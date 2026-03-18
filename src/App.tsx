@@ -54,6 +54,13 @@ export default function App() {
   
   const { user, isLoading } = useAuth();
   const { profile } = useProfile();
+
+  // Redirect to dashboard if logged in and on landing page
+  React.useEffect(() => {
+    if (user && currentView === 'landing') {
+      setCurrentView('dashboard');
+    }
+  }, [user, currentView]);
   
   if (isLoading) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Cargando aplicación...</div>;
@@ -212,6 +219,15 @@ export default function App() {
         );
     }
   };
+
+  if (currentView === 'landing') {
+    return (
+      <LandingPage 
+        onGetStarted={() => setCurrentView('dashboard')} 
+        onLogin={() => setCurrentView('dashboard')} 
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden">
