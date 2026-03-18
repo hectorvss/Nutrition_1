@@ -1,0 +1,45 @@
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('MANAGER', 'CLIENT')),
+  manager_id TEXT REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS clients_profiles (
+  user_id TEXT PRIMARY KEY REFERENCES users(id),
+  weight REAL,
+  goal TEXT,
+  height REAL,
+  notes TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS nutrition_plans (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES users(id),
+  created_by TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL,
+  data_json TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS training_programs (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES users(id),
+  created_by TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL,
+  data_json TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS check_ins (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL REFERENCES users(id),
+  date TEXT NOT NULL,
+  data_json TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

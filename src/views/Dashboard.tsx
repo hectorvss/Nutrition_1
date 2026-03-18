@@ -1,0 +1,298 @@
+import React, { useState, useEffect } from 'react';
+import { fetchWithAuth } from '../api';
+import { 
+  Search, 
+  Settings, 
+  UserPlus, 
+  Calendar, 
+  Utensils, 
+  Send, 
+  Bell, 
+  TrendingUp, 
+  FilePlus, 
+  Check, 
+  Video, 
+  MapPin,
+  Zap
+} from 'lucide-react';
+import { useTask } from '../context/TaskContext';
+import { useCalendar, getEventPresentationInfo } from '../context/CalendarContext';
+import { useClient } from '../context/ClientContext';
+import { useIntegrations } from '../context/IntegrationsContext';
+import { CreditCard, ArrowUpRight, ArrowDownRight, DollarSign } from 'lucide-react';
+
+interface DashboardProps {
+  onNavigate: (view: string) => void;
+}
+
+export default function Dashboard({ onNavigate }: DashboardProps) {
+  const { tasks } = useTask();
+  const { getEventsForDate } = useCalendar();
+  const { clients } = useClient();
+  const { integrations, stripeData } = useIntegrations();
+  const [activity, setActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadActivity = async () => {
+      try {
+        const data = await fetchWithAuth('/manager/analytics');
+        if (data.recentActivity) {
+          setActivity(data.recentActivity);
+        }
+      } catch (error) {
+        console.error('Failed to load activity:', error);
+      }
+    };
+    loadActivity();
+  }, []);
+
+  const quickActions = [
+    { id: 'add-client', label: 'Add New Client', icon: UserPlus, color: 'bg-emerald-50 text-emerald-600' },
+    { id: 'schedule', label: 'Schedule Appointment', icon: Calendar, color: 'bg-blue-50 text-blue-600' },
+    { id: 'automations', label: 'Manage Automations', icon: Zap, color: 'bg-amber-50 text-amber-600' },
+    { id: 'broadcast', label: 'Broadcast Message', icon: Send, color: 'bg-purple-50 text-purple-600' },
+  ];
+
+  // Derive today's properties
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  const scheduleItems = getEventsForDate(todayDateStr).sort((a, b) => a.time.localeCompare(b.time));
+
+  // Sort tasks, take top 5
+  const activeTasks = tasks.filter(t => t.status !== 'pending'); // only overdue or today
+  const pendingCount = tasks.filter(t => t.status === 'pending').length;
+  const overdueCount = activeTasks.filter(t => t.status === 'overdue').length;
+
+  return (
+    <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div>
+          <p className="text-slate-500 text-sm font-medium mb-1">Today, {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric'})}</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Good Morning, Manager</h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-xl">You have {overdueCount} overdue tasks and {activeTasks.length - overdueCount} tasks for today.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative hidden sm:block">
+            <Search className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" />
+            <input 
+              className="pl-10 pr-4 py-2.5 rounded-lg border-none bg-white shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none w-64 text-sm text-slate-700 placeholder-slate-400 transition-all" 
+              placeholder="Search clients, foods..." 
+              type="text"
+            />
+          </div>
+          <button className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {quickActions.map((action) => (
+            <button 
+              key={action.id}
+              onClick={() => {
+                if (action.id === 'schedule') onNavigate('calendar');
+                else if (action.id === 'automations') onNavigate('automations');
+                else if (action.id === 'add-client') onNavigate('clients');
+                else if (action.id === 'broadcast') onNavigate('messages');
+              }}
+              className="flex flex-col items-start gap-2 p-5 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group text-left"
+            >
+              <div className={`p-2 rounded-lg ${action.color} group-hover:bg-emerald-600 group-hover:text-white transition-colors`}>
+                <action.icon className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-slate-900 text-sm">{action.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded bg-red-50 text-red-500">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-lg text-slate-900">Attention Required</h3>
+              </div>
+              <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-500">{activeTasks.length} Items</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {activeTasks.length === 0 && (
+                <div className="p-8 text-center text-slate-500">No pending attention tasks! Great job.</div>
+              )}
+              {activeTasks.slice(0, 5).map((item) => (
+                <div key={item.id} className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => onNavigate('tasks')}>
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style={{ backgroundImage: `url("${item.avatar}")` }} />
+                    {item.status === 'overdue' && (
+                      <div className="absolute -bottom-1 -right-1 bg-red-500 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
+                        <span className="text-[10px] text-white font-bold">!</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-sm text-slate-900 truncate">{item.client} <span className="font-normal text-slate-500 ml-1">{item.title}</span></h4>
+                      <span className="text-xs text-slate-400 shrink-0">{item.timeLabel}</span>
+                    </div>
+                    <p className="text-sm text-slate-500 truncate">{item.desc}</p>
+                  </div>
+                  <button className="text-emerald-600 opacity-0 group-hover:opacity-100 font-semibold text-sm transition-opacity capitalize">
+                    Resolve
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 bg-slate-50 text-center border-t border-slate-100">
+              <button onClick={() => onNavigate('tasks')} className="text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">View All Tasks</button>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-900">Schedule Today</h3>
+              <button onClick={() => onNavigate('calendar')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">View Calendar</button>
+            </div>
+            <div className="space-y-4">
+              {scheduleItems.length === 0 && (
+                <div className="text-slate-500 text-sm italic">No events scheduled for today.</div>
+              )}
+              {scheduleItems.map((item) => {
+                const info = getEventPresentationInfo(item.type);
+                const EventIcon = info.icon;
+                return (
+                <div key={item.id} className="flex gap-4">
+                  <div className="w-16 flex flex-col items-end pt-1 shrink-0">
+                    <span className="text-sm font-bold text-slate-700">{item.time.split(' ')[0]}</span>
+                    <span className="text-xs text-slate-400">{item.time.includes(' ') ? item.time.split(' ')[1] : ''}</span>
+                  </div>
+                  <div className={`flex-1 p-4 rounded-xl border-l-4 ${info.color} relative border-t border-r border-b border-r-slate-100 border-t-slate-100 border-b-slate-100 shadow-sm transition-all`}>
+                    <h4 className="font-bold text-slate-800 text-sm truncate mr-10">{item.title}</h4>
+                    <p className="text-slate-600 text-xs mt-1 truncate">with {item.client || item.initials} • {item.type}</p>
+                    <div className="absolute top-4 right-4">
+                       {item.avatar ? (
+                         <div className="w-8 h-8 rounded-full bg-cover bg-center border-2 border-white shadow-sm" style={{ backgroundImage: `url("${item.avatar}")` }} />
+                       ) : (
+                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 font-bold text-xs border-2 border-slate-100">{item.initials}</div>
+                       )}
+                    </div>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          {integrations?.stripe_enabled && stripeData && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm overflow-hidden relative group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <CreditCard className="w-24 h-24 -rotate-12" />
+              </div>
+              
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Financial Overview</h3>
+                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                    <DollarSign className="w-4 h-4" />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-3xl font-bold text-slate-900">
+                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: stripeData.currency }).format(stripeData.balance)}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                      <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                      <span className="text-emerald-600 font-bold">+12.5%</span> vs last month
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium">Monthly Revenue</p>
+                      <p className="text-lg font-bold text-slate-900">
+                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: stripeData.currency }).format(stripeData.mrr)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 font-medium">Avg. Ticket</p>
+                      <p className="text-lg font-bold text-slate-900">
+                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: stripeData.currency }).format(stripeData.mrr / (clients.length || 1))}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="flex items-end gap-1 h-12">
+                      {stripeData.recent_revenue.map((val, i) => (
+                        <div 
+                          key={i} 
+                          className="flex-1 bg-emerald-100 rounded-t-sm hover:bg-emerald-500 transition-colors cursor-help"
+                          style={{ height: `${(val / Math.max(...stripeData.recent_revenue)) * 100}%` }}
+                          title={`Day ${i+1}: ${val}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-center text-slate-400 mt-2">Revenue last 7 days</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-emerald-500 text-white rounded-2xl p-6 shadow-lg shadow-emerald-500/20 relative overflow-hidden">
+            <div className="absolute right-[-20px] top-[-20px] bg-white/10 w-32 h-32 rounded-full blur-2xl" />
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium opacity-90">Active Clients</p>
+                  <h3 className="text-3xl font-bold mt-1">{clients.length}</h3>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm opacity-90">
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold">+3</span>
+                <span>since last month</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex-1">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Latest Updates</h3>
+            <div className="space-y-6">
+              {activity.slice(0, 5).map((update, idx) => {
+                const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'NEW_CLIENT' ? UserPlus : Check);
+                return (
+                  <div key={idx} className="flex gap-3 relative before:absolute before:left-[19px] before:top-8 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden">
+                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-900"><span className="font-bold">{update.title}</span> {update.sub}</p>
+                      <p className="text-xs text-slate-400 mt-1">{update.time}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              {activity.length === 0 && (
+                <p className="text-sm text-slate-500 italic">No recent activity found.</p>
+              )}
+            </div>
+            <button className="w-full mt-6 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              View All Activity
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
