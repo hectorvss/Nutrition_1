@@ -13,6 +13,46 @@ export default function Pricing({ onGetStarted }: PricingProps) {
     return isAnnual ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
   };
 
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleSubscribe = async (planTitle: string) => {
+    setLoading(planTitle);
+    try {
+      // Mock user data - in a real app, get this from auth context
+      const userId = "temp-user-id"; 
+      const userEmail = "user@example.com";
+
+      // Map plan to real Stripe Price IDs provided by user
+      const priceMap: Record<string, string> = {
+        "Professional": "price_1TCN9vCR4WvolxlpwC33dk8J",
+        "Scale": "price_1TCNAHCR4WvolxlpwpLRfmwX",
+        "Unlimited": "price_1TCNAcCR4WvolxlptLzNYdsz",
+      };
+
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId: priceMap[planTitle],
+          userId,
+          userEmail
+        }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('Error initiating checkout. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <div className="bg-surface font-body text-on-surface min-h-screen">
       <main className="max-w-7xl mx-auto px-8 py-24">
@@ -53,148 +93,99 @@ export default function Pricing({ onGetStarted }: PricingProps) {
           )}
         </div>
 
-        {/* Pricing Bento Grid */}
+        {/* Pricing Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-24">
-          {/* Professional Plan */}
-          <div className="pricing-card-glow bg-surface-container-lowest rounded-3xl p-10 flex flex-col transition-all duration-300 hover:shadow-[0_40px_60px_-15px_rgba(0,0,0,0.04)] border border-outline-variant/15">
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-primary mb-2">Professional</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight text-primary">{calculatePrice(39)}€</span>
-                <span className="text-on-surface-variant font-medium">/{isAnnual ? 'month' : 'month'}</span>
-              </div>
-            </div>
-            <div className="bg-secondary-container/30 px-4 py-2 rounded-full w-fit mb-8">
-              <span className="text-secondary font-bold text-xs uppercase tracking-wider">Up to 20 active clients</span>
-            </div>
-            <ul className="space-y-6 mb-10 flex-grow">
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Full platform access</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 20 active clients</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 2,000 monthly messages</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 10 GB file storage</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 10 active automations</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 25 active alerts</span>
-              </li>
-            </ul>
-            <button 
-              onClick={onGetStarted}
-              className="w-full py-4 rounded-full border border-primary text-primary font-bold hover:bg-primary hover:text-on-primary transition-all duration-300 cursor-pointer"
+          {[
+            {
+              title: "Professional",
+              monthlyPrice: 39,
+              clients: "Up to 20 active clients",
+              features: [
+                "Full platform access",
+                "Up to 20 active clients",
+                "Up to 2,000 monthly messages",
+                "Up to 10 GB file storage",
+                "Up to 10 active automations",
+                "Up to 25 active alerts"
+              ],
+              buttonLabel: "Start Professional",
+              accent: false
+            },
+            {
+              title: "Scale",
+              monthlyPrice: 79,
+              clients: "Up to 60 active clients",
+              features: [
+                "Everything in Professional",
+                "Up to 60 active clients",
+                "Up to 10,000 monthly messages",
+                "Up to 50 GB file storage",
+                "Up to 30 active automations",
+                "Up to 100 active alerts"
+              ],
+              buttonLabel: "Start Scale",
+              accent: false
+            },
+            {
+              title: "Unlimited",
+              monthlyPrice: 99,
+              clients: "Unlimited active clients",
+              features: [
+                "Everything in Scale",
+                "Unlimited active clients",
+                "Unlimited monthly messages",
+                "Unlimited file storage",
+                "Unlimited active automations",
+                "Unlimited active alerts"
+              ],
+              buttonLabel: "Start Unlimited",
+              accent: false
+            }
+          ].map((plan, idx) => (
+            <motion.div 
+              key={idx}
+              whileHover={{ scale: 1.02, y: -5 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="bg-surface-container-lowest rounded-3xl p-10 flex flex-col border border-outline-variant/30 transition-shadow hover:shadow-2xl hover:shadow-black/5"
             >
-              Start Professional
-            </button>
-          </div>
-
-          {/* Scale Plan (Most Popular) */}
-          <div className="pricing-card-glow bg-surface-container-lowest rounded-3xl p-10 flex flex-col relative transition-all duration-300 ring-2 ring-primary shadow-[0_40px_60px_-15px_rgba(0,0,0,0.04)] scale-105 z-10">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-6 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap shadow-lg">
-              Recommended
-            </div>
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-primary mb-2">Scale</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight text-primary">{calculatePrice(79)}€</span>
-                <span className="text-on-surface-variant font-medium">/{isAnnual ? 'month' : 'month'}</span>
+              <div className="mb-8">
+                <h3 className="text-xl font-bold text-primary mb-2">{plan.title}</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold tracking-tight text-primary">{calculatePrice(plan.monthlyPrice)}€</span>
+                  <span className="text-on-surface-variant font-medium">/month</span>
+                </div>
               </div>
-            </div>
-            <div className="bg-secondary-container px-4 py-2 rounded-full w-fit mb-8">
-              <span className="text-secondary font-bold text-xs uppercase tracking-wider">Up to 60 active clients</span>
-            </div>
-            <ul className="space-y-6 mb-10 flex-grow">
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Everything in Professional</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 60 active clients</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 10,000 monthly messages</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 50 GB file storage</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 30 active automations</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Up to 100 active alerts</span>
-              </li>
-            </ul>
-            <button 
-              onClick={onGetStarted}
-              className="w-full py-4 rounded-full bg-primary text-on-primary font-bold transition-all duration-300 active:scale-95 cursor-pointer"
-            >
-              Start Scale
-            </button>
-          </div>
-
-          {/* Unlimited Plan */}
-          <div className="pricing-card-glow bg-surface-container-lowest rounded-3xl p-10 flex flex-col transition-all duration-300 hover:shadow-[0_40px_60px_-15px_rgba(0,0,0,0.04)] border border-outline-variant/15">
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-primary mb-2">Unlimited</h3>
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight text-primary">{calculatePrice(99)}€</span>
-                <span className="text-on-surface-variant font-medium">/{isAnnual ? 'month' : 'month'}</span>
+              <div className="bg-secondary-container/20 px-4 py-2 rounded-full w-fit mb-8">
+                <span className="text-secondary font-bold text-xs uppercase tracking-wider">{plan.clients}</span>
               </div>
-            </div>
-            <div className="bg-secondary-container/30 px-4 py-2 rounded-full w-fit mb-8">
-              <span className="text-secondary font-bold text-xs uppercase tracking-wider">Unlimited active clients</span>
-            </div>
-            <ul className="space-y-6 mb-10 flex-grow">
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Everything in Scale</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Unlimited active clients</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Unlimited monthly messages</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Unlimited file storage</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Unlimited active automations</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                <span className="text-on-surface-variant text-sm font-medium">Unlimited active alerts</span>
-              </li>
-            </ul>
-            <button 
-              onClick={onGetStarted}
-              className="w-full py-4 rounded-full border border-primary text-primary font-bold hover:bg-primary hover:text-on-primary transition-all duration-300 cursor-pointer"
-            >
-              Start Unlimited
-            </button>
-          </div>
+              <ul className="space-y-6 mb-10 flex-grow">
+                {plan.features.map((feature, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
+                    <span className="text-on-surface-variant text-sm font-medium">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <button 
+                onClick={() => handleSubscribe(plan.title)}
+                disabled={loading !== null}
+                className={`w-full py-4 rounded-full font-bold transition-all duration-300 cursor-pointer border flex items-center justify-center gap-2 ${
+                  loading === plan.title ? 'opacity-70 cursor-wait' : ''
+                } ${
+                  idx === 1 
+                  ? 'bg-primary text-on-primary border-primary' 
+                  : 'bg-transparent text-primary border-primary hover:bg-primary hover:text-on-primary'
+                }`}
+              >
+                {loading === plan.title ? (
+                  <Clock className="w-5 h-5 animate-spin" />
+                ) : (
+                  <CreditCard className="w-5 h-5" />
+                )}
+                {loading === plan.title ? 'Connecting...' : plan.buttonLabel}
+              </button>
+            </motion.div>
+          ))}
         </div>
 
         {/* Detailed Comparison Section */}
@@ -255,44 +246,8 @@ export default function Pricing({ onGetStarted }: PricingProps) {
               </tbody>
             </table>
           </div>
-          <div className="mt-12 text-center">
-            <p className="text-on-surface-variant text-[13px] font-medium italic opacity-70">
-              * Advanced business and team management features are planned for future enterprise-grade releases.
-            </p>
-          </div>
         </section>
-
-        {/* Trust & Notes */}
-        <div className="flex flex-col items-center gap-12 mt-24">
-          <div className="bg-surface-container-low/50 px-8 py-6 rounded-2xl max-w-2xl text-center border border-outline-variant/10">
-            <p className="text-on-surface-variant text-sm leading-relaxed font-medium">
-              All current plans include full access to the platform's core functionalities. Future premium features will be available via add-ons or plan upgrades.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center items-center gap-10 text-on-surface-variant font-bold text-sm">
-            <span className="flex items-center gap-2.5"><Verified className="text-secondary w-5 h-5" /> Cancel anytime</span>
-            <span className="flex items-center gap-2.5"><Clock className="text-secondary w-5 h-5" /> Free trial available</span>
-            <span className="flex items-center gap-2.5"><CreditCard className="text-secondary w-5 h-5" /> No hidden fees</span>
-          </div>
-        </div>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-surface-container-lowest py-20 border-t border-outline-variant/15">
-        <div className="flex flex-col md:flex-row justify-between items-center max-w-7xl mx-auto w-full px-8 gap-10">
-          <div className="flex flex-col items-center md:items-start gap-4">
-            <span className="text-xl font-headline font-bold text-primary">nutrifit.</span>
-            <p className="text-on-surface-variant text-sm font-medium">Elevating the standard of nutrition coaching.</p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-8">
-            <a className="text-on-surface-variant hover:text-primary transition-colors underline-offset-4 hover:underline text-sm font-medium" href="#">Privacy Policy</a>
-            <a className="text-on-surface-variant hover:text-primary transition-colors underline-offset-4 hover:underline text-sm font-medium" href="#">Terms of Service</a>
-            <a className="text-on-surface-variant hover:text-primary transition-colors underline-offset-4 hover:underline text-sm font-medium" href="#">Cookie Policy</a>
-            <a className="text-on-surface-variant hover:text-primary transition-colors underline-offset-4 hover:underline text-sm font-medium" href="#">Contact</a>
-          </div>
-          <p className="text-on-surface-variant text-xs font-medium">© 2024 nutrifit. All rights reserved.</p>
-        </div>
-      </footer>
     </div>
   );
 }
