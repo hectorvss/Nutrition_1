@@ -46,13 +46,13 @@ router.post('/login', async (req, res) => {
 router.post('/setup', async (req, res) => {
   const { email, password, role, managerId } = req.body;
   try {
-    const { data, error } = await supabase.auth.signUp({
+    // Use Admin API to create user with email auto-confirmed
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          role: role || 'CLIENT'
-        }
+      email_confirm: true,
+      user_metadata: {
+        role: role || 'CLIENT'
       }
     });
     
