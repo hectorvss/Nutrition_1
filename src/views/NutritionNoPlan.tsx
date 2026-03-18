@@ -1,0 +1,437 @@
+import React, { useState } from 'react';
+import { useClient } from '../context/ClientContext';
+import { motion } from 'motion/react';
+import { fetchWithAuth } from '../api';
+
+interface NutritionNoPlanProps {
+  client: any;
+  onBack: () => void;
+  onStartPlan: (preset?: any, initialPlanData?: any) => void;
+}
+
+const PRESETS = [
+  {
+    id: 'fat-loss-basic',
+    calories: 1500,
+    title: 'Fat Loss Basic',
+    subtitle: 'Conservative cut',
+    tag: 'Balanced',
+    tagColor: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+    protein: 32,
+    carbs: 38,
+    fats: 30,
+    weekViewLabel: '3+2',
+    structure: '3 Meals + 2 Snacks',
+    macroId: 'Balanced (40/30/30)',
+    bars: [60, 80, 70, 60, 90, {h: 50, p: true}, {h: 40, p: true}],
+    recommendedFor: ['Weight Loss', 'Fat Loss']
+  },
+  {
+    id: 'active-maintain',
+    calories: 1800,
+    title: 'Active Maintain',
+    subtitle: 'Recommended for current goal',
+    tag: 'High Carb',
+    tagColor: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+    protein: 25,
+    carbs: 50,
+    fats: 25,
+    weekViewLabel: '4 meals',
+    structure: '4 Meals',
+    macroId: 'High Carb (25/50/25)',
+    bars: [70, 70, 70, 80, 80, {h: 60, p: true}, {h: 60, p: true}],
+    recommendedFor: ['Maintenance', 'Not Set']
+  },
+  {
+    id: 'moderate-gain',
+    calories: 2000,
+    title: 'Moderate Gain',
+    subtitle: 'Lean bulk approach',
+    tag: 'High Protein',
+    tagColor: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+    protein: 40,
+    carbs: 35,
+    fats: 25,
+    weekViewLabel: '3+2',
+    structure: '3 Meals + 2 Snacks',
+    macroId: 'Balanced (40/30/30)',
+    bars: [80, 80, 80, 80, 80, {h: 80, p: true}, {h: 80, p: true}],
+    recommendedFor: ['Muscle Gain']
+  },
+  {
+    id: 'active-build',
+    calories: 2200,
+    title: 'Active Build',
+    subtitle: 'Standard muscle gain',
+    tag: 'Standard',
+    tagColor: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
+    protein: 30,
+    carbs: 40,
+    fats: 30,
+    weekViewLabel: '3+3',
+    structure: '3 Meals + 3 Snacks',
+    macroId: 'Balanced (40/30/30)',
+    bars: [90, 90, 90, 90, 90, 90, {h: 70, p: true}],
+    recommendedFor: ['Muscle Gain']
+  },
+  {
+    id: 'athlete-perform',
+    calories: 2500,
+    title: 'Athlete Perform',
+    subtitle: 'Sport performance',
+    tag: 'High Energy',
+    tagColor: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
+    protein: 25,
+    carbs: 48,
+    fats: 27,
+    weekViewLabel: '4+2',
+    structure: '4 Meals + 2 Snacks',
+    macroId: 'Balanced (40/30/30)',
+    bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 60, p: true}],
+    recommendedFor: ['Performance']
+  },
+  {
+    id: 'mass-builder',
+    calories: 2800,
+    title: 'Mass Builder',
+    subtitle: 'Significant surplus',
+    tag: 'High Carb',
+    tagColor: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+    protein: 25,
+    carbs: 55,
+    fats: 20,
+    weekViewLabel: '5 meals',
+    structure: '5 Meals',
+    macroId: 'High Carb (25/55/20)',
+    bars: [95, 95, 95, 95, 95, {h: 80, p: true}, {h: 80, p: true}],
+    recommendedFor: ['Muscle Gain']
+  },
+  {
+    id: 'power-lifting',
+    calories: 3100,
+    title: 'Power Lifting',
+    subtitle: 'Strength focus',
+    tag: 'Balanced+',
+    tagColor: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+    protein: 30,
+    carbs: 40,
+    fats: 30,
+    weekViewLabel: '5+1',
+    structure: '5 Meals + 1 Snack',
+    macroId: 'Balanced (40/30/30)',
+    bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 50, p: true}],
+    recommendedFor: ['Strength']
+  },
+  {
+    id: 'extreme-bulk',
+    calories: 3300,
+    title: 'Extreme Bulk',
+    subtitle: 'Maximum surplus',
+    tag: 'Max Carb',
+    tagColor: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+    protein: 20,
+    carbs: 60,
+    fats: 20,
+    weekViewLabel: '6 meals',
+    structure: '6 Meals',
+    macroId: 'High Carb (20/60/20)',
+    bars: [100, 100, 100, 100, 100, 100, {h: 100, p: true}],
+    recommendedFor: ['Muscle Gain']
+  }
+];
+
+export default function NutritionNoPlan({ client, onBack, onStartPlan }: NutritionNoPlanProps) {
+  const { assignNutritionPlan, reloadClients } = useClient();
+  const clientGoal = client?.goal || 'Not Set';
+  
+  // Find recommended preset
+  const recommendedPreset = PRESETS.find(p => p.recommendedFor.includes(clientGoal)) || PRESETS[1];
+  
+  const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
+  const selectedPreset = PRESETS.find(p => p.id === selectedId) || recommendedPreset;
+
+  const handleConfirm = async () => {
+    // If it's one of our known presets, apply it via master plan
+    const isMasterPlan = PRESETS.some(p => p.id === selectedPreset.id);
+    
+    if (isMasterPlan) {
+      try {
+        const appliedPlan = await fetchWithAuth(`/manager/clients/${client.id}/apply-master-plan`, {
+          method: 'POST',
+          body: JSON.stringify({ slug: `nutrition_${selectedPreset.id}` })
+        });
+        await reloadClients();
+        onStartPlan(selectedPreset, appliedPlan);
+      } catch (err) {
+        console.error('Error applying master plan:', err);
+        assignNutritionPlan(client.id);
+        onStartPlan(selectedPreset);
+      }
+    } else {
+      assignNutritionPlan(client.id);
+      onStartPlan(selectedPreset);
+    }
+  };
+
+  const handleCreateNew = () => {
+    assignNutritionPlan(client.id);
+    onStartPlan(null);
+  };
+
+  return (
+    <div className="flex flex-col w-full">
+      <div className="p-6 pb-2">
+        <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 mb-4">
+          <ol className="inline-flex items-center space-x-1 md:space-x-2">
+            <li className="inline-flex items-center">
+              <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-500 transition-colors">
+                Nutrition
+              </button>
+            </li>
+            <li>
+              <div className="flex items-center">
+                <span className="material-symbols-outlined text-slate-400 text-lg mx-1">chevron_right</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">{client?.name}</span>
+              </div>
+            </li>
+          </ol>
+        </nav>
+
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+          <div className="relative flex-shrink-0">
+            <div 
+              className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm" 
+              style={{ backgroundImage: `url("${client?.avatar || 'https://ui-avatars.com/api/?name=C&background=random'}")` }}
+            ></div>
+            <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 shadow-sm"></div>
+          </div>
+          <div className="flex-1 text-center sm:text-left">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{client?.name}</h1>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">flag</span>
+                Goal: {clientGoal}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">female</span>
+                Female, {client?.age || '28'}
+              </span>
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
+              <span className="flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">scale</span>
+                {client?.weight || '68'}kg
+              </span>
+            </div>
+          </div>
+          <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
+            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">Status</div>
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium text-sm">
+              <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+              No Plan Yet
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-6 pt-2 overflow-hidden">
+        {/* Left Column: Templates */}
+        <div className="flex-1 lg:basis-[70%] flex flex-col gap-4 overflow-hidden">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-emerald-500">grid_view</span>
+              Start from a Template
+            </h2>
+            <div className="flex gap-2">
+              <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <span className="material-symbols-outlined text-[20px]">filter_list</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide pb-10">
+            <div className="flex flex-col gap-4">
+              
+              {/* Scratch / Blank option */}
+              <button 
+                onClick={handleCreateNew} 
+                className="group w-full flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/5 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-emerald-500 text-2xl">add</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200">Create New Plan</h3>
+                    <p className="text-sm text-slate-500">Start from scratch with custom macros</p>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-slate-400 group-hover:text-emerald-500 transition-colors">arrow_forward</span>
+              </button>
+
+              {/* Template Cards */}
+              {PRESETS.map((preset) => {
+                const isSelected = selectedId === preset.id;
+                const isRecommended = recommendedPreset.id === preset.id;
+                
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => setSelectedId(preset.id)}
+                    className={`group w-full text-left rounded-2xl transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 p-5 ${
+                      isSelected 
+                        ? 'bg-white dark:bg-slate-800 border-2 border-emerald-500 ring-4 ring-emerald-500/10 shadow-lg shadow-emerald-500/10 z-10' 
+                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-3 right-3 text-emerald-500">
+                        <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                      </div>
+                    )}
+
+                    <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-4">
+                      <div className="flex items-center gap-1.5 justify-center sm:justify-start text-orange-500 font-bold text-xl mb-1">
+                        <span className="material-symbols-outlined">local_fire_department</span>
+                        {preset.calories.toLocaleString()}
+                      </div>
+                      <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">{preset.title}</h3>
+                      <p className="text-xs text-slate-500 mt-1">{isRecommended ? 'Recommended for current goal' : preset.subtitle}</p>
+                    </div>
+
+                    <div className="flex-1 w-full space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`${preset.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide`}>
+                          {preset.tag}
+                        </span>
+                        <div className="flex gap-2 text-xs text-slate-500 font-medium">
+                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>{preset.protein}% P</span>
+                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{preset.carbs}% C</span>
+                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>{preset.fats}% F</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden flex">
+                        <div className="bg-blue-500 h-full transition-all" style={{ width: `${preset.protein}%` }}></div>
+                        <div className="bg-green-500 h-full transition-all" style={{ width: `${preset.carbs}%` }}></div>
+                        <div className="bg-yellow-500 h-full transition-all" style={{ width: `${preset.fats}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-700 pt-4 sm:pt-0">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Week View</span>
+                        <span className="text-[10px] text-slate-400 font-medium">{preset.weekViewLabel}</span>
+                      </div>
+                      <div className="flex gap-1 h-8 items-end justify-between">
+                        {preset.bars.map((bar: any, bi) => {
+                          const height = typeof bar === 'number' ? bar : bar.h;
+                          const isPrimary = typeof bar === 'object' && bar.p;
+                          return (
+                            <div 
+                              key={bi} 
+                              className={`w-1.5 rounded-t-sm transition-all ${isPrimary ? 'bg-emerald-500/60' : 'bg-slate-300 dark:bg-slate-600'}`} 
+                              style={{ height: `${height}%` }}
+                            ></div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Settings */}
+        <div className="flex-1 lg:basis-[30%] flex flex-col gap-6 overflow-y-auto pr-1 pb-10">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 text-center">
+            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-slate-600">visibility</span>
+            </div>
+            <h3 className="font-bold text-slate-900 dark:text-white mb-2">Template Preview</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Select a template on the left to see detailed meal distribution and macro breakdowns here.
+            </p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-5 shadow-sm min-h-[400px]">
+            <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-4">
+              <span className="material-symbols-outlined text-emerald-500">tune</span>
+              <h3 className="font-bold text-slate-900 dark:text-white">Plan Settings</h3>
+            </div>
+            
+            <div className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">Target Calories</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">local_fire_department</span>
+                  <input 
+                    className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-semibold" 
+                    type="number" 
+                    value={selectedPreset.calories}
+                    readOnly
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">kcal</span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">Daily Structure</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">restaurant</span>
+                  <select 
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-semibold cursor-pointer"
+                    value={selectedPreset.structure}
+                    onChange={() => {}}
+                  >
+                    <option value="3 Meals">3 Meals</option>
+                    <option value="3 Meals + 1 Snack">3 Meals + 1 Snack</option>
+                    <option value="3 Meals + 2 Snacks">3 Meals + 2 Snacks</option>
+                    <option value="3 Meals + 3 Snacks">3 Meals + 3 Snacks</option>
+                    <option value="4 Meals">4 Meals</option>
+                    <option value="4 Meals + 2 Snacks">4 Meals + 2 Snacks</option>
+                    <option value="5 Meals">5 Meals</option>
+                    <option value="5 Meals + 1 Snack">5 Meals + 1 Snack</option>
+                    <option value="6 Meals">6 Meals</option>
+                  </select>
+                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">Macro Split</label>
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">pie_chart</span>
+                  <select 
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-semibold cursor-pointer"
+                    value={selectedPreset.macroId}
+                    onChange={() => {}}
+                  >
+                    <option value="Balanced (40/30/30)">Balanced (40/30/30)</option>
+                    <option value="Low Carb (40/40/20)">Low Carb (40/40/20)</option>
+                    <option value="High Carb (25/50/25)">High Carb (25/50/25)</option>
+                    <option value="High Carb (25/55/20)">High Carb (25/55/20)</option>
+                    <option value="High Carb (20/60/20)">High Carb (20/60/20)</option>
+                    <option value="Ketogenic (20/5/75)">Ketogenic (20/5/75)</option>
+                  </select>
+                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6 flex content-end">
+              <button 
+                onClick={handleConfirm}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group"
+              >
+                <span className="material-symbols-outlined group-hover:scale-110 transition-transform">edit_document</span>
+                Create Draft Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
