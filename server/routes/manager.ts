@@ -1981,7 +1981,14 @@ router.post('/tasks', async (req: any, res) => {
     const { data, error } = await supabaseAdmin
       .from('tasks')
       .insert({
-        ...req.body,
+        title: req.body.title,
+        description: req.body.description,
+        type: req.body.type,
+        date: req.body.date,
+        time: req.body.time,
+        duration: req.body.duration,
+        client_id: req.body.client_id,
+        status: req.body.status || 'pending',
         manager_id: req.user.id,
         created_at: new Date().toISOString()
       })
@@ -2106,7 +2113,14 @@ router.patch('/tasks/:id', async (req: any, res) => {
     const { data, error } = await supabaseAdmin
       .from('tasks')
       .update({
-        ...req.body,
+        title: req.body.title,
+        description: req.body.description,
+        type: req.body.type,
+        date: req.body.date,
+        time: req.body.time,
+        duration: req.body.duration,
+        client_id: req.body.client_id,
+        status: req.body.status,
         updated_at: new Date().toISOString()
       })
       .eq('id', req.params.id)
