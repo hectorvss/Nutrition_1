@@ -146,7 +146,7 @@ function BusinessAnalytics({ data }: any) {
         />
         <StatCard 
           title="Monthly Rev" 
-          value={`$${(data?.revenue / 1000).toFixed(1)}k`} 
+          value={data?.revenue >= 1000 ? `$${(data.revenue / 1000).toFixed(1)}k` : `$${data?.revenue || '0'}`} 
           change="+8.5%" 
           isPositive={true} 
           icon={<DollarSign className="w-6 h-6" />} 
