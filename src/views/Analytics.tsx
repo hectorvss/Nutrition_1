@@ -22,6 +22,17 @@ import {
   ListChecks,
   Gauge
 } from 'lucide-react';
+import { 
+  LineChart, 
+  Line, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
 
 type AnalyticsTab = 'business' | 'nutrition' | 'training';
 
@@ -210,34 +221,46 @@ function BusinessAnalytics({ data }: any) {
               </div>
             </div>
           </div>
-          <div className="h-[300px] w-full flex items-end gap-1 sm:gap-2 relative pb-6">
-            <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="w-full h-px bg-slate-100"></div>
-              ))}
-            </div>
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => {
-              const monthlyData = data?.monthlyRevenue || Array(12).fill(0);
-              const maxRev = Math.max(...monthlyData, 1000); // At least 1k for scaling
-              const height = (monthlyData[i] / maxRev) * 100;
-              
-              // Mock renewals for now as requested
-              const fillHeight = 85; 
-
-              return (
-                <div key={month} className="flex-1 flex flex-col justify-end items-center gap-1 group cursor-pointer">
-                  {monthlyData[i] > 0 && (
-                    <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-slate-800 text-white text-[10px] px-2 py-1 rounded transition-opacity pointer-events-none whitespace-nowrap z-20">
-                      ${monthlyData[i].toLocaleString()}
-                    </div>
-                  )}
-                  <div className="w-full max-w-[32px] bg-emerald-100 h-[var(--h)] rounded-t-sm group-hover:bg-emerald-200 transition-colors relative" style={{ '--h': `${Math.max(height, 2)}%` } as any}>
-                    <div className="absolute bottom-0 left-0 right-0 bg-emerald-500 h-[var(--fh)] rounded-t-sm" style={{ '--fh': `${fillHeight}%` } as any}></div>
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-medium">{month}</span>
-                </div>
-              );
-            })}
+          <div className="h-[300px] w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => ({
+                month: m,
+                revenue: data?.monthlyRevenue?.[i] || 0
+              }))}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#64748b' }}
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: any) => [`$${value}`, 'Revenue']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="#10b981" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorRevenue)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
