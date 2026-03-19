@@ -113,9 +113,10 @@ interface NutritionWeeklyViewProps {
   client: any;
   onBack: () => void;
   onSelectDay: (dayId: string) => void;
+  onReassign?: () => void;
 }
 
-export default function NutritionWeeklyView({ client, onBack, onSelectDay }: NutritionWeeklyViewProps) {
+export default function NutritionWeeklyView({ client, onBack, onSelectDay, onReassign }: NutritionWeeklyViewProps) {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   
   return (
@@ -185,19 +186,31 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay }: Nut
               </div>
             </div>
             
-            <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
-              <button 
-                onClick={() => setViewMode('weekly')}
-                className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'weekly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                WEEKLY VIEW
-              </button>
-              <button 
-                onClick={() => setViewMode('monthly')}
-                className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                MONTH VIEW
-              </button>
+            <div className="flex items-center gap-4">
+              {onReassign && (
+                <button 
+                  onClick={onReassign}
+                  className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-emerald-400 hover:border-emerald-500/50 transition-all font-bold text-xs"
+                >
+                  <span className="material-symbols-outlined text-[20px]">sync</span>
+                  REASSIGN PLAN
+                </button>
+              )}
+              
+              <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
+                <button 
+                  onClick={() => setViewMode('weekly')}
+                  className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'weekly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  WEEKLY VIEW
+                </button>
+                <button 
+                  onClick={() => setViewMode('monthly')}
+                  className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  MONTH VIEW
+                </button>
+              </div>
             </div>
           </div>
           {WEEK_DAYS.map((day) => (
