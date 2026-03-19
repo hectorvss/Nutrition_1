@@ -210,21 +210,31 @@ function BusinessAnalytics({ data }: any) {
               </div>
             </div>
           </div>
-          <div className="h-[300px] w-full flex items-end gap-2 sm:gap-4 relative pb-6">
+          <div className="h-[300px] w-full flex items-end gap-1 sm:gap-2 relative pb-6">
             <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="w-full h-px bg-slate-100"></div>
               ))}
             </div>
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'].map((month, i) => {
-              const heights = [40, 55, 45, 65, 75, 60, 80, 90];
-              const fillHeights = [80, 85, 70, 90, 80, 85, 92, 88];
+            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, i) => {
+              const monthlyData = data?.monthlyRevenue || Array(12).fill(0);
+              const maxRev = Math.max(...monthlyData, 1000); // At least 1k for scaling
+              const height = (monthlyData[i] / maxRev) * 100;
+              
+              // Mock renewals for now as requested
+              const fillHeight = 85; 
+
               return (
-                <div key={month} className="flex-1 flex flex-col justify-end items-center gap-2 group cursor-pointer">
-                  <div className="w-full max-w-[40px] bg-emerald-100 h-[var(--h)] rounded-t-sm group-hover:bg-emerald-200 transition-colors relative" style={{ '--h': `${heights[i]}%` } as any}>
-                    <div className="absolute bottom-0 left-0 right-0 bg-emerald-500 h-[var(--fh)] rounded-t-sm" style={{ '--fh': `${fillHeights[i]}%` } as any}></div>
+                <div key={month} className="flex-1 flex flex-col justify-end items-center gap-1 group cursor-pointer">
+                  {monthlyData[i] > 0 && (
+                    <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-slate-800 text-white text-[10px] px-2 py-1 rounded transition-opacity pointer-events-none whitespace-nowrap z-20">
+                      ${monthlyData[i].toLocaleString()}
+                    </div>
+                  )}
+                  <div className="w-full max-w-[32px] bg-emerald-100 h-[var(--h)] rounded-t-sm group-hover:bg-emerald-200 transition-colors relative" style={{ '--h': `${Math.max(height, 2)}%` } as any}>
+                    <div className="absolute bottom-0 left-0 right-0 bg-emerald-500 h-[var(--fh)] rounded-t-sm" style={{ '--fh': `${fillHeight}%` } as any}></div>
                   </div>
-                  <span className="text-xs text-slate-400 font-medium">{month}</span>
+                  <span className="text-[10px] text-slate-400 font-medium">{month}</span>
                 </div>
               );
             })}
