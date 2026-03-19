@@ -42,7 +42,7 @@ export default function CheckInList({ onViewHistory }: CheckInListProps) {
   });
 
   return (
-    <div className="p-6 md:p-8 w-full space-y-6">
+    <div className="p-6 md:p-8 lg:p-10 w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Client Check-ins</h1>
