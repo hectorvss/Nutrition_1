@@ -42,17 +42,13 @@ export interface DeprecatedTask {
 }
 
 interface TasksProps {
-  onNavigate: (view: string) => void;
+  onNavigate: (view: string, data?: any) => void;
 }
 
 import { useTask, TaskItem } from '../context/TaskContext';
 
 export default function Tasks({ onNavigate }: TasksProps) {
-  const [selectedTaskParamId, setSelectedTaskId] = useState<number | null>(null);
   const { tasks } = useTask();
-
-  // Pick task
-  let selectedTask = tasks.find(t => t.id === selectedTaskParamId);
 
   // Derived counts for Stats
   const overdueCount = tasks.filter(t => t.status === 'overdue').length;
@@ -165,10 +161,8 @@ export default function Tasks({ onNavigate }: TasksProps) {
                     {prioTasks.map((task) => (
                       <div 
                         key={task.id}
-                        onClick={() => setSelectedTaskId(task.id)}
-                        className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${
-                          selectedTaskParamId === task.id ? config.borderActive : config.borderInactive
-                        }`}
+                        onClick={() => onNavigate('create-task', { taskId: task.id })}
+                        className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${config.borderInactive}`}
                       >
                         <div className="flex items-start gap-3 sm:gap-4">
                           <div className="pt-1 hidden sm:block">
@@ -212,129 +206,6 @@ export default function Tasks({ onNavigate }: TasksProps) {
           </div>
         </div>
       </div>
-
-      {/* Task Detail Sidebar / Overlay */}
-      <AnimatePresence>
-        {selectedTask && (
-          <>
-            {/* Mobile Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedTaskId(null)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden"
-            />
-            
-              <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-full sm:w-[450px] lg:relative lg:w-[450px] bg-white border-l border-slate-200 flex flex-col h-full shadow-2xl z-50 lg:z-20"
-            >
-              <header className="p-4 sm:p-6 border-b border-slate-100">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <div className="flex gap-2">
-                    <span className={`text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${
-                      (selectedTask.priority || 'medium') === 'high' ? 'text-red-600 bg-red-50' : 
-                      (selectedTask.priority || 'medium') === 'medium' ? 'text-orange-600 bg-orange-50' :
-                      'text-emerald-600 bg-emerald-50'
-                    }`}>
-                      {selectedTask.type}
-                    </span>
-                    <span className={`text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider ${
-                      (selectedTask.priority || 'medium') === 'high' ? 'text-white bg-red-500' : 
-                      (selectedTask.priority || 'medium') === 'medium' ? 'text-white bg-orange-500' :
-                      'text-white bg-emerald-500'
-                    }`}>
-                      {selectedTask.priority || 'Medium'} PRIORITY
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => setSelectedTaskId(null)}
-                    className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">{selectedTask.title}</h2>
-              </header>
-
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 scrollbar-hide">
-                {/* Client Info Card */}
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img src={selectedTask.avatar} alt={selectedTask.client} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full shrink-0" referrerPolicy="no-referrer" />
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-slate-900 truncate">{selectedTask.client}</h4>
-                      <p className="text-[11px] sm:text-xs text-slate-500 truncate">{selectedTask.program} • Week 4/12</p>
-                    </div>
-                  </div>
-                  <button className="text-[10px] sm:text-xs font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-wider shrink-0 ml-2">
-                    View Profile
-                  </button>
-                </div>
-
-                {/* Metrics */}
-                {selectedTask.metrics && (
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="bg-emerald-50/30 border border-emerald-100 rounded-2xl p-3 sm:p-4">
-                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Weight Change</p>
-                      <div className="flex items-center gap-2">
-                        <TrendingDown className="w-4 h-4 text-emerald-500" />
-                        <span className="text-base sm:text-lg font-bold text-slate-900">{selectedTask.metrics.weightChange}</span>
-                      </div>
-                    </div>
-                    <div className="bg-blue-50/30 border border-blue-100 rounded-2xl p-3 sm:p-4">
-                      <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Compliance</p>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-blue-500" />
-                        <span className="text-base sm:text-lg font-bold text-slate-900">{selectedTask.metrics.compliance}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Items */}
-                {selectedTask.actionItems && (
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Action Items</h3>
-                      <span className="text-[10px] font-bold text-slate-400">0/{selectedTask.actionItems.length} Completed</span>
-                    </div>
-                    <div className="space-y-2">
-                      {selectedTask.actionItems.map((item, idx) => (
-                        <label key={idx} className="flex items-center gap-3 p-3 sm:p-4 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-emerald-500 transition-all group">
-                          <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500" />
-                          <span className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-slate-900">{item}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Coach Notes */}
-                {selectedTask.notes && (
-                  <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-3">
-                    <Lightbulb className="w-5 h-5 text-amber-500 shrink-0" />
-                    <p className="text-[11px] sm:text-xs text-amber-800 leading-relaxed font-medium">
-                      {selectedTask.notes}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 sm:p-6 border-t border-slate-100 bg-white">
-                <button className="w-full py-3 sm:py-4 bg-emerald-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all text-sm sm:text-base">
-                  Start Review
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
