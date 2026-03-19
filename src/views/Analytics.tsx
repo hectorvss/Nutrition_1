@@ -223,10 +223,14 @@ function BusinessAnalytics({ data }: any) {
           </div>
           <div className="h-[300px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => ({
-                month: m,
-                revenue: data?.monthlyRevenue?.[i] || 0
-              }))}>
+              <AreaChart data={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => {
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                return {
+                  month: m,
+                  revenue: i <= currentMonth ? (data?.monthlyRevenue?.[i] || 0) : null
+                };
+              })}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
@@ -258,6 +262,8 @@ function BusinessAnalytics({ data }: any) {
                   strokeWidth={3}
                   fillOpacity={1} 
                   fill="url(#colorRevenue)" 
+                  dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
