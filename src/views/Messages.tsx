@@ -364,8 +364,8 @@ export default function Messages() {
     });
 
     return (
-      <div className="flex-1 h-full flex flex-col items-center bg-[#f8fafc] overflow-y-auto custom-scrollbar p-4 sm:p-10">
-        <main className="w-full max-w-[1400px] bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden font-['Manrope',_sans-serif] flex flex-col mb-6">
+      <div className="flex-1 h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden p-6 md:p-8 lg:p-10">
+        <main className="w-full h-full bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden font-['Manrope',_sans-serif] flex flex-col">
           <div className="p-6 border-b border-slate-100 space-y-4">
             <div className="flex justify-between items-center">
               <div>
@@ -468,8 +468,8 @@ export default function Messages() {
 
 
   return (
-    <div className="flex-1 h-full flex flex-col items-center bg-[#f8fafc] overflow-y-auto custom-scrollbar p-4 sm:p-10">
-      <main className="w-full max-w-[1400px] h-full flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+    <div className="flex-1 h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden p-6 md:p-8 lg:p-10">
+      <main className="w-full h-full flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         {isComposing ? (
           /* New Message Workspace */
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
