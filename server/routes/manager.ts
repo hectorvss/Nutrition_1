@@ -1677,19 +1677,34 @@ router.get('/analytics', async (req: any, res) => {
         try {
           const stripe = new Stripe(integrations.stripe_secret_key);
           
-          // 1. Get Balance
-          const balance = await stripe.balance.retrieve();
-          const available = balance.available.reduce((acc, curr) => acc + curr.amount, 0) / 100;
-          
-          // 2. Get Charges from last 30 days for Revenue/MRR
-          const thirtyDaysAgo = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
+          // 2. Get Charges from CURRENT YEAR for Trends
+          const startOfYear = Math.floor(new Date(new Date().getFullYear(), 0, 1).getTime() / 1000);
           const charges = await stripe.charges.list({
-            created: { gte: thirtyDaysAgo },
+            created: { gte: startOfYear },
             limit: 100
           });
           
-          revenue = charges.data.reduce((acc, c) => acc + (c.amount / 100), 0);
-          mrr = revenue; // Simple MRR estimate based on monthly volume
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const monthlyRevenue = Array(12).fill(0);
+          
+          charges.data.forEach(c => {
+            const date = new Date(c.created * 1000);
+            if (date.getFullYear() === now.getFullYear()) {
+              monthlyRevenue[date.getMonth()] += (c.amount / 100);
+            }
+          });
+
+          revenue = monthlyRevenue[currentMonth];
+          const yearlyTotal = monthlyRevenue.reduce((a, b) => a + b, 0);
+          
+          // Add custom business data
+          (res as any).businessData = {
+            monthlyRevenue,
+            totalYearly: yearlyTotal
+          };
+          
+          mrr = revenue; // Simple MRR estimate based on current month volume
           
         } catch (sErr) {
           console.error('Stripe analytics error:', sErr);
@@ -1701,8 +1716,9 @@ router.get('/analytics', async (req: any, res) => {
           totalClients: totalClients || 0,
           newLeads: newClients || 0,
           retention: 94.2, 
-          revenue: revenue || 12400.50, // Fallback to mock
-          ltv: 850
+          revenue: revenue || 0,
+          ltv: 850,
+          monthlyRevenue: (res as any).businessData?.monthlyRevenue || Array(12).fill(0)
         },
       nutrition,
       training,
@@ -1914,7 +1930,13 @@ async function syncToGoogleCalendar(managerId: string, task: any) {
         (auth as any).scopes = ['https://www.googleapis.com/auth/calendar'];
       } catch (err) {
         console.error('Failed to parse Google Service Account JSON');
+        // If they provided a service account field, don't use the API key as fallback for writing
+        // because it will 100% fail and cause confusion.
+        return; 
       }
+    } else if (!auth) {
+      // No credentials at all
+      return;
     }
 
     const calendar = google.calendar({ version: 'v3', auth });
@@ -2021,11 +2043,24 @@ router.post('/integrations/google-calendar/test', async (req: any, res) => {
     }
 
     const calendar = google.calendar({ version: 'v3', auth });
-    await calendar.calendarList.list({ maxResults: 1 });
+    const list = await calendar.calendarList.list({ maxResults: 1 });
+    
+    // Check if the specific calendarID is accessible
+    if (integrations.google_calendar_id) {
+       try {
+         await calendar.events.list({ calendarId: integrations.google_calendar_id, maxResults: 1 });
+       } catch (e: any) {
+         return res.json({ success: false, message: `Calendario ID ${integrations.google_calendar_id} no accesible: ${e.message}` });
+       }
+    }
+
     res.json({ success: true });
   } catch (error: any) {
     console.error('Google test error:', error);
-    res.json({ success: false, message: error.message || 'Error de conexión' });
+    let msg = error.message || 'Error de conexión';
+    if (error.code === 401) msg = 'No autorizado (revisa tu API Key/JSON)';
+    if (error.code === 403) msg = 'Acceso denegado (¿has compartido el calendario con el email de la cuenta de servicio?)';
+    res.json({ success: false, message: msg });
   }
 });
 
