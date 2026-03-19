@@ -22,7 +22,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        <div className="p-4 md:p-6 lg:p-8">
           {/* Breadcrumbs & Header */}
           <div className="flex flex-col gap-6 mb-8">
             <div className="flex items-center gap-2 text-sm text-slate-500">
