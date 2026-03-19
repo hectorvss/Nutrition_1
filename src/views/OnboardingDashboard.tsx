@@ -61,7 +61,7 @@ export default function OnboardingDashboard({ onNavigate }: OnboardingDashboardP
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+    <div className="p-6 md:p-8 lg:p-10 space-y-6 w-full">
       {/* Breadcrumbs */}
       <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
         <div className="flex items-center gap-2">

@@ -349,7 +349,7 @@ export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowE
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50 relative">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shrink-0">
+      <header className="bg-white border-b border-slate-200 px-6 md:px-8 lg:px-10 py-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <button 
             onClick={onBack}
