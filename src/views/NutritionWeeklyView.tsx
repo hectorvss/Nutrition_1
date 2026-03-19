@@ -211,8 +211,8 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   });
 
   return (
-    <div className="flex flex-col w-full">
-      <div className="p-4 md:p-6 pb-2">
+    <div className="flex flex-col w-full h-full">
+      <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6 pb-2">
         <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 mb-4">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
@@ -262,7 +262,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
         </div>
       </div>
 
-      <div className="p-4 md:p-6 pt-2 pb-20">
+      <div className="px-6 md:px-8 lg:px-10 pt-2 pb-20">
         <div className="flex flex-col gap-4">
           
           {/* View Mode Toggle Area */}

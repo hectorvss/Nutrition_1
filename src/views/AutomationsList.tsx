@@ -35,7 +35,7 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
   );
 
   return (
-    <div className="flex flex-1 h-full overflow-hidden p-6 gap-6">
+    <div className="flex flex-1 h-full overflow-hidden p-6 md:p-8 lg:p-10 gap-6">
       <div className="w-full flex flex-col h-full">
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>

@@ -201,7 +201,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
-      <div className="p-4 md:p-6 pb-2">
+      <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6 pb-2">
         <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 mb-4">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
@@ -263,7 +263,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pt-2 pb-20">
+      <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pt-2 pb-20">
         <div className="flex flex-col gap-4">
           
           <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
