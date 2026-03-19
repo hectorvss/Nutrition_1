@@ -1035,8 +1035,13 @@ function IntegrationsSettings() {
     }
   };
 
-  const handleIntegrationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+  const handleIntegrationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const target = e.target;
+    const name = target.name;
+    const value = target.value;
+    const type = (target as any).type;
+    const checked = (target as any).checked;
+    
     setLocalIntegrations((prev: any) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
