@@ -4,6 +4,7 @@ import TrainingDashboard from './TrainingDashboard';
 import TrainingNoPlan from './TrainingNoPlan';
 import TrainingWeeklyView from './TrainingWeeklyView';
 import WorkoutEditor from './WorkoutEditor';
+import { fetchWithAuth } from '../api';
 import AssignProgram from './AssignProgram';
 import ActivityEditor from './ActivityEditor';
 
@@ -72,9 +73,20 @@ export default function Training() {
           <AssignProgram 
             clientId={selectedClient?.id} 
             onBack={() => setCurrentView('client-list')}
-            onAssign={(pid) => {
-              // Usually handle backend call here or inside component
-              setCurrentView('weekly-view');
+            onAssign={async (pid, dataJson) => {
+              try {
+                await fetchWithAuth(`/manager/clients/${selectedClient.id}/training-program`, {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    name: dataJson.name,
+                    data_json: dataJson
+                  })
+                });
+                setSelectedClient({ ...selectedClient, trainingPlanAssigned: true });
+                setCurrentView('weekly-view');
+              } catch (error) {
+                console.error('Error assigning program:', error);
+              }
             }}
             onCreateScratch={() => setCurrentView('workout-editor')}
           />
