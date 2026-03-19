@@ -112,6 +112,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const [librarySearch, setLibrarySearch] = useState('');
 
   const [fullPlanData, setFullPlanData] = useState<any>(null);
+  const [mode, setMode] = useState<'general' | 'example'>('general');
 
   // Load existing plan on mount
   React.useEffect(() => {
@@ -122,8 +123,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         setFullPlanData(json);
         
         let targetMeals = [];
-        if (json.days && selectedDay && json.days[selectedDay]) {
-          targetMeals = json.days[selectedDay].meals;
+        // Support weekly structure with day-specific selection
+        if (json.days) {
+          const dayToLoad = selectedDay || 'monday';
+          targetMeals = json.days[dayToLoad]?.meals || [];
         } else {
           targetMeals = json.meals || [];
         }
@@ -147,8 +150,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           setFullPlanData(json);
 
           let targetMeals = [];
-          if (json.days && selectedDay && json.days[selectedDay]) {
-            targetMeals = json.days[selectedDay].meals;
+          if (json.days) {
+            const dayToLoad = selectedDay || 'monday';
+            targetMeals = json.days[dayToLoad]?.meals || [];
           } else {
             targetMeals = json.meals || [];
           }
@@ -236,8 +240,6 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const [newBlockName, setNewBlockName] = useState('');
   const [newBlockTime, setNewBlockTime] = useState('12:00 PM');
 
-  const [isDrafting] = useState(isNewPlan || true);
-  const [mode, setMode] = useState<'general' | 'example'>('general');
   const filteredLibraryFoods = foods.filter(f =>
     !librarySearch || f.name.toLowerCase().includes(librarySearch.toLowerCase())
   );
@@ -523,19 +525,19 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500">
               <span className="flex items-center gap-1">
                 <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
-                Goal: Fat Loss
+                Goal: {client?.goal || 'Not Set'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">Female, 28</span>
+              <span className="flex items-center gap-1">{client?.gender || 'Female'}, {client?.age || '28'}</span>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">68kg</span>
+              <span className="flex items-center gap-1">{client?.weight || '68'}kg</span>
             </div>
           </div>
           <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
             <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1 text-center">Status</div>
             <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
               <span className={`w-2 h-2 rounded-full ${totalItems === 0 ? 'bg-slate-400' : 'bg-emerald-500'}`}></span>
-              {totalItems === 0 ? 'Empty Plan' : 'Drafting'}
+              {totalItems === 0 ? 'Empty Plan' : (client?.nutritionPlanAssigned ? 'Active Plan' : 'Drafting')}
             </div>
           </div>
         </div>
