@@ -27,12 +27,8 @@ import FoodCreate from './views/FoodCreate';
 import SupplementCreate from './views/SupplementCreate';
 import TrainingLibrary from './views/TrainingLibrary';
 import ExerciseCreate from './views/ExerciseCreate';
-import TrainingDashboard from './views/TrainingDashboard';
-import WorkoutEditor from './views/WorkoutEditor';
-import ActivityEditor from './views/ActivityEditor';
+import Training from './views/Training';
 import ExerciseDetail from './views/ExerciseDetail';
-import AssignProgram from './views/AssignProgram';
-import TrainingNoPlan from './views/TrainingNoPlan';
 import Analytics from './views/Analytics';
 import Settings from './views/Settings';
 import OnboardingDashboard from './views/OnboardingDashboard';
@@ -114,58 +110,7 @@ export default function App() {
       case 'nutrition':
         return <Nutrition />;
       case 'training':
-        return (
-          <TrainingDashboard 
-            onNavigate={(view, clientId) => {
-              if (clientId) setSelectedClientId(clientId);
-              setCurrentView(view as View);
-            }} 
-          />
-        );
-      case 'assign-program':
-        return (
-          <TrainingNoPlan 
-            client={globalClients.find(c => c.id === selectedClientId)} 
-            onBack={() => setCurrentView('training')}
-            onStartPlan={(preset) => {
-              setCurrentView('workout-editor');
-            }}
-          />
-        );
-      case 'workout-editor-blank':
-        return (
-          <WorkoutEditor 
-            clientId={selectedClientId}
-            mode="blank"
-            onBack={() => setCurrentView('assign-program')} 
-            onEditActivity={(activityId, activityName) => {
-              if (activityName) setSelectedActivityName(activityName);
-              setCurrentView('activity-editor');
-            }} 
-          />
-        );
-      case 'workout-editor':
-        return (
-          <WorkoutEditor 
-            clientId={selectedClientId}
-            mode="default"
-            onBack={() => {
-              // If we came from assign-program, go back there, otherwise training
-              setCurrentView('training');
-            }} 
-            onEditActivity={(activityId, activityName) => {
-              if (activityName) setSelectedActivityName(activityName);
-              setCurrentView('activity-editor');
-            }} 
-          />
-        );
-      case 'activity-editor':
-        return (
-          <ActivityEditor 
-            activityName={selectedActivityName || undefined}
-            onBack={() => setCurrentView('workout-editor')} 
-          />
-        );
+        return <Training />;
       case 'library':
         return <LibraryDashboard onNavigate={(view) => setCurrentView(view as View)} />;
       case 'exercises':
