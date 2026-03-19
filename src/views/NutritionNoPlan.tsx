@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useClient } from '../context/ClientContext';
+import { useFoodContext } from '../context/FoodContext';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
 
@@ -142,6 +143,7 @@ const PRESETS = [
 
 export default function NutritionNoPlan({ client, onBack, onStartPlan }: NutritionNoPlanProps) {
   const { assignNutritionPlan, reloadClients } = useClient();
+  const { foods } = useFoodContext();
   const clientGoal = client?.goal || 'Not Set';
   
   // Find recommended preset
@@ -215,37 +217,67 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
 
     const totalWeight = mealWeights.reduce((a, b) => a + b, 0);
 
-    // 3. Create Meal Blocks
+    // 3. Prepare food sources for auto-population
+    // Simple classification logic
+    const proteinSources = foods.filter(f => (f.protein * 4) / f.calories > 0.4) || [];
+    const carbSources = foods.filter(f => (f.carbs * 4) / f.calories > 0.5) || [];
+    const fatSources = foods.filter(f => (f.fats * 9) / f.calories > 0.5) || [];
+
+    // Fallbacks if library is empty
+    const fallbackProt = { id: 'fb-p', name: 'Chicken Breast', protein: 31, carbs: 0, fats: 3.6, calories: 165, servingSize: '100g' };
+    const fallbackCarb = { id: 'fb-c', name: 'Brown Rice', protein: 2.6, carbs: 23, fats: 0.9, calories: 111, servingSize: '100g' };
+    const fallbackFat = { id: 'fb-f', name: 'Avocado', protein: 2, carbs: 8.5, fats: 14.7, calories: 160, servingSize: '1/2 unit' };
+
+    // 4. Create Meal Blocks
     const generatedMeals = mealNames.map((name, index) => {
       const weight = mealWeights[index];
       const ratio = weight / totalWeight;
+      const targetP = totalProteinG * ratio;
+      const targetC = totalCarbsG * ratio;
+      const targetF = totalFatsG * ratio;
+
+      // Select one from each category (random or first)
+      const pFood = proteinSources[index % (proteinSources.length || 1)] || fallbackProt;
+      const cFood = carbSources[index % (carbSources.length || 1)] || fallbackCarb;
+      const fFood = fatSources[index % (fatSources.length || 1)] || fallbackFat;
+
+      // Calculate quantities (multiplier)
+      const pQty = Math.max(0.1, Math.round((targetP / pFood.protein) * 10) / 10);
+      const cQty = Math.max(0.1, Math.round((targetC / cFood.carbs) * 10) / 10);
+      const fQty = Math.max(0.1, Math.round((targetF / fFood.fats) * 10) / 10);
+
+      const items = [
+        { ...pFood, quantity: pQty, foodId: pFood.id, id: `p-${Date.now()}-${index}` },
+        { ...cFood, quantity: cQty, foodId: cFood.id, id: `c-${Date.now()}-${index}` },
+        { ...fFood, quantity: fQty, foodId: fFood.id, id: `f-${Date.now()}-${index}` }
+      ];
 
       return {
         id: Date.now() + index,
         name,
         iconName: name.includes("Breakfast") ? "Sunrise" : name.includes("Lunch") ? "Sun" : name.includes("Dinner") ? "Moon" : "Cookie",
         time: name.includes("Breakfast") ? "08:00 AM" : name.includes("Snack") ? "11:00 AM" : "01:30 PM",
-        items: [],
+        items: items, // Example mode populated!
         categories: [
           { 
             id: 'p', 
             label: 'Protein Source', 
-            example: 'e.g., Chicken, Eggs, Tofu', 
-            amount: Math.round(totalProteinG * ratio), 
+            example: pFood.name, 
+            amount: Math.round(targetP), 
             color: 'bg-blue-500' 
           },
           { 
             id: 'c', 
             label: 'Carbohydrates', 
-            example: 'e.g., Rice, Oats, Fruit', 
-            amount: Math.round(totalCarbsG * ratio), 
+            example: cFood.name, 
+            amount: Math.round(targetC), 
             color: 'bg-emerald-500' 
           },
           { 
             id: 'f', 
             label: 'Healthy Fats', 
-            example: 'e.g., Avocado, Nuts, Oil', 
-            amount: Math.round(totalFatsG * ratio), 
+            example: fFood.name, 
+            amount: Math.round(targetF), 
             color: 'bg-amber-500' 
           },
         ]
@@ -254,7 +286,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
 
     return {
       meals: generatedMeals,
-      mode: 'general',
+      mode: 'example', // Set mode to example by default since it's populated
       targetCalories,
       macroSplitId
     };
