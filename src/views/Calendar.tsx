@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 
 interface CalendarProps {
-  onNavigate: (view: string) => void;
+  onNavigate: (view: string, data?: any) => void;
 }
 
 import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
@@ -121,7 +121,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
           {calendarDays.map((dayObj, idx) => {
             const dayEvents = dayObj ? getEventsForDate(dayObj.dateStr) : [];
             return (
-              <div key={idx} onClick={() => dayObj && onNavigate('create-task')} className={`border-b border-r border-slate-100 p-2 min-h-[100px] transition-colors group relative cursor-pointer ${dayObj === null ? 'bg-slate-50/30' : 'hover:bg-slate-50'}`}>
+              <div key={idx} onClick={() => dayObj && onNavigate('create-task', { date: dayObj.dateStr })} className={`border-b border-r border-slate-100 p-2 min-h-[100px] transition-colors group relative cursor-pointer ${dayObj === null ? 'bg-slate-50/30' : 'hover:bg-slate-50'}`}>
                 {dayObj !== null && (
                   <>
                     <div className="flex justify-between items-start">
@@ -132,7 +132,14 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                       {dayEvents.slice(0, 3).map((ev, eIdx) => {
                         const info = getEventPresentationInfo(ev.type);
                         return (
-                          <div key={eIdx} className={`text-[10px] font-bold px-1.5 py-0.5 rounded truncate bg-opacity-30 border ${info.color.split(' ')[0]} border-${info.color.split(' ')[0].split('-')[1]}-200 text-${info.color.split(' ')[0].split('-')[1]}-700`}>
+                          <div 
+                            key={eIdx} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigate('create-task', { taskId: ev.id });
+                            }}
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded truncate bg-opacity-30 border ${info.color.split(' ')[0]} border-${info.color.split(' ')[0].split('-')[1]}-200 text-${info.color.split(' ')[0].split('-')[1]}-700 cursor-pointer hover:brightness-95`}
+                          >
                             {ev.time} {ev.title}
                           </div>
                         );
@@ -225,7 +232,11 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                   return (
                     <div 
                       key={`${weekDay.dateStr}-${event.id || idx}`}
-                      className={`absolute p-2 border-l-4 rounded-r-lg shadow-sm z-10 overflow-hidden ${info.color}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigate('create-task', { taskId: event.id });
+                      }}
+                      className={`absolute p-2 border-l-4 rounded-r-lg shadow-sm z-10 overflow-hidden ${info.color} cursor-pointer hover:brightness-95 transition-all`}
                       style={{ 
                         top: `${top}px`, 
                         left: `${left + 0.5}%`, 
@@ -293,6 +304,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                 return (
                   <div 
                     key={event.id}
+                    onClick={() => onNavigate('create-task', { taskId: event.id })}
                     className={`absolute left-6 right-6 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
                     style={{ top: `${top}px`, height: `${height}px` }}
                   >
@@ -371,14 +383,12 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
               ))}
             </div>
             
-            <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 shadow-sm p-1">
-              <button onClick={handlePrev} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 transition-colors">
+            {/* Minimalist Date Controls */}
+            <div className="flex items-center gap-1">
+              <button onClick={handlePrev} className="p-2 hover:bg-white rounded-lg text-slate-500 transition-colors border border-transparent hover:border-slate-200">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
-                Today
-              </button>
-              <button onClick={handleNext} className="p-2 hover:bg-slate-50 rounded-lg text-slate-500 transition-colors">
+              <button onClick={handleNext} className="p-2 hover:bg-white rounded-lg text-slate-500 transition-colors border border-transparent hover:border-slate-200">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>

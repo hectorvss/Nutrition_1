@@ -19,10 +19,11 @@ export interface CalendarEvent {
 
 interface CalendarContextType {
   events: CalendarEvent[];
-  addEvent: (event: Omit<CalendarEvent, 'id'>) => void;
-  deleteEvent: (id: string) => void;
-  updateEvent: (id: string, updates: Partial<CalendarEvent>) => void;
+  addEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
+  deleteEvent: (id: string) => Promise<void>;
+  updateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<CalendarEvent>;
   getEventsForDate: (dateStr: string) => CalendarEvent[];
+  refreshEvents: () => Promise<void>;
 }
 
 // Initial dummy data aligned with the design, but now dynamic
@@ -78,11 +79,25 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const mapBackendToFrontend = (t: any): CalendarEvent => ({
+    id: t.id,
+    time: t.time || t.start_time || '09:00',
+    date: t.date,
+    duration: t.duration || '1h',
+    title: t.title,
+    type: t.type,
+    desc: t.description || t.desc || '',
+    client: t.client || t.users?.name || 'General',
+    avatar: t.avatar || null,
+    initials: t.initials || (t.client ? t.client.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'GT'),
+    clientId: t.client_id || t.clientId
+  });
+
   const fetchTasks = async () => {
     try {
       setIsLoading(true);
       const data = await fetchWithAuth('/manager/tasks');
-      setEvents(data || []);
+      setEvents((data || []).map(mapBackendToFrontend));
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
     } finally {
@@ -98,11 +113,18 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     try {
       const newEvent = await fetchWithAuth('/manager/tasks', {
         method: 'POST',
-        body: JSON.stringify(event)
+        body: JSON.stringify({
+          ...event,
+          client_id: event.clientId, // backend expects snake_case for DB
+          description: event.desc    // backend expects description for DB
+        })
       });
-      setEvents(prev => [...prev, newEvent]);
+      const mapped = mapBackendToFrontend(newEvent);
+      setEvents(prev => [...prev, mapped]);
+      return mapped;
     } catch (error) {
       console.error('Failed to add event:', error);
+      throw error;
     }
   };
 
@@ -112,6 +134,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       setEvents(prev => prev.filter(e => e.id !== id));
     } catch (error) {
       console.error('Failed to delete event:', error);
+      throw error;
     }
   };
 
@@ -119,11 +142,18 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     try {
       const updatedEvent = await fetchWithAuth(`/manager/tasks/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify(updates)
+        body: JSON.stringify({
+          ...updates,
+          client_id: updates.clientId,
+          description: updates.desc
+        })
       });
-      setEvents(prev => prev.map(e => e.id === id ? updatedEvent : e));
+      const mapped = mapBackendToFrontend(updatedEvent);
+      setEvents(prev => prev.map(e => e.id === id ? mapped : e));
+      return mapped;
     } catch (error) {
       console.error('Failed to update event:', error);
+      throw error;
     }
   };
 
@@ -132,7 +162,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <CalendarContext.Provider value={{ events, addEvent, deleteEvent, updateEvent, getEventsForDate }}>
+    <CalendarContext.Provider value={{ events, addEvent, deleteEvent, updateEvent, getEventsForDate, refreshEvents: fetchTasks }}>
       {isLoading ? (
         <div className="flex items-center justify-center h-full min-h-[400px]">
           <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>

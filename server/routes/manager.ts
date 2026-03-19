@@ -1891,7 +1891,7 @@ router.get('/tasks', async (req: any, res) => {
 });
 
 // Helper function to sync a task to Google Calendar
-async function syncToGoogleCalendar(managerId: string, task: any) {
+async function syncToGoogleCalendar(managerId: string, task: any, operation: 'INSERT' | 'UPDATE' | 'DELETE' = 'INSERT') {
   try {
     const { data: integrations } = await supabaseAdmin
       .from('integrations')
@@ -1905,7 +1905,6 @@ async function syncToGoogleCalendar(managerId: string, task: any) {
 
     let auth: any = integrations.google_calendar_api_key;
 
-    // Use Service Account if provided (much more reliable for writing)
     if (integrations.google_service_account) {
       try {
         const credentials = typeof integrations.google_service_account === 'string' 
@@ -1916,34 +1915,63 @@ async function syncToGoogleCalendar(managerId: string, task: any) {
         (auth as any).scopes = ['https://www.googleapis.com/auth/calendar'];
       } catch (err) {
         console.error('Failed to parse Google Service Account JSON');
-        // If they provided a service account field, don't use the API key as fallback for writing
-        // because it will 100% fail and cause confusion.
         return; 
       }
     } else if (!auth) {
-      // No credentials at all
       return;
     }
 
     const calendar = google.calendar({ version: 'v3', auth });
+    const calendarId = integrations.google_calendar_id || 'primary';
     
-    await calendar.events.insert({
-      calendarId: integrations.google_calendar_id || 'primary',
-      requestBody: {
-        summary: task.title,
-        description: task.description,
-        start: {
-          dateTime: `${task.date}T${task.time}:00Z`, 
-        },
-        end: {
-          dateTime: `${task.date}T${task.time}:00Z`, // Simplified: same as start or +1h
-        },
+    // Determine the date/time string
+    // Standardize: if task has date and start_time/time
+    const dateStr = task.date || new Date().toISOString().split('T')[0];
+    const timeStr = task.time || task.start_time || '09:00';
+    const endStr = task.end_time || (parseInt(timeStr.split(':')[0]) + 1).toString().padStart(2, '0') + ':' + timeStr.split(':')[1];
+
+    const eventBody = {
+      summary: task.title,
+      description: task.description || task.desc || '',
+      start: {
+        dateTime: `${dateStr}T${timeStr}:00Z`, 
       },
-    });
-    console.log(`Task ${task.id} synced to Google Calendar`);
-  } catch (error) {
-    console.error('Google Calendar Sync Error:', error);
-    // Non-fatal for the internal task creation
+      end: {
+        dateTime: `${dateStr}T${endStr}:00Z`,
+      },
+    };
+
+    if (operation === 'DELETE') {
+      if (task.google_event_id) {
+        await calendar.events.delete({ calendarId, eventId: task.google_event_id });
+        console.log(`Task ${task.id} deleted from Google Calendar`);
+      }
+    } else if (operation === 'UPDATE' && task.google_event_id) {
+      await calendar.events.update({
+        calendarId,
+        eventId: task.google_event_id,
+        requestBody: eventBody
+      });
+      console.log(`Task ${task.id} updated in Google Calendar`);
+    } else {
+      // INSERT (or fallback if UPDATE was requested but no ID exists)
+      const response = await calendar.events.insert({
+        calendarId,
+        requestBody: eventBody,
+      });
+      
+      const newEventId = response.data.id;
+      if (newEventId) {
+        // Store the ID in our DB
+        await supabaseAdmin
+          .from('tasks')
+          .update({ google_event_id: newEventId })
+          .eq('id', task.id);
+        console.log(`Task ${task.id} synced to Google Calendar (New Event: ${newEventId})`);
+      }
+    }
+  } catch (error: any) {
+    console.error('Google Calendar Sync Error:', error.message || error);
   }
 }
 
@@ -2087,6 +2115,10 @@ router.patch('/tasks/:id', async (req: any, res) => {
       .single();
 
     if (error) throw error;
+
+    // Sync to Google Calendar
+    await syncToGoogleCalendar(req.user.id, data, 'UPDATE');
+
     res.json(data);
   } catch (error: any) {
     console.error('Error updating task:', error);
@@ -2097,6 +2129,20 @@ router.patch('/tasks/:id', async (req: any, res) => {
 // Delete a task
 router.delete('/tasks/:id', async (req: any, res) => {
   try {
+    // 1. Get task first to get google_event_id
+    const { data: task } = await supabaseAdmin
+      .from('tasks')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('manager_id', req.user.id)
+      .maybeSingle();
+
+    if (task) {
+      // 2. Sync (Delete) to Google Calendar
+      await syncToGoogleCalendar(req.user.id, task, 'DELETE');
+    }
+
+    // 3. Delete from DB
     const { error } = await supabaseAdmin
       .from('tasks')
       .delete()

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Check, 
   X, 
@@ -9,118 +9,138 @@ import {
   Phone, 
   ShieldCheck, 
   Plus,
-  Calendar
+  Calendar,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
-import { useTask, ManualTaskInput } from '../context/TaskContext';
-import { useCalendar, EventType } from '../context/CalendarContext';
+import { useTask } from '../context/TaskContext';
+import { useCalendar } from '../context/CalendarContext';
+import { supabase } from '../supabase';
 
 interface CreateTaskProps {
-  onNavigate: (view: string) => void;
+  onNavigate: (view: string, data?: any) => void;
+  editId?: string; // UUIDs are strings
+  initialDate?: string;
 }
 
-export default function CreateTask({ onNavigate }: CreateTaskProps) {
+export default function CreateTask({ onNavigate, editId, initialDate }: CreateTaskProps) {
   const { clients } = useClient();
-  const { addManualTask } = useTask();
-  const { addEvent } = useCalendar();
+  const { refreshTasks } = useTask();
+  const { addEvent, updateEvent, deleteEvent, refreshEvents, events } = useCalendar();
 
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<'Training' | 'Nutrition' | 'Check-in' | 'Call' | 'Admin'>('Check-in');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [date, setDate] = useState(initialDate || new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
   const [repeat, setRepeat] = useState('Does not repeat');
   const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
-  
-  // Sync Options
-  const [syncToTasks, setSyncToTasks] = useState(true);
-  const [syncToCalendar, setSyncToCalendar] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Load task for editing
+  useEffect(() => {
+    if (editId) {
+      const task = events.find(e => e.id === editId);
+      if (task) {
+        setTitle(task.title || '');
+        setDescription(task.desc || '');
+        // Map backend types back to frontend categories
+        const typeMap: Record<string, any> = {
+          'TRAINING': 'Training',
+          'NUTRITION': 'Nutrition',
+          'CHECK-IN': 'Check-in',
+          'CALL': 'Call',
+          'VIDEO CALL': 'Call',
+          'ADMIN': 'Admin',
+          'INTERNAL': 'Admin'
+        };
+        const mappedType = typeMap[task.type.toUpperCase()] || 'Check-in';
+        setCategory(mappedType);
+        setDate(task.date || '');
+        setStartTime(task.time || '09:00');
+        // If we had end_time or duration, we'd set it here
+        if (task.duration) {
+          // simple duration to end time estimate if needed
+        }
+        if (task.clientId) setSelectedClientId(task.clientId);
+      }
+    }
+  }, [editId, events]);
+
+  const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
 
   // Derived
   const filteredClients = clients.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const toggleClientSelection = (clientId: string) => {
-    setSelectedClients(prev => 
-      prev.includes(clientId) ? prev.filter(id => id !== clientId) : [...prev, clientId]
-    );
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return alert("Task title is required");
+    setLoading(true);
 
-    // Default to "General" if no clients selected, or map through selected clients if multiple
-    const targets = selectedClients.length > 0 
-      ? selectedClients.map(id => clients.find(c => c.id === id)!) 
-      : [{ id: 'general', name: 'General', plan: 'None', avatar: '' }];
+    const client = clients.find(c => c.id === selectedClientId);
 
-    const savePromises: Promise<void>[] = [];
+    // Map frontend categories to backend expected EventTypes/Strings
+    const typeMap: Record<string, any> = {
+      'Training': 'Training',
+      'Nutrition': 'Nutrition',
+      'Check-in': 'Check-in',
+      'Call': 'Video Call',
+      'Admin': 'Internal'
+    };
 
-    // Add to Calendar Context
-    if (syncToCalendar) {
-      // Map category to Calendar EventType
-      let eventType: EventType = 'Internal';
-      if (category === 'Training') eventType = 'Training';
-      if (category === 'Nutrition') eventType = 'Nutrition';
-      if (category === 'Call') eventType = 'Video Call';
-      if (category === 'Check-in') eventType = 'In-Person';
-
-      // Duration estimation calculation (rough)
-      const parseH = (t: string) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
-      const diffMins = parseH(endTime) - parseH(startTime);
-      const h = Math.floor(diffMins / 60);
-      const m = diffMins % 60;
-      let durationStr = `${h}h`;
-      if (h === 0) durationStr = `${m}m`;
-      else if (m > 0) durationStr = `${h}h ${m}m`;
-
-      targets.forEach(c => {
-        const p = addEvent({
-          time: startTime,
-          date: date,
-          duration: diffMins <= 0 ? '1h' : durationStr,
-          title: title,
-          type: eventType,
-          desc: description,
-          client: c.name !== 'General' ? c.name : undefined,
-          initials: c.name?.substring(0,2).toUpperCase(),
-          avatar: c.avatar
-        });
-        if (p instanceof Promise) savePromises.push(p);
-      });
-    }
-
-    // Add to Task Context
-    if (syncToTasks) {
-      targets.forEach(c => {
-        const manualTask: ManualTaskInput = {
-          title: title,
-          desc: description,
-          client: c.name !== 'General' ? c.name : 'General Task',
-          program: c.plan || 'None',
-          status: 'pending', 
-          timeLabel: repeat,
-          priority: priority.toLowerCase() as any,
-          type: category.toUpperCase(),
-          label: 'USER SCHEDULED',
-          avatar: c.avatar
-        };
-        const p = addManualTask(manualTask);
-        if (p instanceof Promise) savePromises.push(p);
-      });
-    }
+    const taskData: any = {
+      title,
+      desc: description,
+      description: description,
+      type: typeMap[category] || category,
+      date,
+      time: startTime,
+      duration: '1h', // Default or calculated
+      clientId: selectedClientId,
+      client: client?.name || 'General Task',
+      avatar: client?.avatar || null,
+      initials: client ? client.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'GT',
+      priority: priority.toLowerCase()
+    };
 
     try {
-      await Promise.all(savePromises);
-      // Return to dashboard/tasks
+      if (editId) {
+        await updateEvent(editId, taskData);
+      } else {
+        await addEvent(taskData);
+      }
+
+      // Refresh contexts if needed (though addEvent/updateEvent already update state)
+      await refreshTasks(); 
       onNavigate('tasks');
     } catch (error) {
-       console.error("Failed to save tasks", error);
-       alert("An error occurred while saving tasks.");
+      console.error("Failed to save task", error);
+      alert("An error occurred while saving the task.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editId) return;
+    if (!window.confirm("Are you sure you want to delete this task? This will also remove it from Google Calendar if synced.")) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteEvent(editId);
+      await refreshTasks();
+      onNavigate('tasks');
+    } catch (error) {
+      console.error("Failed to delete task", error);
+      alert("An error occurred while deleting the task.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -128,10 +148,21 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
     <div className="w-full max-w-5xl mx-auto flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm my-6 sm:my-8 mb-16 relative">
       <header className="flex items-center justify-between p-6 border-b border-slate-200 bg-white sticky top-0 z-10 rounded-t-2xl">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Create New Task</h1>
-          <p className="text-sm text-slate-500">Add a new task or appointment to the schedule</p>
+          <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Task' : 'Create New Task'}</h1>
+          <p className="text-sm text-slate-500">{editId ? 'Modify task details or delete it' : 'Add a new task or appointment to the schedule'}</p>
         </div>
         <div className="flex items-center gap-3">
+          {editId && (
+            <button 
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting || loading}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-200 flex items-center gap-2"
+            >
+              <Trash2 className="w-[18px] h-[18px]" />
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          )}
           <button 
             type="button"
             onClick={() => onNavigate('tasks')}
@@ -142,10 +173,11 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
           <button 
             type="button"
             onClick={handleSave}
-            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+            disabled={loading || isDeleting}
+            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
           >
-            <Check className="w-[18px] h-[18px]" />
-            Save Task
+            {loading ? <div className="w-[18px] h-[18px] border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-[18px] h-[18px]" />}
+            {editId ? 'Update Task' : 'Save Task'}
           </button>
         </div>
       </header>
@@ -224,7 +256,7 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
             <div className="md:col-span-4">
               <h3 className="text-sm font-bold text-slate-900 mb-1">Assignment</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">Assign this task to specific clients. You can select multiple.</p>
+              <p className="text-xs text-slate-500 leading-relaxed">Assign this task to a specific client, or leave blank for a general task.</p>
             </div>
             <div className="md:col-span-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
               <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Assign To</label>
@@ -238,28 +270,36 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
                   type="text" 
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1">
+                <div 
+                  onClick={() => setSelectedClientId(null)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold cursor-pointer transition-all ${
+                    selectedClientId === null 
+                      ? 'bg-slate-800 text-white border-slate-800' 
+                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  General Task
+                </div>
                 {filteredClients.map((client) => {
-                  const isSelected = selectedClients.includes(client.id);
+                  const isSelected = selectedClientId === client.id;
                   return (
                     <div 
                       key={client.id}
-                      onClick={() => toggleClientSelection(client.id)}
-                      className={`flex items-center gap-2 px-2 py-1 rounded-full border text-xs font-bold pr-1 cursor-pointer transition-all ${
+                      onClick={() => setSelectedClientId(client.id)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold cursor-pointer transition-all ${
                         isSelected 
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                          ? 'bg-emerald-500 text-white border-emerald-500' 
+                          : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                       }`}
                     >
                       {client.avatar ? (
-                        <div className="h-5 w-5 rounded-full bg-cover bg-center" style={{ backgroundImage: `url("${client.avatar}")` }} />
+                        <div className="h-4 w-4 rounded-full bg-cover bg-center border border-white/20" style={{ backgroundImage: `url("${client.avatar}")` }} />
                       ) : (
-                        <div className="h-5 w-5 rounded-full bg-slate-300 flex items-center justify-center text-[10px] text-slate-600">{client.name.substring(0,2).toUpperCase()}</div>
+                        <div className="h-4 w-4 rounded-full bg-slate-300 flex items-center justify-center text-[8px] text-slate-600">{client.name.substring(0,2).toUpperCase()}</div>
                       )}
                       {client.name}
-                      <button type="button" className={`rounded-full p-0.5 transition-colors ${isSelected ? 'hover:bg-emerald-200' : 'hover:bg-slate-200'}`}>
-                        {isSelected ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                      </button>
                     </div>
                   );
                 })}
@@ -329,7 +369,7 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
           <hr className="border-slate-200" />
 
           {/* Priority */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 pb-8">
             <div className="md:col-span-4">
               <h3 className="text-sm font-bold text-slate-900 mb-1">Priority</h3>
               <p className="text-xs text-slate-500 leading-relaxed">Indicate the urgency level of this task.</p>
@@ -356,52 +396,12 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
             </div>
           </section>
 
-          <hr className="border-slate-200" />
-
-          {/* Sync Options */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 pb-4">
-            <div className="md:col-span-4">
-              <h3 className="text-sm font-bold text-slate-900 mb-1">Sync Options</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">Where should this task appear?</p>
-            </div>
-            <div className="md:col-span-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600">
-                    <ClipboardCheck className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">Add to Tasks List</h4>
-                    <p className="text-xs text-slate-500">Show in my task's list</p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={syncToTasks} onChange={e => setSyncToTasks(e.target.checked)} />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
-              
-              <div className="h-[1px] w-full bg-slate-100"></div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">Add to Calendar</h4>
-                    <p className="text-xs text-slate-500">Block time on schedule</p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={syncToCalendar} onChange={e => setSyncToCalendar(e.target.checked)} />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                </label>
-              </div>
-
-            </div>
-          </section>
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-blue-700 leading-relaxed">
+              <strong>Info:</strong> All scheduled tasks are automatically synchronized with both your internal task list and calendar. If you have the Google Calendar integration enabled, this task will also be synced there automatically.
+            </p>
+          </div>
 
         </form>
       </div>

@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     time TIME NOT NULL,
     duration TEXT, -- '30m', '1h', etc.
     status TEXT DEFAULT 'pending', -- 'pending', 'completed', 'cancelled'
+    google_event_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

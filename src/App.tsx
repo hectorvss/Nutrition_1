@@ -42,9 +42,8 @@ type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'ta
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
-  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [selectedTaskDate, setSelectedTaskDate] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { clients: globalClients } = useClient();
   
@@ -92,11 +91,26 @@ export default function App() {
       case 'dashboard':
         return <Dashboard onNavigate={(view) => setCurrentView(view as View)} />;
       case 'tasks':
-        return <Tasks onNavigate={(view) => setCurrentView(view as View)} />;
+        return <Tasks onNavigate={(view, data) => {
+          if (data?.taskId) setSelectedTaskId(data.taskId);
+          setCurrentView(view as View);
+        }} />;
       case 'calendar':
-        return <CalendarView onNavigate={(view) => setCurrentView(view as View)} />;
+        return <CalendarView onNavigate={(view, data) => {
+          if (data?.taskId) setSelectedTaskId(data.taskId);
+          if (data?.date) setSelectedTaskDate(data.date);
+          setCurrentView(view as View);
+        }} />;
       case 'create-task':
-        return <CreateTask onNavigate={(view) => setCurrentView(view as View)} />;
+        return <CreateTask 
+          editId={selectedTaskId || undefined} 
+          initialDate={selectedTaskDate || undefined}
+          onNavigate={(view) => {
+            setSelectedTaskId(null);
+            setSelectedTaskDate(null);
+            setCurrentView(view as View);
+          }} 
+        />;
       case 'task-intelligence':
         return <TaskIntelligence onNavigate={(view) => setCurrentView(view as View)} />;
       case 'clients':
