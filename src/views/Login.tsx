@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../api';
 import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, Play } from 'lucide-react';
 
-export default function Login() {
+export default function Login({ onBackToLanding }: { onBackToLanding?: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,6 +55,20 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white font-body text-black flex overflow-hidden relative">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-50 z-50" />
+      
+      {onBackToLanding && (
+        <motion.button 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={onBackToLanding}
+          className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white shadow-2xl flex items-center justify-center cursor-pointer border border-slate-100 z-[100] group"
+          title="Back to home"
+        >
+          <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-black transition-colors" />
+        </motion.button>
+      )}
       
       {/* Left side: Form */}
       <div className="w-full lg:w-[45%] flex flex-col justify-center px-8 sm:px-12 md:px-20 relative z-10 bg-white">

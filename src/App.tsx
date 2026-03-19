@@ -72,7 +72,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <Login />;
+    return <Login onBackToLanding={() => setCurrentView('landing')} />;
   }
 
   // Route to the dedicated client portal if the user is a client
