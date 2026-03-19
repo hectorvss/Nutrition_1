@@ -23,17 +23,28 @@ export default function Pricing({ onGetStarted }: PricingProps) {
       const userEmail = "user@example.com";
 
       // Map plan to real Stripe Price IDs provided by user
-      const priceMap: Record<string, string> = {
-        "Professional": "price_1TCN9vCR4WvolxlpwC33dk8J",
-        "Scale": "price_1TCNAHCR4WvolxlpwpLRfmwX",
-        "Unlimited": "price_1TCNAcCR4WvolxlptLzNYdsz",
+      const priceMap: Record<string, { monthly: string; annual: string }> = {
+        "Professional": {
+          monthly: "price_1TCN9vCR4WvolxlpwC33dk8J",
+          annual: "price_1TCf4PCR4Wvolxlp3MoDzi0J"
+        },
+        "Scale": {
+          monthly: "price_1TCNAHCR4WvolxlpwpLRfmwX",
+          annual: "price_1TCf52CR4WvolxlpcMMLOVpv"
+        },
+        "Unlimited": {
+          monthly: "price_1TCNAcCR4WvolxlptLzNYdsz",
+          annual: "price_1TCf5cCR4WvolxlpWGhpOgnI"
+        },
       };
+
+      const selectedPriceId = isAnnual ? priceMap[planTitle].annual : priceMap[planTitle].monthly;
 
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: priceMap[planTitle],
+          priceId: selectedPriceId,
           userId,
           userEmail
         }),
