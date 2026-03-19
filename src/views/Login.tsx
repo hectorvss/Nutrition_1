@@ -63,7 +63,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onBackToLanding}
-          className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white shadow-2xl flex items-center justify-center cursor-pointer border border-slate-100 z-[100] group"
+          className="absolute top-8 left-8 w-12 h-12 rounded-full bg-white shadow-2xl flex items-center justify-center cursor-pointer border border-slate-100 z-[100] group"
           title="Back to home"
         >
           <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-black transition-colors" />
