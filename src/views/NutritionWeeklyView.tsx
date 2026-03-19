@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { fetchWithAuth } from '../api';
 
 interface DayPlan {
   id: string;
@@ -118,10 +119,33 @@ interface NutritionWeeklyViewProps {
 
 export default function NutritionWeeklyView({ client, onBack, onSelectDay, onReassign }: NutritionWeeklyViewProps) {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
-  
-  // 1. Extract dynamic plan data if exists
-  const hasPlan = client?.nutritionPlanAssigned && client.nutritionPlan?.data_json?.days;
-  const planDays = client?.nutritionPlan?.data_json?.days || {};
+  const [planData, setPlanData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      if (!client?.id) return;
+      setIsLoading(true);
+      try {
+        const data = await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`);
+        if (data && data.data_json) {
+          setPlanData(data.data_json);
+        } else {
+          setPlanData(null); // No plan found or data_json is empty
+        }
+      } catch (err) {
+        console.error('Error fetching weekly plan:', err);
+        setPlanData(null); // Reset planData on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPlan();
+  }, [client?.id]);
+
+  // 1. Extract dynamic plan data
+  const hasPlan = !!planData?.days;
+  const planDays = planData?.days || {};
 
   const daysConfig = [
     { id: 'monday', name: 'Lunes', nameEn: 'Monday' },
@@ -241,7 +265,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       <div className="p-4 md:p-6 pt-2 pb-20">
         <div className="flex flex-col gap-4">
           
-          {/* View Mode Toggle Area (Replaces Create New Plan) */}
+          {/* View Mode Toggle Area */}
           <div className="bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm text-emerald-500">
@@ -254,6 +278,12 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
             </div>
             
             <div className="flex items-center gap-4">
+              {isLoading && (
+                <div className="flex items-center gap-2 mr-4">
+                  <div className="w-4 h-4 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                  <span className="text-xs font-medium text-slate-400">Loading plan...</span>
+                </div>
+              )}
               {onReassign && (
                 <button 
                   onClick={onReassign}
@@ -280,7 +310,13 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               </div>
             </div>
           </div>
-          {processedDays.map((day, dayIdx) => (
+          
+          {isLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+              <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+              <p className="text-sm font-medium">Cargando distribución semanal...</p>
+            </div>
+          ) : processedDays.map((day, dayIdx) => (
             <button
               key={day.id}
               onClick={() => onSelectDay(day.id)}

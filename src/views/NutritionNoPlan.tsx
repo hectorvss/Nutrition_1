@@ -212,9 +212,9 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
 
     // Quantities (multipliers)
     return [
-      Math.max(0.1, Math.round((det1 / det) * 10) / 10),
-      Math.max(0.1, Math.round((det2 / det) * 10) / 10),
-      Math.max(0.1, Math.round((det3 / det) * 10) / 10)
+      Math.max(0.1, Math.round((det1 / det) * 100) / 100),
+      Math.max(0.1, Math.round((det2 / det) * 100) / 100),
+      Math.max(0.1, Math.round((det3 / det) * 100) / 100)
     ];
   };
 
@@ -311,15 +311,30 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   const handleConfirm = async () => {
     const generatedData = generatePlanData();
     
-    // We update the local state but we also prepare a "fake" appliedPlan result
-    // matching what the backend returns but with our dynamic data
-    const initialPlanData = {
-      name: `Plan Dinámico - ${client.name}`,
-      data_json: generatedData
-    };
-
-    assignNutritionPlan(client.id);
-    onStartPlan(null, initialPlanData);
+    // Persist immediately to backend
+    try {
+      await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `Plan Dinámico - ${client.name}`,
+          data_json: generatedData
+        })
+      });
+      
+      // Update global context state
+      await reloadClients();
+      
+      const initialPlanData = {
+        name: `Plan Dinámico - ${client.name}`,
+        data_json: generatedData
+      };
+      
+      // Navigate to detail view
+      onStartPlan(null, initialPlanData);
+    } catch (err) {
+      console.error('Error saving generated plan:', err);
+      alert('Error al guardar el plan generado');
+    }
   };
 
   const handleCreateNew = () => {
