@@ -210,13 +210,13 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     const q2 = det2 / det;
     const q3 = det3 / det;
 
-    // VALIDATION RANGES (User Constraints)
-    // Protein source (e.g. Chicken): 100-200g -> multiplier 1.0 to 2.0
-    // Carb source (e.g. Rice): 60-160g -> multiplier 0.6 to 1.6
-    // Fat source (e.g. Nuts): 15-60g -> multiplier 0.15 to 0.6
+    // CATEGORY-SPECIFIC VALIDATION RANGES
+    // q1: Protein source (e.g. Chicken): 80-250g
+    // q2: Carb source (e.g. Rice): 50-220g
+    // q3: Fat source (e.g. Nuts): 10-50g
     if (q1 < 0.8 || q1 > 2.5) return null; 
-    if (q2 < 0.4 || q2 > 2.2) return null; 
-    if (q3 < 0.1 || q3 > 0.8) return null; 
+    if (q2 < 0.5 || q2 > 2.2) return null; 
+    if (q3 < 0.1 || q3 > 0.5) return null; 
 
     return [
       Math.round(q1 * 100) / 100,
@@ -302,8 +302,8 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
           const cFood = fallbackCarb;
           const fFood = fallbackFat;
           
-          // Standard proportions: 150g P-Source, 100g C-Source, 25g F-Source
-          const baseP = 1.5, baseC = 1.0, baseF = 0.25;
+          // Standard proportions: 150g P-Source, 100g C-Source, 15g F-Source (Nuts/Oil)
+          const baseP = 1.5, baseC = 1.0, baseF = 0.15;
           const standardCals = (pFood.calories * baseP) + (cFood.calories * baseC) + (fFood.calories * baseF);
           const scalar = (targetCalories * ratio) / standardCals;
           
@@ -344,12 +344,22 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       let diff = targetCalories - currentDayCals;
       if (Math.abs(diff) > 2) {
         // Try to adjust a portion without making it "ridiculous"
+        // Prioritize Carbs, then Protein, AVOID Fat adjustment for stability
         generatedMeals.some(m => {
           return m.items.some(item => {
-            if (item.category === 'Carbs' || item.category === 'Protein') {
+            const isCarb = item.category === 'Carbs';
+            const isProt = item.category === 'Protein';
+            const isFat = item.category === 'Fats';
+            
+            let min = 0.5, max = 2.5; 
+            if (isFat) { min = 0.1; max = 0.5; }
+            else if (isProt) { min = 0.8; max = 2.5; }
+            else if (isCarb) { min = 0.5; max = 2.2; }
+
+            if (isCarb || isProt || (isFat && Math.abs(diff) < 20)) {
               const adjustment = diff / item.calories;
               const newQty = item.quantity + adjustment;
-              if (newQty > 0.4 && newQty < 3.0) {
+              if (newQty > min && newQty < max) {
                 item.quantity = Math.round(newQty * 100) / 100;
                 diff = 0; // successfully balanced
                 return true;
