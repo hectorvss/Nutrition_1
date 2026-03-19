@@ -123,7 +123,7 @@ const PRESETS = [
     tags: [
       { icon: 'calendar_today', text: '3x / week' },
       { icon: 'self_improvement', text: 'Mobility' },
-      { icon: 'fitbit_yoga', text: 'Yoga' }
+      { icon: 'spa', text: 'Yoga' }
     ],
     scheduleLabel: '3 days active',
     schedule: ['M', 'W', 'F'],
