@@ -114,9 +114,14 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       const newEvent = await fetchWithAuth('/manager/tasks', {
         method: 'POST',
         body: JSON.stringify({
-          ...event,
-          client_id: event.clientId, // backend expects snake_case for DB
-          description: event.desc    // backend expects description for DB
+          title: event.title,
+          description: event.desc,
+          type: event.type,
+          date: event.date,
+          time: event.time,
+          duration: event.duration || '1h',
+          client_id: event.clientId,
+          status: 'pending'
         })
       });
       const mapped = mapBackendToFrontend(newEvent);
@@ -143,9 +148,14 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       const updatedEvent = await fetchWithAuth(`/manager/tasks/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          ...updates,
+          title: updates.title,
+          description: updates.desc,
+          type: updates.type,
+          date: updates.date,
+          time: updates.time,
+          duration: updates.duration,
           client_id: updates.clientId,
-          description: updates.desc
+          status: 'pending'
         })
       });
       const mapped = mapBackendToFrontend(updatedEvent);
