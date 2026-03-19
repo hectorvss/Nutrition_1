@@ -38,20 +38,19 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [planData, setPlanData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
+  const [dragOverDayId, setDragOverDayId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlanData = async () => {
       if (!client?.id) return;
       try {
         setIsLoading(true);
-        // Using training-program instead of training-plan
         const data = await fetchWithAuth(`/manager/clients/${client.id}/training-program`);
-        console.log('Training program fetched:', data);
-        
         if (data && data.data_json) {
           setPlanData(data);
-          // If the plan has a schedule, we use it to determine which days are active
-          // If not, we fall back to some sensible defaults or what's in the DB
         }
       } catch (error) {
         console.error('Error fetching training program:', error);
@@ -61,8 +60,137 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
     };
     fetchPlanData();
   }, [client?.id]);
+
+  const handleUpdateDay = (dayId: string, workoutId: string | null) => {
+    if (!planData || !planData.data_json) return;
+    
+    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
+    if (workoutId) {
+      newWeeklySchedule[dayId] = workoutId;
+    } else {
+      delete newWeeklySchedule[dayId];
+    }
+
+    const updatedDataJson = { 
+      ...planData.data_json, 
+      weeklySchedule: newWeeklySchedule 
+    };
+
+    setPlanData({
+      ...planData,
+      data_json: updatedDataJson
+    });
+    setHasChanges(true);
+  };
+
+  const [showWorkoutPicker, setShowWorkoutPicker] = useState<string | null>(null);
+
+  const handleMoveWorkout = (dayId: string, direction: 'up' | 'down') => {
+    if (!planData || !planData.data_json) return;
+    
+    const dayIndex = DAYS_CONFIG.findIndex(d => d.id === dayId);
+    const targetIndex = direction === 'up' ? dayIndex - 1 : dayIndex + 1;
+    
+    if (targetIndex < 0 || targetIndex >= DAYS_CONFIG.length) return;
+    
+    const targetDayId = DAYS_CONFIG[targetIndex].id;
+    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
+    
+    const sourceWorkoutId = newWeeklySchedule[dayId];
+    const targetWorkoutId = newWeeklySchedule[targetDayId];
+    
+    if (sourceWorkoutId) {
+      newWeeklySchedule[targetDayId] = sourceWorkoutId;
+    } else {
+      delete newWeeklySchedule[targetDayId];
+    }
+    
+    if (targetWorkoutId) {
+      newWeeklySchedule[dayId] = targetWorkoutId;
+    } else {
+      delete newWeeklySchedule[dayId];
+    }
+
+    const updatedDataJson = { 
+      ...planData.data_json, 
+      weeklySchedule: newWeeklySchedule 
+    };
+
+    setPlanData({
+      ...planData,
+      data_json: updatedDataJson
+    });
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    if (!planData || !planData.data_json || !hasChanges) return;
+    
+    setIsSaving(true);
+    try {
+      await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: planData.name,
+          data_json: planData.data_json
+        })
+      });
+      setHasChanges(false);
+      alert('Plan guardado correctamente');
+    } catch (e) {
+      console.error('Error saving training program:', e);
+      alert('Error al guardar el plan');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, dayId: string) => {
+    setDraggedDayId(dayId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, dayId: string) => {
+    e.preventDefault();
+    if (draggedDayId === dayId) return;
+    setDragOverDayId(dayId);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetDayId: string) => {
+    e.preventDefault();
+    setDragOverDayId(null);
+    if (!draggedDayId || draggedDayId === targetDayId) return;
+
+    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
+    const sourceWorkoutId = newWeeklySchedule[draggedDayId];
+    const targetWorkoutId = newWeeklySchedule[targetDayId];
+
+    if (sourceWorkoutId) {
+      newWeeklySchedule[targetDayId] = sourceWorkoutId;
+    } else {
+      delete newWeeklySchedule[targetDayId];
+    }
+
+    if (targetWorkoutId) {
+      newWeeklySchedule[draggedDayId] = targetWorkoutId;
+    } else {
+      delete newWeeklySchedule[draggedDayId];
+    }
+
+    setPlanData({
+      ...planData,
+      data_json: { ...planData.data_json, weeklySchedule: newWeeklySchedule }
+    });
+    setHasChanges(true);
+    setDraggedDayId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedDayId(null);
+    setDragOverDayId(null);
+  };
+  
   const processedDays: DayTraining[] = DAYS_CONFIG.map((day) => {
-    // If we have real plan data
     if (planData && planData.data_json) {
       const dataJson = planData.data_json;
       const weeklySchedule = dataJson.weeklySchedule || {};
@@ -75,7 +203,6 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
         const allExercises = blocks.flatMap((b: any) => b.exercises || []);
         const totalSetsNum = allExercises.reduce((acc: number, ex: any) => acc + (Number(ex.sets) || 0), 0);
         
-        // Intensity and Tags - can be derived from workout or default
         const isStrength = workout.name.toLowerCase().includes('fuerza') || workout.name.toLowerCase().includes('strength');
         const isMobility = workout.name.toLowerCase().includes('mob') || workout.name.toLowerCase().includes('recu');
         
@@ -109,93 +236,6 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       isRestDay: true
     };
   });
-
-  const handleUpdateDay = async (dayId: string, workoutId: string | null) => {
-    if (!planData || !planData.data_json) return;
-    
-    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
-    if (workoutId) {
-      newWeeklySchedule[dayId] = workoutId;
-    } else {
-      delete newWeeklySchedule[dayId];
-    }
-
-    const updatedDataJson = { 
-      ...planData.data_json, 
-      weeklySchedule: newWeeklySchedule 
-    };
-
-    // Optimistic update
-    setPlanData({
-      ...planData,
-      data_json: updatedDataJson
-    });
-
-    try {
-      await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: planData.name,
-          data_json: updatedDataJson
-        })
-      });
-    } catch (e) {
-      console.error('Error saving schedule:', e);
-      // Revert if error? (Optional for now)
-    }
-  };
-
-  const [showWorkoutPicker, setShowWorkoutPicker] = useState<string | null>(null);
-
-  const handleMoveWorkout = async (dayId: string, direction: 'up' | 'down') => {
-    if (!planData || !planData.data_json) return;
-    
-    const dayIndex = DAYS_CONFIG.findIndex(d => d.id === dayId);
-    const targetIndex = direction === 'up' ? dayIndex - 1 : dayIndex + 1;
-    
-    if (targetIndex < 0 || targetIndex >= DAYS_CONFIG.length) return;
-    
-    const targetDayId = DAYS_CONFIG[targetIndex].id;
-    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
-    
-    // Swap
-    const sourceWorkoutId = newWeeklySchedule[dayId];
-    const targetWorkoutId = newWeeklySchedule[targetDayId];
-    
-    if (sourceWorkoutId) {
-      newWeeklySchedule[targetDayId] = sourceWorkoutId;
-    } else {
-      delete newWeeklySchedule[targetDayId];
-    }
-    
-    if (targetWorkoutId) {
-      newWeeklySchedule[dayId] = targetWorkoutId;
-    } else {
-      delete newWeeklySchedule[dayId];
-    }
-
-    const updatedDataJson = { 
-      ...planData.data_json, 
-      weeklySchedule: newWeeklySchedule 
-    };
-
-    setPlanData({
-      ...planData,
-      data_json: updatedDataJson
-    });
-
-    try {
-      await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: planData.name,
-          data_json: updatedDataJson
-        })
-      });
-    } catch (e) {
-      console.error('Error moving workout:', e);
-    }
-  };
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
@@ -239,11 +279,23 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
             </div>
           </div>
           
-          <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 mt-2 sm:mt-0">
-            <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1 text-center">Plan Progress</div>
-            <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Week 1 / 12
+          <div className="flex items-center gap-3">
+            {hasChanges && (
+              <button 
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[18px]">{isSaving ? 'sync' : 'save'}</span>
+                {isSaving ? 'GUARDANDO...' : 'SAVE CHANGES'}
+              </button>
+            )}
+            <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 mt-2 sm:mt-0">
+              <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1 text-center">Plan Progress</div>
+              <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Week 1 / 12
+              </div>
             </div>
           </div>
         </div>
@@ -303,10 +355,20 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               <p className="text-sm font-medium">Cargando distribución semanal...</p>
             </div>
           ) : processedDays.map((day) => (
-            <div key={day.id} className="relative group">
+            <div 
+              key={day.id} 
+              className={`relative group transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.02] -translate-y-1' : ''}`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, day.id)}
+              onDragOver={(e) => handleDragOver(e, day.id)}
+              onDragLeave={() => setDragOverDayId(null)}
+              onDrop={(e) => handleDrop(e, day.id)}
+              onDragEnd={handleDragEnd}
+            >
               <button
                 onClick={() => onSelectDay(day.id)}
                 className={`w-full text-left bg-white rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6 p-5 ${
+                  dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' : 
                   day.isRestDay ? 'border-slate-100 opacity-80 hover:opacity-100' : 'border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
                 }`}
               >
@@ -349,7 +411,12 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                 <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-50 pt-4 sm:pt-0 flex justify-between items-center group/side">
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">ENTRENAMIENTO</span>
+                       <div className="flex items-center gap-2">
+                          <div className="cursor-grab text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
+                          </div>
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">ENTRENAMIENTO</span>
+                       </div>
                     </div>
                     <div className={`text-sm font-bold truncate ${day.isRestDay ? 'text-slate-400' : 'text-slate-900'}`}>
                       {day.workoutName}
