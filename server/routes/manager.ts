@@ -158,6 +158,7 @@ router.post('/integrations', async (req: any, res) => {
       google_calendar_enabled: integrationData.google_calendar_enabled,
       google_calendar_api_key: integrationData.google_calendar_api_key,
       google_calendar_id: integrationData.google_calendar_id,
+      google_service_account: integrationData.google_service_account,
       stripe_enabled: integrationData.stripe_enabled,
       stripe_publishable_key: integrationData.stripe_publishable_key,
       stripe_secret_key: integrationData.stripe_secret_key,
@@ -1896,14 +1897,27 @@ async function syncToGoogleCalendar(managerId: string, task: any) {
       .eq('user_id', managerId)
       .maybeSingle();
 
-    if (!integrations?.google_calendar_enabled || !integrations?.google_calendar_api_key) {
+    if (!integrations?.google_calendar_enabled) {
       return;
     }
 
-    // Note: Writing to Google Calendar usually requires OAuth2 or a Service Account.
-    // API Keys are primarily for public data.
-    // However, we'll implement the structure for it.
-    const calendar = google.calendar({ version: 'v3', auth: integrations.google_calendar_api_key });
+    let auth: any = integrations.google_calendar_api_key;
+
+    // Use Service Account if provided (much more reliable for writing)
+    if (integrations.google_service_account) {
+      try {
+        const credentials = typeof integrations.google_service_account === 'string' 
+          ? JSON.parse(integrations.google_service_account) 
+          : integrations.google_service_account;
+        
+        auth = google.auth.fromJSON(credentials);
+        (auth as any).scopes = ['https://www.googleapis.com/auth/calendar'];
+      } catch (err) {
+        console.error('Failed to parse Google Service Account JSON');
+      }
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth });
     
     await calendar.events.insert({
       calendarId: integrations.google_calendar_id || 'primary',
@@ -1989,11 +2003,24 @@ router.post('/integrations/google-calendar/test', async (req: any, res) => {
       .eq('user_id', req.user.id)
       .maybeSingle();
 
-    if (!integrations?.google_calendar_api_key) {
-      return res.json({ success: false, message: 'Falta la API Key' });
+    if (!integrations?.google_calendar_api_key && !integrations?.google_service_account) {
+      return res.json({ success: false, message: 'Falta la API Key o Cuenta de Servicio' });
     }
 
-    const calendar = google.calendar({ version: 'v3', auth: integrations.google_calendar_api_key });
+    let auth: any = integrations.google_calendar_api_key;
+    if (integrations.google_service_account) {
+      try {
+        const credentials = typeof integrations.google_service_account === 'string' 
+          ? JSON.parse(integrations.google_service_account) 
+          : integrations.google_service_account;
+        auth = google.auth.fromJSON(credentials);
+        (auth as any).scopes = ['https://www.googleapis.com/auth/calendar'];
+      } catch (err) {
+        return res.json({ success: false, message: 'JSON de Cuenta de Servicio inválido' });
+      }
+    }
+
+    const calendar = google.calendar({ version: 'v3', auth });
     await calendar.calendarList.list({ maxResults: 1 });
     res.json({ success: true });
   } catch (error: any) {

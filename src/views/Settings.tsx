@@ -1130,6 +1130,19 @@ function IntegrationsSettings() {
                 placeholder="ejemplo@gmail.com"
               />
             </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Google Service Account JSON (Recomendado para escritura)</label>
+              <textarea 
+                name="google_service_account"
+                value={localIntegrations.google_service_account || ''}
+                onChange={handleIntegrationChange}
+                className="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none min-h-[100px]" 
+                placeholder='{ "type": "service_account", ... }'
+              />
+              <p className="text-[10px] text-slate-500 mt-1">
+                Pega aquí el contenido del archivo JSON de tu Cuenta de Servicio de Google Cloud.
+              </p>
+            </div>
           </div>
 
           <div className="flex justify-end pt-2">
