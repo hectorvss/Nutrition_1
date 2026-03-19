@@ -89,7 +89,7 @@ router.post('/webhook', async (req: any, res) => {
             stripe_subscription_id: subscriptionId,
             plan_tier: planTier,
             status: subscription.status,
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           });
         }
@@ -108,7 +108,7 @@ router.post('/webhook', async (req: any, res) => {
         if (subData?.user_id) {
           await supabaseAdmin.from('manager_subscriptions').update({
             status: subscription.status,
-            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           }).eq('stripe_subscription_id', subscription.id);
         }
@@ -125,11 +125,18 @@ router.post('/webhook', async (req: any, res) => {
 
 // Helper to map Price IDs to Tiers
 function getPlanTier(priceId: string): string {
-  // You should map these to your actual Stripe Price IDs
-  if (priceId.includes('professional')) return 'professional';
-  if (priceId.includes('scale')) return 'scale';
-  if (priceId.includes('unlimited')) return 'unlimited';
-  return 'professional'; // fallback
+  const priceToTier: Record<string, string> = {
+    // Monthly
+    "price_1TCN9vCR4WvolxlpwC33dk8J": "professional",
+    "price_1TCNAHCR4WvolxlpwpLRfmwX": "scale",
+    "price_1TCNAcCR4WvolxlptLzNYdsz": "unlimited",
+    // Annual (20% discount)
+    "price_1TCf4PCR4Wvolxlp3MoDzi0J": "professional",
+    "price_1TCf52CR4WvolxlpcMMLOVpv": "scale",
+    "price_1TCf5cCR4WvolxlpWGhpOgnI": "unlimited"
+  };
+
+  return priceToTier[priceId] || 'professional';
 }
 
 export default router;
