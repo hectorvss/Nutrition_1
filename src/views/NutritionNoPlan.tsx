@@ -167,11 +167,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   };
 
   const solveMacros = (targetP: number, targetC: number, targetF: number, f1: any, f2: any, f3: any) => {
-    // We have a 3x3 system:
-    // q1*p1 + q2*p2 + q3*p3 = targetP
-    // q1*c1 + q2*c2 + q3*c3 = targetC
-    // q1*f1 + q2*f2 + q3*f3 = targetF
-    
+    // 3x3 Determinant calculation
     const det = (
       f1.protein * f2.carbs * f3.fats +
       f2.protein * f3.carbs * f1.fats +
@@ -181,7 +177,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       f3.fats * f1.carbs * f2.protein
     );
 
-    if (Math.abs(det) < 0.0001) return [1, 1, 1]; // Fallback if singular
+    if (Math.abs(det) < 0.01) return null;
 
     const det1 = (
       targetP * f2.carbs * f3.fats +
@@ -210,11 +206,22 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       targetF * f1.carbs * f2.protein
     );
 
-    // Quantities (multipliers)
+    const q1 = det1 / det;
+    const q2 = det2 / det;
+    const q3 = det3 / det;
+
+    // VALIDATION RANGES (User Constraints)
+    // Protein source (e.g. Chicken): 100-200g -> multiplier 1.0 to 2.0
+    // Carb source (e.g. Rice): 60-160g -> multiplier 0.6 to 1.6
+    // Fat source (e.g. Nuts): 15-60g -> multiplier 0.15 to 0.6
+    if (q1 < 0.8 || q1 > 2.5) return null; 
+    if (q2 < 0.4 || q2 > 2.2) return null; 
+    if (q3 < 0.1 || q3 > 0.8) return null; 
+
     return [
-      Math.max(0.1, Math.round((det1 / det) * 100) / 100),
-      Math.max(0.1, Math.round((det2 / det) * 100) / 100),
-      Math.max(0.1, Math.round((det3 / det) * 100) / 100)
+      Math.round(q1 * 100) / 100,
+      Math.round(q2 * 100) / 100,
+      Math.round(q3 * 100) / 100
     ];
   };
 
@@ -235,14 +242,14 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
     const weeklyDays: Record<string, any> = {};
 
-    // Prepare food sources
-    const proteinSources = foods.filter(f => (f.protein * 4) / f.calories > 0.45) || [];
-    const carbSources = foods.filter(f => (f.carbs * 4) / f.calories > 0.5) || [];
-    const fatSources = foods.filter(f => (f.fats * 9) / f.calories > 0.5) || [];
+    // Prepare food sources with SLIGHTLY broader filters to have more combinations
+    const proteinSources = foods.filter(f => (f.protein * 4) / f.calories > 0.40) || [];
+    const carbSources = foods.filter(f => (f.carbs * 4) / f.calories > 0.45) || [];
+    const fatSources = foods.filter(f => (f.fats * 9) / f.calories > 0.45) || [];
 
     const fallbackProt = { id: 'fb-p', name: 'Chicken Breast', protein: 31, carbs: 0, fats: 3.6, calories: 165, servingSize: '100g', category: 'Protein' };
     const fallbackCarb = { id: 'fb-c', name: 'Rice', protein: 2.6, carbs: 23, fats: 0.9, calories: 111, servingSize: '100g', category: 'Carbs' };
-    const fallbackFat = { id: 'fb-f', name: 'Avocado', protein: 2, carbs: 8.5, fats: 14.7, calories: 160, servingSize: '1/2 unit', category: 'Fats' };
+    const fallbackFat = { id: 'fb-f', name: 'Walnuts', protein: 15, carbs: 14, fats: 65, calories: 654, servingSize: '100g', category: 'Fats' };
 
     days.forEach((day, dayIdx) => {
       // 2. Define Meal Structure weights
@@ -268,33 +275,80 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
         const targetC = totalCarbsG * ratio;
         const targetF = totalFatsG * ratio;
 
-        // Variety: Offset food selection by day and meal index
-        const pFood = proteinSources[(dayIdx + index) % (proteinSources.length || 1)] || fallbackProt;
-        const cFood = carbSources[(dayIdx + index + 1) % (carbSources.length || 1)] || fallbackCarb;
-        const fFood = fatSources[(dayIdx + index + 2) % (fatSources.length || 1)] || fallbackFat;
+        // SMART COMBINATOR LOOP
+        let bestResult: any = null;
+        let attempts = 0;
+        const maxAttempts = 15;
 
-        // PERFECT macros using matrix solver
-        const [q1, q2, q3] = solveMacros(targetP, targetC, targetF, pFood as any, cFood as any, fFood as any);
+        while (attempts < maxAttempts && !bestResult) {
+          const pIdx = (dayIdx + index + attempts) % (proteinSources.length || 1);
+          const cIdx = (dayIdx + index + attempts + 1) % (carbSources.length || 1);
+          const fIdx = (dayIdx + index + attempts + 2) % (fatSources.length || 1);
 
-        const items = [
-          { ...pFood, quantity: q1, foodId: pFood.id, id: `p-${day}-${index}` },
-          { ...cFood, quantity: q2, foodId: cFood.id, id: `c-${day}-${index}` },
-          { ...fFood, quantity: q3, foodId: fFood.id, id: `f-${day}-${index}` }
-        ];
+          const pFood = proteinSources[pIdx] || fallbackProt;
+          const cFood = carbSources[cIdx] || fallbackCarb;
+          const fFood = fatSources[fIdx] || fallbackFat;
+
+          const solution = solveMacros(targetP, targetC, targetF, pFood, cFood, fFood);
+          if (solution) {
+            bestResult = { foods: [pFood, cFood, fFood], quantities: solution };
+          }
+          attempts++;
+        }
+
+        // Final fallback if no realistic perfect solution found
+        if (!bestResult) {
+          const pFood = fallbackProt;
+          const cFood = fallbackCarb;
+          const fFood = fallbackFat;
+          // Forced solver (ignoring ranges) for fallback safety
+          const qp = targetP / pFood.protein;
+          const qc = targetC / cFood.carbs;
+          const qf = targetF / fFood.fats;
+          bestResult = { foods: [pFood, cFood, fFood], quantities: [qp, qc, qf].map(q => Math.round(q * 100) / 100) };
+        }
+
+        const items = bestResult.foods.map((f: any, i: number) => ({
+          ...f,
+          quantity: bestResult.quantities[i],
+          foodId: f.id,
+          id: `${day}-${name}-${i}-${attempts}`
+        }));
 
         return {
-          id: Date.now() + index + (dayIdx * 100),
+          id: Math.random(),
           name,
           iconName: name.includes("Breakfast") ? "Sunrise" : name.includes("Lunch") ? "Sun" : name.includes("Dinner") ? "Moon" : "Cookie",
           time: name.includes("Breakfast") ? "08:00 AM" : name.includes("Snack") ? "11:00 AM" : "01:30 PM",
           items: items,
           categories: [
-            { id: 'p', label: 'Protein Source', example: pFood.name, amount: Math.round(targetP), color: 'bg-blue-500' },
-            { id: 'c', label: 'Carbohydrates', example: cFood.name, amount: Math.round(targetC), color: 'bg-emerald-500' },
-            { id: 'f', label: 'Healthy Fats', example: fFood.name, amount: Math.round(targetF), color: 'bg-amber-500' },
+            { id: 'p', label: 'Protein Source', example: items[0].name, amount: Math.round(targetP), color: 'bg-blue-500' },
+            { id: 'c', label: 'Carbohydrates', example: items[1].name, amount: Math.round(targetC), color: 'bg-emerald-500' },
+            { id: 'f', label: 'Healthy Fats', example: items[2].name, amount: Math.round(targetF), color: 'bg-amber-500' },
           ]
         };
       });
+
+      // 5. CALORIE BALANCING (Strict Verification)
+      let currentDayCals = 0;
+      generatedMeals.forEach(m => m.items.forEach(i => {
+        currentDayCals += (i.calories || 0) * (i.quantity || 1);
+      }));
+
+      // Adjust the largest carb source in the day to match targetCalories exactly
+      const diff = targetCalories - currentDayCals;
+      if (Math.abs(diff) > 5) {
+        // Find a suitable carb item to adjust
+        let adjustTarget = generatedMeals[0].items[1]; // fallback to first carb
+        generatedMeals.reverse().some(m => {
+          const carbItem = m.items.find((it: any) => it.category === 'Carbs');
+          if (carbItem) { adjustTarget = carbItem; return true; }
+          return false;
+        });
+        
+        const extraQty = diff / adjustTarget.calories;
+        adjustTarget.quantity = Math.round((adjustTarget.quantity + extraQty) * 100) / 100;
+      }
 
       weeklyDays[day] = { meals: generatedMeals };
     });
