@@ -148,29 +148,130 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   const recommendedPreset = PRESETS.find(p => p.recommendedFor.includes(clientGoal)) || PRESETS[1];
   
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
+  
+  // Interactive Settings State
+  const [targetCalories, setTargetCalories] = useState<number>(recommendedPreset.calories);
+  const [dailyStructure, setDailyStructure] = useState<string>(recommendedPreset.structure);
+  const [macroSplitId, setMacroSplitId] = useState<string>(recommendedPreset.macroId);
+
   const selectedPreset = PRESETS.find(p => p.id === selectedId) || recommendedPreset;
 
-  const handleConfirm = async () => {
-    // If it's one of our known presets, apply it via master plan
-    const isMasterPlan = PRESETS.some(p => p.id === selectedPreset.id);
+  // Update settings when a preset is selected
+  const handleSelectPreset = (preset: any) => {
+    setSelectedId(preset.id);
+    setTargetCalories(preset.calories);
+    setDailyStructure(preset.structure);
+    setMacroSplitId(preset.macroId);
+  };
+
+  const generatePlanData = () => {
+    // 1. Calculate Total Macros (Grams)
+    // Ratios based on macroSplitId string like "Balanced (40/30/30)"
+    let pPct = 0.3, cPct = 0.4, fPct = 0.3; // Default Balanced
     
-    if (isMasterPlan) {
-      try {
-        const appliedPlan = await fetchWithAuth(`/manager/clients/${client.id}/apply-master-plan`, {
-          method: 'POST',
-          body: JSON.stringify({ slug: `nutrition_${selectedPreset.id}` })
-        });
-        await reloadClients();
-        onStartPlan(selectedPreset, appliedPlan);
-      } catch (err) {
-        console.error('Error applying master plan:', err);
-        assignNutritionPlan(client.id);
-        onStartPlan(selectedPreset);
-      }
-    } else {
-      assignNutritionPlan(client.id);
-      onStartPlan(selectedPreset);
+    if (macroSplitId.includes("40/30/30")) { pPct = 0.4; cPct = 0.3; fPct = 0.3; }
+    else if (macroSplitId.includes("40/20/40")) { pPct = 0.4; cPct = 0.2; fPct = 0.4; } // Low Carb
+    else if (macroSplitId.includes("25/50/25")) { pPct = 0.25; cPct = 0.5; fPct = 0.25; }
+    else if (macroSplitId.includes("25/55/20")) { pPct = 0.25; cPct = 0.55; fPct = 0.2; }
+    else if (macroSplitId.includes("20/60/20")) { pPct = 0.2; cPct = 0.6; fPct = 0.2; }
+    else if (macroSplitId.includes("20/5/75")) { pPct = 0.2; cPct = 0.05; fPct = 0.75; }
+
+    const totalProteinG = (targetCalories * pPct) / 4;
+    const totalCarbsG = (targetCalories * cPct) / 4;
+    const totalFatsG = (targetCalories * fPct) / 9;
+
+    // 2. Define Meal Structure weights
+    let mealNames: string[] = [];
+    let mealWeights: number[] = []; // relative weights
+
+    if (dailyStructure === "3 Meals") {
+      mealNames = ["Breakfast", "Lunch", "Dinner"];
+      mealWeights = [1, 1, 1];
+    } else if (dailyStructure === "3 Meals + 1 Snack") {
+      mealNames = ["Breakfast", "Lunch", "Afternoon Snack", "Dinner"];
+      mealWeights = [1, 1, 0.5, 1];
+    } else if (dailyStructure === "3 Meals + 2 Snacks") {
+      mealNames = ["Breakfast", "Morning Snack", "Lunch", "Afternoon Snack", "Dinner"];
+      mealWeights = [1, 0.5, 1, 0.5, 1];
+    } else if (dailyStructure === "3 Meals + 3 Snacks") {
+      mealNames = ["Breakfast", "Morning Snack", "Lunch", "Afternoon Snack", "Dinner", "Evening Snack"];
+      mealWeights = [1, 0.5, 1, 0.5, 1, 0.5];
+    } else if (dailyStructure === "4 Meals") {
+      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4"];
+      mealWeights = [1, 1, 1, 1];
+    } else if (dailyStructure === "4 Meals + 2 Snacks") {
+      mealNames = ["Meal 1", "Snack 1", "Meal 2", "Snack 2", "Meal 3", "Meal 4"];
+      mealWeights = [1, 0.5, 1, 0.5, 1, 1];
+    } else if (dailyStructure === "5 Meals") {
+      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5"];
+      mealWeights = [1, 1, 1, 1, 1];
+    } else if (dailyStructure === "5 Meals + 1 Snack") {
+      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5", "Late Snack"];
+      mealWeights = [1, 1, 1, 1, 1, 0.5];
+    } else if (dailyStructure === "6 Meals") {
+      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5", "Meal 6"];
+      mealWeights = [1, 1, 1, 1, 1, 1];
     }
+
+    const totalWeight = mealWeights.reduce((a, b) => a + b, 0);
+
+    // 3. Create Meal Blocks
+    const generatedMeals = mealNames.map((name, index) => {
+      const weight = mealWeights[index];
+      const ratio = weight / totalWeight;
+
+      return {
+        id: Date.now() + index,
+        name,
+        iconName: name.includes("Breakfast") ? "Sunrise" : name.includes("Lunch") ? "Sun" : name.includes("Dinner") ? "Moon" : "Cookie",
+        time: name.includes("Breakfast") ? "08:00 AM" : name.includes("Snack") ? "11:00 AM" : "01:30 PM",
+        items: [],
+        categories: [
+          { 
+            id: 'p', 
+            label: 'Protein Source', 
+            example: 'e.g., Chicken, Eggs, Tofu', 
+            amount: Math.round(totalProteinG * ratio), 
+            color: 'bg-blue-500' 
+          },
+          { 
+            id: 'c', 
+            label: 'Carbohydrates', 
+            example: 'e.g., Rice, Oats, Fruit', 
+            amount: Math.round(totalCarbsG * ratio), 
+            color: 'bg-emerald-500' 
+          },
+          { 
+            id: 'f', 
+            label: 'Healthy Fats', 
+            example: 'e.g., Avocado, Nuts, Oil', 
+            amount: Math.round(totalFatsG * ratio), 
+            color: 'bg-amber-500' 
+          },
+        ]
+      };
+    });
+
+    return {
+      meals: generatedMeals,
+      mode: 'general',
+      targetCalories,
+      macroSplitId
+    };
+  };
+
+  const handleConfirm = async () => {
+    const generatedData = generatePlanData();
+    
+    // We update the local state but we also prepare a "fake" appliedPlan result
+    // matching what the backend returns but with our dynamic data
+    const initialPlanData = {
+      name: `Plan Dinámico - ${client.name}`,
+      data_json: generatedData
+    };
+
+    assignNutritionPlan(client.id);
+    onStartPlan(null, initialPlanData);
   };
 
   const handleCreateNew = () => {
@@ -277,7 +378,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                 return (
                   <button
                     key={preset.id}
-                    onClick={() => setSelectedId(preset.id)}
+                    onClick={() => handleSelectPreset(preset)}
                     className={`group w-full text-left rounded-2xl transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 p-5 ${
                       isSelected 
                         ? 'bg-white dark:bg-slate-800 border-2 border-emerald-500 ring-4 ring-emerald-500/10 shadow-lg shadow-emerald-500/10 z-10' 
@@ -345,14 +446,22 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
 
         {/* Right Column: Settings */}
         <div className="flex-1 lg:basis-[30%] flex flex-col gap-6 overflow-y-auto pr-1 pb-10">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 text-center">
-            <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-slate-600">visibility</span>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 text-center shadow-sm">
+            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 dark:border-emerald-800">
+              <span className="material-symbols-outlined text-3xl text-emerald-500">restaurant</span>
             </div>
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2">Template Preview</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Select a template on the left to see detailed meal distribution and macro breakdowns here.
-            </p>
+            <h3 className="font-bold text-slate-900 dark:text-white mb-2">Selected: {selectedPreset.title}</h3>
+            <div className="flex items-center justify-center gap-3">
+              <div className="text-center">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Calories</div>
+                <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{targetCalories}</div>
+              </div>
+              <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
+              <div className="text-center">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Meals</div>
+                <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{dailyStructure.split(' ')[0]}</div>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-5 shadow-sm min-h-[400px]">
@@ -369,8 +478,8 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                   <input 
                     className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-semibold" 
                     type="number" 
-                    value={selectedPreset.calories}
-                    readOnly
+                    value={targetCalories}
+                    onChange={(e) => setTargetCalories(Number(e.target.value))}
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">kcal</span>
                 </div>
@@ -382,8 +491,8 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">restaurant</span>
                   <select 
                     className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-semibold cursor-pointer"
-                    value={selectedPreset.structure}
-                    onChange={() => {}}
+                    value={dailyStructure}
+                    onChange={(e) => setDailyStructure(e.target.value)}
                   >
                     <option value="3 Meals">3 Meals</option>
                     <option value="3 Meals + 1 Snack">3 Meals + 1 Snack</option>
@@ -405,8 +514,8 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">pie_chart</span>
                   <select 
                     className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-semibold cursor-pointer"
-                    value={selectedPreset.macroId}
-                    onChange={() => {}}
+                    value={macroSplitId}
+                    onChange={(e) => setMacroSplitId(e.target.value)}
                   >
                     <option value="Balanced (40/30/30)">Balanced (40/30/30)</option>
                     <option value="Low Carb (40/40/20)">Low Carb (40/40/20)</option>
@@ -419,6 +528,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                 </div>
               </div>
             </div>
+
 
             <div className="mt-auto pt-6 flex content-end">
               <button 
