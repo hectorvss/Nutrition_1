@@ -1131,6 +1131,42 @@ function IntegrationsSettings() {
               />
             </div>
           </div>
+
+          <div className="flex justify-end pt-2">
+            <button 
+              onClick={async () => {
+                try {
+                  setSaving(true);
+                  const result = await fetchWithAuth('/manager/integrations/google-calendar/sync-all', { method: 'POST' });
+                  alert(`Sincronización completada: ${result.synced} tareas enviadas, ${result.failed} fallidas.`);
+                } catch (err) {
+                  alert('Error al sincronizar con Google Calendar');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100"
+            >
+              <Share2 className="w-3 h-3" />
+              Sincronizar tareas existentes ahora
+            </button>
+            <button 
+              onClick={async () => {
+                try {
+                  setSaving(true);
+                  const result = await fetchWithAuth('/manager/integrations/google-calendar/test', { method: 'POST' });
+                  alert(result.success ? '¡Conexión exitosa! El calendario es accesible.' : `Error: ${result.message}`);
+                } catch (err) {
+                  alert('Error al probar la conexión con Google.');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 ml-2"
+            >
+              Probar conexión
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1191,21 +1227,37 @@ function IntegrationsSettings() {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="flex justify-end mt-8">
-           <button 
-            onClick={handleSaveIntegrations}
-            disabled={isSaving}
-            className="px-6 py-2.5 rounded-xl bg-[#635BFF] hover:bg-[#5851e0] text-white font-bold text-sm transition-all shadow-lg shadow-[#635BFF]/20 flex items-center gap-2 disabled:opacity-50"
-          >
-            {isSaving ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <BadgeCheck className="w-4 h-4" />
-            )}
-            {isSaving ? 'Guardando...' : 'Guardar Configuración de APIs'}
-          </button>
-        </div>
+      <div className="flex justify-end gap-3 pt-4">
+        <button 
+          onClick={handleSaveIntegrations}
+          disabled={isSaving}
+          className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 disabled:opacity-50"
+        >
+          {isSaving ? (
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <BadgeCheck className="w-4 h-4" />
+          )}
+          {isSaving ? 'Guardando...' : 'Guardar Todas las Integraciones'}
+        </button>
+        <button 
+          onClick={async () => {
+            try {
+              setSaving(true);
+              const result = await fetchWithAuth('/manager/integrations/stripe/test', { method: 'POST' });
+              alert(result.success ? '¡Conexión exitosa! Stripe está respondiendo correctamente.' : `Error: ${result.message}`);
+            } catch (err) {
+              alert('Error al probar la conexión con Stripe.');
+            } finally {
+              setSaving(false);
+            }
+          }}
+          className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all shadow-lg flex items-center gap-2"
+        >
+          Probar Stripe
+        </button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
