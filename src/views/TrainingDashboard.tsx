@@ -70,11 +70,7 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                 <div 
                   key={client.id} 
                   onClick={() => {
-                    if (client.status === 'NO PLAN') {
-                      onNavigate('assign-program', client.id);
-                    } else {
-                      onNavigate('workout-editor', client.id);
-                    }
+                    onNavigate('weekly-view', client);
                   }}
                   className="group p-6 hover:bg-slate-50/80 transition-all cursor-pointer"
                 >
