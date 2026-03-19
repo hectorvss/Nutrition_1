@@ -111,18 +111,30 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const [isSaving, setIsSaving] = useState(false);
   const [librarySearch, setLibrarySearch] = useState('');
 
+  const [fullPlanData, setFullPlanData] = useState<any>(null);
+
   // Load existing plan on mount
   React.useEffect(() => {
     const fetchPlan = async () => {
-      // If we already have initialPlanData, use it and skip fetch
-      if (initialPlanData && initialPlanData.data_json?.meals) {
+      // 1. If we have initialPlanData, prioritize it
+      if (initialPlanData && initialPlanData.data_json) {
+        const json = initialPlanData.data_json;
+        setFullPlanData(json);
+        
+        let targetMeals = [];
+        if (json.days && selectedDay && json.days[selectedDay]) {
+          targetMeals = json.days[selectedDay].meals;
+        } else {
+          targetMeals = json.meals || [];
+        }
+
         const icons: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
-        const loadedMeals = initialPlanData.data_json.meals.map((m: any) => ({
+        const loadedMeals = targetMeals.map((m: any) => ({
           ...m,
           icon: icons[m.iconName] || Sunrise
         }));
         setMeals(loadedMeals);
-        if (initialPlanData.data_json.mode) setMode(initialPlanData.data_json.mode);
+        if (json.mode) setMode(json.mode);
         return;
       }
 
@@ -130,17 +142,25 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       setIsLoading(true);
       try {
         const data = await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`);
-        if (data && data.data_json && data.data_json.meals) {
-          // Reconstruct icon functions from components
+        if (data && data.data_json) {
+          const json = data.data_json;
+          setFullPlanData(json);
+
+          let targetMeals = [];
+          if (json.days && selectedDay && json.days[selectedDay]) {
+            targetMeals = json.days[selectedDay].meals;
+          } else {
+            targetMeals = json.meals || [];
+          }
+
           const icons: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
-          const loadedMeals = data.data_json.meals.map((m: any) => ({
+          const loadedMeals = targetMeals.map((m: any) => ({
             ...m,
             icon: icons[m.iconName] || Sunrise
           }));
           setMeals(loadedMeals);
-          if (data.data_json.mode) setMode(data.data_json.mode);
+          if (json.mode) setMode(json.mode);
         } else {
-          // If no plan, set defaults
           setMeals(DEFAULT_MEALS);
         }
       } catch (err) {
@@ -150,30 +170,40 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       }
     };
     fetchPlan();
-  }, [client?.id, initialPlanData]);
+  }, [client?.id, initialPlanData, selectedDay]);
 
   const savePlan = async () => {
     if (!client?.id) return;
     setIsSaving(true);
     try {
-      // Stringify meals but keep icon name for reconstruction
       const mealsToSave = meals.map(m => ({
         ...m,
-        icon: undefined, // cannot stringify components
+        icon: undefined,
         iconName: m.name.includes('Breakfast') ? 'Sunrise' : m.name.includes('Lunch') ? 'Sun' : m.name.includes('Dinner') ? 'Moon' : 'Cookie'
       }));
+
+      let finalDataJson = { ...fullPlanData, mode };
+
+      if (selectedDay) {
+        if (!finalDataJson.days) finalDataJson.days = {};
+        // Update specific day in weekly structure
+        finalDataJson.days[selectedDay] = { meals: mealsToSave };
+        finalDataJson.type = 'weekly';
+      } else {
+        // Fallback for non-weekly or new plans
+        finalDataJson.meals = mealsToSave;
+      }
 
       await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {
         method: 'POST',
         body: JSON.stringify({
           name: `Plan de Nutrición - ${client.name}`,
-          data_json: { meals: mealsToSave, mode }
+          data_json: finalDataJson
         })
       });
       
-      // Trigger a reload of clients to update assignment status in dashboard
+      setFullPlanData(finalDataJson);
       await reloadClients();
-      
       alert('Plan guardado correctamente');
     } catch (err) {
       console.error('Error saving plan:', err);

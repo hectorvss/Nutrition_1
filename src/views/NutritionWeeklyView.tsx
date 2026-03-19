@@ -119,6 +119,73 @@ interface NutritionWeeklyViewProps {
 export default function NutritionWeeklyView({ client, onBack, onSelectDay, onReassign }: NutritionWeeklyViewProps) {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   
+  // 1. Extract dynamic plan data if exists
+  const hasPlan = client?.nutritionPlanAssigned && client.nutritionPlan?.data_json?.days;
+  const planDays = client?.nutritionPlan?.data_json?.days || {};
+
+  const daysConfig = [
+    { id: 'monday', name: 'Lunes', nameEn: 'Monday' },
+    { id: 'tuesday', name: 'Martes', nameEn: 'Tuesday' },
+    { id: 'wednesday', name: 'Miércoles', nameEn: 'Wednesday' },
+    { id: 'thursday', name: 'Jueves', nameEn: 'Thursday' },
+    { id: 'friday', name: 'Viernes', nameEn: 'Friday' },
+    { id: 'saturday', name: 'Sábado', nameEn: 'Saturday' },
+    { id: 'sunday', name: 'Domingo', nameEn: 'Sunday' },
+  ];
+
+  const processedDays: DayPlan[] = daysConfig.map((day, dayIdx) => {
+    const dayData = planDays[day.id];
+    
+    if (!dayData) {
+      return {
+        ...day,
+        calories: 0, protein: 0, carbs: 0, fats: 0,
+        weekViewLabel: 'No Plan',
+        tag: 'Rest',
+        tagColor: 'bg-slate-50 text-slate-400 border-slate-100',
+        bars: [20, 20, 20, 20, 20]
+      };
+    }
+
+    const meals = dayData.meals || [];
+    let totalCals = 0, totalP = 0, totalC = 0, totalF = 0;
+    
+    meals.forEach((m: any) => {
+      m.items.forEach((i: any) => {
+        totalCals += (i.calories || 0) * (i.quantity || 1);
+        totalP += (i.protein || 0) * (i.quantity || 1);
+        totalC += (i.carbs || 0) * (i.quantity || 1);
+        totalF += (i.fats || 0) * (i.quantity || 1);
+      });
+    });
+
+    const totalMacros = (totalP * 4) + (totalC * 4) + (totalF * 9) || 1;
+    const pPct = Math.round((totalP * 4 / totalMacros) * 100);
+    const cPct = Math.round((totalC * 4 / totalMacros) * 100);
+    const fPct = Math.round((totalF * 9 / totalMacros) * 100);
+
+    // Generate bars based on meal distribution
+    const bars = meals.map((m: any) => {
+      const mCals = m.items.reduce((a: number, i: any) => a + (i.calories * i.quantity), 0);
+      const h = Math.min(100, Math.max(20, (mCals / (totalCals / meals.length)) * 60));
+      return { h, p: m.name.includes('Lunch') || m.name.includes('Dinner') };
+    });
+
+    return {
+      id: day.id,
+      name: day.name,
+      nameEn: day.nameEn,
+      calories: Math.round(totalCals),
+      protein: pPct,
+      carbs: cPct,
+      fats: fPct,
+      weekViewLabel: `${meals.length} meals`,
+      tag: dayIdx % 3 === 0 ? 'Entrenamiento' : 'Descanso',
+      tagColor: dayIdx % 3 === 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100',
+      bars
+    };
+  });
+
   return (
     <div className="flex flex-col w-full">
       <div className="p-4 md:p-6 pb-2">
@@ -151,12 +218,12 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">flag</span>
-                Goal: Fat Loss
+                Goal: {client?.goal || 'Fat Loss'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
               <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                Plan Activo
+                {hasPlan ? 'Plan Activo' : 'Borrador / No Asignado'}
               </span>
             </div>
           </div>
@@ -165,7 +232,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
             <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">Plan Progress</div>
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Week 4 / 12
+              Week 1 / 12
             </div>
           </div>
         </div>
@@ -213,7 +280,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               </div>
             </div>
           </div>
-          {WEEK_DAYS.map((day) => (
+          {processedDays.map((day, dayIdx) => (
             <button
               key={day.id}
               onClick={() => onSelectDay(day.id)}
@@ -233,7 +300,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               <div className="flex-1 w-full space-y-3">
                 <div className="flex items-center justify-between">
                   <span className={`${day.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide border`}>
-                    {day.tag}
+                    {dayIdx % 3 === 0 ? 'Entrenamiento' : 'Descanso'}
                   </span>
                   <div className="flex gap-2 text-xs text-slate-500 font-medium">
                     <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>{day.protein}% P</span>

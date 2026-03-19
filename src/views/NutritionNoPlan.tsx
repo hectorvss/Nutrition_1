@@ -166,13 +166,63 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     setMacroSplitId(preset.macroId);
   };
 
+  const solveMacros = (targetP: number, targetC: number, targetF: number, f1: any, f2: any, f3: any) => {
+    // We have a 3x3 system:
+    // q1*p1 + q2*p2 + q3*p3 = targetP
+    // q1*c1 + q2*c2 + q3*c3 = targetC
+    // q1*f1 + q2*f2 + q3*f3 = targetF
+    
+    const det = (
+      f1.protein * f2.carbs * f3.fats +
+      f2.protein * f3.carbs * f1.fats +
+      f3.protein * f1.carbs * f2.fats -
+      f1.fats * f2.carbs * f3.protein -
+      f2.fats * f3.carbs * f1.protein -
+      f3.fats * f1.carbs * f2.protein
+    );
+
+    if (Math.abs(det) < 0.0001) return [1, 1, 1]; // Fallback if singular
+
+    const det1 = (
+      targetP * f2.carbs * f3.fats +
+      f2.protein * f3.carbs * targetF +
+      f3.protein * targetC * f2.fats -
+      targetF * f2.carbs * f3.protein -
+      f2.fats * f3.carbs * targetP -
+      f3.fats * targetC * f2.protein
+    );
+
+    const det2 = (
+      f1.protein * targetC * f3.fats +
+      targetP * f3.carbs * f1.fats +
+      f3.protein * f1.carbs * targetF -
+      f1.fats * targetC * f3.protein -
+      targetP * f3.carbs * f1.protein -
+      f3.fats * f1.carbs * targetP
+    );
+
+    const det3 = (
+      f1.protein * f2.carbs * targetF +
+      f2.protein * targetC * f1.fats +
+      targetP * f1.carbs * f2.fats -
+      targetP * f2.carbs * f3.protein -
+      f2.fats * targetC * f1.protein -
+      targetF * f1.carbs * f2.protein
+    );
+
+    // Quantities (multipliers)
+    return [
+      Math.max(0.1, Math.round((det1 / det) * 10) / 10),
+      Math.max(0.1, Math.round((det2 / det) * 10) / 10),
+      Math.max(0.1, Math.round((det3 / det) * 10) / 10)
+    ];
+  };
+
   const generatePlanData = () => {
     // 1. Calculate Total Macros (Grams)
-    // Ratios based on macroSplitId string like "Balanced (40/30/30)"
-    let pPct = 0.3, cPct = 0.4, fPct = 0.3; // Default Balanced
-    
+    let pPct = 0.3, cPct = 0.4, fPct = 0.3;
     if (macroSplitId.includes("40/30/30")) { pPct = 0.4; cPct = 0.3; fPct = 0.3; }
-    else if (macroSplitId.includes("40/20/40")) { pPct = 0.4; cPct = 0.2; fPct = 0.4; } // Low Carb
+    else if (macroSplitId.includes("40/20/40")) { pPct = 0.4; cPct = 0.2; fPct = 0.4; } 
     else if (macroSplitId.includes("25/50/25")) { pPct = 0.25; cPct = 0.5; fPct = 0.25; }
     else if (macroSplitId.includes("25/55/20")) { pPct = 0.25; cPct = 0.55; fPct = 0.2; }
     else if (macroSplitId.includes("20/60/20")) { pPct = 0.2; cPct = 0.6; fPct = 0.2; }
@@ -182,113 +232,79 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     const totalCarbsG = (targetCalories * cPct) / 4;
     const totalFatsG = (targetCalories * fPct) / 9;
 
-    // 2. Define Meal Structure weights
-    let mealNames: string[] = [];
-    let mealWeights: number[] = []; // relative weights
+    const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    const weeklyDays: Record<string, any> = {};
 
-    if (dailyStructure === "3 Meals") {
-      mealNames = ["Breakfast", "Lunch", "Dinner"];
-      mealWeights = [1, 1, 1];
-    } else if (dailyStructure === "3 Meals + 1 Snack") {
-      mealNames = ["Breakfast", "Lunch", "Afternoon Snack", "Dinner"];
-      mealWeights = [1, 1, 0.5, 1];
-    } else if (dailyStructure === "3 Meals + 2 Snacks") {
-      mealNames = ["Breakfast", "Morning Snack", "Lunch", "Afternoon Snack", "Dinner"];
-      mealWeights = [1, 0.5, 1, 0.5, 1];
-    } else if (dailyStructure === "3 Meals + 3 Snacks") {
-      mealNames = ["Breakfast", "Morning Snack", "Lunch", "Afternoon Snack", "Dinner", "Evening Snack"];
-      mealWeights = [1, 0.5, 1, 0.5, 1, 0.5];
-    } else if (dailyStructure === "4 Meals") {
-      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4"];
-      mealWeights = [1, 1, 1, 1];
-    } else if (dailyStructure === "4 Meals + 2 Snacks") {
-      mealNames = ["Meal 1", "Snack 1", "Meal 2", "Snack 2", "Meal 3", "Meal 4"];
-      mealWeights = [1, 0.5, 1, 0.5, 1, 1];
-    } else if (dailyStructure === "5 Meals") {
-      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5"];
-      mealWeights = [1, 1, 1, 1, 1];
-    } else if (dailyStructure === "5 Meals + 1 Snack") {
-      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5", "Late Snack"];
-      mealWeights = [1, 1, 1, 1, 1, 0.5];
-    } else if (dailyStructure === "6 Meals") {
-      mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5", "Meal 6"];
-      mealWeights = [1, 1, 1, 1, 1, 1];
-    }
-
-    const totalWeight = mealWeights.reduce((a, b) => a + b, 0);
-
-    // 3. Prepare food sources for auto-population
-    // Simple classification logic
-    const proteinSources = foods.filter(f => (f.protein * 4) / f.calories > 0.4) || [];
+    // Prepare food sources
+    const proteinSources = foods.filter(f => (f.protein * 4) / f.calories > 0.45) || [];
     const carbSources = foods.filter(f => (f.carbs * 4) / f.calories > 0.5) || [];
     const fatSources = foods.filter(f => (f.fats * 9) / f.calories > 0.5) || [];
 
-    // Fallbacks if library is empty
-    const fallbackProt = { id: 'fb-p', name: 'Chicken Breast', protein: 31, carbs: 0, fats: 3.6, calories: 165, servingSize: '100g' };
-    const fallbackCarb = { id: 'fb-c', name: 'Brown Rice', protein: 2.6, carbs: 23, fats: 0.9, calories: 111, servingSize: '100g' };
-    const fallbackFat = { id: 'fb-f', name: 'Avocado', protein: 2, carbs: 8.5, fats: 14.7, calories: 160, servingSize: '1/2 unit' };
+    const fallbackProt = { id: 'fb-p', name: 'Chicken Breast', protein: 31, carbs: 0, fats: 3.6, calories: 165, servingSize: '100g', category: 'Protein' };
+    const fallbackCarb = { id: 'fb-c', name: 'Rice', protein: 2.6, carbs: 23, fats: 0.9, calories: 111, servingSize: '100g', category: 'Carbs' };
+    const fallbackFat = { id: 'fb-f', name: 'Avocado', protein: 2, carbs: 8.5, fats: 14.7, calories: 160, servingSize: '1/2 unit', category: 'Fats' };
 
-    // 4. Create Meal Blocks
-    const generatedMeals = mealNames.map((name, index) => {
-      const weight = mealWeights[index];
-      const ratio = weight / totalWeight;
-      const targetP = totalProteinG * ratio;
-      const targetC = totalCarbsG * ratio;
-      const targetF = totalFatsG * ratio;
+    days.forEach((day, dayIdx) => {
+      // 2. Define Meal Structure weights
+      let mealNames: string[] = [];
+      let mealWeights: number[] = [];
+      if (dailyStructure === "3 Meals") { mealNames = ["Breakfast", "Lunch", "Dinner"]; mealWeights = [1, 1, 1]; }
+      else if (dailyStructure === "3 Meals + 1 Snack") { mealNames = ["Breakfast", "Lunch", "Afternoon Snack", "Dinner"]; mealWeights = [1, 1, 0.5, 1]; }
+      else if (dailyStructure === "3 Meals + 2 Snacks") { mealNames = ["Breakfast", "Morning Snack", "Lunch", "Afternoon Snack", "Dinner"]; mealWeights = [1, 0.5, 1, 0.5, 1]; }
+      else if (dailyStructure === "3 Meals + 3 Snacks") { mealNames = ["Breakfast", "Morning Snack", "Lunch", "Afternoon Snack", "Dinner", "Evening Snack"]; mealWeights = [1, 0.5, 1, 0.5, 1, 0.5]; }
+      else if (dailyStructure === "4 Meals") { mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4"]; mealWeights = [1, 1, 1, 1]; }
+      else if (dailyStructure === "4 Meals + 2 Snacks") { mealNames = ["Meal 1", "Snack 1", "Meal 2", "Snack 2", "Meal 3", "Meal 4"]; mealWeights = [1, 0.5, 1, 0.5, 1, 1]; }
+      else if (dailyStructure === "5 Meals") { mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5"]; mealWeights = [1, 1, 1, 1, 1]; }
+      else if (dailyStructure === "5 Meals + 1 Snack") { mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5", "Late Snack"]; mealWeights = [1, 1, 1, 1, 1, 0.5]; }
+      else if (dailyStructure === "6 Meals") { mealNames = ["Meal 1", "Meal 2", "Meal 3", "Meal 4", "Meal 5", "Meal 6"]; mealWeights = [1, 1, 1, 1, 1, 1]; }
 
-      // Select one from each category (random or first)
-      const pFood = proteinSources[index % (proteinSources.length || 1)] || fallbackProt;
-      const cFood = carbSources[index % (carbSources.length || 1)] || fallbackCarb;
-      const fFood = fatSources[index % (fatSources.length || 1)] || fallbackFat;
+      const totalWeight = mealWeights.reduce((a, b) => a + b, 0);
 
-      // Calculate quantities (multiplier)
-      const pQty = Math.max(0.1, Math.round((targetP / pFood.protein) * 10) / 10);
-      const cQty = Math.max(0.1, Math.round((targetC / cFood.carbs) * 10) / 10);
-      const fQty = Math.max(0.1, Math.round((targetF / fFood.fats) * 10) / 10);
+      // 4. Create Meal Blocks
+      const generatedMeals = mealNames.map((name, index) => {
+        const weight = mealWeights[index];
+        const ratio = weight / totalWeight;
+        const targetP = totalProteinG * ratio;
+        const targetC = totalCarbsG * ratio;
+        const targetF = totalFatsG * ratio;
 
-      const items = [
-        { ...pFood, quantity: pQty, foodId: pFood.id, id: `p-${Date.now()}-${index}` },
-        { ...cFood, quantity: cQty, foodId: cFood.id, id: `c-${Date.now()}-${index}` },
-        { ...fFood, quantity: fQty, foodId: fFood.id, id: `f-${Date.now()}-${index}` }
-      ];
+        // Variety: Offset food selection by day and meal index
+        const pFood = proteinSources[(dayIdx + index) % (proteinSources.length || 1)] || fallbackProt;
+        const cFood = carbSources[(dayIdx + index + 1) % (carbSources.length || 1)] || fallbackCarb;
+        const fFood = fatSources[(dayIdx + index + 2) % (fatSources.length || 1)] || fallbackFat;
 
-      return {
-        id: Date.now() + index,
-        name,
-        iconName: name.includes("Breakfast") ? "Sunrise" : name.includes("Lunch") ? "Sun" : name.includes("Dinner") ? "Moon" : "Cookie",
-        time: name.includes("Breakfast") ? "08:00 AM" : name.includes("Snack") ? "11:00 AM" : "01:30 PM",
-        items: items, // Example mode populated!
-        categories: [
-          { 
-            id: 'p', 
-            label: 'Protein Source', 
-            example: pFood.name, 
-            amount: Math.round(targetP), 
-            color: 'bg-blue-500' 
-          },
-          { 
-            id: 'c', 
-            label: 'Carbohydrates', 
-            example: cFood.name, 
-            amount: Math.round(targetC), 
-            color: 'bg-emerald-500' 
-          },
-          { 
-            id: 'f', 
-            label: 'Healthy Fats', 
-            example: fFood.name, 
-            amount: Math.round(targetF), 
-            color: 'bg-amber-500' 
-          },
-        ]
-      };
+        // PERFECT macros using matrix solver
+        const [q1, q2, q3] = solveMacros(targetP, targetC, targetF, pFood as any, cFood as any, fFood as any);
+
+        const items = [
+          { ...pFood, quantity: q1, foodId: pFood.id, id: `p-${day}-${index}` },
+          { ...cFood, quantity: q2, foodId: cFood.id, id: `c-${day}-${index}` },
+          { ...fFood, quantity: q3, foodId: fFood.id, id: `f-${day}-${index}` }
+        ];
+
+        return {
+          id: Date.now() + index + (dayIdx * 100),
+          name,
+          iconName: name.includes("Breakfast") ? "Sunrise" : name.includes("Lunch") ? "Sun" : name.includes("Dinner") ? "Moon" : "Cookie",
+          time: name.includes("Breakfast") ? "08:00 AM" : name.includes("Snack") ? "11:00 AM" : "01:30 PM",
+          items: items,
+          categories: [
+            { id: 'p', label: 'Protein Source', example: pFood.name, amount: Math.round(targetP), color: 'bg-blue-500' },
+            { id: 'c', label: 'Carbohydrates', example: cFood.name, amount: Math.round(targetC), color: 'bg-emerald-500' },
+            { id: 'f', label: 'Healthy Fats', example: fFood.name, amount: Math.round(targetF), color: 'bg-amber-500' },
+          ]
+        };
+      });
+
+      weeklyDays[day] = { meals: generatedMeals };
     });
 
     return {
-      meals: generatedMeals,
-      mode: 'example', // Set mode to example by default since it's populated
+      days: weeklyDays,
+      mode: 'example',
       targetCalories,
-      macroSplitId
+      macroSplitId,
+      type: 'weekly'
     };
   };
 
