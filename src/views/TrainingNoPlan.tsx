@@ -192,7 +192,8 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
   };
 
   return (
-    <div className="flex-1 overflow-y-auto min-h-full bg-slate-50">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+      <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-6 lg:p-8">
         {/* Header Breadcrumb & Status */}
         <div className="flex flex-col gap-6 mb-6">
@@ -439,6 +440,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

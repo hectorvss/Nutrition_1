@@ -241,7 +241,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, mode =
   const totalExercises = blocks.reduce((acc, b) => acc + b.exercises.length, 0);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-slate-50">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">

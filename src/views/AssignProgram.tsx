@@ -20,7 +20,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
   const selectedProgram = trainingPrograms.find(p => p.id === selectedProgramId) || trainingPrograms[0];
 
   return (
-    <div className="flex-1 flex flex-col min-h-full bg-slate-50">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
       <div className="flex-1 overflow-y-auto">
         <div className="w-full p-4 md:p-6 pb-20">
           {/* Breadcrumbs & Header */}
