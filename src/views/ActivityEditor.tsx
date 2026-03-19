@@ -8,8 +8,8 @@ interface ActivityEditorProps {
 export default function ActivityEditor({ onBack, activityName = 'Bulgarian Split Squat' }: ActivityEditorProps) {
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 flex justify-center items-start">
-        <div className="bg-white w-full max-w-6xl rounded-3xl shadow-xl border border-slate-200 flex flex-col h-auto min-h-[calc(100vh-4rem)]">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
+        <div className="bg-white w-full rounded-3xl shadow-xl border border-slate-200 flex flex-col h-auto min-h-[calc(100vh-4rem)]">
           {/* Header */}
           <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">

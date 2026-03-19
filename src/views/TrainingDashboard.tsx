@@ -21,8 +21,8 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
 
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
-      <div className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
-        <div className="max-w-6xl mx-auto flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pt-2">
+        <div className="flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           {/* Header */}
           <div className="p-8 border-b border-slate-100 space-y-6">
             <div className="flex justify-between items-center">

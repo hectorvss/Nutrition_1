@@ -290,8 +290,8 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, mode =
         </div>
       </header>
 
-      <div className="flex-1 p-6 lg:p-10">
-        <div className="max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-8">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
+        <div className="w-full flex flex-col lg:flex-row gap-8">
           {/* Left Column: Workout Blocks */}
           <div className="flex-1 flex flex-col gap-6 pr-2 pb-20">
             {blocks.map((block) => {
