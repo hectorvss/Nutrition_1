@@ -1996,7 +1996,7 @@ router.post('/tasks', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error creating task:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -2122,7 +2122,7 @@ router.patch('/tasks/:id', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating task:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -2153,7 +2153,7 @@ router.delete('/tasks/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting task:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
