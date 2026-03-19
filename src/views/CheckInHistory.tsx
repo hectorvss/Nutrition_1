@@ -75,7 +75,7 @@ const historyWeeks = [
 
 export default function CheckInHistory({ clientId, onBack, onViewReview }: CheckInHistoryProps) {
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto w-full space-y-6">
+    <div className="p-6 md:p-8 w-full space-y-6">
       <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
         <div className="flex items-center gap-2">
           <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Check-ins</button>

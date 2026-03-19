@@ -95,7 +95,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
+        <div className="flex-1 overflow-auto">
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Clients</h1>

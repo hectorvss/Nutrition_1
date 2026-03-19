@@ -63,7 +63,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const overdueCount = activeTasks.filter(t => t.status === 'overdue').length;
 
   return (
-    <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
+    <div className="p-6 md:p-8 lg:p-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
           <p className="text-slate-500 text-sm font-medium mb-1">Today, {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric'})}</p>

@@ -127,7 +127,7 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
 
   return (
     <div className="flex flex-1 h-full overflow-hidden p-6 gap-6">
-      <div className="w-full max-w-6xl mx-auto flex flex-col h-full">
+      <div className="w-full flex flex-col h-full">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
