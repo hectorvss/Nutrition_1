@@ -14,6 +14,7 @@ interface DayTraining {
   tag: string;
   tagColor: string;
   exercises: any[];
+  isRestDay: boolean;
 }
 
 const DAYS_CONFIG = [
@@ -63,29 +64,32 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
   const processedDays: DayTraining[] = DAYS_CONFIG.map((day) => {
     // If we have real plan data
     if (planData && planData.data_json) {
-      const schedule = planData.schedule || ['M', 'W', 'F']; 
-      // Map day id to schedule format if needed (e.g., 'monday' -> 'M')
-      const dayMap: Record<string, string> = {
-        'monday': 'M', 'tuesday': 'T', 'wednesday': 'W', 'thursday': 'Th', 
-        'friday': 'F', 'saturday': 'S', 'sunday': 'Su'
-      };
+      const dataJson = planData.data_json;
+      const weeklySchedule = dataJson.weeklySchedule || {};
+      const workoutId = weeklySchedule[day.id];
+      const workouts = dataJson.workouts || [];
+      const workout = workouts.find((w: any) => w.id === workoutId);
       
-      const isTrainingDay = schedule.includes(dayMap[day.id]);
-      
-      if (isTrainingDay) {
-        const blocks = planData.data_json.blocks || [];
+      if (workout) {
+        const blocks = workout.blocks || [];
         const allExercises = blocks.flatMap((b: any) => b.exercises || []);
         const totalSetsNum = allExercises.reduce((acc: number, ex: any) => acc + (Number(ex.sets) || 0), 0);
         
+        // Intensity and Tags - can be derived from workout or default
+        const isStrength = workout.name.toLowerCase().includes('fuerza') || workout.name.toLowerCase().includes('strength');
+        const isMobility = workout.name.toLowerCase().includes('mob') || workout.name.toLowerCase().includes('recu');
+        
         return {
           ...day,
-          workoutName: planData.name || 'Strength Training',
-          intensity: 'Moderada',
-          intensityColor: 'bg-emerald-500',
-          duration: '60 min',
+          workoutName: workout.name,
+          intensity: isStrength ? 'Alta' : isMobility ? 'Baja' : 'Moderada',
+          intensityColor: isStrength ? 'bg-orange-500' : isMobility ? 'bg-blue-400' : 'bg-emerald-500',
+          duration: planData.duration ? `${planData.duration} min` : '60 min',
           volume: `${totalSetsNum} series`,
-          tag: 'Entrenamiento',
-          tagColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+          tag: isMobility ? 'Movilidad' : 'Entrenamiento',
+          tagColor: isMobility 
+            ? 'bg-blue-50 text-blue-600 border-blue-100' 
+            : 'bg-emerald-50 text-emerald-600 border-emerald-100',
           exercises: allExercises,
           isRestDay: false
         };
@@ -105,6 +109,93 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       isRestDay: true
     };
   });
+
+  const handleUpdateDay = async (dayId: string, workoutId: string | null) => {
+    if (!planData || !planData.data_json) return;
+    
+    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
+    if (workoutId) {
+      newWeeklySchedule[dayId] = workoutId;
+    } else {
+      delete newWeeklySchedule[dayId];
+    }
+
+    const updatedDataJson = { 
+      ...planData.data_json, 
+      weeklySchedule: newWeeklySchedule 
+    };
+
+    // Optimistic update
+    setPlanData({
+      ...planData,
+      data_json: updatedDataJson
+    });
+
+    try {
+      await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: planData.name,
+          data_json: updatedDataJson
+        })
+      });
+    } catch (e) {
+      console.error('Error saving schedule:', e);
+      // Revert if error? (Optional for now)
+    }
+  };
+
+  const [showWorkoutPicker, setShowWorkoutPicker] = useState<string | null>(null);
+
+  const handleMoveWorkout = async (dayId: string, direction: 'up' | 'down') => {
+    if (!planData || !planData.data_json) return;
+    
+    const dayIndex = DAYS_CONFIG.findIndex(d => d.id === dayId);
+    const targetIndex = direction === 'up' ? dayIndex - 1 : dayIndex + 1;
+    
+    if (targetIndex < 0 || targetIndex >= DAYS_CONFIG.length) return;
+    
+    const targetDayId = DAYS_CONFIG[targetIndex].id;
+    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
+    
+    // Swap
+    const sourceWorkoutId = newWeeklySchedule[dayId];
+    const targetWorkoutId = newWeeklySchedule[targetDayId];
+    
+    if (sourceWorkoutId) {
+      newWeeklySchedule[targetDayId] = sourceWorkoutId;
+    } else {
+      delete newWeeklySchedule[targetDayId];
+    }
+    
+    if (targetWorkoutId) {
+      newWeeklySchedule[dayId] = targetWorkoutId;
+    } else {
+      delete newWeeklySchedule[dayId];
+    }
+
+    const updatedDataJson = { 
+      ...planData.data_json, 
+      weeklySchedule: newWeeklySchedule 
+    };
+
+    setPlanData({
+      ...planData,
+      data_json: updatedDataJson
+    });
+
+    try {
+      await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: planData.name,
+          data_json: updatedDataJson
+        })
+      });
+    } catch (e) {
+      console.error('Error moving workout:', e);
+    }
+  };
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
@@ -168,7 +259,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               </div>
               <div>
                 <h3 className="font-bold text-slate-900">Plan Distribution</h3>
-                <p className="text-sm text-slate-500">Visualiza el balance semanal de entrenamientos del cliente.</p>
+                <p className="text-sm text-slate-500">Haz clic en cada día para editar o cambiar el entrenamiento.</p>
               </div>
             </div>
             
@@ -212,55 +303,144 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               <p className="text-sm font-medium">Cargando distribución semanal...</p>
             </div>
           ) : processedDays.map((day) => (
-            <button
-              key={day.id}
-              onClick={() => onSelectDay(day.id)}
-              className="group w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6 p-5"
-            >
-              <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 pb-4 sm:pb-0 sm:pr-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-lg text-slate-900 leading-tight">{day.name}</h3>
-                  <span className="text-xs text-slate-400 font-medium">/ {day.nameEn}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xl">
-                  <span className="material-symbols-outlined text-lg">fitness_center</span>
-                  {day.duration}
-                </div>
-              </div>
-
-              <div className="flex-1 w-full space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className={`${day.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide border`}>
-                    {day.tag}
-                  </span>
-                  <div className="flex gap-4 text-xs text-slate-500 font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px] text-slate-400">monitoring</span>
-                      Intensidad: {day.intensity}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px] text-slate-400">layers</span>
-                      {day.volume}
-                    </span>
+            <div key={day.id} className="relative group">
+              <button
+                onClick={() => onSelectDay(day.id)}
+                className={`w-full text-left bg-white rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6 p-5 ${
+                  day.isRestDay ? 'border-slate-100 opacity-80 hover:opacity-100' : 'border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
+                }`}
+              >
+                <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 pb-4 sm:pb-0 sm:pr-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-lg text-slate-900 leading-tight">{day.name}</h3>
+                    <span className="text-xs text-slate-400 font-medium">/ {day.nameEn}</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 font-bold text-xl ${day.isRestDay ? 'text-slate-300' : 'text-emerald-600'}`}>
+                    <span className="material-symbols-outlined text-lg">{day.isRestDay ? 'bedtime' : 'fitness_center'}</span>
+                    {day.duration}
                   </div>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
-                  <div className={`${day.intensityColor} h-full transition-all`} style={{ width: day.tag === 'Descanso' ? '10%' : '100%' }}></div>
-                </div>
-              </div>
 
-              <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-50 pt-4 sm:pt-0">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">ENTRENAMIENTO</span>
+                <div className="flex-1 w-full space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className={`${day.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide border`}>
+                      {day.tag}
+                    </span>
+                    <div className="flex gap-4 text-xs text-slate-500 font-medium">
+                      {!day.isRestDay && (
+                        <>
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[16px] text-slate-400">monitoring</span>
+                            Intensidad: {day.intensity}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[16px] text-slate-400">layers</span>
+                            {day.volume}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
+                    {!day.isRestDay && <div className={`${day.intensityColor} h-full transition-all`} style={{ width: '100%' }}></div>}
+                  </div>
                 </div>
-                <div className="text-sm font-bold text-slate-900 truncate">
-                  {day.workoutName}
+
+                <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-50 pt-4 sm:pt-0 flex justify-between items-center group/side">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">ENTRENAMIENTO</span>
+                    </div>
+                    <div className={`text-sm font-bold truncate ${day.isRestDay ? 'text-slate-400' : 'text-slate-900'}`}>
+                      {day.workoutName}
+                    </div>
+                    {!day.isRestDay && (
+                      <div className="text-[10px] text-slate-400 font-medium mt-1">
+                        Pulsa para ver ejercicios
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col gap-1">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveWorkout(day.id, 'up');
+                      }}
+                      disabled={DAYS_CONFIG.findIndex(d => d.id === day.id) === 0}
+                      className="p-1 rounded bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 transition-all disabled:opacity-30 disabled:hover:bg-slate-50 disabled:hover:text-slate-400 opacity-0 group-hover:opacity-100"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">expand_less</span>
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveWorkout(day.id, 'down');
+                      }}
+                      disabled={DAYS_CONFIG.findIndex(d => d.id === day.id) === DAYS_CONFIG.length - 1}
+                      className="p-1 rounded bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 transition-all disabled:opacity-30 disabled:hover:bg-slate-50 disabled:hover:text-slate-400 opacity-0 group-hover:opacity-100"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">expand_more</span>
+                    </button>
+                  </div>
+
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowWorkoutPicker(showWorkoutPicker === day.id ? null : day.id);
+                    }}
+                    className={`p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
+                      showWorkoutPicker === day.id ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined">edit_calendar</span>
+                  </button>
                 </div>
-                <div className="text-[10px] text-slate-400 font-medium mt-1">
-                  {day.tag === 'Descanso' ? 'Día de recuperación' : 'Pulsa para ver ejercicios'}
+              </button>
+
+              {/* Workout Picker Dropdown */}
+              {showWorkoutPicker === day.id && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in duration-200">
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2 border-b border-slate-50 mb-2">
+                    Cambiar Entrenamiento
+                  </div>
+                  <div className="space-y-1">
+                    <button 
+                      onClick={() => {
+                        handleUpdateDay(day.id, null);
+                        setShowWorkoutPicker(null);
+                      }}
+                      className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all flex items-center gap-3"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">block</span>
+                      Día de Descanso
+                    </button>
+                    {planData.data_json.workouts?.map((w: any) => (
+                      <button 
+                        key={w.id}
+                        onClick={() => {
+                          handleUpdateDay(day.id, w.id);
+                          setShowWorkoutPicker(null);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between group/item ${
+                          planData.data_json.weeklySchedule?.[day.id] === w.id 
+                            ? 'bg-emerald-50 text-emerald-600' 
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-emerald-500'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-[20px]">fitness_center</span>
+                          {w.name}
+                        </div>
+                        {planData.data_json.weeklySchedule?.[day.id] === w.id && (
+                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </button>
+              )}
+            </div>
           ))}
         </div>
       </div>

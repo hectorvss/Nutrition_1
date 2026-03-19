@@ -2,15 +2,17 @@ import React, { useState } from 'react';
 import { useClient } from '../context/ClientContext';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
+import { PROGRAM_TEMPLATES } from '../constants/training_presets';
+import { trainingPrograms } from '../constants/training';
 
 interface TrainingNoPlanProps {
   client: any;
   onBack: () => void;
-  onStartPlan: (preset?: any) => void;
+  onStartPlan: (dataJson?: any) => void;
 }
 const PRESETS = [
   {
-    id: 'fuerza-start',
+    id: 'p1',
     title: 'Fuerza Start',
     level: 'Beginner',
     levelColor: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900',
@@ -24,13 +26,13 @@ const PRESETS = [
       { icon: 'fitness_center', text: 'Strength' }
     ],
     scheduleLabel: 'Mon, Wed, Fri active',
-    schedule: ['M', 'W', 'F'],
+    schedule: ['M', null, 'W', null, 'F', null, null],
     freqValue: '3x',
     focusValue: 'Full Body Strength',
     recommended: ['Not Set']
   },
   {
-    id: 'fuerza-regular',
+    id: 'p2',
     title: 'Fuerza Regular',
     level: 'Intermediate',
     levelColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',
@@ -44,13 +46,13 @@ const PRESETS = [
       { icon: 'arrow_upward', text: 'Upper/Lower' }
     ],
     scheduleLabel: '4 days active',
-    schedule: ['M', 'T', 'T', 'F'],
+    schedule: ['M', 'T', null, 'T', 'F', null, null],
     freqValue: '4x',
     focusValue: 'Full Body Strength',
     recommended: ['Weight Loss']
   },
   {
-    id: 'fuerza-pro',
+    id: 'p3',
     title: 'Fuerza Pro',
     level: 'Advanced',
     levelColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900',
@@ -64,13 +66,13 @@ const PRESETS = [
       { icon: 'horizontal_split', text: 'PPL' }
     ],
     scheduleLabel: 'Weekdays active',
-    schedule: ['M', 'T', 'W', 'T', 'F'],
+    schedule: ['M', 'T', 'W', 'T', 'F', null, null],
     freqValue: '5x',
     focusValue: 'Full Body Strength',
     recommended: []
   },
   {
-    id: 'perdida-grasa',
+    id: 'p4',
     title: 'Pérdida de Grasa',
     level: 'High Intensity',
     levelColor: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-900',
@@ -84,13 +86,13 @@ const PRESETS = [
       { icon: 'directions_run', text: 'HIIT' }
     ],
     scheduleLabel: '4 days active',
-    schedule: ['M', 'T', 'T', 'F'],
+    schedule: ['M', 'T', null, 'T', 'F', null, null],
     freqValue: '4x',
     focusValue: 'Endurance',
     recommended: ['Weight Loss']
   },
   {
-    id: 'hipertrofia',
+    id: 'p5',
     title: 'Hipertrofia',
     level: 'Volume',
     levelColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',
@@ -100,17 +102,17 @@ const PRESETS = [
     volume: { label: 'Very High', pct: 95, color: 'bg-purple-500' },
     tags: [
       { icon: 'calendar_today', text: '5x / week' },
-      { icon: 'monitor_weight', text: 'Muscle Focus' },
-      { icon: 'fitness_center', text: 'Bodybuilding' }
+      { icon: 'timer', text: '60 min' },
+      { icon: 'expand', text: 'High Volume' }
     ],
     scheduleLabel: 'Weekdays active',
-    schedule: ['M', 'T', 'W', 'T', 'F'],
+    schedule: ['M', 'T', 'W', 'T', 'F', null, null],
     freqValue: '5x',
     focusValue: 'Hypertrophy',
     recommended: ['Muscle Gain']
   },
   {
-    id: 'movilidad',
+    id: 'p6',
     title: 'Movilidad & Recuperación',
     level: 'Restorative',
     levelColor: 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-900',
@@ -172,17 +174,33 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
 
   const handleConfirm = async () => {
     try {
-      // Apply via master plan with specific slug
-      await fetchWithAuth(`/manager/clients/${client.id}/apply-training-master-plan`, {
+      const template = PROGRAM_TEMPLATES[selectedId];
+      const selectedProgram = trainingPrograms.find(p => p.id === selectedId) || trainingPrograms[0];
+
+      const dataJson = {
+        name: selectedProgram.name,
+        level: selectedProgram.level,
+        focus: selectedProgram.focus,
+        frequency: selectedProgram.frequency,
+        duration: selectedProgram.duration,
+        schedule: selectedProgram.schedule,
+        description: selectedProgram.description,
+        workouts: template?.workouts || [],
+        weeklySchedule: template?.defaultSchedule || {}
+      };
+
+      await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
         method: 'POST',
-        body: JSON.stringify({ slug: `training_${selectedPreset.id}` })
+        body: JSON.stringify({
+          name: dataJson.name,
+          data_json: dataJson
+        })
       });
+
       await reloadClients();
-      onStartPlan(selectedPreset);
+      onStartPlan(dataJson);
     } catch (err) {
-      console.error('Error applying training master plan:', err);
-      assignTrainingPlan(client.id);
-      onStartPlan(selectedPreset);
+      console.error('Error applying training program:', err);
     }
   };
 

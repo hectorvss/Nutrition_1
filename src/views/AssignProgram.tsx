@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { trainingPrograms } from '../constants/training';
+import { PROGRAM_TEMPLATES } from '../constants/training_presets';
 import { useClient } from '../context/ClientContext';
+import { fetchWithAuth } from '../api';
 
 interface AssignProgramProps {
   clientId: string;
   onBack: () => void;
-  onAssign: (programId: string) => void;
+  onAssign: (programId: string, dataJson: any) => void;
   onCreateScratch: () => void;
 }
 
@@ -18,6 +20,28 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
   };
   const [selectedProgramId, setSelectedProgramId] = useState<string>(trainingPrograms[0].id);
   const selectedProgram = trainingPrograms.find(p => p.id === selectedProgramId) || trainingPrograms[0];
+
+  const handleAssign = async () => {
+    // Get the template for the selected program
+    const template = PROGRAM_TEMPLATES[selectedProgramId];
+    
+    // Prepare the data_json structure
+    const dataJson = {
+      name: selectedProgram.name,
+      level: selectedProgram.level,
+      focus: selectedProgram.focus,
+      frequency: selectedProgram.frequency,
+      duration: selectedProgram.duration,
+      schedule: selectedProgram.schedule,
+      description: selectedProgram.description,
+      // Store the full list of available workouts for this program
+      workouts: template?.workouts || [],
+      // Store the mapping of days to specific workout IDs
+      weeklySchedule: template?.defaultSchedule || {}
+    };
+
+    onAssign(selectedProgramId, dataJson);
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
@@ -247,7 +271,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                   </div>
 
                   <button 
-                    onClick={() => onAssign(selectedProgramId)}
+                    onClick={handleAssign}
                     className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 mt-4"
                   >
                     <span className="material-symbols-outlined text-[22px]">assignment_add</span>
