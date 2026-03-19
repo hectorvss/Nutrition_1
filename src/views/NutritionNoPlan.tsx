@@ -275,19 +275,39 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
         const targetC = totalCarbsG * ratio;
         const targetF = totalFatsG * ratio;
 
+        // 4.1 Filter sources by meal type
+        const isBf = (f: any) => /huevo|pan|leche|yogur|avena|fruta|queso|pavo|jamon|egg|bread|milk|yogurt|oats|fruit|cheese|turkey|ham/i.test(f.name);
+        const isSk = (f: any) => /fruta|fruto|fruto seco|yogur|barrita|fruit|nuts|yogurt|bar/i.test(f.name);
+        const isMn = (f: any) => /pollo|carne|arroz|pasta|ensalada|pescado|verdura|ternera|salmon|lenteja|garbanzo|chicken|beef|rice|pasta|salad|fish|veg|lentil/i.test(f.name);
+
+        let pFiltered = proteinSources;
+        let cFiltered = carbSources;
+        let fFiltered = fatSources;
+
+        if (name.includes("Breakfast")) {
+          pFiltered = proteinSources.filter(isBf).length ? proteinSources.filter(isBf) : proteinSources;
+          cFiltered = carbSources.filter(isBf).length ? carbSources.filter(isBf) : carbSources;
+        } else if (name.includes("Snack")) {
+          pFiltered = proteinSources.filter(isSk).length ? proteinSources.filter(isSk) : proteinSources;
+          fFiltered = fatSources.filter(isSk).length ? fatSources.filter(isSk) : fatSources;
+        } else {
+          pFiltered = proteinSources.filter(isMn).length ? proteinSources.filter(isMn) : proteinSources;
+          cFiltered = carbSources.filter(isMn).length ? carbSources.filter(isMn) : carbSources;
+        }
+
         // SMART COMBINATOR LOOP
         let bestResult: any = null;
         let attempts = 0;
         const maxAttempts = 15;
 
         while (attempts < maxAttempts && !bestResult) {
-          const pIdx = (dayIdx + index + attempts) % (proteinSources.length || 1);
-          const cIdx = (dayIdx + index + attempts + 1) % (carbSources.length || 1);
-          const fIdx = (dayIdx + index + attempts + 2) % (fatSources.length || 1);
+          const pIdx = (dayIdx + index + attempts) % (pFiltered.length || 1);
+          const cIdx = (dayIdx + index + attempts + 1) % (cFiltered.length || 1);
+          const fIdx = (dayIdx + index + attempts + 2) % (fFiltered.length || 1);
 
-          const pFood = proteinSources[pIdx] || fallbackProt;
-          const cFood = carbSources[cIdx] || fallbackCarb;
-          const fFood = fatSources[fIdx] || fallbackFat;
+          const pFood = pFiltered[pIdx] || fallbackProt;
+          const cFood = cFiltered[cIdx] || fallbackCarb;
+          const fFood = fFiltered[fIdx] || fallbackFat;
 
           const solution = solveMacros(targetP, targetC, targetF, pFood, cFood, fFood);
           if (solution) {
@@ -298,9 +318,9 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
 
         // Final fallback if no realistic perfect solution found (PROPORTIONAL SCALING)
         if (!bestResult) {
-          const pFood = fallbackProt;
-          const cFood = fallbackCarb;
-          const fFood = fallbackFat;
+          const pFood = pFiltered[0] || fallbackProt;
+          const cFood = cFiltered[0] || fallbackCarb;
+          const fFood = fFiltered[0] || fallbackFat;
           
           // Standard proportions: 150g P-Source, 100g C-Source, 15g F-Source (Nuts/Oil)
           const baseP = 1.5, baseC = 1.0, baseF = 0.15;
@@ -320,11 +340,13 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
           id: `${day}-${name}-${i}-${attempts}`
         }));
 
+        const mealTimes = ["08:30 AM", "11:30 AM", "02:00 PM", "05:30 PM", "09:00 PM", "11:00 PM"];
+
         return {
           id: Math.random(),
           name,
           iconName: name.includes("Breakfast") ? "Sunrise" : name.includes("Lunch") ? "Sun" : name.includes("Dinner") ? "Moon" : "Cookie",
-          time: name.includes("Breakfast") ? "08:00 AM" : name.includes("Snack") ? "11:00 AM" : "01:30 PM",
+          time: mealTimes[index] || "12:00 PM",
           items: items,
           categories: [
             { id: 'p', label: 'Protein Source', example: items[0].name, amount: Math.round(targetP), color: 'bg-blue-500' },
