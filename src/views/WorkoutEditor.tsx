@@ -274,18 +274,10 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, mode =
           <button 
             onClick={saveProgram}
             disabled={isSaving}
-            className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold text-sm shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[18px]">{isSaving ? 'sync' : (isBlank ? 'save' : 'edit_note')}</span>
-            {isSaving ? 'Guardando...' : (isBlank ? 'Save Draft' : 'Edit Workout')}
-          </button>
-          <button 
-            onClick={saveProgram}
-            disabled={isSaving}
             className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm"
           >
-            <span className="material-symbols-outlined text-[18px]">publish</span>
-            {isSaving ? 'Guardando...' : 'Publish to App'}
+            <span className="material-symbols-outlined text-[18px]">{isSaving ? 'sync' : 'save'}</span>
+            {isSaving ? 'Guardando...' : 'Save'}
           </button>
         </div>
       </header>
