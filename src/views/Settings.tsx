@@ -72,7 +72,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto p-6 md:p-8 lg:p-10">
+    <div className="p-6 md:p-8 lg:p-10 w-full">
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Settings</h1>
         <p className="text-slate-500 text-sm">Manage your account preferences, appearance, and notifications.</p>
