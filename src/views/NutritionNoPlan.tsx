@@ -296,16 +296,21 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
           attempts++;
         }
 
-        // Final fallback if no realistic perfect solution found
+        // Final fallback if no realistic perfect solution found (PROPORTIONAL SCALING)
         if (!bestResult) {
           const pFood = fallbackProt;
           const cFood = fallbackCarb;
           const fFood = fallbackFat;
-          // Forced solver (ignoring ranges) for fallback safety
-          const qp = targetP / pFood.protein;
-          const qc = targetC / cFood.carbs;
-          const qf = targetF / fFood.fats;
-          bestResult = { foods: [pFood, cFood, fFood], quantities: [qp, qc, qf].map(q => Math.round(q * 100) / 100) };
+          
+          // Standard proportions: 150g P-Source, 100g C-Source, 25g F-Source
+          const baseP = 1.5, baseC = 1.0, baseF = 0.25;
+          const standardCals = (pFood.calories * baseP) + (cFood.calories * baseC) + (fFood.calories * baseF);
+          const scalar = (targetCalories * ratio) / standardCals;
+          
+          bestResult = { 
+            foods: [pFood, cFood, fFood], 
+            quantities: [baseP * scalar, baseC * scalar, baseF * scalar].map(q => Math.round(q * 100) / 100) 
+          };
         }
 
         const items = bestResult.foods.map((f: any, i: number) => ({
@@ -335,19 +340,24 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
         currentDayCals += (i.calories || 0) * (i.quantity || 1);
       }));
 
-      // Adjust the largest carb source in the day to match targetCalories exactly
-      const diff = targetCalories - currentDayCals;
-      if (Math.abs(diff) > 5) {
-        // Find a suitable carb item to adjust
-        let adjustTarget = generatedMeals[0].items[1]; // fallback to first carb
-        generatedMeals.reverse().some(m => {
-          const carbItem = m.items.find((it: any) => it.category === 'Carbs');
-          if (carbItem) { adjustTarget = carbItem; return true; }
-          return false;
+      // SAFE BALANCING: Adjust quantities slightly to match targetCalories exactly
+      let diff = targetCalories - currentDayCals;
+      if (Math.abs(diff) > 2) {
+        // Try to adjust a portion without making it "ridiculous"
+        generatedMeals.some(m => {
+          return m.items.some(item => {
+            if (item.category === 'Carbs' || item.category === 'Protein') {
+              const adjustment = diff / item.calories;
+              const newQty = item.quantity + adjustment;
+              if (newQty > 0.4 && newQty < 3.0) {
+                item.quantity = Math.round(newQty * 100) / 100;
+                diff = 0; // successfully balanced
+                return true;
+              }
+            }
+            return false;
+          });
         });
-        
-        const extraQty = diff / adjustTarget.calories;
-        adjustTarget.quantity = Math.round((adjustTarget.quantity + extraQty) * 100) / 100;
       }
 
       weeklyDays[day] = { meals: generatedMeals };
