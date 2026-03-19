@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { fetchWithAuth } from '../api';
+import { useAuth } from './AuthContext';
 
 interface Integrations {
   user_id: string;
@@ -31,6 +32,7 @@ interface IntegrationsContextType {
 const IntegrationsContext = createContext<IntegrationsContextType | undefined>(undefined);
 
 export const IntegrationsProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [integrations, setIntegrations] = useState<Integrations | null>(null);
   const [stripeData, setStripeData] = useState<StripeBalance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,8 +89,10 @@ export const IntegrationsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    fetchIntegrations();
-  }, []);
+    if (user) {
+      fetchIntegrations();
+    }
+  }, [user]);
 
   return (
     <IntegrationsContext.Provider value={{ 
