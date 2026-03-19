@@ -57,6 +57,7 @@ export default function Nutrition() {
           <NutritionWeeklyView
             client={selectedClient}
             onBack={() => setCurrentView('client-list')}
+            onReassign={() => setCurrentView('no-plan')}
             onSelectDay={(dayId) => {
               setSelectedDay(dayId);
               setCurrentView('plan-detail');
