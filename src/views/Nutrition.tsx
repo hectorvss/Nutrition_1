@@ -48,6 +48,9 @@ export default function Nutrition() {
               setSelectedPreset(preset);
               setInitialPlanData(planData);
               setIsNewPlan(true);
+              if (planData) {
+                setSelectedDay('monday'); // Default to monday for dynamic generation
+              }
               setCurrentView('plan-detail');
             }}
           />
