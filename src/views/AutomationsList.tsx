@@ -36,7 +36,7 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
 
   return (
     <div className="flex flex-1 h-full overflow-hidden p-6 gap-6">
-      <div className="w-full max-w-6xl mx-auto flex flex-col h-full">
+      <div className="w-full flex flex-col h-full">
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Automate Messages</h1>

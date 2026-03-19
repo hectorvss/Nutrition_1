@@ -74,7 +74,7 @@ export default function AddClient({ onBack }: AddClientProps) {
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-hidden">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="max-w-[1000px] mx-auto p-6 md:p-8 lg:p-10">
+        <div className="p-6 md:p-8 lg:p-10">
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-8 font-medium">
             <button onClick={onBack} className="hover:text-emerald-600 transition-colors flex items-center gap-1">
               <ArrowLeft className="w-4 h-4" />

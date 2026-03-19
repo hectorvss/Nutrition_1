@@ -811,7 +811,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     <>
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10">
+        <div className="p-6 md:p-8 lg:p-10">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">
             <button onClick={onBack} className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1">
               Clients

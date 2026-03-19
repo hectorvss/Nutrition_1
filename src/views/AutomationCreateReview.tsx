@@ -93,7 +93,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
 
   return (
     <div className="flex flex-1 h-full overflow-hidden p-6 gap-6">
-      <div className="w-full max-w-6xl mx-auto flex flex-col h-full">
+      <div className="w-full flex flex-col h-full">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
           <div>
