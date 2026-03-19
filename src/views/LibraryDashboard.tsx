@@ -48,7 +48,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
   }, [activeTab, search]);
 
   return (
-    <div className="max-w-[1400px] mx-auto p-6 md:p-8 lg:p-10 h-full flex flex-col overflow-hidden bg-slate-50">
+    <div className="p-6 md:p-8 lg:p-10 w-full h-full flex flex-col overflow-hidden bg-slate-50">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
