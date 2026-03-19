@@ -85,44 +85,6 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
 
   const [showWorkoutPicker, setShowWorkoutPicker] = useState<string | null>(null);
 
-  const handleMoveWorkout = (dayId: string, direction: 'up' | 'down') => {
-    if (!planData || !planData.data_json) return;
-    
-    const dayIndex = DAYS_CONFIG.findIndex(d => d.id === dayId);
-    const targetIndex = direction === 'up' ? dayIndex - 1 : dayIndex + 1;
-    
-    if (targetIndex < 0 || targetIndex >= DAYS_CONFIG.length) return;
-    
-    const targetDayId = DAYS_CONFIG[targetIndex].id;
-    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
-    
-    const sourceWorkoutId = newWeeklySchedule[dayId];
-    const targetWorkoutId = newWeeklySchedule[targetDayId];
-    
-    if (sourceWorkoutId) {
-      newWeeklySchedule[targetDayId] = sourceWorkoutId;
-    } else {
-      delete newWeeklySchedule[targetDayId];
-    }
-    
-    if (targetWorkoutId) {
-      newWeeklySchedule[dayId] = targetWorkoutId;
-    } else {
-      delete newWeeklySchedule[dayId];
-    }
-
-    const updatedDataJson = { 
-      ...planData.data_json, 
-      weeklySchedule: newWeeklySchedule 
-    };
-
-    setPlanData({
-      ...planData,
-      data_json: updatedDataJson
-    });
-    setHasChanges(true);
-  };
-
   const handleSave = async () => {
     if (!planData || !planData.data_json || !hasChanges) return;
     
@@ -367,11 +329,14 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
             >
               <button
                 onClick={() => onSelectDay(day.id)}
-                className={`w-full text-left bg-white rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6 p-5 ${
+                className={`w-full text-left bg-white rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
                   dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' : 
                   day.isRestDay ? 'border-slate-100 opacity-80 hover:opacity-100' : 'border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
                 }`}
               >
+                <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
+                  <span className="material-symbols-outlined text-[24px]">drag_indicator</span>
+                </div>
                 <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 pb-4 sm:pb-0 sm:pr-4">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-bold text-lg text-slate-900 leading-tight">{day.name}</h3>
@@ -412,9 +377,6 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                   <div>
                     <div className="flex justify-between items-center mb-2">
                        <div className="flex items-center gap-2">
-                          <div className="cursor-grab text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
-                          </div>
                           <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">ENTRENAMIENTO</span>
                        </div>
                     </div>
@@ -426,29 +388,6 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                         Pulsa para ver ejercicios
                       </div>
                     )}
-                  </div>
-                  
-                  <div className="flex flex-col gap-1">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveWorkout(day.id, 'up');
-                      }}
-                      disabled={DAYS_CONFIG.findIndex(d => d.id === day.id) === 0}
-                      className="p-1 rounded bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 transition-all disabled:opacity-30 disabled:hover:bg-slate-50 disabled:hover:text-slate-400 opacity-0 group-hover:opacity-100"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">expand_less</span>
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveWorkout(day.id, 'down');
-                      }}
-                      disabled={DAYS_CONFIG.findIndex(d => d.id === day.id) === DAYS_CONFIG.length - 1}
-                      className="p-1 rounded bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 transition-all disabled:opacity-30 disabled:hover:bg-slate-50 disabled:hover:text-slate-400 opacity-0 group-hover:opacity-100"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">expand_more</span>
-                    </button>
                   </div>
 
                   <button 
