@@ -1665,28 +1665,24 @@ router.get('/analytics', async (req: any, res) => {
 
       // 5. Stripe Real-time metrics
       let revenue = 0;
-      let mrr = 0;
+      let monthlyRevenue = Array(12).fill(0);
       
       const { data: integrations } = await supabaseAdmin
         .from('integrations')
-        .select('stripe_secret_key, stripe_enabled')
+        .select('*')
         .eq('user_id', managerId)
         .maybeSingle();
 
       if (integrations?.stripe_enabled && integrations?.stripe_secret_key) {
         try {
           const stripe = new Stripe(integrations.stripe_secret_key);
+          const now = new Date();
+          const startOfYear = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
           
-          // 2. Get Charges from CURRENT YEAR for Trends
-          const startOfYear = Math.floor(new Date(new Date().getFullYear(), 0, 1).getTime() / 1000);
           const charges = await stripe.charges.list({
             created: { gte: startOfYear },
             limit: 100
           });
-          
-          const now = new Date();
-          const currentMonth = now.getMonth();
-          const monthlyRevenue = Array(12).fill(0);
           
           charges.data.forEach(c => {
             const date = new Date(c.created * 1000);
@@ -1695,17 +1691,7 @@ router.get('/analytics', async (req: any, res) => {
             }
           });
 
-          revenue = monthlyRevenue[currentMonth];
-          const yearlyTotal = monthlyRevenue.reduce((a, b) => a + b, 0);
-          
-          // Add custom business data
-          (res as any).businessData = {
-            monthlyRevenue,
-            totalYearly: yearlyTotal
-          };
-          
-          mrr = revenue; // Simple MRR estimate based on current month volume
-          
+          revenue = monthlyRevenue[now.getMonth()];
         } catch (sErr) {
           console.error('Stripe analytics error:', sErr);
         }
@@ -1718,7 +1704,7 @@ router.get('/analytics', async (req: any, res) => {
           retention: 94.2, 
           revenue: revenue || 0,
           ltv: 850,
-          monthlyRevenue: (res as any).businessData?.monthlyRevenue || Array(12).fill(0)
+          monthlyRevenue
         },
       nutrition,
       training,
