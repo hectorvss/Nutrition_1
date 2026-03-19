@@ -72,39 +72,59 @@ const defaultEvents: CalendarEvent[] = [
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
+import { fetchWithAuth } from '../api';
+
 export const CalendarProvider = ({ children }: { children: ReactNode }) => {
-  const [events, setEvents] = useState<CalendarEvent[]>(defaultEvents);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchTasks = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchWithAuth('/manager/tasks');
+      setEvents(data || []);
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const saved = localStorage.getItem('calendar_events');
-    if (saved) {
-      try {
-        setEvents(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse calendar events", e);
-      }
-    }
+    fetchTasks();
   }, []);
 
-  const saveEvents = (newEvents: CalendarEvent[]) => {
-    setEvents(newEvents);
-    localStorage.setItem('calendar_events', JSON.stringify(newEvents));
+  const addEvent = async (event: Omit<CalendarEvent, 'id'>) => {
+    try {
+      const newEvent = await fetchWithAuth('/manager/tasks', {
+        method: 'POST',
+        body: JSON.stringify(event)
+      });
+      setEvents(prev => [...prev, newEvent]);
+    } catch (error) {
+      console.error('Failed to add event:', error);
+    }
   };
 
-  const addEvent = (event: Omit<CalendarEvent, 'id'>) => {
-    const newEvent: CalendarEvent = {
-      ...event,
-      id: Date.now().toString()
-    };
-    saveEvents([...events, newEvent]);
+  const deleteEvent = async (id: string) => {
+    try {
+      await fetchWithAuth(`/manager/tasks/${id}`, { method: 'DELETE' });
+      setEvents(prev => prev.filter(e => e.id !== id));
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+    }
   };
 
-  const deleteEvent = (id: string) => {
-    saveEvents(events.filter(e => e.id !== id));
-  };
-
-  const updateEvent = (id: string, updates: Partial<CalendarEvent>) => {
-    saveEvents(events.map(e => e.id === id ? { ...e, ...updates } : e));
+  const updateEvent = async (id: string, updates: Partial<CalendarEvent>) => {
+    try {
+      const updatedEvent = await fetchWithAuth(`/manager/tasks/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      });
+      setEvents(prev => prev.map(e => e.id === id ? updatedEvent : e));
+    } catch (error) {
+      console.error('Failed to update event:', error);
+    }
   };
 
   const getEventsForDate = (dateStr: string) => {
@@ -113,7 +133,11 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <CalendarContext.Provider value={{ events, addEvent, deleteEvent, updateEvent, getEventsForDate }}>
-      {children}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-full min-h-[400px]">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      ) : children}
     </CalendarContext.Provider>
   );
 };

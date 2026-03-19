@@ -56,12 +56,40 @@ const defaultRules: AutomationRule[] = [
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
+import { fetchWithAuth } from '../api';
+
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const [rules, setRules] = useState<AutomationRule[]>(defaultRules);
   const [manualTasks, setManualTasks] = useState<TaskItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { clients } = useClient();
 
-  // On mount, load from localStorage if available
+  const fetchManualTasks = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchWithAuth('/manager/tasks');
+      // Filter out tasks that are also being handled by Calendar if necessary, 
+      // but for now, we just map them to TaskItem structure.
+      const formatted: TaskItem[] = (data || []).map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        desc: t.description || '',
+        client: t.users?.name || 'General',
+        program: 'Custom',
+        avatar: '',
+        status: t.status === 'completed' ? 'pending' : 'today',
+        timeLabel: t.time,
+        priority: 'medium',
+        type: t.type
+      }));
+      setManualTasks(formatted);
+    } catch (error) {
+      console.error('Failed to fetch manual tasks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const savedRules = localStorage.getItem('automation_rules');
     if (savedRules) {
@@ -71,14 +99,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         console.error("Failed to parse automation rules", e);
       }
     }
-    const savedManual = localStorage.getItem('manual_tasks');
-    if (savedManual) {
-      try {
-        setManualTasks(JSON.parse(savedManual));
-      } catch (e) {
-        console.error("Failed to parse manual tasks", e);
-      }
-    }
+    fetchManualTasks();
   }, []);
 
   const updateRule = (id: string, updates: Partial<AutomationRule>) => {
@@ -89,17 +110,34 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('automation_rules', JSON.stringify(rules));
   };
 
-  const addManualTask = (task: ManualTaskInput) => {
-    const newTask: TaskItem = {
-      ...task,
-      id: Date.now(),
-      type: task.type || 'MANUAL TASK',
-      label: task.label || 'USER CREATED',
-      avatar: task.avatar || 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=100&h=100&fit=crop', // default manager fallback
-    };
-    const newManualList = [...manualTasks, newTask];
-    setManualTasks(newManualList);
-    localStorage.setItem('manual_tasks', JSON.stringify(newManualList));
+  const addManualTask = async (task: ManualTaskInput) => {
+    try {
+      // Map TaskItem structure back to SQL table structure
+      const payload = {
+        title: task.title,
+        description: task.desc,
+        type: task.type || 'MANUAL TASK',
+        date: new Date().toISOString().split('T')[0], // Default to today for manual tasks unless specified
+        time: '09:00', // Default
+        duration: '30m'
+      };
+      
+      const response = await fetchWithAuth('/manager/tasks', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      
+      const newTask: TaskItem = {
+        ...task,
+        id: response.id,
+        type: task.type || 'MANUAL TASK',
+        label: task.label || 'USER CREATED',
+        avatar: task.avatar || 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=100&h=100&fit=crop',
+      };
+      setManualTasks(prev => [...prev, newTask]);
+    } catch (error) {
+      console.error('Failed to add manual task:', error);
+    }
   };
 
   // Generate tasks dynamically based on clients and enabled rules

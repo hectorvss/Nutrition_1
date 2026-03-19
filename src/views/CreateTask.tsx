@@ -49,7 +49,7 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
     );
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return alert("Task title is required");
 
@@ -57,6 +57,8 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
     const targets = selectedClients.length > 0 
       ? selectedClients.map(id => clients.find(c => c.id === id)!) 
       : [{ id: 'general', name: 'General', plan: 'None', avatar: '' }];
+
+    const savePromises: Promise<void>[] = [];
 
     // Add to Calendar Context
     if (syncToCalendar) {
@@ -77,7 +79,7 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
       else if (m > 0) durationStr = `${h}h ${m}m`;
 
       targets.forEach(c => {
-        addEvent({
+        const p = addEvent({
           time: startTime,
           date: date,
           duration: diffMins <= 0 ? '1h' : durationStr,
@@ -88,6 +90,7 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
           initials: c.name?.substring(0,2).toUpperCase(),
           avatar: c.avatar
         });
+        if (p instanceof Promise) savePromises.push(p);
       });
     }
 
@@ -99,19 +102,26 @@ export default function CreateTask({ onNavigate }: CreateTaskProps) {
           desc: description,
           client: c.name !== 'General' ? c.name : 'General Task',
           program: c.plan || 'None',
-          status: 'pending', // Will show up if priority is pending or today
+          status: 'pending', 
           timeLabel: repeat,
           priority: priority.toLowerCase() as any,
           type: category.toUpperCase(),
           label: 'USER SCHEDULED',
           avatar: c.avatar
         };
-        addManualTask(manualTask);
+        const p = addManualTask(manualTask);
+        if (p instanceof Promise) savePromises.push(p);
       });
     }
 
-    // Return to dashboard/tasks
-    onNavigate('tasks');
+    try {
+      await Promise.all(savePromises);
+      // Return to dashboard/tasks
+      onNavigate('tasks');
+    } catch (error) {
+       console.error("Failed to save tasks", error);
+       alert("An error occurred while saving tasks.");
+    }
   };
 
   return (
