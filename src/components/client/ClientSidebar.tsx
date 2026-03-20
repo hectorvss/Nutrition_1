@@ -14,6 +14,7 @@ const navItems = [
   { id: 'messages', label: 'Messages', icon: 'chat_bubble' },
   { id: 'nutrition', label: 'Nutrition', icon: 'restaurant' },
   { id: 'training', label: 'Training', icon: 'fitness_center' },
+  { id: 'roadmap', label: 'Roadmap', icon: 'map' },
   { id: 'progress', label: 'Progress', icon: 'trending_up' },
 ];
 

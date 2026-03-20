@@ -15,6 +15,7 @@ import { useClient } from './context/ClientContext';
 import CalendarView from './views/Calendar';
 import CreateTask from './views/CreateTask';
 import PlanningManagement from './views/PlanningManagement';
+import PlanningDetail from './views/PlanningDetail';
 import TaskIntelligence from './views/TaskIntelligence';
 import Clients from './views/Clients';
 import CheckIns from './views/CheckIns';
@@ -44,6 +45,7 @@ type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'ta
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedTaskDate, setSelectedTaskDate] = useState<string | null>(null);
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
@@ -118,9 +120,11 @@ export default function App() {
         return <TaskIntelligence onNavigate={(view) => setCurrentView(view as View)} />;
       case 'planning':
         return <PlanningManagement onNavigate={(view, cid) => {
-          if (cid) setSelectedTaskId(cid as any); // reusing cid as generic param
+          if (cid) setSelectedClientId(cid);
           setCurrentView(view as View);
         }} />;
+      case 'planning-detail':
+        return <PlanningDetail onNavigate={(view) => setCurrentView(view as View)} clientId={selectedClientId || undefined} />;
       case 'clients':
         return <Clients />;
       case 'check-ins':

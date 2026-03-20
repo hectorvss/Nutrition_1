@@ -2180,6 +2180,84 @@ router.delete('/tasks/:id', async (req: any, res) => {
   }
 });
 
+// ROADMAP ROUTES
+
+router.get('/clients/:clientId/roadmap', async (req: any, res) => {
+  const { clientId } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('roadmaps')
+      .select('*')
+      .eq('client_id', clientId)
+      .maybeSingle();
+
+    if (error) throw error;
+    
+    // Default structure if not found
+    if (!data) {
+      return res.json({ 
+        nutrition: [], 
+        training: [], 
+        status: 'Draft' 
+      });
+    }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching roadmap:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+router.post('/clients/:clientId/roadmap', async (req: any, res) => {
+  const { clientId } = req.params;
+  const managerId = req.user.id;
+  const { nutrition, training, status } = req.body;
+
+  try {
+    // Upsert the roadmap
+    const { data: existing } = await supabaseAdmin
+      .from('roadmaps')
+      .select('id')
+      .eq('client_id', clientId)
+      .maybeSingle();
+
+    let result;
+    if (existing) {
+      const { data, error } = await supabaseAdmin
+        .from('roadmaps')
+        .update({ 
+          data_json: { nutrition, training },
+          status: status || 'Draft',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from('roadmaps')
+        .insert({ 
+          client_id: clientId,
+          manager_id: managerId,
+          data_json: { nutrition, training },
+          status: status || 'Draft'
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    }
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error saving roadmap:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 export default router;
 
 
