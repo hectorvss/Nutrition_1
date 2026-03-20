@@ -40,6 +40,7 @@ interface TaskContextType {
   addManualTask: (task: ManualTaskInput) => void;
   updateRule: (id: string, updates: Partial<AutomationRule>) => void;
   saveRules: () => void;
+  refreshTasks: () => Promise<void>;
 }
 
 const defaultRules: AutomationRule[] = [
@@ -211,7 +212,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   }, [clients, rules, manualTasks]);
 
   return (
-    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules }}>
+    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks: fetchManualTasks }}>
       {children}
     </TaskContext.Provider>
   );
