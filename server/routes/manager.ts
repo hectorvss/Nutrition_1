@@ -53,7 +53,7 @@ router.get('/profile', async (req: any, res) => {
     res.json(profile || { user_id: req.user.id });
   } catch (error: any) {
     console.error('Error fetching profile:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -136,7 +136,7 @@ router.get('/integrations', async (req: any, res) => {
     res.json(integrations || { user_id: req.user.id });
   } catch (error: any) {
     console.error('Error fetching integrations:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -224,7 +224,7 @@ router.get('/integrations/stripe/balance', async (req: any, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching stripe balance:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -349,7 +349,7 @@ router.delete('/clients/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting client:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -369,7 +369,7 @@ router.get('/clients/:id/nutrition-plan', async (req: any, res) => {
     res.json(plan || null);
   } catch (error) {
     console.error('Error fetching nutrition plan:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -444,7 +444,7 @@ router.get('/clients/:id/training-program', async (req: any, res) => {
     res.json(program || null);
   } catch (error) {
     console.error('Error fetching training program:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1400,7 +1400,7 @@ router.get('/settings', verifyManager, async (req: any, res) => {
     });
   } catch (error) {
     console.error('Error fetching settings:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1420,7 +1420,7 @@ router.post('/settings', verifyManager, async (req: any, res) => {
     res.json(data);
   } catch (error) {
     console.error('Error updating settings:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1452,7 +1452,7 @@ router.post('/update-password', async (req: any, res) => {
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Error updating password:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1484,7 +1484,7 @@ router.get('/security/sessions', async (req: any, res) => {
     res.json(sessions);
   } catch (error) {
     console.error('Error fetching sessions:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1501,7 +1501,7 @@ router.delete('/security/sessions/:id', async (req: any, res) => {
     res.json({ message: 'Session revoked' });
   } catch (error) {
     console.error('Error revoking session:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1534,7 +1534,7 @@ router.get('/security/history', async (req: any, res) => {
     res.json(history);
   } catch (error) {
     console.error('Error fetching history:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1560,7 +1560,7 @@ router.post('/security/2fa/toggle', async (req: any, res) => {
     res.json({ success: true, mfa_enabled: enabled });
   } catch (error) {
     console.error('Error toggling 2FA:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1735,7 +1735,7 @@ router.get('/onboarding', async (req: any, res) => {
     res.json(flows || []);
   } catch (error: any) {
     console.error('Error fetching onboarding flows:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1766,7 +1766,7 @@ router.get('/onboarding/:id', async (req: any, res) => {
     res.json({ ...flow, stats: counts });
   } catch (error: any) {
     console.error('Error fetching flow details:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1818,7 +1818,7 @@ router.delete('/onboarding/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting flow:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1886,7 +1886,7 @@ router.get('/tasks', async (req: any, res) => {
     res.json(tasks || []);
   } catch (error: any) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 
@@ -1924,6 +1924,7 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
     const calendar = google.calendar({ version: 'v3', auth });
     const calendarId = integrations.google_calendar_id || 'primary';
     
+    console.log(`Syncing task ${task.id} to Google Calendar ${calendarId}...`);
     // Determine the date/time string
     // Standardize: if task has date and start_time/time
     const dateStr = task.date || new Date().toISOString().split('T')[0];
@@ -1939,7 +1940,10 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
       end: {
         dateTime: `${dateStr}T${endStr}:00Z`,
       },
+      timeZone: 'UTC' // Standardize
     };
+
+    console.log('Google Event Data:', JSON.stringify(eventBody, null, 2));
 
     if (operation === 'DELETE') {
       if (task.google_event_id) {
@@ -1972,6 +1976,9 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
     }
   } catch (error: any) {
     console.error('Google Calendar Sync Error:', error.message || error);
+    if (error.code === 404 || error.code === 403) {
+      console.warn('CRITICAL: Calendar not found or access denied. Ensure the calendar is SHARED with the Service Account email if using JSON.');
+    }
   }
 }
 
