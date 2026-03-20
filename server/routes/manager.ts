@@ -1650,7 +1650,7 @@ router.get('/analytics', async (req: any, res) => {
     // Get last 5 check-ins
     const { data: recentCheckIns } = await supabaseAdmin
       .from('check_ins')
-      .select('date, client_id, users(name)')
+      .select('date, client_id, users(email)')
       .eq('users.manager_id', managerId)
       .order('date', { ascending: false })
       .limit(5);
@@ -1658,7 +1658,7 @@ router.get('/analytics', async (req: any, res) => {
     const activity = (recentCheckIns || []).map(ci => ({
       type: 'CHECK_IN',
       title: 'New Check-in',
-      sub: `from ${(ci.users as any)?.name || 'Client'}`,
+      sub: `from ${(ci.users as any)?.email || 'Client'}`,
       time: ci.date,
       color: 'bg-emerald-100 text-emerald-600'
     }));
@@ -1875,9 +1875,10 @@ router.post('/onboarding/:id/publish', async (req: any, res) => {
 // Get all tasks for this manager
 router.get('/tasks', async (req: any, res) => {
   try {
+    console.log(`GET /tasks: Fetching for manager ${req.user.id}`);
     const { data: tasks, error } = await supabaseAdmin
       .from('tasks')
-      .select('*, users!client_id(name)')
+      .select('*, users!client_id(email)')
       .eq('manager_id', req.user.id)
       .order('date', { ascending: true })
       .order('time', { ascending: true });
@@ -1984,6 +1985,7 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
 
 // Create a new task
 router.post('/tasks', async (req: any, res) => {
+  console.log('POST /tasks: Received payload:', JSON.stringify(req.body, null, 2));
   try {
     const { data, error } = await supabaseAdmin
       .from('tasks')
@@ -2004,8 +2006,8 @@ router.post('/tasks', async (req: any, res) => {
 
     if (error) throw error;
 
-    // Trigger Google Calendar Sync
-    await syncToGoogleCalendar(req.user.id, data);
+    // Trigger Google Calendar Sync (non-blocking)
+    syncToGoogleCalendar(req.user.id, data);
 
     res.json(data);
   } catch (error: any) {

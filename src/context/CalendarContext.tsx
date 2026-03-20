@@ -79,19 +79,22 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const mapBackendToFrontend = (t: any): CalendarEvent => ({
-    id: t.id,
-    time: t.time || t.start_time || '09:00',
-    date: t.date,
-    duration: t.duration || '1h',
-    title: t.title,
-    type: t.type,
-    desc: t.description || t.desc || '',
-    client: t.client || t.users?.name || 'General',
-    avatar: t.avatar || null,
-    initials: t.initials || (t.client ? t.client.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'GT'),
-    clientId: t.client_id || t.clientId
-  });
+  const mapBackendToFrontend = (t: any): CalendarEvent => {
+    const clientName = t.client || t.users?.name || t.users?.email || 'General';
+    return {
+      id: t.id,
+      time: t.time || t.start_time || '09:00',
+      date: t.date,
+      duration: t.duration || '1h',
+      title: t.title,
+      type: t.type,
+      desc: t.description || t.desc || '',
+      client: clientName,
+      avatar: t.avatar || (t.users?.email ? `https://ui-avatars.com/api/?name=${t.users.email}&background=random` : null),
+      initials: t.initials || (clientName !== 'General' ? clientName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'GT'),
+      clientId: t.client_id || t.clientId
+    };
+  };
 
   const fetchTasks = async () => {
     try {
