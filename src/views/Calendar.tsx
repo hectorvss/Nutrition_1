@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -29,7 +29,31 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [now, setNow] = useState(new Date());
 
-  React.useEffect(() => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (viewMode === 'Month') return;
+    
+    // Small timeout to ensure DOM is ready
+    const timer = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        const rowHeight = viewMode === 'Week' ? 96 : 128;
+        const scrollPadding = viewMode === 'Week' ? 0 : 16;
+        const targetTop = (now.getHours() * rowHeight) + (now.getMinutes() * (rowHeight / 60)) + scrollPadding;
+        
+        // Center the indicator
+        const containerHeight = scrollContainerRef.current.clientHeight;
+        scrollContainerRef.current.scrollTo({
+          top: targetTop - (containerHeight / 2),
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [viewMode, currentDate]); // also scroll when date changes if desired
+
+  useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
@@ -179,7 +203,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
         </div>
 
         {/* Week Grid */}
-        <div className="flex-1 overflow-y-auto relative">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative scrollbar-hide">
           <div className="grid grid-cols-[80px_1fr] min-h-full">
             {/* Time Labels */}
             <div className="border-r border-slate-100 bg-slate-50/30">
@@ -267,7 +291,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
   const renderDayView = () => {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[800px]">
-        <div className="flex-1 overflow-y-auto relative">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative scrollbar-hide">
           <div className="grid grid-cols-[100px_1fr] min-h-full">
             {/* Time Labels */}
             <div className="border-r border-slate-100 bg-slate-50/30">
