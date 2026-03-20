@@ -74,6 +74,26 @@ router.get('/plans', async (req: any, res) => {
   }
 });
 
+// Get my roadmap
+router.get('/roadmap', async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('roadmaps')
+      .select('*')
+      .eq('client_id', req.user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    res.json(data || { 
+      data_json: { nutrition: [], training: [] }, 
+      status: 'Empty' 
+    });
+  } catch (error: any) {
+    console.error('Error fetching roadmap:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 // --- ONBOARDING ROUTES ---
 
 // Get active onboarding message for the client

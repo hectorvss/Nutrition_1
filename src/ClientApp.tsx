@@ -6,13 +6,14 @@ import ClientDashboard from './views/client/ClientDashboard';
 import ClientCheckIns from './views/client/ClientCheckIns';
 import ClientNutrition from './views/client/ClientNutrition';
 import ClientTraining from './views/client/ClientTraining';
+import ClientRoadmap from './views/client/ClientRoadmap';
 import Settings from './views/Settings';
 import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
 import ActivityEditor from './views/ActivityEditor';
 import OnboardingPopup from './components/OnboardingPopup';
 
-export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'progress' | 'settings' | 'activity-editor';
+export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'settings' | 'activity-editor';
 
 export default function ClientApp() {
   const [currentView, setCurrentView] = useState<ClientView>('dashboard');
@@ -40,6 +41,8 @@ export default function ClientApp() {
             }} 
           />
         );
+      case 'roadmap':
+        return <ClientRoadmap />;
       case 'activity-editor':
         return (
           <ActivityEditor 
