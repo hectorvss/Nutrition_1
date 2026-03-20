@@ -170,40 +170,39 @@ export default function ClientRoadmap() {
   const activeNutrition = useMemo(() => roadmap?.nutrition.find(b => b.id === selectedNutritionId), [roadmap, selectedNutritionId]);
   const activeTraining = useMemo(() => roadmap?.training.find(b => b.id === selectedTrainingId), [roadmap, selectedTrainingId]);
 
-  if (loading) return <div className="p-8 flex items-center justify-center h-full"><Sparkles className="w-8 h-8 text-emerald-500 animate-pulse" /></div>;
+  if (loading) return (
+    <div className="p-10 flex items-center justify-center min-h-[400px]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 font-medium italic">Cargando tu planificación...</p>
+      </div>
+    </div>
+  );
   if (!roadmap) return null;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-[#112116] font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans selection:bg-emerald-100 selection:text-emerald-900">
       
+      {/* Scrollable Container */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth no-scrollbar">
-        <div className="max-w-[1440px] mx-auto space-y-6 text-slate-900 dark:text-slate-100">
+        <div className="max-w-[1440px] mx-auto space-y-6">
           
-          {/* Header */}
-          <div className="space-y-4">
-             <div className="flex items-center justify-between">
-              <h1 className="text-4xl font-bold tracking-tight text-[#17cf54]">Strategic Roadmap</h1>
-              <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <Calendar className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-500 uppercase tracking-widest leading-none mt-1">Status: {roadmap.status}</span>
+          {/* 1. Header Area */}
+          <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-6 text-center md:text-left flex-col md:flex-row">
+              <div className="w-16 h-16 rounded-2xl bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54]">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">Tu Estrategia Clínica</p>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight leading-none">Strategic Roadmap</h2>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-10">
-              <div className="flex flex-col">
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Plan Objective</p>
-                <h2 className="text-3xl font-bold tracking-tight leading-tight">Elite Body Recomposition & Metabolic Priming</h2>
-              </div>
-
-              <div className="flex items-center gap-6 bg-[#17cf54] text-white px-8 py-5 rounded-3xl shadow-xl shadow-[#17cf54]/20 ring-4 ring-emerald-500/10">
-                <div className="relative">
-                  <PlayIcon className="w-10 h-10 fill-white/20" />
-                  <div className="absolute inset-0 bg-white/20 blur-xl rounded-full" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-bold text-2xl tracking-tight leading-none mb-1">Week {roadmap.currentWeek}</span>
-                  <span className="text-xs font-bold uppercase tracking-widest opacity-80 leading-none">Of {roadmap.totalWeeks} Phase Cycle</span>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="bg-[#17cf54] px-5 py-3 rounded-2xl text-white flex items-center gap-3 shadow-lg shadow-[#17cf54]/20 font-bold text-xs tracking-widest uppercase cursor-default">
+                <PlayIcon className="w-5 h-5 fill-white/20" />
+                <span>Estado: {roadmap.status}</span>
               </div>
             </div>
           </div>
@@ -300,24 +299,24 @@ export default function ClientRoadmap() {
 
                 {activeNutrition ? (
                   <div className="space-y-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Target Daily Intake</p>
-                        <span className="text-xl text-slate-900 dark:text-white font-bold">{activeNutrition.kcal} KCAL</span>
-                      </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Daily Macro Split</p>
-                        <span className="text-xl text-slate-900 dark:text-white font-bold">{activeNutrition.macros}</span>
-                      </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Net Deficit Goal</p>
-                        <span className="text-xl text-amber-600 font-bold">{activeNutrition.deficit} KCAL</span>
-                      </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Hydration Standard</p>
-                        <span className="text-xl text-blue-500 font-bold">{activeNutrition.water} LITERS</span>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Ingesta Diaria</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeNutrition.kcal} <span className="text-[10px] text-slate-400 font-bold tracking-widest">KCAL</span></p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Macros</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeNutrition.macros}</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-amber-500/20 group/card">
+                    <p className="text-[10px] font-bold text-amber-600/60 uppercase tracking-widest mb-1 font-semibold italic">Déficit</p>
+                    <p className="text-xl font-bold text-amber-600 tracking-tight leading-none">{activeNutrition.deficit} <span className="text-[10px] text-amber-500/50 font-bold tracking-widest">KCAL/D</span></p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-blue-500/20 group/card">
+                    <p className="text-[10px] font-bold text-blue-600/60 uppercase tracking-widest mb-1 font-semibold italic">Agua</p>
+                    <p className="text-xl font-bold text-blue-500 tracking-tight leading-none">{activeNutrition.water} <span className="text-[10px] text-blue-400/50 font-bold tracking-widest">LITROS</span></p>
+                  </div>
+                </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                       <div className="space-y-8">
@@ -376,21 +375,21 @@ export default function ClientRoadmap() {
                 {activeTraining ? (
                    <div className="space-y-8">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Neuro-Focus</p>
-                          <span className="text-xl text-slate-900 dark:text-white font-bold">{activeTraining.focus}</span>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Enfoque del Bloque</p>
+                          <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeTraining.focus}</p>
                         </div>
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Weekly Effort</p>
-                          <span className="text-xl text-slate-900 dark:text-white font-bold">{activeTraining.sessions}</span>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Sesiones / Sem</p>
+                          <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeTraining.sessions}</p>
                         </div>
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Load Intensity</p>
-                          <span className="text-xl text-purple-600 font-bold">{activeTraining.intensity}</span>
+                        <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-purple-500/20 group/card">
+                          <p className="text-[10px] font-bold text-purple-600/60 uppercase tracking-widest mb-1 font-semibold italic">Intensidad</p>
+                          <p className="text-xl font-bold text-purple-600 tracking-tight leading-none">{activeTraining.intensity}</p>
                         </div>
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-semibold shadow-sm italic">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 italic">Tempo Pattern</p>
-                          <span className="text-xl text-slate-900 dark:text-white font-bold">{activeTraining.tempo}</span>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Protocolo Tempo</p>
+                          <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight font-mono leading-none">{activeTraining.tempo}</p>
                         </div>
                       </div>
 

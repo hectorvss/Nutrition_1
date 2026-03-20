@@ -114,6 +114,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                   }}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all group ${
                     (currentView === item.id || 
+                     (item.id === 'planning' && ['planning-detail'].includes(currentView)) ||
                      (item.id === 'calendar' && ['create-task'].includes(currentView)) ||
                      (item.id === 'training' && ['assign-program', 'workout-editor', 'exercise-edit'].includes(currentView)) ||
                      (item.id === 'exercises' && ['exercise-create'].includes(currentView)))
@@ -123,6 +124,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                 >
                   <item.icon className={`w-[18px] h-[18px] ${
                     (currentView === item.id || 
+                     (item.id === 'planning' && ['planning-detail'].includes(currentView)) ||
                      (item.id === 'calendar' && ['create-task'].includes(currentView)) ||
                      (item.id === 'training' && ['assign-program', 'workout-editor', 'exercise-edit'].includes(currentView)) ||
                      (item.id === 'exercises' && ['exercise-create'].includes(currentView)))

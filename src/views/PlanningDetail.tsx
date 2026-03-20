@@ -318,7 +318,14 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   const activeNutrition = useMemo(() => roadmap?.nutrition.find(b => b.id === selectedNutritionId), [roadmap, selectedNutritionId]);
   const activeTraining = useMemo(() => roadmap?.training.find(b => b.id === selectedTrainingId), [roadmap, selectedTrainingId]);
 
-  if (loading) return <div className="p-8 flex items-center justify-center h-full"><Sparkles className="w-8 h-8 text-emerald-500 animate-pulse" /></div>;
+  if (loading) return (
+    <div className="p-10 flex items-center justify-center min-h-[400px]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 font-medium italic">Loading planning data...</p>
+      </div>
+    </div>
+  );
   if (!roadmap) return null;
 
   return (
@@ -362,8 +369,19 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                   <span>Program: {roadmap.status}</span>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <button onClick={handleSave} className="flex-1 px-6 py-3 rounded-2xl bg-white dark:bg-slate-800 border-2 border-[#17cf54] text-[#17cf54] font-bold text-xs tracking-widest uppercase transition-all hover:bg-emerald-50 active:scale-95">Save Draft</button>
-                  <button className="flex-1 px-6 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs tracking-widest uppercase shadow-sm hover:bg-slate-200 active:scale-95">Discard</button>
+                  <button 
+                    onClick={handleSave} 
+                    className="flex-1 px-6 py-3 rounded-xl border border-emerald-500 text-emerald-600 font-bold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 bg-white text-xs uppercase tracking-widest active:scale-95 shadow-sm"
+                  >
+                    <SaveIcon className="w-4 h-4" />
+                    Save Draft
+                  </button>
+                  <button 
+                    className="flex-1 px-6 py-3 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-xs uppercase tracking-widest active:scale-95 shadow-sm"
+                  >
+                    <X className="w-4 h-4" />
+                    Discard
+                  </button>
                 </div>
               </div>
             </div>
@@ -472,21 +490,21 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                 {activeNutrition ? (
                   <div className="space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Target Daily Intake</p>
-                        <InlineInput value={activeNutrition.kcal} onChange={(v: string) => updateBlockData(activeNutrition.id, { kcal: v })} suffix="KCAL" className="text-xl text-slate-900 dark:text-white" />
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Target Daily Intake</p>
+                        <InlineInput value={activeNutrition.kcal} onChange={(v: string) => updateBlockData(activeNutrition.id, { kcal: v })} suffix="KCAL" className="text-xl text-slate-900 dark:text-white justify-center" />
                       </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Daily Macro Split</p>
-                        <InlineInput value={activeNutrition.macros} onChange={(v: string) => updateBlockData(activeNutrition.id, { macros: v })} className="text-xl text-slate-900 dark:text-white" />
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Daily Macro Split</p>
+                        <InlineInput value={activeNutrition.macros} onChange={(v: string) => updateBlockData(activeNutrition.id, { macros: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
                       </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Target Deficit</p>
-                        <InlineInput value={activeNutrition.deficit} onChange={(v: string) => updateBlockData(activeNutrition.id, { deficit: v })} suffix="KCAL/DAY" className="text-xl text-amber-600" />
+                      <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-amber-500/20 group/card">
+                        <p className="text-[10px] font-bold text-amber-600/60 uppercase tracking-widest mb-1 font-semibold italic">Target Deficit</p>
+                        <InlineInput value={activeNutrition.deficit} onChange={(v: string) => updateBlockData(activeNutrition.id, { deficit: v })} suffix="KCAL/DAY" className="text-xl text-amber-600 justify-center" />
                       </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Water Target</p>
-                        <InlineInput value={activeNutrition.water} onChange={(v: string) => updateBlockData(activeNutrition.id, { water: v })} suffix="LITERS" className="text-xl text-blue-500" />
+                      <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-blue-500/20 group/card">
+                        <p className="text-[10px] font-bold text-blue-600/60 uppercase tracking-widest mb-1 font-semibold italic">Water Target</p>
+                        <InlineInput value={activeNutrition.water} onChange={(v: string) => updateBlockData(activeNutrition.id, { water: v })} suffix="LITERS" className="text-xl text-blue-500 justify-center" />
                       </div>
                     </div>
 
@@ -565,21 +583,21 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                 {activeTraining ? (
                    <div className="space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Block Focus</p>
-                        <InlineInput value={activeTraining.focus} onChange={(v: string) => updateBlockData(activeTraining.id, { focus: v })} className="text-xl text-slate-900 dark:text-white" />
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Block Focus</p>
+                        <InlineInput value={activeTraining.focus} onChange={(v: string) => updateBlockData(activeTraining.id, { focus: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
                       </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Sessions / Week</p>
-                        <InlineInput value={activeTraining.sessions} onChange={(v: string) => updateBlockData(activeTraining.id, { sessions: v })} className="text-xl text-slate-900 dark:text-white" />
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Sessions / Week</p>
+                        <InlineInput value={activeTraining.sessions} onChange={(v: string) => updateBlockData(activeTraining.id, { sessions: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
                       </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Target Intensity</p>
-                        <InlineInput value={activeTraining.intensity} onChange={(v: string) => updateBlockData(activeTraining.id, { intensity: v })} className="text-xl text-purple-600 font-bold" />
+                      <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-purple-500/20 group/card">
+                        <p className="text-[10px] font-bold text-purple-600/60 uppercase tracking-widest mb-1 font-semibold italic">Target Intensity</p>
+                        <InlineInput value={activeTraining.intensity} onChange={(v: string) => updateBlockData(activeTraining.id, { intensity: v })} className="text-xl text-purple-600 font-bold justify-center" />
                       </div>
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 font-semibold">Tempo Protocol</p>
-                        <InlineInput value={activeTraining.tempo} onChange={(v: string) => updateBlockData(activeTraining.id, { tempo: v })} className="text-xl text-slate-900 dark:text-white" />
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Tempo Protocol</p>
+                        <InlineInput value={activeTraining.tempo} onChange={(v: string) => updateBlockData(activeTraining.id, { tempo: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
                       </div>
                     </div>
 
