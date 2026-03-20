@@ -14,6 +14,7 @@ import { useProfile } from './context/ProfileContext';
 import { useClient } from './context/ClientContext';
 import CalendarView from './views/Calendar';
 import CreateTask from './views/CreateTask';
+import PlanningManagement from './views/PlanningManagement';
 import TaskIntelligence from './views/TaskIntelligence';
 import Clients from './views/Clients';
 import CheckIns from './views/CheckIns';
@@ -38,12 +39,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
 import LandingPage from './views/LandingPage';
 
-type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
+type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [selectedTaskDate, setSelectedTaskDate] = useState<string | null>(null);
+  const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
+  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { clients: globalClients } = useClient();
   
@@ -113,6 +116,11 @@ export default function App() {
         />;
       case 'task-intelligence':
         return <TaskIntelligence onNavigate={(view) => setCurrentView(view as View)} />;
+      case 'planning':
+        return <PlanningManagement onNavigate={(view, cid) => {
+          if (cid) setSelectedTaskId(cid as any); // reusing cid as generic param
+          setCurrentView(view as View);
+        }} />;
       case 'clients':
         return <Clients />;
       case 'check-ins':
