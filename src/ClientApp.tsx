@@ -19,7 +19,7 @@ export default function ClientApp() {
   const [currentView, setCurrentView] = useState<ClientView>('dashboard');
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { user } = useAuth();
 
   const renderView = () => {

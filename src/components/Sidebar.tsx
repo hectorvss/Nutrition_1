@@ -64,7 +64,6 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
     {
       title: 'Insights',
       items: [
-        { id: 'onboarding', label: 'Onboarding', icon: ClipboardCheck },
         { id: 'analytics', label: 'Analytics', icon: BarChart3 },
         { id: 'settings', label: 'Settings', icon: Settings },
       ]
