@@ -118,7 +118,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
 
       // Refresh contexts if needed (though addEvent/updateEvent already update state)
       await refreshTasks(); 
-      onNavigate('tasks');
+      onNavigate('calendar');
     } catch (error) {
       console.error("Failed to save task", error);
       alert("An error occurred while saving the task.");
@@ -135,7 +135,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
     try {
       await deleteEvent(editId);
       await refreshTasks();
-      onNavigate('tasks');
+      onNavigate('calendar');
     } catch (error) {
       console.error("Failed to delete task", error);
       alert("An error occurred while deleting the task.");
@@ -148,8 +148,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
     <div className="w-full max-w-5xl mx-auto flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm my-6 sm:my-8 mb-16 relative">
       <header className="flex items-center justify-between p-6 border-b border-slate-200 bg-white sticky top-0 z-10 rounded-t-2xl">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Task' : 'Create New Task'}</h1>
-          <p className="text-sm text-slate-500">{editId ? 'Modify task details or delete it' : 'Add a new task or appointment to the schedule'}</p>
+          <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Event' : 'Create New Event'}</h1>
+          <p className="text-sm text-slate-500">{editId ? 'Modify event details or delete it' : 'Add a new event or appointment to the schedule'}</p>
         </div>
         <div className="flex items-center gap-3">
           {editId && (
@@ -165,7 +165,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           )}
           <button 
             type="button"
-            onClick={() => onNavigate('tasks')}
+            onClick={() => onNavigate('calendar')}
             className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
           >
             Cancel
@@ -177,7 +177,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
             className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
           >
             {loading ? <div className="w-[18px] h-[18px] border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-[18px] h-[18px]" />}
-            {editId ? 'Update Task' : 'Save Task'}
+            {editId ? 'Update Event' : 'Save Event'}
           </button>
         </div>
       </header>

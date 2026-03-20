@@ -25,8 +25,14 @@ import { useCalendar, getEventPresentationInfo, EventType } from '../context/Cal
 type ViewMode = 'Month' | 'Week' | 'Day';
 
 export default function CalendarView({ onNavigate }: CalendarProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('Month');
+  const [viewMode, setViewMode] = useState<ViewMode>('Day');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [now, setNow] = useState(new Date());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const { getEventsForDate } = useCalendar();
 
@@ -75,9 +81,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
 
   const weekDates = getWeekDates(currentDate);
 
-  const hours = [
-    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
-  ];
+  const hours = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
 
   const currentDayEvents = getEventsForDate(getLocalDateString(currentDate));
 
@@ -199,14 +203,16 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
               ))}
 
               {/* Current Time Indicator */}
-              <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: '400px' }}>
+              <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${(now.getHours() * 96) + (now.getMinutes() * (96 / 60))}px` }}>
                 <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 shadow-sm"></div>
                 <div className="flex-1 h-px bg-red-500"></div>
-                <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">12:15</div>
+                <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">
+                  {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </div>
               </div>
 
-              {/* Lunch Break */}
-              <div className="absolute left-0 right-0 h-12 bg-slate-50/50 border-y border-slate-100 flex items-center justify-center z-10" style={{ top: '384px' }}>
+              {/* Lunch Break (13:00 - 14:00) */}
+              <div className="absolute left-0 right-0 h-12 bg-slate-50/50 border-y border-slate-100 flex items-center justify-center z-10" style={{ top: `${13 * 96}px` }}>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">Lunch Break</span>
               </div>
 
@@ -239,8 +245,8 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                       className={`absolute p-2 border-l-4 rounded-r-lg shadow-sm z-10 overflow-hidden ${info.color} cursor-pointer hover:brightness-95 transition-all`}
                       style={{ 
                         top: `${top}px`, 
-                        left: `${left + 0.5}%`, 
-                        width: '13.2%',
+                        left: `${dayIdx * (100 / 7) + 0.2}%`, 
+                        width: `${100 / 7 - 0.4}%`,
                         height: `${height}px`
                       }}
                     >
@@ -267,29 +273,29 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
             <div className="border-r border-slate-100 bg-slate-50/30">
               {hours.map(hour => (
                 <div key={hour} className="h-32 border-b border-slate-100 flex items-start justify-center pt-4">
-                  <span className="text-[12px] font-bold text-slate-400">{hour} AM</span>
+                  <span className="text-[12px] font-bold text-slate-400">{hour}</span>
                 </div>
               ))}
             </div>
 
             {/* Daily Grid */}
-            <div className="relative p-6">
+            <div className="relative p-0 pt-4 px-6 mb-8">
               {/* Horizontal Lines */}
               {hours.map((_, i) => (
                 <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i + 1) * 128}px` }}></div>
               ))}
 
-              {/* Lunch Break */}
-              <div className="absolute left-0 right-0 h-16 border-y border-dashed border-slate-200 flex items-center justify-center z-0" style={{ top: '512px' }}>
+              {/* Lunch Break (13:00 - 14:00) */}
+              <div className="absolute left-0 right-0 h-16 border-y border-dashed border-slate-200 flex items-center justify-center z-0" style={{ top: `${13 * 128}px` }}>
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-white px-4 py-1.5 rounded-full border border-slate-100 shadow-sm">Lunch Break</span>
               </div>
 
               {/* Daily Events */}
               {currentDayEvents.map((event) => {
-                const hourIdx = hours.indexOf(event.time.slice(0, 2) + ':00');
+                const hourIdx = hours.indexOf(event.time.slice(0, 2).padStart(2, '0') + ':00');
                 if (hourIdx === -1) return null;
                 const minuteOff = event.time.includes(':') ? parseInt(event.time.split(':')[1]) * (128 / 60) : 0;
-                const top = hourIdx * 128 + 24 + minuteOff;
+                const top = hourIdx * 128 + 16 + minuteOff;
                 
                 let height = 80; // default
                 if (event.duration === '30m') height = 64;
@@ -305,7 +311,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                   <div 
                     key={event.id}
                     onClick={() => onNavigate('create-task', { taskId: event.id })}
-                    className={`absolute left-6 right-6 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
+                    className={`absolute left-4 right-4 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
                     style={{ top: `${top}px`, height: `${height}px` }}
                   >
                     <div className="shrink-0">
@@ -340,9 +346,9 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
               })}
 
               {/* Current Time Line */}
-              <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: '1152px' }}>
-                <div className="w-3 h-3 rounded-full bg-orange-500 -ml-1.5 shadow-md"></div>
-                <div className="flex-1 h-0.5 bg-orange-500"></div>
+              <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${(now.getHours() * 128) + (now.getMinutes() * (128 / 60))}px` }}>
+                <div className="w-3 h-3 rounded-full bg-red-500 -ml-1.5 shadow-md border-2 border-white"></div>
+                <div className="flex-1 h-0.5 bg-red-500"></div>
               </div>
             </div>
           </div>
@@ -368,7 +374,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
           
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
-              {(['Month', 'Week', 'Day'] as ViewMode[]).map((mode) => (
+              {(['Day', 'Week', 'Month'] as ViewMode[]).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
