@@ -47,14 +47,9 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
       ]
     },
     {
-      title: 'Roadmap',
-      items: [
-        { id: 'planning', label: 'Planning', icon: Zap },
-      ]
-    },
-    {
       title: 'Programming',
       items: [
+        { id: 'planning', label: 'Planning', icon: Zap },
         { id: 'nutrition', label: 'Nutrition', icon: UtensilsCrossed },
         { id: 'training', label: 'Training', icon: Dumbbell },
       ]
