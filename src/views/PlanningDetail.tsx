@@ -27,21 +27,12 @@ import {
   Apple,
   Plus,
   Trash2,
-  Calendar,
-  Layers,
-  Zap,
-  Activity,
-  ArrowRight,
-  Copy,
-  ChevronDown,
-  Layout,
-  Settings,
-  MessageSquare
+  Calendar
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 
-// --- UPDATED TYPES ---
+// --- TYPES ---
 
 interface Milestone {
   id: string;
@@ -51,56 +42,14 @@ interface Milestone {
   status: 'completed' | 'active' | 'upcoming';
 }
 
-interface StructuralNutrition {
-  phaseName: string;
-  strategy: 'maintenance' | 'deficit' | 'surplus' | 'recomposition' | 'diet break' | 'refeed' | 'custom';
-  objective: string;
-  calories: string;
-  margin: string;
-  macros: { p: string; c: string; f: string; };
-  fiber: string;
-  water: string;
-  meals: string;
-  timing: string;
-  refeeds: string;
-  cardio: string;
-  steps: string;
-  supplements: string;
-  adherence: string;
-  triggers: { weight: boolean; energy: boolean; hunger: boolean; digestion: boolean; };
-  notes: string;
-  instructions: string;
-}
-
-interface StructuralTraining {
-  phaseName: string;
-  type: 'hypertrophy' | 'strength' | 'deload' | 'maintenance' | 'peak' | 'conditioning' | 'custom';
-  objective: string;
-  frequency: string;
-  split: string;
-  volume: string;
-  intensity: string;
-  rpe: string;
-  progressionModel: string;
-  priorityExercises: string;
-  muscleFocus: string;
-  cardio: string;
-  mobility: string;
-  deloadLogic: string;
-  expectedFatigue: string;
-  revisionCriteria: string;
-  constraints: string;
-  notes: string;
-  instructions: string;
-}
-
-interface StructuralLogic {
-  whenToUse: string;
-  targetClient: string;
-  nextPhaseConditions: string;
-  signalsToModify: string;
-  dependencies: string;
-  relationNutTrain: string;
+interface Goal {
+  id: string;
+  type: 'physical' | 'nutrition' | 'training' | 'mindset';
+  label: string;
+  desc: string;
+  value: number;
+  targetValue: string;
+  currentValue: string;
 }
 
 interface RoadmapBlock {
@@ -108,18 +57,9 @@ interface RoadmapBlock {
   title: string;
   startWeek: number;
   endWeek: number;
-  type: 'nutrition' | 'training' | 'combined';
+  type: 'nutrition' | 'training';
   color: string;
-  summary: {
-    objective: string;
-    expectedResult: string;
-    successCriteria: string;
-    proNotes: string;
-  };
-  nutrition?: StructuralNutrition;
-  training?: StructuralTraining;
-  logic?: StructuralLogic;
-  status: 'draft' | 'active' | 'archived' | 'template';
+  details: any;
 }
 
 interface RoadmapData {
@@ -130,64 +70,20 @@ interface RoadmapData {
   totalWeeks: number;
   nutrition: RoadmapBlock[];
   training: RoadmapBlock[];
+  goals: Goal[];
   milestones: Milestone[];
+  stats: {
+    weight: string;
+    weightChange: string;
+    adherence: string;
+    adherenceChange: string;
+  };
   risks: string;
 }
 
-// --- DEFAULT GENERATORS ---
+type EditContext = 'PHASE' | 'GOAL' | 'MILESTONE' | 'RISKS' | 'PROGRAM' | null;
 
-const createDefaultNutrition = (): StructuralNutrition => ({
-  phaseName: '',
-  strategy: 'maintenance',
-  objective: '',
-  calories: '',
-  margin: '±100',
-  macros: { p: '', c: '', f: '' },
-  fiber: '25-35g',
-  water: '3-4L',
-  meals: '4',
-  timing: 'Protein centered every 4-5h',
-  refeeds: 'None',
-  cardio: 'LISS 20min 3x/week',
-  steps: '8000-10000',
-  supplements: 'Whey, Creatine, Multivitamin',
-  adherence: '90%+',
-  triggers: { weight: true, energy: true, hunger: false, digestion: false },
-  notes: '',
-  instructions: ''
-});
-
-const createDefaultTraining = (): StructuralTraining => ({
-  phaseName: '',
-  type: 'hypertrophy',
-  objective: '',
-  frequency: '4x',
-  split: 'Upper/Lower',
-  volume: '10-12 sets/muscle',
-  intensity: '75-85% 1RM',
-  rpe: '7-9',
-  progressionModel: 'Linear double progression',
-  priorityExercises: 'Squat, Bench, Row',
-  muscleFocus: 'Posterior chain',
-  cardio: 'None',
-  mobility: 'Dynamic warmup 10min',
-  deloadLogic: 'Every 4th or 5th week',
-  expectedFatigue: 'Moderate',
-  revisionCriteria: 'Stale strength for 2 consecutive weeks',
-  constraints: 'No heavy overhead pressing',
-  notes: '',
-  instructions: ''
-});
-
-const createDefaultLogic = (): StructuralLogic => ({
-  whenToUse: '',
-  targetClient: '',
-  nextPhaseConditions: '',
-  signalsToModify: '',
-  dependencies: '',
-  relationNutTrain: ''
-});
-
+// --- MOCK DATA GENERATOR ---
 const getInitialData = (clientName: string): RoadmapData => ({
   status: 'LIVE',
   startDate: '2023-10-01',
@@ -195,29 +91,33 @@ const getInitialData = (clientName: string): RoadmapData => ({
   currentWeek: 5,
   totalWeeks: 12,
   nutrition: [
-    { 
-      id: 'n1', title: 'Maintenance Phase', startWeek: 1, endWeek: 4, type: 'nutrition', color: 'bg-blue-50/50 border-blue-100 text-blue-600', status: 'active',
-      summary: { objective: 'Stabilize metabolism', expectedResult: 'Weight stability', successCriteria: '±1lb variation', proNotes: '' },
-      nutrition: { ...createDefaultNutrition(), calories: '2500', strategy: 'maintenance' }
-    },
-    { 
-      id: 'n2', title: 'Calculated Deficit', startWeek: 5, endWeek: 8, type: 'nutrition', color: 'bg-amber-50/50 border-amber-100 text-amber-600', status: 'active',
-      summary: { objective: 'Fat loss focus', expectedResult: '-2kg weight', successCriteria: 'Visual definition improvement', proNotes: '' },
-      nutrition: { ...createDefaultNutrition(), calories: '2100', strategy: 'deficit' }
-    }
+    { id: 'n1', title: 'Maintenance', startWeek: 1, endWeek: 4, type: 'nutrition', color: 'bg-blue-50/50 border-blue-100 text-blue-600', details: {} },
+    { id: 'n2', title: 'Deficit (-500)', startWeek: 5, endWeek: 8, type: 'nutrition', color: 'bg-amber-50/50 border-amber-100 text-amber-600', details: {} },
+    { id: 'n3', title: 'Maintenance', startWeek: 9, endWeek: 12, type: 'nutrition', color: 'bg-green-50/50 border-green-100 text-green-600', details: {} },
   ],
   training: [
-    { 
-      id: 't1', title: 'Accumulation 1', startWeek: 1, endWeek: 6, type: 'training', color: 'bg-purple-50/50 border-purple-100 text-purple-600', status: 'active',
-      summary: { objective: 'Build base volume', expectedResult: 'Improved work capacity', successCriteria: 'All sets completed', proNotes: '' },
-      training: { ...createDefaultTraining(), volume: '12-15 sets', type: 'hypertrophy' }
-    }
+    { id: 't1', title: 'Hypertrophy Base (4x)', startWeek: 1, endWeek: 6, type: 'training', color: 'bg-purple-50/50 border-purple-100 text-purple-600', details: {} },
+    { id: 't2', title: 'Strength Peak (3x)', startWeek: 7, endWeek: 12, type: 'training', color: 'bg-rose-50/50 border-rose-100 text-rose-600', details: {} },
+  ],
+  goals: [
+    { id: 'g1', type: 'physical', label: 'Physical', desc: 'Lose 10lbs fat, maintain muscle', value: 60, targetValue: '140 lbs', currentValue: '150 lbs' },
+    { id: 'g2', type: 'nutrition', label: 'Nutrition', desc: 'Adherence to deficit macros', value: 85, targetValue: '90%+', currentValue: 'Consistent' },
+    { id: 'g3', type: 'training', label: 'Training', desc: 'Complete all Hypertrophy sessions', value: 100, targetValue: '100%', currentValue: '16/16 sessions' },
+    { id: 'g4', type: 'mindset', label: 'Mindset', desc: 'Improve sleep quality & stress', value: 70, targetValue: '7.5h+', currentValue: 'Avg 6.5h sleep' },
   ],
   milestones: [
     { id: 'm1', date: 'Oct 01', label: 'Program Start', status: 'completed' },
-    { id: 'm2', date: 'Nov 15', label: 'Phase 2 Review', status: 'active', desc: 'Adjust deficit macros' }
+    { id: 'm2', date: 'Nov 15', label: 'Phase 2 Review', status: 'active', desc: 'Adjust deficit macros if plateaued' },
+    { id: 'm3', date: 'Dec 15', label: 'Begin Strength Peak', status: 'upcoming' },
+    { id: 'm4', date: 'Jan 15', label: 'Program End & Testing', status: 'upcoming' },
   ],
-  risks: 'Client reported poor sleep quality last week.'
+  stats: {
+    weight: '146.5',
+    weightChange: '-3.5',
+    adherence: '92',
+    adherenceChange: '+2'
+  },
+  risks: 'Client reported poor sleep quality last week. Monitor recovery during this higher volume training phase.'
 });
 
 export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (view: string) => void, clientId?: string }) {
@@ -227,12 +127,10 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Selection
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const selectedBlock = useMemo(() => {
-    if (!roadmap || !selectedBlockId) return null;
-    return [...roadmap.nutrition, ...roadmap.training].find(b => b.id === selectedBlockId);
-  }, [roadmap, selectedBlockId]);
+  // Sidebar states
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [editContext, setEditContext] = useState<EditContext>(null);
+  const [editTarget, setEditTarget] = useState<any>(null);
 
   useEffect(() => {
     if (clientId) {
@@ -243,7 +141,7 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   const loadRoadmap = async () => {
     try {
       const data = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`);
-      if (data.data_json && data.data_json.nutrition) {
+      if (data.data_json && data.data_json.goals) {
         setRoadmap({
           ...getInitialData(client?.name || 'Client'),
           ...data.data_json,
@@ -266,51 +164,71 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
         method: 'POST',
         body: JSON.stringify(roadmap)
       });
-      alert('Structural Design Saved Successfully');
+      // Toast or simple feedback
     } catch (error) {
       console.error('Error saving roadmap:', error);
     }
   };
 
-  const updateBlock = (updated: RoadmapBlock) => {
+  const openEditor = (context: EditContext, target: any) => {
+    setEditContext(context);
+    setEditTarget(target);
+    setIsSidebarOpen(true);
+  };
+
+  const updateGoal = (updatedGoal: Goal) => {
     if (!roadmap) return;
-    const typeKey = updated.type === 'nutrition' ? 'nutrition' : 'training';
     setRoadmap({
       ...roadmap,
-      [typeKey]: roadmap[typeKey].map(b => b.id === updated.id ? updated : b)
+      goals: roadmap.goals.map(g => g.id === updatedGoal.id ? updatedGoal : g)
     });
+    setEditTarget(updatedGoal);
+  };
+
+  const updateBlock = (updatedBlock: RoadmapBlock) => {
+    if (!roadmap) return;
+    const key = updatedBlock.type === 'nutrition' ? 'nutrition' : 'training';
+    setRoadmap({
+      ...roadmap,
+      [key]: roadmap[key].map(b => b.id === updatedBlock.id ? updatedBlock : b)
+    });
+    setEditTarget(updatedBlock);
   };
 
   const addBlock = (type: 'nutrition' | 'training') => {
     if (!roadmap) return;
     const newBlock: RoadmapBlock = {
       id: Math.random().toString(36).substr(2, 9),
-      title: 'New Structural Phase',
+      title: 'New Phase',
       startWeek: roadmap.currentWeek,
-      endWeek: roadmap.currentWeek + 3,
+      endWeek: roadmap.currentWeek + 2,
       type,
       color: type === 'nutrition' ? 'bg-rose-50/50 border-rose-100 text-rose-600' : 'bg-indigo-50/50 border-indigo-100 text-indigo-600',
-      status: 'draft',
-      summary: { objective: '', expectedResult: '', successCriteria: '', proNotes: '' },
-      nutrition: type === 'nutrition' ? createDefaultNutrition() : undefined,
-      training: type === 'training' ? createDefaultTraining() : undefined,
-      logic: createDefaultLogic()
+      details: {}
     };
     setRoadmap({
       ...roadmap,
       [type]: [...roadmap[type], newBlock]
     });
-    setSelectedBlockId(newBlock.id);
+    openEditor('PHASE', newBlock);
   };
 
-  const deleteBlock = (id: string, type: 'nutrition' | 'training' | 'combined') => {
+  const deleteBlock = (id: string, type: 'nutrition' | 'training') => {
     if (!roadmap) return;
-    const typeKey = type === 'nutrition' ? 'nutrition' : 'training';
     setRoadmap({
       ...roadmap,
-      [typeKey]: roadmap[typeKey].filter(b => b.id !== id)
+      [type]: roadmap[type].filter(b => b.id !== id)
     });
-    setSelectedBlockId(null);
+    setIsSidebarOpen(false);
+  };
+
+  const updateMilestone = (updated: Milestone) => {
+    if (!roadmap) return;
+    setRoadmap({
+      ...roadmap,
+      milestones: roadmap.milestones.map(m => m.id === updated.id ? updated : m)
+    });
+    setEditTarget(updated);
   };
 
   if (loading) return <div className="p-8 flex items-center justify-center h-full"><Sparkles className="w-8 h-8 text-emerald-500 animate-pulse" /></div>;
@@ -319,338 +237,613 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950 font-display">
       
-      {/* Scrollable Workspace */}
+      {/* Scrollable Container */}
       <div className="flex-1 overflow-y-auto p-8 scroll-smooth no-scrollbar">
-        <div className="max-w-[1500px] mx-auto flex flex-col gap-10">
+        <div className="max-w-[1600px] mx-auto flex flex-col gap-8">
           
-          {/* HEADER (Compact) */}
+          {/* TOP SECTION: BREADCRUMBS & PROFILE */}
           <div className="flex flex-col gap-6">
             <nav className="flex items-center gap-2 text-sm font-semibold">
-              <button onClick={() => onNavigate('planning')} className="text-slate-400 hover:text-emerald-500 transition-colors">Planning</button>
+              <button 
+                onClick={() => onNavigate('planning')}
+                className="text-slate-400 hover:text-emerald-500 transition-colors"
+              >
+                Planning
+              </button>
               <ChevronRight className="w-4 h-4 text-slate-300" />
-              <span className="text-slate-900 dark:text-white font-bold">{client?.name}</span>
+              <span className="text-slate-900 dark:text-white">{client?.name}</span>
             </nav>
 
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <div className="bg-white dark:bg-slate-900 rounded-[20px] p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
               <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-full bg-cover bg-center border border-slate-100 dark:border-slate-800" style={{ backgroundImage: `url(${client?.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'})` }} />
+                <div 
+                  className="w-16 h-16 rounded-full bg-cover bg-center shadow-sm border border-slate-100 dark:border-slate-800" 
+                  style={{ backgroundImage: `url(${client?.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'})` }}
+                />
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-none mb-2">{client?.name} <span className="text-slate-400 font-medium ml-2">— Structural Workspace</span></h2>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg uppercase tracking-widest border border-emerald-100">Live Program</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">End: {roadmap.endDate}</span>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{client?.name}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                      Active
+                    </span>
+                    <span className="text-sm text-slate-400 font-medium ml-2">Female, 28 y.o.</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                 <button onClick={handleSave} className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/10 active:scale-95 transition-all flex items-center gap-2">
-                    <Save className="w-4 h-4" /> Save Strategy
-                 </button>
+                <button className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-emerald-500 transition-all border border-slate-200 dark:border-slate-700 active:scale-95">
+                  <Edit3 className="w-5 h-5" />
+                </button>
+                <button className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-emerald-500 transition-all border border-slate-200 dark:border-slate-700 active:scale-95">
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={handleSave}
+                  className="px-6 py-3 bg-emerald-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-500/10 active:scale-95 transition-all flex items-center gap-2 ml-2"
+                >
+                  <Save className="w-4 h-4" />
+                  Sync Changes
+                </button>
+              </div>
+            </div>
+
+            <div 
+              onClick={() => openEditor('PROGRAM', roadmap)}
+              className="bg-emerald-500 text-white rounded-[16px] p-4 flex items-center justify-between shadow-sm cursor-pointer hover:bg-emerald-600 transition-all active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3">
+                <PlayCircle className="w-5 h-5 opacity-80" />
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-base">Program: {roadmap.status}</span>
+                  <span className="text-sm font-medium text-white/80 hidden sm:inline opacity-80">| Week {roadmap.currentWeek} of {roadmap.totalWeeks} (Phase 2: Deficit)</span>
+                </div>
+              </div>
+              <div className="text-sm font-semibold opacity-90 pr-2">
+                Ends: {roadmap.endDate}
               </div>
             </div>
           </div>
 
-          {/* MASTER ROADMAP (Visual Navigator) */}
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-sm border border-slate-200 dark:border-slate-800">
-            <div className="flex justify-between items-center mb-8">
-               <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                 <MapIcon className="w-5 h-5 text-emerald-500" />
-                 Program Roadmap
-               </h3>
-               <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-800">{roadmap.totalWeeks} Weeks Total</span>
-               </div>
-            </div>
-
-            <div className="relative w-full overflow-x-auto pb-4 no-scrollbar">
-               <div className="min-w-[1200px] relative">
-                  {/* Grid Lines */}
-                  <div className="flex justify-between px-2 mb-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                    {Array.from({ length: roadmap.totalWeeks }).map((_, i) => (
-                      <span key={i} className="w-[8%] text-center">Week {i + 1}</span>
-                    ))}
+          {/* MAIN GRID: 70/30 */}
+          <div className="flex flex-col lg:flex-row gap-8">
+            
+            {/* LEFT COLUMN: 70% */}
+            <div className="w-full lg:w-[70%] flex flex-col gap-6">
+              
+              {/* MASTER ROADMAP PANEL */}
+              <div className="bg-white dark:bg-slate-900 rounded-[16px] p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                    <MapIcon className="w-5 h-5 text-emerald-500" />
+                    Master Roadmap
+                  </h3>
+                  <div className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-semibold rounded-md">
+                    {roadmap.totalWeeks} Weeks
                   </div>
+                </div>
 
-                  {/* Tracks */}
-                  <div className="space-y-4">
+                <div className="relative w-full overflow-x-auto pb-6 no-scrollbar">
+                  <div className="min-w-[1000px] relative">
+                    {/* Week Numbers */}
+                    <div className="flex justify-between px-2 mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      {Array.from({ length: roadmap.totalWeeks }).map((_, i) => (
+                        <span key={i} className="w-[8%] text-center">W{i + 1}</span>
+                      ))}
+                    </div>
+
                     {/* Nutrition Track */}
-                    <div className="relative h-12 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl flex items-center px-2 group">
-                       <button onClick={() => addBlock('nutrition')} className="absolute -left-10 opacity-0 group-hover:opacity-100 flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-100 text-emerald-500 shadow-sm transition-all"><Plus className="w-4 h-4" /></button>
-                       {roadmap.nutrition.map(block => (
-                         <div 
-                          key={block.id}
-                          style={{ width: `${((block.endWeek - block.startWeek + 1) / roadmap.totalWeeks) * 100}%`, left: `${((block.startWeek - 1) / roadmap.totalWeeks) * 100}%` }}
-                          className={`absolute h-8 rounded-xl border-2 flex items-center justify-between px-3 cursor-pointer transition-all ${selectedBlockId === block.id ? 'border-emerald-500 ring-4 ring-emerald-500/10 shadow-lg scale-[1.02] z-20' : 'border-white dark:border-slate-800 shadow-sm'} ${block.color}`}
-                          onClick={() => setSelectedBlockId(block.id)}
-                         >
-                           <span className="text-[10px] font-bold truncate">{block.title}</span>
-                         </div>
-                       ))}
+                    <div className="relative bg-slate-50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-100 dark:border-slate-800/50 mb-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nutrition</h4>
+                        <button 
+                          onClick={() => addBlock('nutrition')}
+                          className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="flex gap-1 h-10">
+                        {roadmap.nutrition.map(block => (
+                          <div 
+                            key={block.id}
+                            style={{ width: `${((block.endWeek - block.startWeek + 1) / roadmap.totalWeeks) * 100}%` }}
+                            className={`rounded-lg border flex items-center justify-center relative group cursor-pointer hover:border-emerald-300 transition-all ${block.color}`}
+                            onClick={() => openEditor('PHASE', block)}
+                          >
+                            <span className="text-[11px] font-semibold truncate px-2">{block.title}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Training Track */}
-                    <div className="relative h-12 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl flex items-center px-2 group">
-                       <button onClick={() => addBlock('training')} className="absolute -left-10 opacity-0 group-hover:opacity-100 flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-slate-100 text-emerald-500 shadow-sm transition-all"><Plus className="w-4 h-4" /></button>
-                       {roadmap.training.map(block => (
-                         <div 
-                          key={block.id}
-                          style={{ width: `${((block.endWeek - block.startWeek + 1) / roadmap.totalWeeks) * 100}%`, left: `${((block.startWeek - 1) / roadmap.totalWeeks) * 100}%` }}
-                          className={`absolute h-8 rounded-xl border-2 flex items-center justify-between px-3 cursor-pointer transition-all ${selectedBlockId === block.id ? 'border-emerald-500 ring-4 ring-emerald-500/10 shadow-lg scale-[1.02] z-20' : 'border-white dark:border-slate-800 shadow-sm'} ${block.color}`}
-                          onClick={() => setSelectedBlockId(block.id)}
-                         >
-                           <span className="text-[10px] font-bold truncate">{block.title}</span>
-                         </div>
-                       ))}
+                    <div className="relative bg-slate-50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-100 dark:border-slate-800/50">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Training</h4>
+                        <button 
+                          onClick={() => addBlock('training')}
+                          className="w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="flex gap-1 h-10">
+                        {roadmap.training.map(block => (
+                          <div 
+                            key={block.id}
+                            style={{ width: `${((block.endWeek - block.startWeek + 1) / roadmap.totalWeeks) * 100}%` }}
+                            className={`rounded-lg border flex items-center justify-center relative group cursor-pointer hover:border-emerald-300 transition-all ${block.color}`}
+                            onClick={() => openEditor('PHASE', block)}
+                          >
+                            <span className="text-[11px] font-semibold truncate px-2">{block.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Today Line */}
+                    <div 
+                      className="absolute top-8 bottom-4 w-[1px] bg-emerald-500 z-10"
+                      style={{ left: `${((roadmap.currentWeek - 0.5) / roadmap.totalWeeks) * 100}%` }}
+                    >
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">TODAY</div>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  {/* Indicators */}
-                  <div className="absolute top-10 bottom-4 w-[1px] bg-emerald-500/30 border-l border-dashed border-emerald-500/50" style={{ left: `${((roadmap.currentWeek - 0.5) / roadmap.totalWeeks) * 100}%` }}>
-                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">TODAY</div>
+              {/* GOALS & PROGRESS SECTION */}
+              <div className="bg-white dark:bg-slate-900 rounded-[16px] p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5 mb-6">
+                  <Flag className="w-5 h-5 text-emerald-500" />
+                  Goals & Progress
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {roadmap.goals.map(goal => (
+                    <div key={goal.id} onClick={() => openEditor('GOAL', goal)} className="cursor-pointer group">
+                      <GoalCard goal={goal} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CHARTS SECTION */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+                {/* Body Progress Chart */}
+                <div className="bg-white dark:bg-slate-900 rounded-[16px] p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between">
+                    Body Progress
+                    <span className="text-[10px] text-emerald-500 font-semibold">-3.5 lbs</span>
+                  </h3>
+                  <div className="h-48 relative pt-2">
+                    <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                      <polyline 
+                        fill="none" 
+                        stroke="#10b981" 
+                        strokeWidth="2" 
+                        strokeLinecap="round"
+                        points="0,20 20,30 40,45 60,60 80,55 100,70" 
+                      />
+                      {[0, 20, 40, 60, 80, 100].map((x, i) => (
+                        <circle key={i} cx={x} cy={[20, 30, 45, 60, 55, 70][i]} r="1.5" className="fill-emerald-500" />
+                      ))}
+                    </svg>
+                    <div className="flex justify-between text-[10px] font-semibold text-slate-300 uppercase mt-4">
+                       <span>W1</span><span>W2</span><span>W3</span><span className="text-emerald-500">W4</span><span>W5</span><span>W6</span>
+                    </div>
                   </div>
-               </div>
-            </div>
-          </div>
+                </div>
 
-          {/* STRUCTURAL BLOCK EDITOR */}
-          <div className="min-h-[600px] flex flex-col gap-6">
-            <AnimatePresence mode="wait">
-              {!selectedBlockId ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="w-full flex flex-col items-center justify-center py-24 bg-white dark:bg-slate-900 rounded-[40px] border-2 border-dashed border-slate-100 dark:border-slate-800 shadow-sm"
-                >
-                   <div className="w-20 h-20 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-300 mb-6">
-                      <Layout className="w-10 h-10" />
-                   </div>
-                   <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-2 italic opacity-60">Select a structural block to edit its design</h4>
-                   <p className="text-sm text-slate-400 font-medium">Click on any phase in the roadmap above to launch the structural editor.</p>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key={selectedBlockId}
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98 }}
-                  className="bg-white dark:bg-slate-900 rounded-[40px] shadow-2xl shadow-slate-200/50 border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col"
-                >
-                  {/* Editor Header */}
-                  <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-slate-50/30 dark:bg-slate-800/20">
-                    <div className="flex items-center gap-6">
-                      <div className={`w-16 h-16 rounded-[24px] border-2 border-white shadow-xl flex items-center justify-center ${selectedBlock?.color}`}>
-                         {selectedBlock?.type === 'nutrition' ? <Apple className="w-8 h-8" /> : <Dumbbell className="w-8 h-8" />}
-                      </div>
-                      <div>
-                        <input 
-                          value={selectedBlock?.title}
-                          onChange={(e) => updateBlock({ ...selectedBlock!, title: e.target.value })}
-                          className="text-3xl font-bold text-slate-900 dark:text-white bg-transparent outline-none focus:text-emerald-500 transition-colors w-full max-w-[400px]"
+                {/* Strength Chart */}
+                <div className="bg-white dark:bg-slate-900 rounded-[16px] p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-6 flex items-center justify-between">
+                    Strength (Squat 1RM)
+                    <span className="text-[10px] text-indigo-500 font-semibold">+12kg</span>
+                  </h3>
+                  <div className="h-48 flex items-end justify-between gap-3 pt-2 px-1">
+                    {[40, 50, 60, 75, 85, 95].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <div 
+                          style={{ height: `${h}%` }}
+                          className={`w-full rounded-t-lg transition-all ${i === 3 ? 'bg-emerald-500 shadow-sm' : 'bg-slate-100 dark:bg-slate-800'}`}
                         />
-                        <div className="flex items-center gap-3 mt-2">
-                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{selectedBlock?.type} Phase</span>
-                           <span className="text-slate-300">•</span>
-                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-700">Week {selectedBlock?.startWeek} to {selectedBlock?.endWeek}</span>
-                        </div>
+                        <span className={`text-[10px] font-semibold ${i === 3 ? 'text-emerald-500' : 'text-slate-300'}`}>W{i+1}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                       <button className="flex-1 md:flex-initial px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all active:scale-95"><Copy className="w-4 h-4" /> Duplicate</button>
-                       <button className="flex-1 md:flex-initial px-6 py-3 bg-rose-50 text-rose-500 rounded-2xl text-xs font-bold border border-rose-100 hover:bg-rose-100 transition-all" onClick={() => { if(selectedBlock) deleteBlock(selectedBlock.id, selectedBlock.type as any); }}><Trash2 className="w-4 h-4" /></button>
-                       <button className="flex-1 md:flex-initial p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-900 transition-all" onClick={() => setSelectedBlockId(null)}><X className="w-5 h-5" /></button>
-                    </div>
+                    ))}
                   </div>
-
-                  {/* Summary Section */}
-                  <div className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 bg-slate-50/20 dark:bg-slate-800/10 border-b border-slate-50 dark:border-slate-800">
-                     <EditorField label="Core Objective" value={selectedBlock?.summary.objective || ''} onChange={(val) => updateBlock({...selectedBlock!, summary: {...selectedBlock!.summary, objective: val}})} placeholder="e.g. Metabolic Adaptation" />
-                     <EditorField label="Expected Result" value={selectedBlock?.summary.expectedResult || ''} onChange={(val) => updateBlock({...selectedBlock!, summary: {...selectedBlock!.summary, expectedResult: val}})} placeholder="e.g. -2% Body Fat" />
-                     <EditorField label="Success Criteria" value={selectedBlock?.summary.successCriteria || ''} onChange={(val) => updateBlock({...selectedBlock!, summary: {...selectedBlock!.summary, successCriteria: val}})} placeholder="e.g. Consistent 1RM gains" />
-                     <EditorField label="Professional Notes" value={selectedBlock?.summary.proNotes || ''} onChange={(val) => updateBlock({...selectedBlock!, summary: {...selectedBlock!.summary, proNotes: val}})} placeholder="Internal observations..." />
-                  </div>
-
-                  {/* Deep Dive Sections (Nutrition & Training) */}
-                  <div className="flex flex-col xl:flex-row divide-y xl:divide-y-0 xl:divide-x divide-slate-100 dark:divide-slate-800">
-                     
-                     {/* NUTRITION SECTION */}
-                     <div className="flex-1 p-10 flex flex-col gap-10">
-                        <SectionHeader icon={<Apple className="w-5 h-5 text-emerald-500" />} title="Structural Nutrition" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           <EditorSelect 
-                              label="Primary Strategy" 
-                              value={selectedBlock?.nutrition?.strategy || 'maintenance'} 
-                              options={['maintenance', 'deficit', 'surplus', 'recomposition', 'diet break', 'refeed', 'custom']} 
-                              onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, strategy: val as any}})} 
-                           />
-                           <EditorInput label="Calories Target" value={selectedBlock?.nutrition?.calories || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, calories: val}})} placeholder="e.g. 2500 kcal" />
-                           <EditorInput label="Margin (±)" value={selectedBlock?.nutrition?.margin || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, margin: val}})} placeholder="e.g. 100 kcal" />
-                           <div className="grid grid-cols-3 gap-4">
-                              <EditorInput label="Protein" value={selectedBlock?.nutrition?.macros.p || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, macros: {...selectedBlock!.nutrition!.macros, p: val}}})} placeholder="g" />
-                              <EditorInput label="Carbs" value={selectedBlock?.nutrition?.macros.c || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, macros: {...selectedBlock!.nutrition!.macros, c: val}}})} placeholder="g" />
-                              <EditorInput label="Fats" value={selectedBlock?.nutrition?.macros.f || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, macros: {...selectedBlock!.nutrition!.macros, f: val}}})} placeholder="g" />
-                           </div>
-                           <EditorInput label="Fiber Goal" value={selectedBlock?.nutrition?.fiber || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, fiber: val}})} placeholder="g" />
-                           <EditorInput label="Water Target" value={selectedBlock?.nutrition?.water || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, water: val}})} placeholder="L" />
-                           <EditorInput label="Meal Count" value={selectedBlock?.nutrition?.meals || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, meals: val}})} placeholder="e.g. 4" />
-                           <EditorInput label="Timing/Distribution" value={selectedBlock?.nutrition?.timing || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, timing: val}})} placeholder="e.g. 30g P / meal" />
-                           <EditorInput label="Refeeds/High Days" value={selectedBlock?.nutrition?.refeeds || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, refeeds: val}})} placeholder="e.g. Sat/Sun refeed" />
-                           <EditorInput label="Associated Cardio" value={selectedBlock?.nutrition?.cardio || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, cardio: val}})} placeholder="e.g. 3x30min LISS" />
-                           <EditorInput label="Step Goal" value={selectedBlock?.nutrition?.steps || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, steps: val}})} placeholder="e.g. 10k" />
-                           <EditorInput label="Supplements" value={selectedBlock?.nutrition?.supplements || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, supplements: val}})} placeholder="e.g. Creatine" />
-                           <EditorInput label="Target Adherence" value={selectedBlock?.nutrition?.adherence || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, adherence: val}})} placeholder="%" />
-                           <div className="md:col-span-2">
-                              <EditorArea label="Review Triggers & Contraindications" value={selectedBlock?.nutrition?.notes || ''} onChange={(val) => updateBlock({...selectedBlock!, nutrition: {...selectedBlock!.nutrition!, notes: val}})} placeholder="When to review? Contraindications?" />
-                           </div>
-                        </div>
-                     </div>
-
-                     {/* TRAINING SECTION */}
-                     <div className="flex-1 p-10 flex flex-col gap-10 bg-slate-50/10 dark:bg-slate-800/5">
-                        <SectionHeader icon={<Dumbbell className="w-5 h-5 text-indigo-500" />} title="Structural Training" />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                           <EditorSelect 
-                              label="Block Type" 
-                              value={selectedBlock?.training?.type || 'hypertrophy'} 
-                              options={['hypertrophy', 'strength', 'deload', 'maintenance', 'peak', 'conditioning', 'custom']} 
-                              onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, type: val as any}})} 
-                           />
-                           <EditorInput label="Frequency" value={selectedBlock?.training?.frequency || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, frequency: val}})} />
-                           <EditorInput label="Split" value={selectedBlock?.training?.split || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, split: val}})} />
-                           <EditorInput label="Volume Target" value={selectedBlock?.training?.volume || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, volume: val}})} />
-                           <EditorInput label="Intensity Focus" value={selectedBlock?.training?.intensity || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, intensity: val}})} />
-                           <EditorInput label="RPE/RIR Guide" value={selectedBlock?.training?.rpe || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, rpe: val}})} />
-                           <EditorInput label="Progression Model" value={selectedBlock?.training?.progressionModel || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, progressionModel: val}})} />
-                           <EditorInput label="Priority Exercises" value={selectedBlock?.training?.priorityExercises || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, priorityExercises: val}})} />
-                           <EditorInput label="Focus Area" value={selectedBlock?.training?.muscleFocus || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, muscleFocus: val}})} />
-                           <EditorInput label="Deload Logic" value={selectedBlock?.training?.deloadLogic || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, deloadLogic: val}})} />
-                           <EditorInput label="Expected Fatigue" value={selectedBlock?.training?.expectedFatigue || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, expectedFatigue: val}})} />
-                           <EditorInput label="Revision Criteria" value={selectedBlock?.training?.revisionCriteria || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, revisionCriteria: val}})} />
-                           <div className="md:col-span-2">
-                              <EditorArea label="Limitations & Constraints" value={selectedBlock?.training?.notes || ''} onChange={(val) => updateBlock({...selectedBlock!, training: {...selectedBlock!.training!, notes: val}})} placeholder="Injuries, equipment limits..." />
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* Rules & Logic Footer */}
-                  <div className="p-10 bg-slate-900 dark:bg-slate-800/50 flex flex-col gap-8">
-                     <SectionHeader icon={<Zap className="w-5 h-5 text-emerald-400" />} title="Rules & Architecture Logic" light />
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <EditorField label="Context: When to use?" light value={selectedBlock?.logic?.whenToUse || ''} onChange={(val) => updateBlock({...selectedBlock!, logic: {...selectedBlock!.logic!, whenToUse: val}})} />
-                        <EditorField label="Ideal Client Profile" light value={selectedBlock?.logic?.targetClient || ''} onChange={(val) => updateBlock({...selectedBlock!, logic: {...selectedBlock!.logic!, targetClient: val}})} />
-                        <EditorField label="Transition: Next Phase Criteria" light value={selectedBlock?.logic?.nextPhaseConditions || ''} onChange={(val) => updateBlock({...selectedBlock!, logic: {...selectedBlock!.logic!, nextPhaseConditions: val}})} />
-                        <EditorField label="Modification Signals" light value={selectedBlock?.logic?.signalsToModify || ''} onChange={(val) => updateBlock({...selectedBlock!, logic: {...selectedBlock!.logic!, signalsToModify: val}})} />
-                        <EditorField label="Block Dependencies" light value={selectedBlock?.logic?.dependencies || ''} onChange={(val) => updateBlock({...selectedBlock!, logic: {...selectedBlock!.logic!, dependencies: val}})} />
-                        <EditorField label="Nut/Train Relationship" light value={selectedBlock?.logic?.relationNutTrain || ''} onChange={(val) => updateBlock({...selectedBlock!, logic: {...selectedBlock!.logic!, relationNutTrain: val}})} />
-                     </div>
-                     <div className="flex flex-col md:flex-row gap-4 mt-4 pt-8 border-t border-white/5">
-                        <button className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:scale-[1.01] transition-all">Apply both modules</button>
-                        <button className="flex-1 py-4 bg-white/10 text-white rounded-2xl text-xs font-bold uppercase tracking-widest border border-white/10 hover:bg-white/20 transition-all">Save as Structural Template</button>
-                        <button className="px-8 py-4 bg-rose-500/20 text-rose-400 rounded-2xl text-xs font-bold uppercase tracking-widest border border-rose-500/20 hover:bg-rose-500/30 transition-all" onClick={() => setSelectedBlockId(null)}>Close Editor</button>
-                     </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* SECONDARY SIDEBAR CONTEXT (Optional Grid) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-10">
-             <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2"><History className="w-4 h-4" /> Global Milestones</h4>
-                <div className="space-y-4">
-                   {roadmap.milestones.map(m => (
-                     <div key={m.id} className="flex gap-4 items-start">
-                        <div className={`w-2 h-2 rounded-full mt-1.5 ${m.status === 'active' ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50' : 'bg-slate-200'}`} />
-                        <div>
-                           <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{m.label}</p>
-                           <p className="text-[10px] text-slate-400 font-medium">{m.date}</p>
-                        </div>
-                     </div>
-                   ))}
                 </div>
-             </div>
-             <div className="md:col-span-2 bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-6">
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-500"><AlertTriangle className="w-6 h-6" /></div>
-                <div>
-                   <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-1">Identified Strategic Risks</h4>
-                   <p className="text-[11px] text-slate-500 font-medium leading-relaxed italic">"{roadmap.risks}"</p>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: 30% */}
+            <div className="w-full lg:w-[30%] flex flex-col gap-6">
+              
+              {/* STATUS WIDGET */}
+              <div className="bg-white dark:bg-slate-900 rounded-[16px] p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Current Status</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-slate-500 font-medium">Weight</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white">{roadmap.stats.weight} <span className="text-xs font-medium text-slate-400">lbs</span></p>
+                    <p className="text-[11px] text-emerald-500 font-semibold flex items-center">
+                      <ArrowDown className="w-3 h-3 mr-1" /> {roadmap.stats.weightChange} lbs
+                    </p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs text-slate-500 font-medium">Adherence</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white">{roadmap.stats.adherence}%</p>
+                    <p className="text-[11px] text-emerald-500 font-semibold flex items-center">
+                      <ArrowUp className="w-3 h-3 mr-1" /> {roadmap.stats.adherenceChange}%
+                    </p>
+                  </div>
                 </div>
-             </div>
+              </div>
+
+              {/* CURRENT PHASE ACTION CARD */}
+              <div className="bg-white dark:bg-slate-900 rounded-[16px] p-6 shadow-sm border border-emerald-500/10 ring-1 ring-emerald-500/5 relative overflow-hidden group hover:border-emerald-500/30 transition-all cursor-pointer">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+                   <RefreshCw className="w-20 h-20 text-emerald-500" />
+                </div>
+                <div className="relative z-10">
+                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest mb-3 inline-block">Current Phase</span>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 leading-tight">Deficit & Hypertrophy</h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed mb-6">Transitioning from maintenance to active deficit while maintaining training intensity.</p>
+                  <div className="flex flex-col gap-2">
+                    <button className="w-full py-2 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-[11px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 transition-all">
+                      <Apple className="w-4 h-4 text-emerald-500" />
+                      Apply to Nutrition
+                    </button>
+                    <button className="w-full py-2 px-4 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 text-[11px] font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2 transition-all">
+                      <Dumbbell className="w-4 h-4 text-emerald-500" />
+                      Apply to Training
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* MILTESTONES */}
+              <div className="bg-white dark:bg-slate-900 rounded-[16px] p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2.5">
+                  <History className="w-4 h-4 text-slate-400" />
+                  Milestones
+                </h3>
+                <div className="space-y-6">
+                  {roadmap.milestones.map((m, i) => (
+                    <div 
+                      key={m.id} 
+                      onClick={() => openEditor('MILESTONE', m)}
+                      className="relative pl-6 border-l border-slate-100 dark:border-slate-800 cursor-pointer group"
+                    >
+                      <div className={`absolute -left-[4.5px] top-1 w-2 h-2 rounded-full ${m.status === 'completed' ? 'bg-slate-300' : m.status === 'active' ? 'bg-emerald-500 ring-4 ring-emerald-500/10' : 'bg-white border-2 border-slate-200'}`}></div>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest ${m.status === 'active' ? 'text-emerald-500' : 'text-slate-400'}`}>{m.date}</p>
+                      <h4 className={`text-sm font-bold group-hover:text-emerald-500 transition-colors ${m.status === 'upcoming' ? 'text-slate-400' : 'text-slate-900 dark:text-white'}`}>{m.label}</h4>
+                      {m.desc && <p className="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">{m.desc}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RISKS ALERT */}
+              <div 
+                onClick={() => openEditor('RISKS', roadmap.risks)}
+                className="bg-amber-50 dark:bg-amber-900/10 rounded-[16px] p-4 border border-amber-200 dark:border-amber-800/30 cursor-pointer hover:border-amber-400 transition-all active:scale-[0.99]"
+              >
+                <div className="flex gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-800 dark:text-amber-500 mb-1">Identified Risks</h4>
+                    <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80 leading-relaxed">
+                      {roadmap.risks || "No risks reported yet for this phase."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
 
         </div>
       </div>
-    </div>
-  );
-}
 
-// --- HELPER COMPONENTS ---
-
-function EditorField({ label, value, onChange, placeholder, light }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string, light?: boolean }) {
-  return (
-    <div className="space-y-1.5">
-       <label className={`text-[9px] font-bold uppercase tracking-[0.2em] ml-1 ${light ? 'text-white/40' : 'text-slate-400'}`}>{label}</label>
-       <input 
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full bg-transparent border-b outline-none text-xs font-bold py-1.5 transition-all focus:border-emerald-500 ${light ? 'text-white border-white/10' : 'text-slate-800 dark:text-white border-slate-100 dark:border-slate-800'}`}
-       />
-    </div>
-  );
-}
-
-function EditorInput({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
-  return (
-    <div className="space-y-2">
-       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-       <input 
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-5 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none font-bold text-slate-700 dark:text-slate-200 transition-all text-xs"
-       />
-    </div>
-  );
-}
-
-function EditorArea({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
-  return (
-    <div className="space-y-2">
-       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-       <textarea 
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-5 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none font-semibold text-slate-500 dark:text-slate-400 transition-all text-xs min-h-[80px]"
-       />
-    </div>
-  );
-}
-
-function EditorSelect({ label, value, options, onChange }: { label: string, value: string, options: string[], onChange: (v: string) => void }) {
-  return (
-    <div className="space-y-2">
-       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">{label}</label>
-       <div className="relative">
-          <select 
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full px-5 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none font-bold text-slate-700 dark:text-slate-200 transition-all text-xs appearance-none pr-10 uppercase tracking-widest"
+      {/* DYNAMIC SIDEBAR EDITOR */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.aside
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed right-0 top-0 bottom-0 w-[420px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl z-50 flex flex-col"
           >
-            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-       </div>
+            {/* Header */}
+            <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700">
+                  <Edit3 className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Edit {editContext}</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Master Planning Editor</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-2 text-slate-300 hover:text-slate-600 dark:hover:text-white rounded-lg transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
+              
+              {/* --- PHASE EDITOR --- */}
+              {editContext === 'PHASE' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Phase Title</label>
+                    <input 
+                      className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none font-semibold text-slate-900 dark:text-white transition-all"
+                      value={editTarget.title}
+                      onChange={(e) => updateBlock({ ...editTarget, title: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Start Week</label>
+                      <input 
+                        type="number"
+                        className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:border-emerald-500 outline-none font-bold text-slate-600 dark:text-slate-300"
+                        value={editTarget.startWeek}
+                        onChange={(e) => updateBlock({ ...editTarget, startWeek: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">End Week</label>
+                      <input 
+                        type="number"
+                        className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 focus:border-emerald-500 outline-none font-bold text-slate-600 dark:text-slate-300"
+                        value={editTarget.endWeek}
+                        onChange={(e) => updateBlock({ ...editTarget, endWeek: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Color Style</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {['blue', 'rose', 'amber', 'indigo', 'purple', 'emerald', 'teal'].map(c => (
+                        <button 
+                          key={c}
+                          onClick={() => updateBlock({ ...editTarget, color: `bg-${c}-50/50 border-${c}-100 text-${c}-600` })}
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${editTarget.color.includes(c) ? 'ring-2 ring-emerald-500 ring-offset-2' : ''} bg-${c}-500`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => deleteBlock(editTarget.id, editTarget.type)}
+                    className="w-full py-3.5 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-500 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 border border-rose-100 dark:border-rose-900/30 hover:bg-rose-100 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete Phase
+                  </button>
+                </div>
+              )}
+
+              {/* --- GOAL EDITOR --- */}
+              {editContext === 'GOAL' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Goal Label</label>
+                    <input 
+                      className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light dark:border-border-dark focus:bg-white focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all"
+                      value={editTarget.label}
+                      onChange={(e) => updateGoal({ ...editTarget, label: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Description</label>
+                    <textarea 
+                      className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light dark:border-border-dark focus:border-emerald-500 outline-none font-medium text-slate-600 dark:text-slate-300 min-h-[100px] text-sm"
+                      value={editTarget.desc}
+                      onChange={(e) => updateGoal({ ...editTarget, desc: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Current</label>
+                      <input 
+                        className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-600 dark:text-slate-300"
+                        value={editTarget.currentValue}
+                        onChange={(e) => updateGoal({ ...editTarget, currentValue: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Target</label>
+                      <input 
+                        className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-600 dark:text-slate-300"
+                        value={editTarget.targetValue}
+                        onChange={(e) => updateGoal({ ...editTarget, targetValue: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                   <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Adherence / Value (%)</label>
+                    <input 
+                      type="range"
+                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                      value={editTarget.value}
+                      onChange={(e) => updateGoal({ ...editTarget, value: parseInt(e.target.value) })}
+                    />
+                    <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400">
+                      <span>0%</span>
+                      <span className="text-emerald-500">{editTarget.value}%</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- MILESTONE EDITOR --- */}
+              {editContext === 'MILESTONE' && (
+                <div className="space-y-6">
+                   <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Milestone Name</label>
+                    <input 
+                      className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-900 dark:text-white transition-all"
+                      value={editTarget.label}
+                      onChange={(e) => updateMilestone({ ...editTarget, label: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Date</label>
+                    <input 
+                      className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-600 dark:text-slate-300"
+                      value={editTarget.date}
+                      onChange={(e) => updateMilestone({ ...editTarget, date: e.target.value })}
+                      placeholder="e.g. Nov 15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Status</label>
+                    <select 
+                       className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-600 appearance-none"
+                       value={editTarget.status}
+                       onChange={(e) => updateMilestone({ ...editTarget, status: e.target.value as any })}
+                    >
+                      <option value="completed">Completed</option>
+                      <option value="active">Active (Next)</option>
+                      <option value="upcoming">Upcoming</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Details</label>
+                    <textarea 
+                      className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-medium text-slate-600 dark:text-slate-300 min-h-[80px]"
+                      value={editTarget.desc}
+                      onChange={(e) => updateMilestone({ ...editTarget, desc: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* --- RISKS EDITOR --- */}
+              {editContext === 'RISKS' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Performance Observations</label>
+                    <textarea 
+                      className="w-full px-6 py-5 rounded-2xl bg-amber-50 dark:bg-slate-800 border border-amber-100 dark:border-amber-900/40 focus:bg-white focus:border-amber-500 outline-none font-medium text-amber-900 dark:text-slate-300 min-h-[240px] leading-relaxed shadow-inner"
+                      value={roadmap.risks}
+                      onChange={(e) => setRoadmap({ ...roadmap, risks: e.target.value })}
+                      placeholder="Identify potential blockers or report recent observations..."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* --- PROGRAM INFO EDITOR --- */}
+              {editContext === 'PROGRAM' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Current Week</label>
+                      <input 
+                        type="number"
+                        className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-600"
+                        value={roadmap.currentWeek}
+                        onChange={(e) => setRoadmap({ ...roadmap, currentWeek: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Total Weeks</label>
+                      <input 
+                        type="number"
+                        className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-600"
+                        value={roadmap.totalWeeks}
+                        onChange={(e) => setRoadmap({ ...roadmap, totalWeeks: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Estimated End Date</label>
+                    <div className="relative">
+                      <input 
+                        className="w-full px-5 py-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border-border-light focus:border-emerald-500 outline-none font-bold text-slate-600 pr-12"
+                        value={roadmap.endDate}
+                        onChange={(e) => setRoadmap({ ...roadmap, endDate: e.target.value })}
+                      />
+                      <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+             {/* Footer Action */}
+             <div className="p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
+                <button 
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-sm font-bold shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  Confirm Strategy
+                </button>
+             </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function SectionHeader({ icon, title, light }: { icon: React.ReactNode, title: string, light?: boolean }) {
+function GoalCard({ goal }: { goal: Goal }) {
+  const Icon = goal.type === 'physical' ? Accessibility : 
+               goal.type === 'nutrition' ? Utensils : 
+               goal.type === 'training' ? Dumbbell : Brain;
+  
+  const colors = {
+    physical: 'text-blue-500 bg-blue-50/50',
+    nutrition: 'text-amber-500 bg-amber-50/50',
+    training: 'text-purple-500 bg-purple-50/50',
+    mindset: 'text-rose-500 bg-rose-50/50'
+  };
+
+  const progressColors = {
+    physical: 'bg-blue-500',
+    nutrition: 'bg-amber-500',
+    training: 'bg-purple-500',
+    mindset: 'bg-rose-500'
+  };
+
   return (
-    <div className="flex items-center gap-3">
-       <div className={`p-2.5 rounded-xl ${light ? 'bg-white/5 border border-white/10' : 'bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700'}`}>
-          {icon}
-       </div>
-       <h4 className={`text-base font-bold tracking-tight ${light ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{title}</h4>
+    <div className="bg-slate-50/30 dark:bg-slate-800/30 rounded-2xl p-5 border border-slate-100 dark:border-slate-800/50 hover:border-emerald-200 transition-all shadow-inner">
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2.5">
+          <div className={`p-2 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-50 dark:border-slate-700`}>
+            <Icon className={`w-4 h-4 ${colors[goal.type]}`} />
+          </div>
+          {goal.label}
+        </h4>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase tracking-wider ${colors[goal.type]}`}>
+          {goal.value}%
+        </span>
+      </div>
+      <p className="text-[11px] font-medium text-slate-500 mb-4 h-8 line-clamp-2 leading-relaxed">{goal.desc}</p>
+      
+      <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 mb-2.5">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${goal.value}%` }}
+          transition={{ duration: 1, ease: 'easeOut' }}
+          className={`${progressColors[goal.type]} h-full rounded-full`}
+        />
+      </div>
+      
+      <div className="flex justify-between text-[10px] font-semibold text-slate-400">
+        <span>{goal.currentValue}</span>
+        <span>Target: {goal.targetValue}</span>
+      </div>
     </div>
   );
 }
