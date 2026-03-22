@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function ClientNutrition() {
   const [mode, setMode] = useState<'general' | 'example'>('general');
+  const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [nutritionPlan, setNutritionPlan] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -47,7 +48,11 @@ export default function ClientNutrition() {
     );
   }
 
-  const meals = nutritionPlan.data_json?.meals || [];
+  const isWeekly = nutritionPlan.data_json?.type === 'weekly';
+  const meals = isWeekly 
+    ? (nutritionPlan.data_json?.days?.[selectedDay]?.meals || []) 
+    : (nutritionPlan.data_json?.meals || []);
+
   const totalCalories = meals.reduce((acc: number, m: any) => 
     acc + (m.items || []).reduce((a: number, i: any) => a + (i.calories * i.quantity), 0), 0
   );
@@ -60,6 +65,28 @@ export default function ClientNutrition() {
   const totalFats = meals.reduce((acc: number, m: any) => 
     acc + (m.items || []).reduce((a: number, i: any) => a + (i.fats * i.quantity), 0), 0
   );
+
+  const renderDaySelector = () => {
+    if (!isWeekly) return null;
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    return (
+      <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 pb-2">
+        {days.map(d => (
+          <button
+            key={d}
+            onClick={() => setSelectedDay(d)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+              selectedDay === d 
+                ? 'bg-[#17cf54] text-white shadow-md shadow-[#17cf54]/20' 
+                : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+            }`}
+          >
+            {d.charAt(0).toUpperCase() + d.slice(1)}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   const renderGeneralMode = () => (
     <div className="flex-1 flex flex-col gap-6">
@@ -78,7 +105,7 @@ export default function ClientNutrition() {
               <circle className="drop-shadow-sm" cx="50" cy="50" fill="transparent" r="40" stroke="#eab308" strokeDasharray="71 180" strokeDashoffset="-185" strokeWidth="12" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-slate-900 dark:text-white">1,800</span>
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">{Math.round(totalCalories)}</span>
               <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wide">kcal</span>
             </div>
           </div>
@@ -92,8 +119,8 @@ export default function ClientNutrition() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-900 dark:text-white">135g</p>
-                <p className="text-xs text-slate-400">/ 135g</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{Math.round(totalProtein)}g</p>
+                <p className="text-xs text-slate-400">Target</p>
               </div>
             </div>
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
@@ -105,8 +132,8 @@ export default function ClientNutrition() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-900 dark:text-white">180g</p>
-                <p className="text-xs text-slate-400">/ 180g</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{Math.round(totalCarbs)}g</p>
+                <p className="text-xs text-slate-400">Target</p>
               </div>
             </div>
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
@@ -118,8 +145,8 @@ export default function ClientNutrition() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-slate-900 dark:text-white">60g</p>
-                <p className="text-xs text-slate-400">/ 60g</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">{Math.round(totalFats)}g</p>
+                <p className="text-xs text-slate-400">Target</p>
               </div>
             </div>
           </div>
@@ -131,7 +158,7 @@ export default function ClientNutrition() {
         <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Daily Structure</h2>
-            <p className="text-sm text-slate-500">4 meals • 1,800 kcal target</p>
+            <p className="text-sm text-slate-500">{meals.length} meals • {Math.round(totalCalories)} kcal target</p>
           </div>
           <button className="text-[#17cf54] text-sm font-semibold hover:underline">
             + Add Meal Block
@@ -261,7 +288,7 @@ export default function ClientNutrition() {
         <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Daily Structure</h2>
-            <p className="text-sm text-slate-500">High Protein Example</p>
+            <p className="text-sm text-slate-500">{meals.length} meals • Example Items</p>
           </div>
         </div>
         <div className="p-6 space-y-4">
@@ -389,6 +416,7 @@ export default function ClientNutrition() {
           </div>
         </div>
 
+        {renderDaySelector()}
         {mode === 'general' ? renderGeneralMode() : renderExampleMode()}
       </div>
     </div>

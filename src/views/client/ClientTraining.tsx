@@ -11,6 +11,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const { exercises, isLoading: exercisesLoading, refreshExercises } = useExerciseContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('');
+  const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [trainingProgram, setTrainingProgram] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -52,8 +53,34 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     );
   }
 
-  const blocks = trainingProgram.data_json?.blocks || [];
+  const isWeekly = trainingProgram.data_json?.type === 'weekly';
+  const blocks = isWeekly 
+    ? (trainingProgram.data_json?.days?.[selectedDay]?.blocks || []) 
+    : (trainingProgram.data_json?.blocks || []);
+    
   const totalExercises = blocks.reduce((acc: number, b: any) => acc + (b.exercises?.length || 0), 0);
+
+  const renderDaySelector = () => {
+    if (!isWeekly) return null;
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    return (
+      <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 pb-2">
+        {days.map(d => (
+          <button
+            key={d}
+            onClick={() => setSelectedDay(d)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+              selectedDay === d 
+                ? 'bg-[#17cf54] text-white shadow-md shadow-[#17cf54]/20' 
+                : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+            }`}
+          >
+            {d.charAt(0).toUpperCase() + d.slice(1)}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   const filteredLibraryExercises = exercises.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -134,6 +161,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         </div>
 
         <div className="flex flex-col gap-8 pb-20">
+          {renderDaySelector()}
           
           {/* Workout Summary - Full Width */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm p-6 md:p-8 flex-shrink-0 w-full">
