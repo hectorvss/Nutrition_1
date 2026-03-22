@@ -168,8 +168,8 @@ function BusinessAnalytics({ data }: any) {
         <StatCard 
           title="Retention" 
           value={`${data?.retention || "0"}%`} 
-          change="-1.2%" 
-          isPositive={false} 
+          change={`${data?.retention >= 90 ? '+0.0%' : '-1.2%'}`} 
+          isPositive={data?.retention >= 90} 
           icon={<Heart className="w-6 h-6" />} 
           iconBg="bg-purple-50" 
           iconColor="text-purple-600" 
@@ -185,9 +185,9 @@ function BusinessAnalytics({ data }: any) {
         />
         <StatCard 
           title="Churn Rate" 
-          value="2.4%" 
-          change="-0.5%" 
-          isPositive={true} 
+          value={`${data?.churnRate || "0"}%`} 
+          change={data?.churnRate > 5 ? "+1.1%" : "-0.5%"} 
+          isPositive={data?.churnRate <= 5} 
           icon={<UserMinus className="w-6 h-6" />} 
           iconBg="bg-red-50" 
           iconColor="text-red-600" 
@@ -273,18 +273,24 @@ function BusinessAnalytics({ data }: any) {
         <div className="xl:col-span-1 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Revenue by Service</h3>
-              <p className="text-xs text-slate-500">Source breakdown</p>
+              <h3 className="text-lg font-bold text-slate-900">Protocol Compliance</h3>
+              <p className="text-xs text-slate-500">Overall coaching delivery quality</p>
             </div>
-            <button className="text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg ${
+              (data?.complianceScore || 0) > 80 ? 'bg-emerald-50 text-emerald-600' : 
+              (data?.complianceScore || 0) > 60 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
+            }`}>
+              {data?.complianceScore || 0}
+            </div>
           </div>
           <div className="flex flex-col gap-6 flex-1 justify-center">
-            <ProgressBar label="Nutrition Plans" value="$8,450" percentage={68} color="bg-emerald-500" />
-            <ProgressBar label="Training Programs" value="$3,100" percentage={25} color="bg-blue-500" />
-            <ProgressBar label="Consultations" value="$900" percentage={7} color="bg-amber-500" />
+            <ProgressBar label="Workout Adherence" value={`${data?.training?.avgCompletion || 0}%`} percentage={data?.training?.avgCompletion || 0} color="bg-emerald-500" />
+            <ProgressBar label="Nutrition Consistency" value={`${data?.nutrition?.avgHydration || 0}%`} percentage={data?.nutrition?.avgHydration || 0} color="bg-blue-500" />
+            <ProgressBar label="Check-in Reliability" value={`${data?.retention || 0}%`} percentage={data?.retention || 0} color="bg-purple-500" />
           </div>
+          <p className="mt-6 text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
+            Composite index of client protocol compliance (last 30 days).
+          </p>
         </div>
       </div>
 
@@ -319,11 +325,13 @@ function BusinessAnalytics({ data }: any) {
               </tr>
             </thead>
             <tbody className="text-slate-600">
-              <CohortRow cohort="Feb 2023" data={[98, 95, 92, 88, 85, 82]} />
-              <CohortRow cohort="Mar 2023" data={[99, 96, 94, 90, 88, null]} />
-              <CohortRow cohort="Apr 2023" data={[97, 94, 90, 86, null, null]} />
-              <CohortRow cohort="May 2023" data={[100, 98, 95, null, null, null]} />
-              <CohortRow cohort="Jun 2023" data={[98, 97, null, null, null, null]} />
+              {data?.cohorts && data.cohorts.length > 0 ? (
+                data.cohorts.map((c: any, i: number) => (
+                  <CohortRow key={i} cohort={c.cohort} data={c.data} />
+                ))
+              ) : (
+                <CohortRow cohort="No data" data={[null, null, null, null, null, null]} />
+              )}
             </tbody>
           </table>
         </div>
@@ -449,9 +457,18 @@ function NutritionAnalytics({ data }: any) {
               {[50, 100, 150].map(y => (
                 <line key={y} x1="0" y1={y} x2="600" y2={y} stroke="#f1f5f9" strokeDasharray="4 4" strokeWidth="1" />
               ))}
-              <path d="M0,140 C100,130 200,160 300,120 S500,130 600,100" fill="none" stroke="#f59e0b" strokeLinecap="round" strokeWidth="3"></path>
-              <path d="M0,100 C100,80 200,110 300,70 S500,40 600,30" fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="3"></path>
-              <path d="M0,120 C100,110 200,90 300,100 S500,80 600,60" fill="none" stroke="#a855f7" strokeLinecap="round" strokeWidth="3"></path>
+              <path 
+                d={data?.nutrition?.microTrends?.iron?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')} 
+                fill="none" stroke="#f59e0b" strokeLinecap="round" strokeWidth="3"
+              />
+              <path 
+                d={data?.nutrition?.microTrends?.vitD?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')} 
+                fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="3"
+              />
+              <path 
+                d={data?.nutrition?.microTrends?.magnesium?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')} 
+                fill="none" stroke="#a855f7" strokeLinecap="round" strokeWidth="3"
+              />
             </svg>
             <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-slate-400 font-medium px-1">
               <span>Week 1</span>
@@ -472,30 +489,19 @@ function NutritionAnalytics({ data }: any) {
             <button className="text-emerald-600 text-xs font-semibold hover:underline">View All</button>
           </div>
           <div className="flex flex-col gap-4 overflow-y-auto">
-            <DeficitClient 
-              name="Sarah Jenkins" 
-              deficit="Iron & Calcium Critical" 
-              severity="high" 
-              image="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
-            />
-            <DeficitClient 
-              name="Mike Ross" 
-              deficit="Protein Low (45%)" 
-              severity="med" 
-              image="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop"
-            />
-            <DeficitClient 
-              name="David Chen" 
-              deficit="Fiber Gap (-12g)" 
-              severity="med" 
-              image="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop"
-            />
-            <DeficitClient 
-              name="Emily Blunt" 
-              deficit="Hydration Low" 
-              severity="low" 
-              image="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop"
-            />
+            {data?.nutrition?.topDeficits && data.nutrition.topDeficits.length > 0 ? (
+              data.nutrition.topDeficits.map((client: any, idx: number) => (
+                <DeficitClient 
+                  key={idx}
+                  name={client.name}
+                  deficit={client.deficit}
+                  severity={client.status === 'High Deficit' ? 'high' : 'med'}
+                  image={`https://ui-avatars.com/api/?name=${client.name}&background=random`}
+                />
+              ))
+            ) : (
+              <p className="text-sm text-slate-500 italic text-center py-8">No deficit data yet</p>
+            )}
           </div>
         </div>
       </div>

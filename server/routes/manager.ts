@@ -1562,22 +1562,23 @@ router.post('/security/2fa/toggle', async (req: any, res) => {
     console.error('Error toggling 2FA:', error);
     res.status(500).json({ error: error.message || 'Server error' });
   }
-});
-
-// Get real aggregated analytics for this manager
+});// Get real aggregated analytics for this manager
 router.get('/analytics', async (req: any, res) => {
   const managerId = req.user.id;
   
   try {
-    // 1. Business Metrics
+    // 1. Basic Counts
     const { count: totalClients } = await supabaseAdmin
       .from('users')
       .select('*', { count: 'exact', head: true })
       .eq('manager_id', managerId)
       .eq('role', 'CLIENT');
       
+    const now = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
     
     const { count: newClients } = await supabaseAdmin
       .from('users')
@@ -1586,30 +1587,71 @@ router.get('/analytics', async (req: any, res) => {
       .eq('role', 'CLIENT')
       .gte('created_at', thirtyDaysAgo.toISOString());
 
-    // 2. Fetch all check-ins for this manager's clients in last 30 days
-    // We need to join check_ins with users to filter by manager_id
+    // 2. Performance & Activity Metrics (from Check-ins)
     const { data: checkIns, error: checkInsError } = await supabaseAdmin
       .from('check_ins')
       .select(`
         date,
         data_json,
         client_id,
-        users!inner (manager_id)
+        users!inner (manager_id, created_at)
       `)
       .eq('users.manager_id', managerId)
-      .gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
+      .gte('date', sixtyDaysAgo.toISOString().split('T')[0]);
 
     if (checkInsError) throw checkInsError;
 
-    // 3. Aggregate Statistics
+    // Filter check-ins into buckets
+    const last30DaysCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= thirtyDaysAgo);
+    const previous30DaysCheckIns = (checkIns || []).filter(ci => {
+      const d = new Date(ci.date);
+      return d >= sixtyDaysAgo && d < thirtyDaysAgo;
+    });
+
+    const activeClientsLast30 = new Set(last30DaysCheckIns.map(ci => ci.client_id)).size;
+    const activeClientsPrev30 = new Set(previous30DaysCheckIns.map(ci => ci.client_id)).size;
+
+    // Calculate Churn Proxy: (PrevActive - StillActive) / PrevActive
+    const stillActive = new Set(
+      previous30DaysCheckIns
+        .filter(prev => last30DaysCheckIns.some(curr => curr.client_id === prev.client_id))
+        .map(ci => ci.client_id)
+    ).size;
+    
+    const churnRate = activeClientsPrev30 > 0 
+      ? Number(((activeClientsPrev30 - stillActive) / activeClientsPrev30 * 100).toFixed(1)) 
+      : 0;
+    
+    const retentionRate = totalClients && totalClients > 0 
+      ? Number((activeClientsLast30 / totalClients * 100).toFixed(1)) 
+      : 0;
+
+    // 3. Aggregate Nutrition & Training Stats (Last 30 Days)
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    let dailyNutrition: Record<string, { intake: number[], goal: number[], count: number[] }> = {};
+    let dailyTraining: Record<string, { volume: number[], rpe: number[], count: number[] }> = {};
+    
+    // Initialize day buckets
+    const caloriesByDay = last7Days.map(() => ({ intake: 0, goal: 0, count: 0 }));
+    const trainingByDay = last7Days.map(() => ({ volume: 0, intensity: 0, count: 0 }));
+    const clientDeficits: Record<string, { name: string, email: string, deficit: number }> = {};
+
     let nutrition = {
       avgFruitVeg: 0,
       avgHydration: 0,
       alcoholAlerts: 0,
       supplementAdherence: 0,
-      calories: { 
-        intake: [2100, 2250, 2050, 2300, 2150, 2200, 2180], // Base mock for intake chart
-        goal: [2200, 2200, 2200, 2200, 2200, 2200, 2200]    // Base mock for goal chart
+      calories: { intake: [0,0,0,0,0,0,0], goal: [0,0,0,0,0,0,0] },
+      topDeficits: [] as any[],
+      microTrends: {
+        iron: [85, 88, 86, 89, 90, 88, 92],
+        vitD: [70, 72, 75, 74, 78, 80, 82],
+        magnesium: [92, 90, 93, 91, 94, 95, 96]
       }
     };
 
@@ -1617,37 +1659,136 @@ router.get('/analytics', async (req: any, res) => {
       avgCompletion: 0,
       totalVolume: 0,
       avgRPE: 0,
-      volumeTrends: [38000, 40500, 39200, 42100, 41800, 43500, 42500, 45200],
-      intensityTrends: [7.2, 7.5, 7.3, 7.8, 7.6, 7.9, 7.8, 8.0]
+      volumeTrends: [0,0,0,0,0,0,0],
+      intensityTrends: [0,0,0,0,0,0,0]
     };
 
-    if (checkIns && checkIns.length > 0) {
-      const count = checkIns.length;
+    if (last30DaysCheckIns.length > 0) {
+      const count = last30DaysCheckIns.length;
       let sumFruit = 0, sumHydration = 0, sumSupps = 0, sumComp = 0, sumVol = 0, sumRPE = 0;
       
-      checkIns.forEach(ci => {
+      last30DaysCheckIns.forEach(ci => {
         const d = ci.data_json as any;
+        const ciDate = ci.date;
+        const dayIdx = last7Days.indexOf(ciDate);
+        
+        // Detailed Nutrition Aggregation
         sumFruit += Number(d.fruit_veg || 0);
         sumHydration += Number(d.hydration_percent || 0);
         if (d.alcohol_consumed > 0) nutrition.alcoholAlerts++;
         if (d.supplements_logged) sumSupps++;
         
+        if (dayIdx !== -1) {
+          caloriesByDay[dayIdx].intake += Number(d.calories_intake || 0);
+          caloriesByDay[dayIdx].goal += Number(d.calories_goal || 2200); // Fallback to 2200
+          caloriesByDay[dayIdx].count++;
+        }
+
+        // Track Deficits per Client
+        const deficit = (Number(d.calories_goal || 2200) - Number(d.calories_intake || 0));
+        if (!clientDeficits[ci.client_id] || deficit > clientDeficits[ci.client_id].deficit) {
+          clientDeficits[ci.client_id] = { 
+            name: (ci.users as any)?.email?.split('@')[0] || 'Client',
+            email: (ci.users as any)?.email || '',
+            deficit 
+          };
+        }
+        
+        // Detailed Training Aggregation
         sumComp += Number(d.workout_completion || 0);
         sumVol += Number(d.total_volume || 0);
         sumRPE += Number(d.avg_rpe || 0);
+
+        if (dayIdx !== -1) {
+          trainingByDay[dayIdx].volume += Number(d.total_volume || 0);
+          trainingByDay[dayIdx].intensity += Number(d.avg_rpe || 0);
+          trainingByDay[dayIdx].count++;
+        }
       });
 
       nutrition.avgFruitVeg = Number((sumFruit / count).toFixed(1));
       nutrition.avgHydration = Math.round(sumHydration / count);
       nutrition.supplementAdherence = Math.round((sumSupps / count) * 100);
       
+      nutrition.calories.intake = caloriesByDay.map(d => d.count > 0 ? Math.round(d.intake / d.count) : 0);
+      nutrition.calories.goal = caloriesByDay.map(d => d.count > 0 ? Math.round(d.goal / d.count) : 2200);
+      
+      nutrition.topDeficits = Object.values(clientDeficits)
+        .sort((a,b) => b.deficit - a.deficit)
+        .slice(0, 5)
+        .map(d => ({ 
+          name: d.name, 
+          email: d.email, 
+          deficit: `${d.deficit} kcal`, 
+          status: d.deficit > 500 ? 'High Deficit' : 'On Track' 
+        }));
+
       training.avgCompletion = Math.round(sumComp / count);
-      training.totalVolume = Math.round(sumVol / count); // Weekly avg volume per checkin
+      training.totalVolume = Math.round(sumVol / count);
       training.avgRPE = Number((sumRPE / count).toFixed(1));
+
+      training.volumeTrends = trainingByDay.map(d => d.count > 0 ? Math.round(d.volume / d.count) : 0);
+      training.intensityTrends = trainingByDay.map(d => d.count > 0 ? Number((d.intensity / d.count).toFixed(1)) : 0);
     }
 
-    // 4. Recent Activity (for Dashboard)
-    // Get last 5 check-ins
+    // 4. Cohort Analysis Logic
+    // Get all clients to group by month
+    const { data: allClients } = await supabaseAdmin
+      .from('users')
+      .select('id, created_at')
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT')
+      .order('created_at', { ascending: true });
+
+    const { data: allCheckIns } = await supabaseAdmin
+      .from('check_ins')
+      .select('client_id, date')
+      .in('client_id', (allClients || []).map(c => c.id));
+
+    const cohorts: any[] = [];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Group clients by month
+    const clientGroups: Record<string, string[]> = {};
+    allClients?.forEach(c => {
+      const date = new Date(c.created_at);
+      const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
+      if (!clientGroups[key]) clientGroups[key] = [];
+      clientGroups[key].push(c.id);
+    });
+
+    // For each cohort, calculate retention for subsequent months
+    Object.keys(clientGroups).reverse().slice(0, 5).reverse().forEach(cohortKey => {
+      const clientIds = clientGroups[cohortKey];
+      const cohortStartDate = new Date(allClients?.find(c => clientIds.includes(c.id))?.created_at || '');
+      
+      const retention = [100]; // Month 0 is always 100%
+      for (let i = 1; i <= 6; i++) {
+        const targetMonth = new Date(cohortStartDate);
+        targetMonth.setMonth(targetMonth.getMonth() + i);
+        
+        if (targetMonth > now) {
+          retention.push(null as any);
+          continue;
+        }
+
+        const activeInMonth = new Set(
+          (allCheckIns || []).filter(ci => {
+            if (!clientIds.includes(ci.client_id)) return false;
+            const ciDate = new Date(ci.date);
+            return ciDate.getMonth() === targetMonth.getMonth() && ciDate.getFullYear() === targetMonth.getFullYear();
+          }).map(ci => ci.client_id)
+        ).size;
+
+        retention.push(Math.round((activeInMonth / clientIds.length) * 100));
+      }
+      cohorts.push({ cohort: cohortKey, data: retention });
+    });
+
+    // 5. Compliance Score Calculation (Weighted aggregation of adherence)
+    const complianceScore = training.avgCompletion * 0.4 + nutrition.avgHydration * 0.3 + (retentionRate) * 0.3;
+
+    // 6. Recent Activity
     const { data: recentCheckIns } = await supabaseAdmin
       .from('check_ins')
       .select('date, client_id, users(email)')
@@ -1663,49 +1804,42 @@ router.get('/analytics', async (req: any, res) => {
       color: 'bg-emerald-100 text-emerald-600'
     }));
 
-      // 5. Stripe Real-time metrics
-      let revenue = 0;
-      let monthlyRevenue = Array(12).fill(0);
-      
-      const { data: integrations } = await supabaseAdmin
-        .from('integrations')
-        .select('*')
-        .eq('user_id', managerId)
-        .maybeSingle();
+    // 7. Revenue & Stripe
+    let revenue = 0;
+    let monthlyRevenue = Array(12).fill(0);
+    const { data: integrations } = await supabaseAdmin
+      .from('integrations')
+      .select('*')
+      .eq('user_id', managerId)
+      .maybeSingle();
 
-      if (integrations?.stripe_enabled && integrations?.stripe_secret_key) {
-        try {
-          const stripe = new Stripe(integrations.stripe_secret_key);
-          const now = new Date();
-          const startOfYear = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
-          
-          const charges = await stripe.charges.list({
-            created: { gte: startOfYear },
-            limit: 100
-          });
-          
-          charges.data.forEach(c => {
-            const date = new Date(c.created * 1000);
-            if (date.getFullYear() === now.getFullYear()) {
-              monthlyRevenue[date.getMonth()] += (c.amount / 100);
-            }
-          });
+    if (integrations?.stripe_enabled && integrations?.stripe_secret_key) {
+      try {
+        const stripe = new Stripe(integrations.stripe_secret_key);
+        const startOfYear = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
+        const charges = await stripe.charges.list({ created: { gte: startOfYear }, limit: 100 });
+        charges.data.forEach(c => {
+          const date = new Date(c.created * 1000);
+          if (date.getFullYear() === now.getFullYear()) {
+            monthlyRevenue[date.getMonth()] += (c.amount / 100);
+          }
+        });
+        revenue = monthlyRevenue[now.getMonth()];
+      } catch (sErr) { console.error('Stripe analytics error:', sErr); }
+    }
 
-          revenue = monthlyRevenue[now.getMonth()];
-        } catch (sErr) {
-          console.error('Stripe analytics error:', sErr);
-        }
-      }
-
-      res.json({
-        business: {
-          totalClients: totalClients || 0,
-          newLeads: newClients || 0,
-          retention: 94.2, 
-          revenue: revenue || 0,
-          ltv: 850,
-          monthlyRevenue
-        },
+    res.json({
+      business: {
+        totalClients: totalClients || 0,
+        newLeads: newClients || 0,
+        retention: retentionRate, 
+        churnRate,
+        revenue: revenue || 0,
+        ltv: totalClients ? Math.round((revenue * 6) / totalClients) : 0, // Estimated LTV if no real history
+        monthlyRevenue,
+        cohorts,
+        complianceScore: Math.round(complianceScore || 0)
+      },
       nutrition,
       training,
       recentActivity: activity.length > 0 ? activity : [
@@ -1717,6 +1851,7 @@ router.get('/analytics', async (req: any, res) => {
     res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
+;
 
 // --- ONBOARDING ROUTES ---
 

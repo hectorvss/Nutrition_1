@@ -63,7 +63,10 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
 
       {/* Quick Actions */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <button className="flex items-center gap-3 p-4 bg-white dark:bg-[#112116] border border-slate-200 dark:border-slate-800 rounded-xl hover:border-[#17cf54]/50 transition-all group shadow-sm text-left">
+        <button 
+          onClick={() => onNavigate('check-ins')}
+          className="flex items-center gap-3 p-4 bg-white dark:bg-[#112116] border border-slate-200 dark:border-slate-800 rounded-xl hover:border-[#17cf54]/50 transition-all group shadow-sm text-left"
+        >
           <div className="w-10 h-10 rounded-lg bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54] group-hover:bg-[#17cf54] group-hover:text-white transition-colors shrink-0">
             <span className="material-symbols-outlined">edit_note</span>
           </div>
