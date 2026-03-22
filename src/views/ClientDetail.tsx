@@ -635,19 +635,19 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[
-          { label: 'MOOD', value: '7.8', status: 'Good', icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
-          { label: 'STRESS', value: '6.2', status: 'Moderate', icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
-          { label: 'MOTIVATION', value: '8.5', status: 'High', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
-          { label: 'ENERGY', value: '6.4', status: 'Okay', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
-          { label: 'SLEEP', value: '7.2h', status: 'Avg', icon: Moon, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'mood' },
-          { label: 'BURNOUT RISK', value: 'Low', status: '', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'stress' },
+          { label: 'MOOD', value: stats?.mindset?.mood || '--', status: stats?.mindset?.mood > 7 ? 'Good' : 'Avg', icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
+          { label: 'STRESS', value: stats?.mindset?.stress || '--', status: stats?.mindset?.stress > 7 ? 'High' : 'Normal', icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
+          { label: 'MOTIVATION', value: stats?.mindset?.motivation || '--', status: stats?.mindset?.motivation > 7 ? 'High' : 'Low', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
+          { label: 'ENERGY', value: stats?.mindset?.energy || '--', status: stats?.mindset?.energy > 7 ? 'High' : 'Low', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
+          { label: 'SLEEP', value: stats?.mindset?.sleep || '7.2h', status: 'Avg', icon: Moon, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'mood' },
+          { label: 'BURNOUT RISK', value: stats?.mindset?.stress > 8 ? 'High' : 'Low', status: '', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'stress' },
         ].map((stat, idx) => (
-          <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{stat.label}</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
+                  <span className="text-3xl font-bold text-slate-900 dark:text-white">{stat.value}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stat.bg} ${stat.color}`}>{stat.status}</span>
                 </div>
               </div>
@@ -655,8 +655,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
             <div className="h-16 w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={mindsetData}>
-                  <Line type="monotone" dataKey={stat.dataKey} stroke={stat.color.replace('text-', '').replace('-500', '')} strokeWidth={2} dot={false} />
+                <LineChart data={stats?.mindset?.history || []}>
+                  <Line type="monotone" dataKey={stat.dataKey} stroke={stat.color.replace('text-', '').replace('-500', '')} strokeWidth={2} dot={false} connectNulls />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -665,44 +665,44 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       </div>
 
       <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-6">Today's State</h3>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Today's State</h3>
           <div className="space-y-6">
             {[
-              { label: 'Mood', value: 8, color: 'bg-blue-500' },
-              { label: 'Stress', value: 7, color: 'bg-red-400' },
-              { label: 'Energy', value: 6, color: 'bg-amber-400' },
-              { label: 'Motivation', value: 8, color: 'bg-purple-500' },
+              { label: 'Mood', value: stats?.mindset?.mood, color: 'bg-blue-500' },
+              { label: 'Stress', value: stats?.mindset?.stress, color: 'bg-red-400' },
+              { label: 'Energy', value: stats?.mindset?.energy, color: 'bg-amber-400' },
+              { label: 'Motivation', value: stats?.mindset?.motivation, color: 'bg-purple-500' },
             ].map((item, idx) => (
               <div key={idx}>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-bold text-slate-600">{item.label}</span>
-                  <span className="text-xs font-bold text-slate-900">{item.value}/10</span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{item.label}</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">{item.value || '--'}/10</span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div className={`${item.color} h-2 rounded-full`} style={{ width: `${item.value * 10}%` }}></div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                  <div className={`${item.color} h-2 rounded-full`} style={{ width: `${(Number(item.value) || 0) * 10}%` }}></div>
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">CLIENT NOTE</p>
-            <p className="text-xs text-slate-600 italic leading-relaxed">
-              "Work has been extremely intense this week with the Q4 push. Struggling to find time to meal prep, but trying to stick to simple options."
+            <p className="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">
+              {stats?.activity?.find((a: any) => a.type === 'CHECK_IN' && a.sub)?.sub || "No client notes available for this period."}
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-slate-900 mb-6">Adherence Snapshot</h3>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Adherence Snapshot</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-500">Nutrition</span>
-              <span className="text-xs font-bold text-slate-900">78%</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Nutrition</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.macros?.protein ? 'High' : (stats?.adherenceRate || 0) + '%'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-500">Training</span>
-              <span className="text-xs font-bold text-slate-900">85%</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Training</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.training?.workoutCount ? Math.round((stats.training.workoutCount / 5) * 100) + '%' : '0%'}</span>
             </div>
           </div>
         </div>

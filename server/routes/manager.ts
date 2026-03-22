@@ -2143,7 +2143,25 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         rpe: (ci.data_json as any).avg_rpe || 0
       }));
 
-    // 10. Documents (Mock for now)
+    // 10. Mindset Stats & History
+    const latestCheckIn = checkIns.length > 0 ? checkIns[checkIns.length - 1] : null;
+    const latestData = latestCheckIn ? (latestCheckIn.data_json as any) : {};
+    
+    const mindset = {
+      energy: latestData.energy_level || '--',
+      stress: latestData.stress_level || '--',
+      mood: latestData.mood_score || '--',
+      motivation: latestData.motivation_level || '--',
+      history: (checkIns || []).map(ci => ({
+        date: ci.date,
+        energy: (ci.data_json as any).energy_level || null,
+        stress: (ci.data_json as any).stress_level || null,
+        mood: (ci.data_json as any).mood_score || null,
+        motivation: (ci.data_json as any).motivation_level || null
+      })).filter(h => h.energy || h.stress || h.mood || h.motivation)
+    };
+
+    // 11. Documents (Mock for now)
     const documents = [
       { name: 'Initial Assessment.pdf', date: client.created_at, type: 'PDF' }
     ];
@@ -2170,6 +2188,7 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         strengthHistory,
         recentWorkouts
       },
+      mindset,
       measurements,
       activity,
       documents,
