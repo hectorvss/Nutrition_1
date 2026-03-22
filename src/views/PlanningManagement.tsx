@@ -26,10 +26,6 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                 <h2 className="text-3xl font-bold text-slate-900">Planning Management</h2>
                 <p className="text-sm text-slate-500 mt-1 font-medium">Structure blocks and set long-term goals for your clients</p>
               </div>
-              <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm">
-                <span className="material-symbols-outlined text-[20px]">add</span>
-                New Planning Block
-              </button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center pt-2">
