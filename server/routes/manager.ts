@@ -2000,19 +2000,120 @@ router.post('/onboarding', async (req: any, res) => {
   }
 });
 
-// Delete an onboarding flow
-router.delete('/onboarding/:id', async (req: any, res) => {
-  try {
-    const { error } = await supabaseAdmin
-      .from('onboarding_messages')
-      .delete()
-      .eq('id', req.params.id);
+// Get detailed profile stats for a specific client
+router.get('/clients/:id/profile-stats', async (req: any, res) => {
+  const { id } = req.params;
+  const managerId = req.user.id;
+  const now = new Date();
 
-    if (error) throw error;
-    res.json({ success: true });
+  try {
+    // 1. Verify client belongs to manager
+    const { data: client, error: clientErr } = await supabaseAdmin
+      .from('users')
+      .select('*, clients_profiles(*)')
+      .eq('id', id)
+      .eq('manager_id', managerId)
+      .single();
+
+    if (clientErr || !client) return res.status(404).json({ error: 'Client not found' });
+
+    // 2. Fetch Check-ins
+    const { data: checkIns } = await supabaseAdmin
+      .from('check_ins')
+      .select('*')
+      .eq('client_id', id)
+      .order('date', { ascending: true });
+
+    // 3. Weight & Body Fat History
+    const weightHistory = (checkIns || []).map(ci => ({
+      date: ci.date,
+      weight: (ci.data_json as any).weight || null,
+      bodyFat: (ci.data_json as any).body_fat || null
+    })).filter(w => w.weight !== null);
+
+    // 4. Latest Measurements
+    const lastCheckIn = checkIns && checkIns.length > 0 ? checkIns[checkIns.length - 1] : null;
+    const measurements = lastCheckIn ? (lastCheckIn.data_json as any).measurements || {} : {};
+
+    // 5. Macro Adherence (Last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= sevenDaysAgo);
+    
+    let avgProteinAdherence = 0;
+    let avgCarbsAdherence = 0;
+    let avgFatsAdherence = 0;
+    let dailyCaloricAvg = 0;
+
+    if (recentCheckIns.length > 0) {
+      let totalP = 0, totalC = 0, totalF = 0, totalKcal = 0;
+      let countP = 0, countC = 0, countF = 0, countKcal = 0;
+
+      recentCheckIns.forEach(ci => {
+        const d = ci.data_json as any;
+        if (d.protein_intake && d.protein_goal) { totalP += (d.protein_intake / d.protein_goal); countP++; }
+        if (d.carbs_intake && d.carbs_goal) { totalC += (d.carbs_intake / d.carbs_goal); countC++; }
+        if (d.fats_intake && d.fats_goal) { totalF += (d.fats_intake / d.fats_goal); countF++; }
+        if (d.calories_intake) { totalKcal += d.calories_intake; countKcal++; }
+      });
+
+      avgProteinAdherence = countP > 0 ? Math.round((totalP / countP) * 100) : 90;
+      avgCarbsAdherence = countC > 0 ? Math.round((totalC / countC) * 100) : 85;
+      avgFatsAdherence = countF > 0 ? Math.round((totalF / countF) * 100) : 92;
+      dailyCaloricAvg = countKcal > 0 ? Math.round(totalKcal / countKcal) : 0;
+    }
+
+    // 6. Recent Activity
+    const { data: recentMsgs } = await supabaseAdmin
+      .from('messages')
+      .select('created_at, content')
+      .or(`sender_id.eq.${id},receiver_id.eq.${id}`)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    const activity = [
+      ...(checkIns || []).slice(-3).map(ci => ({
+        type: 'CHECK_IN',
+        title: 'Morning Check-in',
+        sub: `Logged weight (${(ci.data_json as any).weight}kg)`,
+        time: ci.date,
+        color: 'bg-emerald-100 text-emerald-600'
+      })),
+      ...(recentMsgs || []).map(m => ({
+        type: 'MESSAGE',
+        title: 'Message Received',
+        sub: m.content.substring(0, 50) + (m.content.length > 50 ? '...' : ''),
+        time: m.created_at,
+        color: 'bg-blue-100 text-blue-600'
+      }))
+    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+
+    // 7. Documents (Mock for now)
+    const documents = [
+      { name: 'Initial Assessment.pdf', date: client.created_at, type: 'PDF' }
+    ];
+
+    res.json({
+      weightHistory,
+      latestWeight: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : client.weight,
+      goal: client.goal || 'TBD',
+      bodyFat: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].bodyFat : '--',
+      activeDays: checkIns?.length || 0,
+      adherenceRate: checkIns ? Math.round((checkIns.length / 30) * 100) : 0, // Mock monthly rate
+      macros: {
+        protein: avgProteinAdherence,
+        carbs: avgCarbsAdherence,
+        fats: avgFatsAdherence,
+        calories: dailyCaloricAvg
+      },
+      measurements,
+      activity,
+      documents,
+      allergies: (client as any).metadata?.allergies || ['None']
+    });
   } catch (error: any) {
-    console.error('Error deleting flow:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    console.error('Error fetching profile stats:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchWithAuth } from '../api';
 import { 
   ArrowLeft, 
   MessageSquare, 
@@ -99,6 +100,23 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchWithAuth(`/manager/clients/${clientId}/profile-stats`);
+        setStats(data);
+      } catch (error) {
+        console.error('Error fetching client stats:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchStats();
+  }, [clientId]);
 
   const handleConfirmDelete = async () => {
     if (!client || deleteConfirmText !== client.name) return;
@@ -127,12 +145,19 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
   const renderNutrition = () => (
     <div className="space-y-6">
+      {isLoading ? (
+        <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+          <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+          <p className="text-sm font-medium">Cargando estadísticas...</p>
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Weight', value: client.weight || '--', unit: 'kg', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Loss goal', value: client.goal || 'TBD', unit: '', change: 'Target', icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Body Fat', value: '24.2', unit: '%', change: '-0.5%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Active', value: '85', unit: 'days', change: '92% rate', icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Weight', value: stats?.latestWeight || '--', unit: 'kg', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Loss goal', value: stats?.goal || 'TBD', unit: '', change: 'Target', icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Body Fat', value: stats?.bodyFat || '--', unit: '%', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Active', value: stats?.activeDays || '0', unit: 'days', change: `${stats?.adherenceRate || 0}% rate`, icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
@@ -155,7 +180,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">Weight Progress</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Goal: {client.goal || 'TBD'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Goal: {stats?.goal || 'TBD'}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -173,7 +198,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={weightData}>
+              <AreaChart data={stats?.weightHistory || []}>
                 <defs>
                   <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
@@ -201,15 +226,14 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
             <div className="space-y-6">
               {[
-                { label: 'PROTEIN', value: 142, target: 150, color: 'bg-emerald-500', percent: 94 },
-                { label: 'CARBS', value: 180, target: 200, color: 'bg-blue-400', percent: 90 },
-                { label: 'FATS', value: 55, target: 60, color: 'bg-amber-400', percent: 91 },
+                { label: 'PROTEIN', percent: stats?.macros?.protein || 90, color: 'bg-emerald-500' },
+                { label: 'CARBS', percent: stats?.macros?.carbs || 85, color: 'bg-blue-400' },
+                { label: 'FATS', percent: stats?.macros?.fats || 92, color: 'bg-amber-400' },
               ].map((macro, idx) => (
                 <div key={idx}>
                   <div className="flex justify-between items-end mb-2">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{macro.label}</span>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">{macro.value}g <span className="text-slate-400 dark:text-slate-500 font-medium">/ {macro.target}g</span></p>
                     </div>
                     <span className="text-xs font-bold text-emerald-500">{macro.percent}%</span>
                   </div>
@@ -221,7 +245,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Daily Caloric Avg</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-white">1,850 kcal</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white">{stats?.macros?.calories || 0} kcal</span>
             </div>
           </div>
 
@@ -231,15 +255,11 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               <button className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">EDIT</button>
             </div>
             <div className="flex flex-wrap gap-2 mb-6">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-[10px] font-bold border border-red-100 dark:border-red-800/50">
-                <X className="w-3 h-3" /> GLUTEN
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-[10px] font-bold border border-red-100 dark:border-red-800/50">
-                <X className="w-3 h-3" /> LACTOSE
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 text-[10px] font-bold border border-orange-100 dark:border-orange-800/50">
-                <AlertTriangle className="w-3 h-3" /> PEANUTS (MILD)
-              </span>
+              {stats?.allergies?.map((allergy: string, idx: number) => (
+                <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-[10px] font-bold border border-red-100 dark:border-red-800/50 uppercase">
+                  <X className="w-3 h-3" /> {allergy}
+                </span>
+              ))}
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">DIETARY STYLE</p>
@@ -251,6 +271,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 
@@ -660,7 +682,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Latest Measurements */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-text-main">Latest Measurements</h3>
+          <h3 className="text-lg font-bold text-slate-900">Latest Measurements</h3>
           <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">View All</button>
         </div>
         <div className="flex-1 overflow-auto">
@@ -674,19 +696,17 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
               {[
-                { metric: 'Waist', value: '72 cm', change: '2 cm', icon: 'arrow_downward' },
-                { metric: 'Hip', value: '98 cm', change: '1.5 cm', icon: 'arrow_downward' },
-                { metric: 'Thigh (R)', value: '54 cm', change: '0.5 cm', icon: 'arrow_downward' },
-                { metric: 'Arm (R)', value: '28 cm', change: '0 cm', icon: '' },
+                { metric: 'Waist', value: stats?.measurements?.waist ? `${stats.measurements.waist} cm` : '--', change: '0 cm', icon: '' },
+                { metric: 'Hip', value: stats?.measurements?.hip ? `${stats.measurements.hip} cm` : '--', change: '0 cm', icon: '' },
+                { metric: 'Thigh (R)', value: stats?.measurements?.thigh_r ? `${stats.measurements.thigh_r} cm` : '--', change: '0 cm', icon: '' },
+                { metric: 'Arm (R)', value: stats?.measurements?.arm_r ? `${stats.measurements.arm_r} cm` : '--', change: '0 cm', icon: '' },
               ].map((row, idx) => (
                 <tr key={idx} className="group hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-bold text-slate-700">{row.metric}</td>
                   <td className="px-6 py-4 text-slate-600 font-medium">{row.value}</td>
                   <td className="px-6 py-4 text-right text-emerald-600 font-bold">
                     <div className="flex justify-end items-center gap-1">
-                      {row.icon === 'arrow_downward' && <TrendingDown className="w-3.5 h-3.5" />}
-                      {row.change !== '0 cm' && row.change}
-                      {row.change === '0 cm' && <span className="text-slate-400 font-medium">0 cm</span>}
+                      {row.change !== '0 cm' ? row.change : <span className="text-slate-400 font-medium">0 cm</span>}
                     </div>
                   </td>
                 </tr>
@@ -699,42 +719,28 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Recent Activity */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-text-main">Recent Activity</h3>
+          <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
           <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">History</button>
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
-            <div className="relative">
-              <div className="absolute -left-[31px] bg-white p-1">
-                <div className="h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-900">Morning Check-in</span>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Today, 08:30 AM</span>
+            {stats?.activity?.map((act: any, idx: number) => (
+              <div key={idx} className="relative">
+                <div className="absolute -left-[31px] bg-white p-1">
+                  <div className={`h-3 w-3 rounded-full ${act.type === 'CHECK_IN' ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-blue-400 ring-4 ring-blue-50'}`}></div>
                 </div>
-                <p className="text-xs text-slate-600">Logged weight (68.5kg) and mood (High Energy).</p>
-                <div className="mt-2 flex gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 border border-emerald-100 rounded text-[10px] text-emerald-700 font-bold uppercase">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Compliant
-                  </span>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-900">{act.title}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(act.time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p className="text-xs text-slate-600">{act.sub}</p>
                 </div>
               </div>
-            </div>
-            <div className="relative">
-              <div className="absolute -left-[31px] bg-white p-1">
-                <div className="h-3 w-3 rounded-full bg-blue-400 ring-4 ring-blue-50"></div>
-              </div>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-900">Message Received</span>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Yesterday, 04:15 PM</span>
-                </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-slate-600 italic">
-                  "Hey Dr. Smith, I'm feeling great about the new macro split! Quick question about the pre-workout meal..."
-                </div>
-              </div>
-            </div>
+            ))}
+            {(!stats?.activity || stats.activity.length === 0) && (
+              <p className="text-center text-slate-400 text-sm py-4">No recent activity</p>
+            )}
           </div>
         </div>
       </div>
@@ -742,7 +748,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Account Access & Security */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-text-main">Account Access & Security</h3>
+          <h3 className="text-lg font-bold text-slate-900">Account Access & Security</h3>
           <ShieldCheck className="w-5 h-5 text-slate-400" />
         </div>
         <div className="p-6 flex-1 flex flex-col gap-6">
@@ -777,24 +783,19 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Client Documents */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-text-main">Client Documents</h3>
+          <h3 className="text-lg font-bold text-slate-900">Client Documents</h3>
           <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">Upload New</button>
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="flex flex-col gap-3">
-            {[
-              { name: 'Blood Work Results.pdf', date: 'Oct 10, 2023', icon: FileText, color: 'text-red-500', bg: 'bg-red-50' },
-              { name: 'Initial Assessment.docx', date: 'Aug 15, 2023', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50' },
-              { name: 'Meal Plan Week 4.jpg', date: 'Sep 22, 2023', icon: ImageIcon, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-              { name: 'Macro Tracker.xlsx', date: 'Aug 01, 2023', icon: FileSpreadsheet, color: 'text-purple-500', bg: 'bg-purple-50' },
-            ].map((doc, idx) => (
+            {stats?.documents?.map((doc: any, idx: number) => (
               <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-emerald-500/50 transition-colors group cursor-pointer">
-                <div className={`flex-shrink-0 w-10 h-10 rounded-lg ${doc.bg} flex items-center justify-center ${doc.color}`}>
-                  <doc.icon className="w-5 h-5" />
+                <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-500`}>
+                  <FileText className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-slate-900 truncate">{doc.name}</p>
-                  <p className="text-[10px] font-bold text-slate-400 truncate uppercase">{doc.date}</p>
+                  <p className="text-[10px] font-bold text-slate-400 truncate uppercase">{new Date(doc.date).toLocaleDateString()}</p>
                 </div>
                 <button className="text-slate-400 group-hover:text-emerald-500 transition-colors p-2 hover:bg-white rounded-lg">
                   <Download className="w-4 h-4" />
