@@ -53,10 +53,21 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     );
   }
 
-  const isWeekly = trainingProgram.data_json?.type === 'weekly';
-  const blocks = isWeekly 
-    ? (trainingProgram.data_json?.days?.[selectedDay]?.blocks || []) 
-    : (trainingProgram.data_json?.blocks || []);
+  const dataJson = trainingProgram.data_json || {};
+  const isWeekly = !!dataJson.weeklySchedule;
+  
+  let blocks = [];
+  let currentWorkoutName = '';
+  
+  if (isWeekly) {
+    const workoutId = dataJson.weeklySchedule[selectedDay];
+    const workouts = dataJson.workouts || [];
+    const workout = workouts.find((w: any) => w.id === workoutId);
+    blocks = workout?.blocks || [];
+    currentWorkoutName = workout?.name || 'Día de Descanso';
+  } else {
+    blocks = dataJson.blocks || [];
+  }
     
   const totalExercises = blocks.reduce((acc: number, b: any) => acc + (b.exercises?.length || 0), 0);
 
@@ -65,22 +76,29 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     return (
       <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 pb-2">
-        {days.map(d => (
-          <button
-            key={d}
-            onClick={() => setSelectedDay(d)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-              selectedDay === d 
-                ? 'bg-[#17cf54] text-white shadow-md shadow-[#17cf54]/20' 
-                : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            {d.charAt(0).toUpperCase() + d.slice(1)}
-          </button>
-        ))}
+        {days.map(d => {
+          const wId = dataJson.weeklySchedule[d];
+          const hasWorkout = !!wId;
+          const isSelected = selectedDay === d;
+          return (
+            <button
+              key={d}
+              onClick={() => setSelectedDay(d)}
+              className={`px-4 py-2 flex flex-col items-center justify-center rounded-xl text-sm font-bold whitespace-nowrap transition-all border ${
+                isSelected 
+                  ? 'bg-[#17cf54] text-white border-[#17cf54] shadow-md shadow-[#17cf54]/20' 
+                  : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <span>{d.charAt(0).toUpperCase() + d.slice(1)}</span>
+              <div className={`w-1.5 h-1.5 rounded-full mt-1 ${hasWorkout ? (isSelected ? 'bg-white' : 'bg-[#17cf54]') : 'bg-transparent'}`}></div>
+            </button>
+          );
+        })}
       </div>
     );
   };
+
 
   const filteredLibraryExercises = exercises.filter(ex => {
     const matchesSearch = ex.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -166,7 +184,10 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           {/* Workout Summary - Full Width */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm p-6 md:p-8 flex-shrink-0 w-full">
              <div className="flex items-center justify-between mb-8">
-              <h3 className="font-bold text-slate-900 dark:text-white text-lg">Workout Summary</h3>
+              <div>
+                <h3 className="font-bold text-slate-900 dark:text-white text-lg">Workout Summary</h3>
+                {isWeekly && <p className="text-sm text-[#17cf54] font-medium mt-1">{currentWorkoutName}</p>}
+              </div>
               <button className="text-slate-400 hover:text-slate-600"><span className="material-symbols-outlined text-[20px]">info</span></button>
             </div>
             <div className="flex flex-col md:flex-row items-center justify-center gap-10">
@@ -192,9 +213,18 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
 
           {/* Workout Blocks - Full Width */}
           <div className="w-full flex flex-col gap-6">
-            {blocks.map((block: any, bIdx: number) => (
-              <div key={bIdx} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-shrink-0">
-                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+            {blocks.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center shadow-sm">
+                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-600 mb-4">
+                  <span className="material-symbols-outlined text-3xl">self_improvement</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Día de Descanso</h3>
+                <p className="text-sm text-slate-500 mt-1 max-w-sm">Tómate un respiro, recupérate y prepárate para la próxima sesión.</p>
+              </div>
+            ) : (
+              blocks.map((block: any, bIdx: number) => (
+                <div key={bIdx} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm flex-shrink-0">
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl ${block.iconBg || 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} flex items-center justify-center`}>
                       <span className="material-symbols-outlined text-[24px]">{block.icon || 'fitness_center'}</span>
@@ -228,7 +258,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                   ))}
                 </div>
               </div>
-            ))}
+            )))}
           </div>
 
         </div>
