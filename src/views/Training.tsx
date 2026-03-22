@@ -96,6 +96,7 @@ export default function Training() {
         return (
           <WorkoutEditor 
             clientId={selectedClient?.id}
+            dayId={selectedDayId}
             onEditActivity={(id, name) => {
               if (name) setSelectedActivityName(name);
               setCurrentView('activity-editor');
