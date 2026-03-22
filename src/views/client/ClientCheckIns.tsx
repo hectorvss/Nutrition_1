@@ -15,8 +15,12 @@ export default function ClientCheckIns() {
     alcohol_consumed: 0,
     supplements_logged: true,
     workout_completion: 90,
-    total_volume: 45000,
-    avg_rpe: 7.5,
+    total_volume: '',
+    avg_rpe: 7,
+    fatigue_level: 5,
+    pr_back_squat: '',
+    pr_deadlift: '',
+    pr_bench_press: '',
     notes: ''
   });
 
@@ -257,6 +261,20 @@ export default function ClientCheckIns() {
                       <div className="text-lg font-bold text-center text-slate-900 dark:text-white">{formData.workout_completion}%</div>
                     </div>
                     <div className="space-y-4">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Accumulated Weekly Volume (kg)</label>
+                      <input 
+                        type="number"
+                        value={formData.total_volume}
+                        onChange={(e) => setFormData({...formData, total_volume: e.target.value})}
+                        placeholder="00000"
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl p-4 text-xl font-bold focus:ring-2 focus:ring-[#17cf54]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* RPE & Fatigue */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div className="space-y-4">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Avg. Session RPE</label>
                       <input 
                         type="range"
@@ -268,6 +286,55 @@ export default function ClientCheckIns() {
                         className="w-full accent-purple-500"
                       />
                       <div className="text-lg font-bold text-center text-purple-600">{formData.avg_rpe} / 10</div>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">General Fatigue Level</label>
+                      <input 
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={formData.fatigue_level}
+                        onChange={(e) => setFormData({...formData, fatigue_level: parseInt(e.target.value)})}
+                        className="w-full accent-orange-500"
+                      />
+                      <div className="text-lg font-bold text-center text-orange-600">{formData.fatigue_level} / 10</div>
+                    </div>
+                  </div>
+
+                  {/* Personal Records */}
+                  <div className="space-y-6">
+                    <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] border-b border-slate-100 dark:border-slate-800 pb-2">Personal Records Update</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Back Squat (kg)</label>
+                        <input 
+                          type="number"
+                          value={formData.pr_back_squat}
+                          onChange={(e) => setFormData({...formData, pr_back_squat: e.target.value})}
+                          placeholder="000"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Deadlift (kg)</label>
+                        <input 
+                          type="number"
+                          value={formData.pr_deadlift}
+                          onChange={(e) => setFormData({...formData, pr_deadlift: e.target.value})}
+                          placeholder="000"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Bench Press (kg)</label>
+                        <input 
+                          type="number"
+                          value={formData.pr_bench_press}
+                          onChange={(e) => setFormData({...formData, pr_bench_press: e.target.value})}
+                          placeholder="000"
+                          className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500"
+                        />
+                      </div>
                     </div>
                   </div>
 

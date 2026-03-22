@@ -2088,7 +2088,62 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       }))
     ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
 
-    // 7. Documents (Mock for now)
+    // 8. Training Stats
+    let weeklyVolume = 0;
+    let avgRPE = 0;
+    let workoutCount = 0;
+    let fatigue = 5;
+    
+    if (recentCheckIns.length > 0) {
+      let totalVol = 0;
+      let totalRPE = 0;
+      let countRPE = 0;
+      
+      recentCheckIns.forEach(ci => {
+        const d = ci.data_json as any;
+        if (d.total_volume) totalVol += Number(d.total_volume);
+        if (d.avg_rpe) { totalRPE += Number(d.avg_rpe); countRPE++; }
+        if (d.workout_completion > 0) workoutCount++;
+      });
+      
+      weeklyVolume = totalVol;
+      avgRPE = countRPE > 0 ? Number((totalRPE / countRPE).toFixed(1)) : 0;
+      
+      const latestWithFatigue = [...recentCheckIns].reverse().find(ci => (ci.data_json as any).fatigue_level !== undefined);
+      if (latestWithFatigue) fatigue = (latestWithFatigue.data_json as any).fatigue_level;
+    }
+
+    // 9. Strength PRs & History
+    const lastWithPRs = [...checkIns].reverse().find(ci => 
+      (ci.data_json as any).pr_back_squat || (ci.data_json as any).pr_deadlift || (ci.data_json as any).pr_bench_press
+    );
+    const prs = {
+      squat: lastWithPRs ? (lastWithPRs.data_json as any).pr_back_squat || '--' : '--',
+      deadlift: lastWithPRs ? (lastWithPRs.data_json as any).pr_deadlift || '--' : '--',
+      bench: lastWithPRs ? (lastWithPRs.data_json as any).pr_bench_press || '--' : '--',
+      date: lastWithPRs ? lastWithPRs.date : null
+    };
+
+    const strengthHistory = (checkIns || []).map(ci => ({
+      date: ci.date,
+      squat: (ci.data_json as any).pr_back_squat || null,
+      deadlift: (ci.data_json as any).pr_deadlift || null,
+      bench: (ci.data_json as any).pr_bench_press || null,
+      volume: (ci.data_json as any).total_volume || 0
+    })).filter(h => h.squat || h.deadlift || h.bench || h.volume > 0);
+
+    const recentWorkouts = (checkIns || [])
+      .filter(ci => (ci.data_json as any).workout_completion > 0)
+      .slice(-3)
+      .map(ci => ({
+        name: 'Workout Session', 
+        date: ci.date,
+        status: 'Completed',
+        volume: (ci.data_json as any).total_volume || 0,
+        rpe: (ci.data_json as any).avg_rpe || 0
+      }));
+
+    // 10. Documents (Mock for now)
     const documents = [
       { name: 'Initial Assessment.pdf', date: client.created_at, type: 'PDF' }
     ];
@@ -2099,12 +2154,21 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       goal: client.goal || 'TBD',
       bodyFat: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].bodyFat : '--',
       activeDays: checkIns?.length || 0,
-      adherenceRate: checkIns ? Math.round((checkIns.length / 30) * 100) : 0, // Mock monthly rate
+      adherenceRate: checkIns ? Math.round((checkIns.length / 30) * 100) : 0, 
       macros: {
         protein: avgProteinAdherence,
         carbs: avgCarbsAdherence,
         fats: avgFatsAdherence,
         calories: dailyCaloricAvg
+      },
+      training: {
+        weeklyVolume,
+        avgRPE,
+        workoutCount,
+        fatigue,
+        prs,
+        strengthHistory,
+        recentWorkouts
       },
       measurements,
       activity,

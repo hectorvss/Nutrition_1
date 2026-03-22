@@ -276,14 +276,36 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     </div>
   );
 
+  const [strengthRange, setStrengthRange] = useState('3M');
+
+  const getFilteredStrengthData = () => {
+    if (!stats?.training?.strengthHistory) return [];
+    
+    const now = new Date();
+    let cutoff = new Date();
+    if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
+    else if (strengthRange === '6M') cutoff.setMonth(now.getMonth() - 6);
+    else if (strengthRange === 'YTD') cutoff.setFullYear(now.getFullYear(), 0, 1);
+    else return stats.training.strengthHistory;
+
+    return stats.training.strengthHistory.filter((h: any) => new Date(h.date) >= cutoff);
+  };
+
   const renderTraining = () => (
     <div className="space-y-6">
+      {isLoading ? (
+        <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+          <div className="w-10 h-10 border-4 border-[#17cf54]/20 border-t-[#17cf54] rounded-full animate-spin"></div>
+          <p className="text-sm font-medium">Cargando entrenamiento...</p>
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Weekly Volume', value: '14,250', unit: 'kg', change: '+850 kg', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Avg. Session RPE', value: '7.8', unit: '/ 10', change: 'Target: 8.0', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Workouts', value: '4', unit: '/ 5', change: '80% adherence', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Fatigue Level', value: '6', unit: '/ 10', change: 'Moderate', icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+          { label: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Avg. Session RPE', value: stats?.training?.avgRPE || '--', unit: '/ 10', change: 'Session Avg', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Workouts', value: stats?.training?.workoutCount || '0', unit: 'sessions', change: 'This Week', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: 'Fatigue Level', value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? 'High' : 'Normal', icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
@@ -304,22 +326,29 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Weekly Exercise Analysis</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Deep dive analytics for hypertrophy performance</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Strength Progress Analysis</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Deep dive analytics for primary compound lifts</p>
           </div>
           <div className="flex items-center gap-3">
-            <select className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 py-2 px-4 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none">
-              <option>Sep 25 - Oct 1</option>
+            <select 
+              value={strengthRange}
+              onChange={(e) => setStrengthRange(e.target.value)}
+              className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 py-2 px-4 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none"
+            >
+              <option value="3M">Last 3 Months</option>
+              <option value="6M">Last 6 Months</option>
+              <option value="YTD">Year to Date (YTD)</option>
+              <option value="ALL">All Time</option>
             </select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { name: 'Bulgarian Split Squat', sets: 4, reps: 32, primary: true },
-            { name: 'Deadlift', sets: 5, reps: 25 },
-            { name: 'Bench Press', sets: 4, reps: 40 },
-            { name: 'Pull-ups', sets: 4, reps: 35 },
+            { name: 'Back Squat', value: stats?.training?.prs?.squat || '--', primary: true },
+            { name: 'Deadlift', value: stats?.training?.prs?.deadlift || '--' },
+            { name: 'Bench Press', value: stats?.training?.prs?.bench || '--' },
+            { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0' },
           ].map((ex, idx) => (
             <div key={idx} className={`p-4 rounded-2xl border transition-all cursor-pointer ${ex.primary ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}>
               <div className="flex justify-between items-start mb-4">
@@ -329,22 +358,24 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 {ex.primary && <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded uppercase">Primary</span>}
               </div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{ex.name}</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{ex.sets} sets / {ex.reps} reps</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{ex.value} kg</p>
             </div>
           ))}
         </div>
 
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={strengthData}>
+            <LineChart data={getFilteredStrengthData()}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}} />
-              <YAxis hide />
+              <YAxis hide domain={['auto', 'auto']} />
               <Tooltip 
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)', color: 'var(--tw-colors-slate-900)' }}
                 labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
               />
-              <Line type="monotone" dataKey="volume" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+              <Line name="Squat" type="monotone" dataKey="squat" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+              <Line name="Deadlift" type="monotone" dataKey="deadlift" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+              <Line name="Bench" type="monotone" dataKey="bench" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -358,9 +389,9 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </div>
           <div className="space-y-4">
             {[
-              { exercise: 'Back Squat', weight: '145kg', date: 'Oct 12' },
-              { exercise: 'Deadlift', weight: '180kg', date: 'Sep 28' },
-              { exercise: 'Bench Press', weight: '105kg', date: 'Oct 05' },
+              { exercise: 'Back Squat', weight: stats?.training?.prs?.squat ? `${stats.training.prs.squat}kg` : '--', date: stats?.training?.prs?.date },
+              { exercise: 'Deadlift', weight: stats?.training?.prs?.deadlift ? `${stats.training.prs.deadlift}kg` : '--', date: stats?.training?.prs?.date },
+              { exercise: 'Bench Press', weight: stats?.training?.prs?.bench ? `${stats.training.prs.bench}kg` : '--', date: stats?.training?.prs?.date },
             ].map((pr, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-3">
@@ -371,7 +402,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-slate-900 dark:text-white">{pr.weight}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">{pr.date}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">{pr.date ? new Date(pr.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}</p>
                 </div>
               </div>
             ))}
@@ -384,11 +415,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">View Log</button>
           </div>
           <div className="space-y-4">
-            {[
-              { name: 'Lower Body A', date: 'Oct 24', status: 'Completed' },
-              { name: 'Upper Body B', date: 'Oct 22', status: 'Completed' },
-              { name: 'Lower Body B', date: 'Oct 20', status: 'Completed' },
-            ].map((workout, idx) => (
+            {stats?.training?.recentWorkouts?.map((workout: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
@@ -396,17 +423,23 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">{workout.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">{workout.date}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(workout.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 uppercase">
-                  {workout.status}
-                </span>
+                <div className="text-right">
+                   <p className="text-xs font-bold text-slate-900 dark:text-white">{workout.volume.toLocaleString()} kg</p>
+                   <p className="text-[8px] font-bold text-purple-500 uppercase">RPE {workout.rpe}</p>
+                </div>
               </div>
             ))}
+            {(!stats?.training?.recentWorkouts || stats.training.recentWorkouts.length === 0) && (
+              <p className="text-center text-slate-400 text-sm py-4">No recent workouts logged</p>
+            )}
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 
