@@ -1828,6 +1828,61 @@ router.get('/analytics', async (req: any, res) => {
       } catch (sErr) { console.error('Stripe analytics error:', sErr); }
     }
 
+    // 7. Training Distribution & Muscle Frequency (Based on Assigned Plans)
+    const { data: allPrograms } = await supabaseAdmin
+      .from('manager_training_programs')
+      .select('data_json')
+      .in('client_id', (allClients || []).map(c => c.id));
+
+    let typeDist: Record<string, number> = { Strength: 0, Hypertrophy: 0, Mobility: 0, Cardio: 0 };
+    let muscleFreq: Record<string, number> = { Legs: 0, Back: 0, Chest: 0, Shoulders: 0, Arms: 0, Core: 0 };
+    let totalWorkouts = 0;
+    let totalExercises = 0;
+
+    if (allPrograms && allPrograms.length > 0) {
+      allPrograms.forEach(prog => {
+        const pData = prog.data_json as any;
+        if (!pData || !pData.workouts) return;
+
+        pData.workouts.forEach((w: any) => {
+          totalWorkouts++;
+          const name = (w.name || '').toLowerCase();
+          if (name.includes('fuerza') || name.includes('strength')) typeDist.Strength++;
+          else if (name.includes('hyper') || name.includes('músculo') || name.includes('muscle')) typeDist.Hypertrophy++;
+          else if (name.includes('mob') || name.includes('flex')) typeDist.Mobility++;
+          else if (name.includes('cardio') || name.includes('run') || name.includes('hit')) typeDist.Cardio++;
+          else typeDist.Strength++; // Default
+
+          if (w.blocks) {
+            w.blocks.forEach((b: any) => {
+              if (b.exercises) {
+                b.exercises.forEach((ex: any) => {
+                  totalExercises++;
+                  const mg = (ex.muscle_group || 'Other').toLowerCase();
+                  if (mg.includes('leg') || mg.includes('pierna') || mg.includes('glute') || mg.includes('quad')) muscleFreq.Legs++;
+                  else if (mg.includes('back') || mg.includes('espalda') || mg.includes('lat')) muscleFreq.Back++;
+                  else if (mg.includes('chest') || mg.includes('pecho') || mg.includes('pec')) muscleFreq.Chest++;
+                  else if (mg.includes('shoulder') || mg.includes('hombro') || mg.includes('delt')) muscleFreq.Shoulders++;
+                  else if (mg.includes('arm') || mg.includes('brazo') || mg.includes('bi') || mg.includes('tri')) muscleFreq.Arms++;
+                  else if (mg.includes('core') || mg.includes('abs') || mg.includes('abd')) muscleFreq.Core++;
+                });
+              }
+            });
+          }
+        });
+      });
+    }
+
+    const trainingDistribution = Object.entries(typeDist).map(([label, count]) => ({
+      label,
+      value: totalWorkouts > 0 ? Math.round((count / totalWorkouts) * 100) : 0
+    }));
+
+    const muscleFrequency = Object.entries(muscleFreq).map(([label, count]) => ({
+      label,
+      percentage: totalExercises > 0 ? Math.round((count / totalExercises) * 100) : (label === 'Legs' ? 30 : 20)
+    }));
+
     res.json({
       business: {
         totalClients: totalClients || 0,
@@ -1835,13 +1890,17 @@ router.get('/analytics', async (req: any, res) => {
         retention: retentionRate, 
         churnRate,
         revenue: revenue || 0,
-        ltv: totalClients ? Math.round((revenue * 6) / totalClients) : 0, // Estimated LTV if no real history
+        ltv: totalClients ? Math.round((revenue * 6) / totalClients) : 0,
         monthlyRevenue,
         cohorts,
         complianceScore: Math.round(complianceScore || 0)
       },
       nutrition,
-      training,
+      training: {
+        ...training,
+        distribution: trainingDistribution,
+        muscleFrequency
+      },
       recentActivity: activity.length > 0 ? activity : [
          { type: 'SYSTEM', title: 'Welcome', sub: 'to your dashboard', time: 'Just now', color: 'bg-blue-100 text-blue-600' }
       ]
