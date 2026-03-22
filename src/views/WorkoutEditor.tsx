@@ -7,6 +7,7 @@ interface WorkoutEditorProps {
   onBack: () => void;
   onEditActivity: (activityId: string, activityName?: string) => void;
   clientId?: string | null;
+  dayId?: string | null;
   mode?: 'default' | 'blank';
 }
 
@@ -31,7 +32,7 @@ interface WorkoutBlock {
   exercises: PlannedExercise[];
 }
 
-export default function WorkoutEditor({ onBack, onEditActivity, clientId, mode = 'default' }: WorkoutEditorProps) {
+export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId, mode = 'default' }: WorkoutEditorProps) {
   const { clients } = useClient();
   const { exercises } = useExerciseContext();
   const client = clients.find(c => c.id === clientId as any) || {
@@ -43,6 +44,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, mode =
   const isBlank = mode === 'blank';
 
   const [blocks, setBlocks] = useState<WorkoutBlock[]>([]);
+  const [fullPlanData, setFullPlanData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -53,8 +55,24 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, mode =
       setIsLoading(true);
       try {
         const data = await fetchWithAuth(`/manager/clients/${clientId}/training-program`);
-        if (data && data.data_json && data.data_json.blocks) {
-          setBlocks(data.data_json.blocks);
+        if (data && data.data_json) {
+          setFullPlanData(data.data_json);
+          const dataJson = data.data_json;
+          
+          if (dayId && dataJson.weeklySchedule) {
+            const workoutId = dataJson.weeklySchedule[dayId];
+            const workouts = dataJson.workouts || [];
+            const workout = workouts.find((w: any) => w.id === workoutId);
+            if (workout && workout.blocks) {
+              setBlocks(workout.blocks);
+            } else {
+              setBlocks([]);
+            }
+          } else if (dataJson.blocks) {
+            setBlocks(dataJson.blocks);
+          } else {
+            setBlocks([]);
+          }
         } else if (!isBlank) {
           // If no data found and not blank, use defaults
           setBlocks([
@@ -94,13 +112,45 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, mode =
     if (!clientId) return;
     setIsSaving(true);
     try {
+      let newDataJson = { ...fullPlanData };
+      
+      if (dayId && newDataJson.weeklySchedule) {
+        // Find existing workout ID
+        let workoutId = newDataJson.weeklySchedule[dayId];
+        let workouts = newDataJson.workouts || [];
+        
+        if (workoutId) {
+          // Update existing
+          workouts = workouts.map((w: any) => w.id === workoutId ? { ...w, blocks } : w);
+        } else {
+          // Create new workout for this day
+          workoutId = `w_${Date.now()}`;
+          const dayNameMap: Record<string, string> = {
+            monday: 'Lunes', tuesday: 'Martes', wednesday: 'Miércoles',
+            thursday: 'Jueves', friday: 'Viernes', saturday: 'Sábado', sunday: 'Domingo'
+          };
+          workouts.push({
+            id: workoutId,
+            name: `Entrenamiento ${dayNameMap[dayId] || dayId}`,
+            blocks
+          });
+          newDataJson.weeklySchedule[dayId] = workoutId;
+        }
+        newDataJson.workouts = workouts;
+        newDataJson.type = 'weekly';
+      } else {
+        // Flat mode
+        newDataJson.blocks = blocks;
+      }
+
       await fetchWithAuth(`/manager/clients/${clientId}/training-program`, {
         method: 'POST',
         body: JSON.stringify({
           name: `Programa de Entrenamiento - ${client.name}`,
-          data_json: { blocks }
+          data_json: newDataJson
         })
       });
+      setFullPlanData(newDataJson);
       alert('Programa guardado correctamente');
     } catch (err) {
       console.error('Error saving training program:', err);
