@@ -18,8 +18,6 @@ import {
 import { useTask } from '../context/TaskContext';
 import { useCalendar, getEventPresentationInfo } from '../context/CalendarContext';
 import { useClient } from '../context/ClientContext';
-import { useIntegrations } from '../context/IntegrationsContext';
-import { CreditCard, ArrowUpRight, ArrowDownRight, DollarSign } from 'lucide-react';
 
 interface DashboardProps {
   onNavigate: (view: string) => void;
@@ -29,7 +27,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { tasks } = useTask();
   const { getEventsForDate } = useCalendar();
   const { clients } = useClient();
-  const { integrations, stripeData } = useIntegrations();
   const [activity, setActivity] = useState<any[]>([]);
 
   useEffect(() => {
@@ -189,63 +186,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
 
         <div className="flex flex-col gap-6">
-          {integrations?.stripe_enabled && stripeData && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm overflow-hidden relative group">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <CreditCard className="w-24 h-24 -rotate-12" />
-              </div>
-              
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Financial Overview</h3>
-                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
-                    <DollarSign className="w-4 h-4" />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-3xl font-bold text-slate-900">
-                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: stripeData.currency }).format(stripeData.balance)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                      <ArrowUpRight className="w-3 h-3 text-emerald-500" />
-                      <span className="text-emerald-600 font-bold">+12.5%</span> vs last month
-                    </p>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium">Monthly Revenue</p>
-                      <p className="text-lg font-bold text-slate-900">
-                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: stripeData.currency }).format(stripeData.mrr)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-medium">Avg. Ticket</p>
-                      <p className="text-lg font-bold text-slate-900">
-                        {new Intl.NumberFormat('es-ES', { style: 'currency', currency: stripeData.currency }).format(stripeData.mrr / (clients.length || 1))}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <div className="flex items-end gap-1 h-12">
-                      {stripeData.recent_revenue.map((val, i) => (
-                        <div 
-                          key={i} 
-                          className="flex-1 bg-emerald-100 rounded-t-sm hover:bg-emerald-500 transition-colors cursor-help"
-                          style={{ height: `${(val / Math.max(...stripeData.recent_revenue)) * 100}%` }}
-                          title={`Day ${i+1}: ${val}`}
-                        />
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-center text-slate-400 mt-2">Revenue last 7 days</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="bg-emerald-500 text-white rounded-2xl p-6 shadow-lg shadow-emerald-500/20 relative overflow-hidden">
             <div className="absolute right-[-20px] top-[-20px] bg-white/10 w-32 h-32 rounded-full blur-2xl" />
