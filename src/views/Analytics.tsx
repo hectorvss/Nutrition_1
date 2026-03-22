@@ -627,9 +627,23 @@ function TrainingAnalytics({ data }: any) {
           <div className="flex items-center gap-8 h-full">
             <div className="relative w-40 h-40 flex-shrink-0">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" fill="transparent" r="40" stroke="#3b82f6" strokeDasharray="251.2" strokeDashoffset="125" strokeWidth="12"></circle>
-                <circle cx="50" cy="50" fill="transparent" r="40" stroke="#f59e0b" strokeDasharray="251.2" strokeDashoffset="200" strokeWidth="12" transform="rotate(180 50 50)"></circle>
-                <circle cx="50" cy="50" fill="transparent" r="40" stroke="#a855f7" strokeDasharray="251.2" strokeDashoffset="226" strokeWidth="12" transform="rotate(252 50 50)"></circle>
+                <circle cx="50" cy="50" fill="transparent" r="40" stroke="#f1f5f9" strokeWidth="12"></circle>
+                {data?.training?.distribution?.map((item: any, idx: number) => {
+                  const colors = ['#3b82f6', '#f59e0b', '#a855f7', '#10b981'];
+                  const total = data.training.distribution.reduce((acc: number, cur: any) => acc + cur.value, 0);
+                  const prevValues = data.training.distribution.slice(0, idx).reduce((acc: number, cur: any) => acc + cur.value, 0);
+                  return (
+                    <circle 
+                      key={idx}
+                      cx="50" cy="50" fill="transparent" r="40" 
+                      stroke={colors[idx % colors.length]} 
+                      strokeDasharray="251.2" 
+                      strokeDashoffset={251.2 - (item.value / (total || 1)) * 251.2} 
+                      strokeWidth="12" 
+                      transform={`rotate(${(prevValues / (total || 1)) * 360} 50 50)`}
+                    />
+                  );
+                })}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold text-slate-900">100%</span>
@@ -637,9 +651,12 @@ function TrainingAnalytics({ data }: any) {
               </div>
             </div>
             <div className="flex-1 space-y-3">
-              <DistributionItem color="bg-blue-500" label="Strength" value="50%" />
-              <DistributionItem color="bg-amber-500" label="Cardio" value="30%" />
-              <DistributionItem color="bg-purple-500" label="Mobility" value="20%" />
+              {data?.training?.distribution?.map((item: any, idx: number) => {
+                const colors = ['bg-blue-500', 'bg-amber-500', 'bg-purple-500', 'bg-emerald-500'];
+                return (
+                  <DistributionItem key={idx} color={colors[idx % colors.length]} label={item.label} value={`${item.value}%`} />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -651,11 +668,12 @@ function TrainingAnalytics({ data }: any) {
             </button>
           </div>
           <div className="flex flex-col h-full justify-center space-y-4">
-            <FrequencyItem label="Legs" percentage={35} color="bg-emerald-500" />
-            <FrequencyItem label="Back" percentage={25} color="bg-cyan-500" />
-            <FrequencyItem label="Chest" percentage={20} color="bg-rose-500" />
-            <FrequencyItem label="Shoulders" percentage={15} color="bg-violet-500" />
-            <FrequencyItem label="Arms" percentage={5} color="bg-amber-500" />
+            {data?.training?.muscleFrequency?.map((item: any, idx: number) => {
+              const colors = ['bg-emerald-500', 'bg-cyan-500', 'bg-rose-500', 'bg-violet-500', 'bg-amber-500', 'bg-orange-500'];
+              return (
+                <FrequencyItem key={idx} label={item.label} percentage={item.percentage} color={colors[idx % colors.length]} />
+              );
+            })}
           </div>
         </div>
       </div>
