@@ -21,6 +21,11 @@ export default function ClientCheckIns() {
     pr_back_squat: '',
     pr_deadlift: '',
     pr_bench_press: '',
+    energy_level: 7,
+    stress_level: 4,
+    mood_score: 8,
+    motivation_level: 9,
+    sleep_hours: 8,
     notes: ''
   });
 
@@ -334,6 +339,55 @@ export default function ClientCheckIns() {
                           placeholder="000"
                           className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-xl p-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mindset & Wellness */}
+                  <div className="space-y-6">
+                    <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] border-b border-slate-100 dark:border-slate-800 pb-2">Mindset & Wellness</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Energy Levels</label>
+                        <input 
+                          type="range" min="1" max="10"
+                          value={formData.energy_level}
+                          onChange={(e) => setFormData({...formData, energy_level: parseInt(e.target.value)})}
+                          className="w-full accent-yellow-500"
+                        />
+                        <div className="text-lg font-bold text-center text-yellow-600">{formData.energy_level} / 10</div>
+                      </div>
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Stress Levels</label>
+                        <input 
+                          type="range" min="1" max="10"
+                          value={formData.stress_level}
+                          onChange={(e) => setFormData({...formData, stress_level: parseInt(e.target.value)})}
+                          className="w-full accent-red-500"
+                        />
+                        <div className="text-lg font-bold text-center text-red-600">{formData.stress_level} / 10</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Current Mood</label>
+                        <input 
+                          type="range" min="1" max="10"
+                          value={formData.mood_score}
+                          onChange={(e) => setFormData({...formData, mood_score: parseInt(e.target.value)})}
+                          className="w-full accent-pink-500"
+                        />
+                        <div className="text-lg font-bold text-center text-pink-600">{formData.mood_score} / 10</div>
+                      </div>
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Motivation</label>
+                        <input 
+                          type="range" min="1" max="10"
+                          value={formData.motivation_level}
+                          onChange={(e) => setFormData({...formData, motivation_level: parseInt(e.target.value)})}
+                          className="w-full accent-blue-500"
+                        />
+                        <div className="text-lg font-bold text-center text-blue-600">{formData.motivation_level} / 10</div>
                       </div>
                     </div>
                   </div>
