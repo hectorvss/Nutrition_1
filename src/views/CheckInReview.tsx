@@ -62,9 +62,10 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
   const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadCheckIn = async () => {
       setIsLoading(true);
       try {
+        console.log('DEBUG: CheckInReview fetching for:', { clientId, checkInId });
         const result = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}`);
         if (result) {
           setData(result);
@@ -77,7 +78,7 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
         setIsLoading(false);
       }
     };
-    fetchData();
+    loadCheckIn();
   }, [clientId, checkInId]);
 
   const handlePublish = async () => {

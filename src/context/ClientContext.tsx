@@ -135,9 +135,6 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
             notes: c.notes || '',
             weight: c.weight || null,
             tempPassword: c.temp_password || undefined,
-            // These will be updated by the individual fetch calls in views if needed, 
-            // but for the dashboard list, we can keep them false until we improve the API.
-            // Actually, let's update the backend route to include this info.
             nutritionPlanAssigned: c.nutritionPlanAssigned || false,
             trainingPlanAssigned: c.trainingPlanAssigned || false,
             lastCheckInDate: c.lastCheckInDate || null,
@@ -146,6 +143,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
           };
       });
       
+      console.log('DEBUG: ClientContext loaded IDs:', formatted.map((c: any) => c.id));
       setClients(formatted);
     } catch (err: any) {
       setError(err.message || 'Failed to load clients');

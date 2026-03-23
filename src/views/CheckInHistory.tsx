@@ -27,6 +27,7 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        console.log('DEBUG: CheckInHistory fetching history for clientId:', clientId);
         const data = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins`);
         if (data) {
           setClient(data.client);
