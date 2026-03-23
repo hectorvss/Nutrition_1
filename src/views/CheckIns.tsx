@@ -5,30 +5,42 @@ import CheckInReview from './CheckInReview';
 
 export type CheckInViewMode = 'list' | 'history' | 'review';
 
-export default function CheckIns() {
-  const [viewMode, setViewMode] = useState<CheckInViewMode>('list');
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
+interface CheckInsProps {
+  initialClientId?: string;
+  initialCheckInId?: string;
+  onViewChange?: (clientId: string | null, checkInId: string | null) => void;
+}
+
+export default function CheckIns({ initialClientId, initialCheckInId, onViewChange }: CheckInsProps) {
+  const [viewMode, setViewMode] = useState<CheckInViewMode>(
+    initialCheckInId ? 'review' : (initialClientId ? 'history' : 'list')
+  );
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
+  const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(initialCheckInId || null);
 
   const handleViewHistory = (clientId: string) => {
     setSelectedClientId(clientId);
     setViewMode('history');
+    onViewChange?.(clientId, null);
   };
 
   const handleViewReview = (checkInId: string) => {
     setSelectedCheckInId(checkInId);
     setViewMode('review');
+    onViewChange?.(selectedClientId, checkInId);
   };
 
   const handleBackToList = () => {
     setViewMode('list');
     setSelectedClientId(null);
     setSelectedCheckInId(null);
+    onViewChange?.(null, null);
   };
 
   const handleBackToHistory = () => {
     setViewMode('history');
     setSelectedCheckInId(null);
+    onViewChange?.(selectedClientId, null);
   };
 
   return (
