@@ -87,23 +87,23 @@ export default function ClientCheckIns() {
         </header>
 
         {/* Top Action Card */}
-        <section className="relative overflow-hidden dark:bg-slate-900/50 rounded-2xl shadow-xl p-8 group bg-white border border-slate-100 dark:border-slate-800">
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 rounded-full bg-[#17cf54]/5 blur-3xl group-hover:bg-[#17cf54]/10 transition-all duration-500"></div>
+        <section className="relative overflow-hidden dark:bg-slate-800 rounded-2xl shadow-xl p-8 group bg-slate-50">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 size-64 rounded-full bg-[#17cf54]/50 blur-3xl group-hover:bg-[#17cf54]/30 transition-all duration-500"></div>
           <div className="relative flex flex-col md:flex-row items-center gap-8">
             <div className="w-full md:w-1/3 aspect-square rounded-xl overflow-hidden shadow-2xl rotate-2">
               <img 
-                alt="Fitness tracking" 
+                alt="Fitness person tracking metrics on phone" 
                 className="w-full h-full object-cover" 
-                src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=800"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvMqhdkRY19YBnRf0VTBd7WWAsKonX1-t76Hhx9GybUvn9d_fTlFS6t69c9bf17r3aJxPmjw5K13RHf8ZEOCyHqhBvr3QG-yIWBNK84A2Nce1QMyiO5jR7hGaaiFcXYBwrtPPU8uXCr6WZFoBC9ZriIOr9ynDdh8uDxFT3PUBA1Z-EZMWJT6siZmMoyNVzGHnz3U9AB5_gWnuGmX8ago9aqH2Bsap8DtlgUMi3GqlufKq5pJtASS5P4u5v9EcKLg7v1uzajsCJEGx6"
               />
             </div>
             <div className="flex-1 text-slate-900 dark:text-slate-100">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold mb-4 uppercase tracking-widest bg-[#17cf54] text-white">Coach is waiting</span>
-              <h3 className="text-2xl font-bold mb-2 leading-tight">Weekly Review Window</h3>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold mb-4 uppercase tracking-widest bg-[#17cf54] text-slate-900 border-none">Action Required</span>
+              <h3 className="text-2xl font-bold mb-2 leading-tight">Next review due today</h3>
               <p className="mb-6 max-w-md text-slate-600 dark:text-slate-400">Complete your weekly check-in to keep your coach updated on your progress and receive your updated plan for next week.</p>
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#17cf54] text-white font-bold hover:bg-[#15b84a] transition-all transform active:scale-95 shadow-lg shadow-[#17cf54]/20"
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-[#17cf54] text-slate-900 font-bold hover:bg-[#15b84a] transition-all transform active:scale-95 shadow-lg shadow-[#17cf54]/20"
               >
                 Start Check-in
                 <span className="material-symbols-outlined ml-2 text-[20px]">arrow_forward</span>
@@ -120,46 +120,80 @@ export default function ClientCheckIns() {
               <button className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
                 <span className="material-symbols-outlined text-[18px]">filter_list</span>
               </button>
+              <button className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
+                <span className="material-symbols-outlined text-[18px]">download</span>
+              </button>
             </div>
           </div>
 
           {checkIns.length > 0 ? (
-            checkIns.map((ci) => (
-              <div key={ci.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#17cf54]/30 transition-all shadow-sm">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="size-12 flex items-center justify-center rounded-xl bg-[#17cf54]/10 text-[#17cf54] shrink-0">
-                    <span className="material-symbols-outlined fill-1">task_alt</span>
-                  </div>
-                  <div>
-                    <h5 className="font-bold text-slate-900 dark:text-slate-100">
-                      Check-in: {new Date(ci.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </h5>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-0.5">
-                      <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">scale</span> {ci.data_json?.weight}kg
-                      </span>
-                      <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">checklist</span> {ci.data_json?.workout_completion}% Adherence
-                      </span>
+            checkIns.map((ci, index) => {
+              const isPending = index === 0;
+              return (
+                <div key={ci.id} className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-[#17cf54]/30 transition-all shadow-sm">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className={`size-12 flex items-center justify-center rounded-xl shrink-0 ${isPending ? 'bg-slate-50 dark:bg-slate-800 text-slate-400' : 'bg-[#17cf54]/10 text-[#17cf54]'}`}>
+                      <span className={`material-symbols-outlined ${isPending ? '' : 'fill-1'}`}>{isPending ? 'pending_actions' : 'task_alt'}</span>
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-slate-900 dark:text-slate-100">
+                        Check-in: {new Date(ci.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </h5>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-0.5">
+                        <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">scale</span> {ci.data_json?.weight}kg
+                        </span>
+                        <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">checklist</span> {ci.data_json?.workout_completion}% Adherence
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                    <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full ${isPending ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-[#17cf54]/10 text-[#17cf54]'}`}>
+                      {isPending ? 'Pending' : 'Reviewed'}
+                    </span>
+                    <button className="text-slate-400 hover:text-[#17cf54] transition-colors">
+                      <span className="material-symbols-outlined">more_vert</span>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                  <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-[#17cf54]/10 text-[#17cf54]">
-                    Submitted
-                  </span>
-                  <button className="text-slate-400 hover:text-[#17cf54] transition-colors">
-                    <span className="material-symbols-outlined">more_vert</span>
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
               <span className="material-symbols-outlined text-4xl text-slate-300 mb-4 block">history</span>
               <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No check-ins yet</p>
             </div>
           )}
+          
+          {/* Static Baseline Row */}
+          <div className="group flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-slate-100 dark:bg-slate-800/40 border border-dashed border-slate-300 dark:border-slate-700">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="size-12 flex items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-500">
+                <span className="material-symbols-outlined">flag</span>
+              </div>
+              <div>
+                <h5 className="font-bold text-slate-600 dark:text-slate-300">Baseline Assessment</h5>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-0.5">
+                  <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">scale</span> 85.2kg
+                  </span>
+                  <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">calendar_today</span> Oct 12, 2023
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+              <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
+                Completed
+              </span>
+              <button className="text-slate-400 hover:text-[#17cf54] transition-colors">
+                <span className="material-symbols-outlined">more_vert</span>
+              </button>
+            </div>
+          </div>
         </section>
       </div>
 

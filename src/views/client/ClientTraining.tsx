@@ -321,8 +321,23 @@ function SimpleExerciseRow({ name, sub }: any) {
 }
 
 function DetailedExerciseRow({ name, type, weight, sets, reps, rir, rest }: any) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [clientData, setClientData] = useState({
+    weight: '',
+    sets: '',
+    reps: '',
+    rir: '',
+    rest: '',
+    notes: ''
+  });
+
+  const handleClientDataChange = (field: string, value: string) => {
+    setClientData(prev => ({ ...prev, [field]: value }));
+  };
+
   return (
-    <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
+    <div className="flex flex-col border-b border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-colors">
+      <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
         <div className="md:col-span-4 flex items-center gap-4">
           <div className="cursor-grab text-slate-300 dark:text-slate-700 group-hover:text-slate-400">
@@ -344,11 +359,78 @@ function DetailedExerciseRow({ name, type, weight, sets, reps, rir, rest }: any)
           <div className="text-center text-sm p-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300">{reps}</div>
           <div className="text-center text-sm p-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300">{rir}</div>
           <div className="text-center text-sm p-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300">{rest}</div>
-          <button className="absolute -right-3 top-1/2 -translate-y-1/2 p-1 text-slate-300 hover:text-[#17cf54] rounded-full transition-colors opacity-0 group-hover:opacity-100">
-            <span className="material-symbols-outlined text-[16px]">edit</span>
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`absolute -right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-[#17cf54] hover:bg-[#17cf54]/10 rounded-full transition-all flex items-center justify-center ${isExpanded ? 'bg-[#17cf54]/10 text-[#17cf54] rotate-180' : ''}`}
+          >
+            <span className="material-symbols-outlined text-[20px]">expand_more</span>
           </button>
         </div>
       </div>
+      </div>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 pt-2 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800/50">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-4 flex items-center justify-end md:justify-start">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px] text-[#17cf54]">edit_note</span>
+                Client Log
+              </span>
+            </div>
+            <div className="md:col-span-8 flex flex-col gap-3">
+              <div className="grid grid-cols-5 gap-2 pb-2">
+                <input 
+                  type="text" 
+                  placeholder={typeof weight === 'string' ? weight : '-'} 
+                  value={clientData.weight}
+                  onChange={(e) => handleClientDataChange('weight', e.target.value)}
+                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                />
+                <input 
+                  type="text" 
+                  placeholder={typeof sets === 'string' ? sets : '-'} 
+                  value={clientData.sets}
+                  onChange={(e) => handleClientDataChange('sets', e.target.value)}
+                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                />
+                <input 
+                  type="text" 
+                  placeholder={typeof reps === 'string' ? reps : '-'}
+                  value={clientData.reps}
+                  onChange={(e) => handleClientDataChange('reps', e.target.value)} 
+                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                />
+                <input 
+                  type="text" 
+                  placeholder={typeof rir === 'string' ? rir : '-'} 
+                  value={clientData.rir}
+                  onChange={(e) => handleClientDataChange('rir', e.target.value)}
+                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                />
+                <input 
+                  type="text" 
+                  placeholder={typeof rest === 'string' ? rest : '-'} 
+                  value={clientData.rest}
+                  onChange={(e) => handleClientDataChange('rest', e.target.value)}
+                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+                />
+              </div>
+              <div className="relative">
+                <textarea 
+                  placeholder="Notes, sensations, difficulties..." 
+                  value={clientData.notes}
+                  onChange={(e) => handleClientDataChange('notes', e.target.value)}
+                  className="w-full text-sm p-3 pr-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-[#17cf54]/20 focus:border-[#17cf54] transition-all resize-none h-20 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                />
+                <div className="absolute top-3 right-3 text-slate-300 dark:text-slate-600">
+                  <span className="material-symbols-outlined text-[18px]">quick_reference_all</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
