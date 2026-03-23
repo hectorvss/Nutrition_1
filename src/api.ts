@@ -21,6 +21,7 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  console.log('DEBUG: fetchWithAuth requesting:', `${API_URL}${endpoint}`);
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers,

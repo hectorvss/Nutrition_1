@@ -96,6 +96,7 @@ export default function App() {
         );
       case 'dashboard':
         return <Dashboard onNavigate={(view, data) => {
+          console.log('DEBUG: App onNavigate:', { view, data });
           if (data?.clientId) setSelectedClientId(data.clientId);
           if (data?.checkInId) setSelectedCheckInId(data.checkInId);
           setCurrentView(view as View);

@@ -130,6 +130,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   key={item.id} 
                   className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
                   onClick={() => {
+                    console.log('DEBUG: Dashboard navigating with:', { clientId: item.clientId, checkInId: item.id });
                     if (item.type === 'CHECK_IN') onNavigate('check-ins', { clientId: item.clientId, checkInId: item.id });
                     else onNavigate('tasks');
                   }}
