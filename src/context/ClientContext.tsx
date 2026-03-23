@@ -37,6 +37,9 @@ export interface ClientData {
   trainingPlanAssigned: boolean;
 
   tempPassword?: string;
+  lastCheckInDate?: string;
+  isUnreviewed?: boolean;
+  check_ins?: any[];
 }
 
 interface ClientContextType {
@@ -137,6 +140,9 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
             // Actually, let's update the backend route to include this info.
             nutritionPlanAssigned: c.nutritionPlanAssigned || false,
             trainingPlanAssigned: c.trainingPlanAssigned || false,
+            lastCheckInDate: c.lastCheckInDate || null,
+            isUnreviewed: c.isUnreviewed || false,
+            check_ins: c.check_ins || []
           };
       });
       
