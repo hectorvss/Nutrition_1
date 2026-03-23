@@ -1666,26 +1666,39 @@ router.get('/analytics', async (req: any, res) => {
     if (last30DaysCheckIns.length > 0) {
       const count = last30DaysCheckIns.length;
       let sumFruit = 0, sumHydration = 0, sumSupps = 0, sumComp = 0, sumVol = 0, sumRPE = 0;
-      
+
+      const mapping: Record<string, number> = {
+        'Perfect (>95%)': 100, 'Mostly (>80%)': 85, 'Somewhat (50-80%)': 65, 'Little (<50%)': 30, 'None': 0,
+        'All sessions': 100, 'Missed 1': 85, 'Missed 2-3': 60, 'None done': 0,
+        'Excellent': 100, 'Good': 80, 'Okay': 60, 'Struggling': 30,
+        'Mostly': 80, 'Yes': 100, 'No': 0,
+        'Perfect': 100, 'Very High': 90, 'High': 80, 'Moderate': 60, 'Low': 30, 'Poor': 10
+      };
+
       last30DaysCheckIns.forEach(ci => {
         const d = ci.data_json as any;
         const ciDate = ci.date;
         const dayIdx = last7Days.indexOf(ciDate);
         
-        // Detailed Nutrition Aggregation
-        sumFruit += Number(d.fruit_veg || 0);
-        sumHydration += Number(d.hydration_percent || 0);
-        if (d.alcohol_consumed > 0) nutrition.alcoholAlerts++;
-        if (d.supplements_logged) sumSupps++;
+        // Map qualitative to quantitative if needed
+        const nutVal = mapping[d.nutritionAdherence] ?? Number(d.nutritionAdherence || 0);
+        const traVal = mapping[d.trainingAdherence] ?? Number(d.trainingAdherence || 0);
+        const hydrateVal = mapping[d.waterIntake] ?? Number(d.hydration_percent || 0);
+        const stressVal = mapping[d.stress] ?? 0;
+        
+        sumFruit += 1; // Simplified for new flow
+        sumHydration += hydrateVal;
+        if (d.alcoholIntake && d.alcoholIntake !== 'None') nutrition.alcoholAlerts++;
+        if (d.supplements && d.supplements !== 'None') sumSupps++;
         
         if (dayIdx !== -1) {
-          caloriesByDay[dayIdx].intake += Number(d.calories_intake || 0);
-          caloriesByDay[dayIdx].goal += Number(d.calories_goal || 2200); // Fallback to 2200
+          caloriesByDay[dayIdx].intake += nutVal;
+          caloriesByDay[dayIdx].goal += 100; // Normalized goal
           caloriesByDay[dayIdx].count++;
         }
 
-        // Track Deficits per Client
-        const deficit = (Number(d.calories_goal || 2200) - Number(d.calories_intake || 0));
+        // Track Deficits per Client (using adherence as proxy)
+        const deficit = 100 - nutVal;
         if (!clientDeficits[ci.client_id] || deficit > clientDeficits[ci.client_id].deficit) {
           clientDeficits[ci.client_id] = { 
             name: (ci.users as any)?.email?.split('@')[0] || 'Client',
@@ -1695,23 +1708,23 @@ router.get('/analytics', async (req: any, res) => {
         }
         
         // Detailed Training Aggregation
-        sumComp += Number(d.workout_completion || 0);
-        sumVol += Number(d.total_volume || 0);
-        sumRPE += Number(d.avg_rpe || 0);
+        sumComp += traVal;
+        sumVol += Number(d.weight || 0); // Use weight as volume proxy or placeholder
+        sumRPE += mapping[d.trainingIntensity] ?? 0;
 
         if (dayIdx !== -1) {
-          trainingByDay[dayIdx].volume += Number(d.total_volume || 0);
-          trainingByDay[dayIdx].intensity += Number(d.avg_rpe || 0);
+          trainingByDay[dayIdx].volume += Number(d.weight || 0);
+          trainingByDay[dayIdx].intensity += mapping[d.trainingIntensity] ?? 0;
           trainingByDay[dayIdx].count++;
         }
       });
 
-      nutrition.avgFruitVeg = Number((sumFruit / count).toFixed(1));
+      nutrition.avgFruitVeg = 100; // Placeholder
       nutrition.avgHydration = Math.round(sumHydration / count);
       nutrition.supplementAdherence = Math.round((sumSupps / count) * 100);
       
       nutrition.calories.intake = caloriesByDay.map(d => d.count > 0 ? Math.round(d.intake / d.count) : 0);
-      nutrition.calories.goal = caloriesByDay.map(d => d.count > 0 ? Math.round(d.goal / d.count) : 2200);
+      nutrition.calories.goal = caloriesByDay.map(d => 100);
       
       nutrition.topDeficits = Object.values(clientDeficits)
         .sort((a,b) => b.deficit - a.deficit)
@@ -1719,8 +1732,8 @@ router.get('/analytics', async (req: any, res) => {
         .map(d => ({ 
           name: d.name, 
           email: d.email, 
-          deficit: `${d.deficit} kcal`, 
-          status: d.deficit > 500 ? 'High Deficit' : 'On Track' 
+          deficit: d.deficit > 20 ? 'Action Required' : 'On Track', 
+          status: d.deficit > 20 ? 'High Deficit' : 'On Track' 
         }));
 
       training.avgCompletion = Math.round(sumComp / count);
