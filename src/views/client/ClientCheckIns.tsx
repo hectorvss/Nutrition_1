@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import WeeklyCheckinFlow from './WeeklyCheckinFlow';
+import CheckInDetailView from './CheckInDetailView';
 
 export default function ClientCheckIns() {
   const { user } = useAuth();
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [selectedCheckIn, setSelectedCheckIn] = useState<any>(null);
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,7 +36,11 @@ export default function ClientCheckIns() {
   }
 
   if (isCheckingIn) {
-    return <WeeklyCheckinFlow onComplete={() => setIsCheckingIn(false)} onCancel={() => setIsCheckingIn(false)} />;
+    return <WeeklyCheckinFlow onComplete={() => { setIsCheckingIn(false); loadCheckIns(); }} onCancel={() => setIsCheckingIn(false)} />;
+  }
+
+  if (selectedCheckIn) {
+    return <CheckInDetailView checkIn={selectedCheckIn} onBack={() => setSelectedCheckIn(null)} />;
   }
 
   return (
@@ -168,22 +174,18 @@ export default function ClientCheckIns() {
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">Check-in History</h2>
                 <p className="text-sm text-slate-500">{checkIns.length} entries • Most recent first</p>
               </div>
-              <div className="flex gap-2">
-                <button className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
-                  <span className="material-symbols-outlined text-[18px]">filter_list</span>
-                </button>
-                <button className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
-                  <span className="material-symbols-outlined text-[18px]">download</span>
-                </button>
-              </div>
             </div>
             <div className="p-6 space-y-4">
               {checkIns.length > 0 ? checkIns.map((ci: any, idx: number) => (
-                <div key={ci.id} className="group border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-[#17cf54]/50 transition-all bg-white dark:bg-slate-800/50 shadow-sm">
+                <div 
+                  key={ci.id} 
+                  onClick={() => setSelectedCheckIn(ci)}
+                  className="group border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-[#17cf54]/50 transition-all bg-white dark:bg-slate-800/50 shadow-sm cursor-pointer"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                       <div className={`p-3 rounded-xl ${idx === 0 ? 'bg-[#17cf54]/10 text-[#17cf54]' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                        <span className={`material-symbols-outlined ${idx === 0 ? '' : ''}`}>{idx === 0 ? 'pending_actions' : 'task_alt'}</span>
+                        <span className="material-symbols-outlined">{ci.reviewed_at ? 'task_alt' : 'pending_actions'}</span>
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900 dark:text-white text-lg">
@@ -197,53 +199,11 @@ export default function ClientCheckIns() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${idx === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-[#17cf54]/10 text-[#17cf54]'}`}>
-                        {idx === 0 ? 'Pending' : 'Reviewed'}
+                      <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full ${!ci.reviewed_at ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-[#17cf54]/10 text-[#17cf54]'}`}>
+                        {!ci.reviewed_at ? 'Pending Review' : 'Reviewed'}
                       </span>
-                      <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><span className="material-symbols-outlined">more_vert</span></button>
                     </div>
                   </div>
-                  {/* Summary data row */}
-                  {ci.data_json && (
-                    <div className="mt-4 pl-[68px] grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {ci.data_json.overallFeeling && (
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3">
-                          <div className="w-1.5 h-8 bg-blue-500 rounded-full"></div>
-                          <div className="flex-1">
-                            <p className="text-[10px] text-slate-400 uppercase font-bold">Feeling</p>
-                            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{ci.data_json.overallFeeling}</p>
-                          </div>
-                        </div>
-                      )}
-                      {ci.data_json.nutritionAdherence && (
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3">
-                          <div className="w-1.5 h-8 bg-green-500 rounded-full"></div>
-                          <div className="flex-1">
-                            <p className="text-[10px] text-slate-400 uppercase font-bold">Nutrition</p>
-                            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{ci.data_json.nutritionAdherence}</p>
-                          </div>
-                        </div>
-                      )}
-                      {ci.data_json.trainingAdherence && (
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3">
-                          <div className="w-1.5 h-8 bg-purple-500 rounded-full"></div>
-                          <div className="flex-1">
-                            <p className="text-[10px] text-slate-400 uppercase font-bold">Training</p>
-                            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{ci.data_json.trainingAdherence}</p>
-                          </div>
-                        </div>
-                      )}
-                      {ci.data_json.sleepQuality && (
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3">
-                          <div className="w-1.5 h-8 bg-yellow-500 rounded-full"></div>
-                          <div className="flex-1">
-                            <p className="text-[10px] text-slate-400 uppercase font-bold">Sleep</p>
-                            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{ci.data_json.sleepQuality}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )) : (
                 <div className="p-12 text-center">
@@ -254,31 +214,6 @@ export default function ClientCheckIns() {
                   <p className="text-sm text-slate-400 mt-2">Start your first check-in to see your progress here.</p>
                 </div>
               )}
-
-              {/* Baseline Row */}
-              <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-5 bg-slate-50/50 dark:bg-slate-800/20">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-slate-200 dark:bg-slate-700 text-slate-500 p-3 rounded-xl">
-                      <span className="material-symbols-outlined">flag</span>
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-600 dark:text-slate-300 text-lg">Baseline Assessment</h3>
-                      <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">scale</span> 85.2kg</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">calendar_today</span> Oct 12, 2023</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                      Completed
-                    </span>
-                    <button className="p-2 text-slate-400 hover:text-slate-600"><span className="material-symbols-outlined">more_vert</span></button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

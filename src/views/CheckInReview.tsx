@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   ChevronRight, 
@@ -26,7 +26,15 @@ import {
   Target,
   Moon,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Brain,
+  Scale,
+  Zap,
+  Coffee,
+  Heart,
+  Calendar,
+  Shield,
+  Dumbbell
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -38,482 +46,478 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
+import { fetchWithAuth } from '../api';
 
 interface CheckInReviewProps {
-  clientId: number;
-  week: number;
+  clientId: string;
+  checkInId: string;
   onBack: () => void;
 }
 
-const macroData = [
-  { day: 'Mon', calories: 1840, status: 'met' },
-  { day: 'Tue', calories: 1860, status: 'met' },
-  { day: 'Wed', calories: 1855, status: 'met' },
-  { day: 'Thu', calories: 2100, status: 'over' },
-  { day: 'Fri', calories: 1830, status: 'met' },
-  { day: 'Sat', calories: 1850, status: 'met' },
-  { day: 'Sun', calories: 1845, status: 'met' },
-];
+export default function CheckInReview({ clientId, checkInId, onBack }: CheckInReviewProps) {
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [coachNotes, setCoachNotes] = useState('');
+  const [nextWeekFocus, setNextWeekFocus] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
 
-const stepsData = [
-  { day: 'M', steps: 6000 },
-  { day: 'T', steps: 8500 },
-  { day: 'W', steps: 9200 },
-  { day: 'T', steps: 7500 },
-  { day: 'F', steps: 7000 },
-  { day: 'S', steps: 10000 },
-  { day: 'S', steps: 4000 },
-];
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const result = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}`);
+        if (result) {
+          setData(result);
+          setCoachNotes(result.check_in?.coach_notes || '');
+          setNextWeekFocus(result.check_in?.next_week_focus || '');
+        }
+      } catch (err) {
+        console.error('Error loading check-in review:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [clientId, checkInId]);
 
-export default function CheckInReview({ clientId, week, onBack }: CheckInReviewProps) {
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    try {
+      await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}/review`, {
+        method: 'POST',
+        body: JSON.stringify({ coach_notes: coachNotes, next_week_focus: nextWeekFocus })
+      });
+      onBack();
+    } catch (err) {
+      console.error('Error publishing review:', err);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (!data || !data.check_in) {
+    return <div className="p-8 text-center text-slate-500">Check-in not found.</div>;
+  }
+
+  const { client, check_in } = data;
+  const dj = check_in.data_json || {};
+
+  const KPICard = ({ title, icon: Icon, children, color = "emerald" }: any) => {
+    const colorClasses: any = {
+      emerald: "text-emerald-500",
+      blue: "text-blue-500",
+      amber: "text-amber-500",
+      purple: "text-purple-500",
+      red: "text-red-500",
+      slate: "text-slate-500"
+    };
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 h-full">
+        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6">
+          <Icon className={`w-5 h-5 ${colorClasses[color]}`} />
+          {title}
+        </h2>
+        {children}
+      </div>
+    );
+  };
+
+  const MetricItem = ({ label, value, subtext, color = "emerald" }: any) => {
+    const colorClasses: any = {
+      emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      blue: "bg-blue-50 text-blue-600 border-blue-100",
+      amber: "bg-amber-50 text-amber-600 border-amber-100",
+      purple: "bg-purple-50 text-purple-600 border-purple-100",
+      red: "bg-red-50 text-red-600 border-red-100",
+      slate: "bg-slate-50 text-slate-600 border-slate-100"
+    };
+    return (
+      <div className={`p-4 rounded-xl border ${colorClasses[color]} text-center relative overflow-hidden h-full flex flex-col justify-center`}>
+        <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-70">{label}</p>
+        <p className="text-xl font-bold truncate">{value || '--'}</p>
+        {subtext && <p className="text-[10px] font-bold mt-1 opacity-70">{subtext}</p>}
+      </div>
+    );
+  };
+
+  const Badge = ({ label, color = "emerald" }: any) => {
+    const colorClasses: any = {
+      emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      blue: "bg-blue-50 text-blue-600 border-blue-100",
+      amber: "bg-amber-50 text-amber-600 border-amber-100",
+      purple: "bg-purple-50 text-purple-600 border-purple-100",
+      red: "bg-red-50 text-red-600 border-red-100",
+      slate: "bg-slate-50 text-slate-600 border-slate-100"
+    };
+    return (
+      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase ${colorClasses[color]}`}>
+        {label}
+      </span>
+    );
+  };
+
   return (
-    <div className="p-6 md:p-8 w-full space-y-6">
+    <div className="p-6 md:p-8 w-full space-y-6 max-w-7xl mx-auto">
+      {/* Breadcrumb & Header */}
       <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
         <div className="flex items-center gap-2">
           <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Check-ins</button>
           <ChevronRight className="w-4 h-4" />
-          <span className="font-medium text-slate-900">Sarah Jenkins</span>
+          <span className="font-medium text-slate-900">{client.name}</span>
         </div>
-        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Clinical ID: 8992-B</div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Client ID: {client.id.substring(0,8)}</div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-md border-2 border-white" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop")' }}></div>
-            <div className="absolute -bottom-1 -right-1 bg-amber-500 w-4 h-4 rounded-full border-2 border-white animate-pulse"></div>
+            {client.avatar ? (
+              <div className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-md border-2 border-white" style={{ backgroundImage: `url("${client.avatar}")` }}></div>
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xl border-2 border-white shadow-md">
+                {client.name.substring(0,2).toUpperCase()}
+              </div>
+            )}
+            {!check_in.reviewed_at && <div className="absolute -top-1 -right-1 bg-amber-500 w-4 h-4 rounded-full border-2 border-white animate-pulse"></div>}
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">Sarah Jenkins</h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                <Flag className="w-3 h-3" /> Flagged
-              </span>
+              <h1 className="text-2xl font-bold text-slate-900">{client.name}</h1>
+              {!check_in.reviewed_at ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
+                  <Flag className="w-3 h-3" /> Pending Review
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Reviewed
+                </span>
+              )}
             </div>
             <p className="text-slate-500 text-sm flex items-center gap-2 mt-1 font-medium">
-              <Clock className="w-4 h-4 text-slate-400" /> Submitted Today, 10:42 AM
+              <Clock className="w-4 h-4 text-slate-400" /> Submitted {new Date(check_in.created_at).toLocaleString()}
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              Week 4 Check-in
+              Date: {new Date(check_in.date).toLocaleDateString()}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button className="px-4 py-2.5 rounded-xl border border-emerald-500 text-emerald-600 font-bold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
+          <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
             <History className="w-4 h-4" />
-            View Past Reviews
+            History
           </button>
           <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
             <FileText className="w-4 h-4" />
-            Export PDF
-          </button>
-          <button className="p-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors bg-white">
-            <MoreHorizontal className="w-5 h-5" />
+            Export
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
-          {/* Physical Progress */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Camera className="w-5 h-5 text-emerald-500" />
-                Physical Progress
-              </h2>
-              <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 uppercase tracking-wider">
-                <span className="flex items-center gap-1.5 text-emerald-600"><Check className="w-3 h-3" /> Lighting</span>
-                <span className="w-px h-3 bg-slate-200"></span>
-                <span className="flex items-center gap-1.5 text-emerald-600"><Check className="w-3 h-3" /> Posing</span>
-                <span className="w-px h-3 bg-slate-200"></span>
-                <span className="flex items-center gap-1.5 text-slate-400"><X className="w-3 h-3" /> Background</span>
-              </div>
+          
+          {/* Section 1: Overall & Body */}
+          <KPICard title="Overall & Body metrics" icon={Smile} color="emerald">
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <MetricItem label="Overall Week" value={dj.overallWeek} color="emerald" />
+                <MetricItem label="Current Weight" value={dj.weight ? `${dj.weight}kg` : '--'} color="blue" />
+                <MetricItem label="Avg Weight" value={dj.avgWeight ? `${dj.avgWeight}kg` : '--'} color="blue" />
+                <MetricItem label="Satisfaction" value={dj.satisfaction} color="amber" />
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Body Perception</h4>
+                  <p className="text-sm text-slate-700 font-medium">{dj.bodyPerception || '—'}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Visible Changes</h4>
+                  <p className="text-sm text-slate-700 font-medium">{dj.visibleChanges || '—'}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Plan Alignment</h4>
+                  <p className="text-sm text-slate-700 font-medium">{dj.matchPlan || '—'}</p>
+                </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                   <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Consistency</span> <span className="font-bold text-slate-900">{dj.consistency || '--'}</span></div>
+                   <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Mental Health</span> <span className="font-bold text-slate-900">{dj.mentalHealth || '--'}</span></div>
+                   <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Biggest Change</span> <span className="font-bold text-slate-900">{dj.biggestChangeArea || '--'}</span></div>
+                </div>
+                <div className="p-4 bg-blue-50/40 rounded-xl border border-blue-100/50">
+                   <h4 className="text-[9px] font-bold text-blue-400 uppercase mb-2 tracking-widest">Client Feedback</h4>
+                   <p className="text-sm text-slate-600 font-medium italic">"{dj.weekNotes || 'No notes provided'}"</p>
+                </div>
+             </div>
+             {/* Measurements Table */}
+             <div className="mt-6 overflow-hidden rounded-xl border border-slate-100">
+               <table className="w-full text-[11px] text-left">
+                 <thead className="bg-slate-50 font-bold uppercase tracking-widest text-slate-400 text-[9px] border-b border-slate-100">
+                   <tr><th className="px-4 py-3">Waist</th><th className="px-4 py-3">Hips</th><th className="px-4 py-3">Chest</th><th className="px-4 py-3">Arms</th><th className="px-4 py-3">Thighs</th></tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-50">
+                   <tr className="font-bold text-slate-700">
+                     <td className="px-4 py-3">{dj.waist ? dj.waist+'cm' : '--'}</td>
+                     <td className="px-4 py-3">{dj.hips ? dj.hips+'cm' : '--'}</td>
+                     <td className="px-4 py-3">{dj.chest ? dj.chest+'cm' : '--'}</td>
+                     <td className="px-4 py-3">{dj.arms ? dj.arms+'cm' : '--'}</td>
+                     <td className="px-4 py-3">{dj.thighs ? dj.thighs+'cm' : '--'}</td>
+                   </tr>
+                 </tbody>
+               </table>
+             </div>
+          </KPICard>
+
+          {/* Section 2: Nutrition */}
+          <KPICard title="Nutrition Adherence" icon={PieChart} color="emerald">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <MetricItem label="Overall Adherence" value={dj.nutritionAdherence} color="emerald" />
+              <MetricItem label="Calorie Target" value={dj.hitCalories} color="amber" />
+              <MetricItem label="Protein Target" value={dj.hitProtein} color="red" />
+              <MetricItem label="Accuracy" value={dj.trackingAccuracy} color="slate" />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { label: 'Front', url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=600&fit=crop' },
-                { label: 'Side', url: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=600&fit=crop' },
-                { label: 'Back', url: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=400&h=600&fit=crop' },
-              ].map((img, idx) => (
-                <div key={idx} className="group relative aspect-[3/4] bg-slate-100 rounded-xl overflow-hidden border border-slate-200 cursor-pointer">
-                  <img src={img.url} alt={img.label} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
-                  <div className="absolute top-3 left-3 bg-black/50 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm uppercase tracking-wider">
-                    {img.label}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="space-y-4">
+                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Meals Followed</span> <span className="font-bold text-slate-900">{dj.mealsFollowed || '--'}</span></div>
+                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Off-Plan Count</span> <span className="font-bold text-slate-900">{dj.offPlanCount || '0'}</span></div>
+                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Skipped Meals</span> <span className="font-bold text-slate-900">{dj.skippedMeals || 'None'}</span></div>
+                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Hardest Meal</span> <span className="font-bold text-slate-900">{dj.hardestMeal || '--'}</span></div>
+               </div>
+               <div className="space-y-4">
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Obstacles & Context</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {dj.adherenceObstacles?.length > 0 ? dj.adherenceObstacles.map((o:string) => <Badge key={o} label={o} color="red" />) : <span className="text-xs text-slate-400 italic">None reported</span>}
                   </div>
-                </div>
-              ))}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mt-2">
+                     <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Digestive Issues?</h4>
+                     <p className="text-sm font-bold text-slate-700">{dj.digestiveIssues || 'No'}</p>
+                  </div>
+               </div>
             </div>
-          </div>
+          </KPICard>
 
-          {/* Perimeter Measurements */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-emerald-500" />
-                Perimeter Measurements
-              </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Show Delta</span>
-                <div className="w-8 h-4 bg-emerald-500 rounded-full relative cursor-pointer">
-                  <div className="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div>
-                </div>
-              </div>
+          {/* Section 3: Digestion & Biofeedback */}
+          <KPICard title="Digestion & Biofeedback" icon={Stethoscope} color="purple">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <MetricItem label="Digestion" value={dj.digestionQuality} color="purple" />
+              <MetricItem label="Bloating" value={dj.bloatingLevel} color="purple" />
+              <MetricItem label="Hunger" value={dj.hunger} color="amber" />
+              <MetricItem label="Cravings" value={dj.cravings} color="red" />
             </div>
-            <div className="overflow-hidden rounded-xl border border-slate-100">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50 text-[10px] text-slate-500 font-bold uppercase tracking-wider border-b border-slate-100">
-                  <tr>
-                    <th className="px-6 py-4">Area</th>
-                    <th className="px-6 py-4 text-right">Start</th>
-                    <th className="px-6 py-4 text-right">Current</th>
-                    <th className="px-6 py-4 text-right">Delta</th>
-                    <th className="px-6 py-4 text-right">Goal</th>
-                    <th className="px-6 py-4 text-center">Trend</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {[
-                    { area: 'Waist', start: '82 cm', current: '78 cm', delta: '-4 cm', goal: '75 cm', trend: 'down' },
-                    { area: 'Hips', start: '104 cm', current: '101 cm', delta: '-3 cm', goal: '98 cm', trend: 'down' },
-                    { area: 'R. Arm', start: '32 cm', current: '31.5 cm', delta: '-0.5 cm', goal: '30 cm', trend: 'flat' },
-                    { area: 'L. Thigh', start: '58 cm', current: '56.5 cm', delta: '-1.5 cm', goal: '54 cm', trend: 'down' },
-                  ].map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-slate-900">{row.area}</td>
-                      <td className="px-6 py-4 text-right text-slate-500 font-medium">{row.start}</td>
-                      <td className="px-6 py-4 text-right font-bold text-slate-900">{row.current}</td>
-                      <td className="px-6 py-4 text-right text-emerald-600 font-bold bg-emerald-50/30">{row.delta}</td>
-                      <td className="px-6 py-4 text-right text-slate-400 font-medium">{row.goal}</td>
-                      <td className="px-6 py-4 text-center">
-                        {row.trend === 'down' ? <TrendingDown className="w-4 h-4 text-emerald-500 mx-auto" /> : <Minus className="w-4 h-4 text-amber-500 mx-auto" />}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Sensations & Feedback */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6">
-              <Smile className="w-5 h-5 text-emerald-500" />
-              Sensations & Feedback
-            </h2>
             <div className="space-y-6">
-              <div className="flex gap-4 items-start">
-                <div className="shrink-0 w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
-                  <Smile className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-slate-900 mb-2">How are you feeling?</h4>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-sm text-slate-600 leading-relaxed italic">
-                      "Feeling surprisingly energetic this week! The increased carb intake on training days really helped my performance. Sleep has been consistent, around 7-8 hours."
-                    </p>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                     <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Bowel Regularity</h4>
+                     <p className="text-sm font-bold text-slate-700">{dj.bowelRegularity || '--'}</p>
                   </div>
-                </div>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div className="shrink-0 w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-slate-900 mb-2">Any difficulties?</h4>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-sm text-slate-600 leading-relaxed italic">
-                      "Struggled a bit with meal prep on Wednesday due to work. Had to eat out once, but tried to choose the healthiest option available."
-                    </p>
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                     <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Cravings Timing</h4>
+                     <p className="text-sm font-bold text-slate-700">{dj.cravingsTime || '--'}</p>
                   </div>
-                </div>
-              </div>
-              <div className="flex gap-4 items-start">
-                <div className="shrink-0 w-10 h-10 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center">
-                  <Edit3 className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-slate-900 mb-2">Proposed Changes</h4>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-sm text-slate-600 leading-relaxed italic">
-                      "Could we look at adding a bit more variety to the breakfast options? The oatmeal is great but I'm getting a little bored of it every single day."
-                    </p>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <MetricItem label="Energy Post-Meal" value={dj.energyResponse} color="emerald" />
+                  <MetricItem label="Fullness Response" value={dj.fullnessResponse} color="blue" />
+               </div>
+               <div>
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Reported Symptoms</h4>
+                  <div className="flex flex-wrap gap-2">
+                     {dj.digestiveSymptoms?.length > 0 ? dj.digestiveSymptoms.map((s:string) => <Badge key={s} label={s} color="purple" />) : <span className="text-xs text-slate-400 italic">None reported</span>}
                   </div>
-                </div>
-              </div>
+               </div>
+               {dj.foodNotes && (
+                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Biofeedback Notes</h4>
+                    <p className="text-sm text-slate-600 italic">"{dj.foodNotes}"</p>
+                 </div>
+               )}
             </div>
-          </div>
+          </KPICard>
 
-          {/* Calories & Macros */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-emerald-500" />
-                Calories & Macros
-              </h2>
-              <button className="text-xs font-bold text-emerald-600 hover:underline uppercase tracking-wider">Show daily logs</button>
+          {/* Section 4: Training Performance */}
+          <KPICard title="Training Performance" icon={Dumbbell} color="emerald">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+              <MetricItem label="Adherence" value={dj.trainingAdherence} color="emerald" />
+              <MetricItem label="Performance" value={dj.performance} color="blue" />
+              <MetricItem label="Strength" value={dj.strength} color="red" />
+              <MetricItem label="Intensity" value={dj.trainingIntensity} color="amber" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-              {[
-                { label: 'Calories', value: '1850', status: 'Target Met', color: 'text-emerald-600', bg: 'bg-slate-50', border: 'border-slate-100' },
-                { label: 'Protein', value: '145g', status: '100%', color: 'text-red-600', bg: 'bg-red-50/50', border: 'border-red-100', barColor: 'bg-red-500' },
-                { label: 'Carbs', value: '180g', status: '85%', color: 'text-amber-600', bg: 'bg-amber-50/50', border: 'border-amber-100', barColor: 'bg-amber-500' },
-                { label: 'Fats', value: '60g', status: '95%', color: 'text-blue-600', bg: 'bg-blue-50/50', border: 'border-blue-100', barColor: 'bg-blue-500' },
-              ].map((macro, idx) => (
-                <div key={idx} className={`p-4 rounded-xl border ${macro.bg} ${macro.border} text-center relative overflow-hidden`}>
-                  {macro.barColor && <div className={`absolute bottom-0 left-0 h-1 ${macro.barColor}`} style={{ width: macro.status }} />}
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{macro.label}</p>
-                  <p className={`text-xl font-bold ${macro.color.includes('slate') ? 'text-slate-900' : macro.color}`}>{macro.value}</p>
-                  <p className={`text-[10px] font-bold mt-1 ${macro.color}`}>{macro.status}</p>
-                </div>
-              ))}
+            <div className="space-y-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-emerald-50/30 rounded-xl border border-emerald-100/50">
+                    <h4 className="text-[9px] font-bold text-emerald-600 uppercase mb-2 flex items-center gap-1.5"><Zap className="w-3 h-3"/> Training Wins & PRs</h4>
+                    <p className="text-sm text-slate-700 font-bold mb-1">{dj.prWins || 'No PRs this week'}</p>
+                    <p className="text-xs text-slate-500">{dj.strongExerciseNotes}</p>
+                  </div>
+                  <div className="p-4 bg-red-50/30 rounded-xl border border-red-100/50">
+                    <h4 className="text-[9px] font-bold text-red-600 uppercase mb-2 flex items-center gap-1.5"><AlertTriangle className="w-3 h-3"/> Struggles & Drops</h4>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {dj.performanceDropReasons?.map((r:string) => <Badge key={r} label={r} color="red" />)}
+                    </div>
+                    <p className="text-xs text-slate-500">{dj.awkwardExerciseNotes}</p>
+                  </div>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex justify-between text-[11px] items-center p-2 bg-slate-50 rounded-lg"><span className="text-slate-400 font-bold uppercase">Energy</span> <span className="font-bold text-slate-900">{dj.trainingEnergy || '--'}</span></div>
+                  <div className="flex justify-between text-[11px] items-center p-2 bg-slate-50 rounded-lg"><span className="text-slate-400 font-bold uppercase">Quality</span> <span className="font-bold text-slate-900">{dj.trainingQuality || '--'}</span></div>
+                  <div className="flex justify-between text-[11px] items-center p-2 bg-slate-50 rounded-lg"><span className="text-slate-400 font-bold uppercase">Recovery</span> <span className="font-bold text-slate-900">{dj.trainingRecovery || '--'}</span></div>
+               </div>
+               {dj.trainingNotes && <p className="text-xs text-slate-500 italic">"{dj.trainingNotes}"</p>}
             </div>
-            <div className="h-40 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={macroData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}} />
-                  <YAxis hide />
-                  <Tooltip 
-                    cursor={{fill: '#f8fafc'}}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Bar dataKey="calories" radius={[4, 4, 0, 0]}>
-                    {macroData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.status === 'over' ? '#f87171' : '#10b981'} fillOpacity={0.2} stroke={entry.status === 'over' ? '#f87171' : '#10b981'} strokeWidth={1} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          </KPICard>
+
         </div>
 
+        {/* Sidebar Column */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Coach Alerts */}
-          <div className="bg-red-50 rounded-2xl shadow-sm p-6 border border-red-100">
-            <h2 className="text-xs font-bold text-red-800 flex items-center gap-2 mb-4 uppercase tracking-widest">
-              <AlertTriangle className="w-4 h-4" />
-              Coach Alerts
-            </h2>
-            <div className="space-y-3">
-              {[
-                { title: 'Weight Plateau', desc: 'Weight stable for 10 days despite deficit.', icon: Minus, color: 'text-red-600', bg: 'bg-red-100' },
-                { title: 'Missed Leg Day', desc: 'Skipped Thursday session reported.', icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-100' },
-              ].map((alert, idx) => (
-                <div key={idx} className="bg-white p-3 rounded-xl border border-red-100 flex gap-3 items-start shadow-sm">
-                  <div className={`w-8 h-8 rounded-full ${alert.bg} flex items-center justify-center shrink-0 ${alert.color}`}>
-                    <alert.icon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900">{alert.title}</h4>
-                    <p className="text-[10px] font-medium text-slate-500 mt-0.5">{alert.desc}</p>
-                  </div>
+          
+          {/* Recovery & Foundations */}
+          <KPICard title="Recovery & Sleep" icon={Moon} color="blue">
+             <div className="grid grid-cols-2 gap-4 mb-4">
+                <MetricItem label="Sleep Qty" value={dj.sleepQuantity} color="blue" />
+                <MetricItem label="Sleep Qual" value={dj.sleepQuality} color="blue" />
+                <MetricItem label="Stress" value={dj.stress} color="red" />
+                <MetricItem label="Motivation" value={dj.motivation} color="amber" />
+             </div>
+             <div className="space-y-4">
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Interruptions</span> <span className="font-bold text-slate-900">{dj.sleepInterruptions || '--'}</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Consistency</span> <span className="font-bold text-slate-900">{dj.sleepScheduleConsistency || '--'}</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Fatigue</span> <span className="font-bold text-slate-900">{dj.generalFatigue || '--'}</span></div>
+                <div className="mt-4">
+                   <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Recovery Impacts</h4>
+                   <div className="flex flex-wrap gap-2">
+                      {dj.recoveryImpacts?.map((i:string) => <Badge key={i} label={i} color="slate" />)}
+                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+                {dj.recoveryNotes && <p className="text-xs text-slate-500 italic mt-2">"{dj.recoveryNotes}"</p>}
+             </div>
+          </KPICard>
 
-          {/* Key Metrics */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6">
-              <Activity className="w-5 h-5 text-emerald-500" />
-              Key Metrics
-            </h2>
-            <div className="mb-8 p-5 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="flex justify-between items-end mb-2">
-                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Current Weight</span>
-                <span className="text-emerald-600 text-[10px] font-bold bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">-0.8kg</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-slate-900">74.5</span>
-                <span className="text-lg text-slate-400 font-bold">kg</span>
-              </div>
-              <div className="w-full bg-slate-200 h-1.5 rounded-full mt-4 overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: '65%' }}></div>
-              </div>
-              <div className="flex justify-between mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                <span>Start: 78kg</span>
-                <span>Goal: 70kg</span>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Footprints className="w-4 h-4 text-slate-400" />
-                  Daily Steps
-                </span>
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">Avg: 8,200</span>
-              </div>
-              <div className="h-24 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stepsData}>
-                    <Bar dataKey="steps" radius={[2, 2, 0, 0]}>
-                      {stepsData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill="#10b981" fillOpacity={entry.steps >= 8000 ? 1 : 0.3} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2 px-1 uppercase tracking-widest">
-                {stepsData.map(d => <span key={d.day}>{d.day}</span>)}
-              </div>
-            </div>
-          </div>
+          {/* Activity & Cardio */}
+          <KPICard title="Activity & Cardio" icon={Footprints} color="slate">
+             <MetricItem label="Step Range" value={dj.stepRange} color="slate" />
+             <div className="mt-4 space-y-3">
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Steps Adherence</span> <span className="font-bold text-slate-700">{dj.stepsAdherence || '--'}</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Cardio Adherence</span> <span className="font-bold text-slate-700">{dj.cardioAdherence || '--'}</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Cardio Perf.</span> <span className="font-bold text-slate-700">{dj.cardioPerformance || '--'}</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Activity Level</span> <span className="font-bold text-slate-700">{dj.activityLevel || '--'}</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Tired post-act</span> <span className="font-bold text-slate-700">{dj.activityTired || '--'}</span></div>
+                {dj.activityLimitations?.length > 0 && (
+                   <div className="mt-2">
+                      <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Limitations</h4>
+                      <div className="flex flex-wrap gap-1">{dj.activityLimitations.map((l:string) => <span key={l} className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{l}</span>)}</div>
+                   </div>
+                )}
+             </div>
+          </KPICard>
 
-          {/* Compliance */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              Compliance
-            </h2>
-            <div className="space-y-6">
-              {[
-                { label: 'Nutrition', value: 95, color: 'bg-emerald-500', bg: 'bg-emerald-50/50', border: 'border-emerald-100', text: 'text-emerald-600', desc: 'Adhered to macro targets perfectly 6/7 days.' },
-                { label: 'Training', value: 80, color: 'bg-amber-500', bg: 'bg-amber-50/50', border: 'border-amber-100', text: 'text-amber-600', desc: 'Missed Leg Day on Thursday.' },
-                { label: 'Hydration', value: 100, color: 'bg-blue-500', bg: 'bg-blue-50/50', border: 'border-blue-100', text: 'text-blue-600', isHydration: true, desc: 'Hit 3L goal every day.' },
-              ].map((item, idx) => (
-                <div key={idx} className={`${item.bg} p-4 rounded-xl border ${item.border}`}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-bold text-slate-900">{item.label}</span>
-                    <span className={`text-sm font-bold ${item.text}`}>{item.value}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div className={`${item.color} h-full rounded-full`} style={{ width: `${item.value}%` }}></div>
-                  </div>
-                  {item.isHydration && (
-                    <div className="flex gap-1.5 mt-3 mb-1">
-                      {[1,2,3,4,5].map(i => <Droplets key={i} className="w-4 h-4 text-blue-500 fill-blue-500" />)}
-                    </div>
-                  )}
-                  <p className="text-[10px] font-medium text-slate-500 mt-2">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Digestion & Health */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6">
-              <Stethoscope className="w-5 h-5 text-emerald-500" />
-              Digestion & Health
-            </h2>
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Energy Levels</span>
-                    <span className="text-xs font-bold text-emerald-600">8/10</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: '80%' }}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">Hunger</span>
-                    <span className="text-xs font-bold text-amber-600">High</span>
-                  </div>
-                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-amber-500 h-full rounded-full" style={{ width: '70%' }}></div>
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1 font-medium italic">"Peaking post-workout"</p>
-                </div>
+          {/* Habits & Routine */}
+          <KPICard title="Habits & Routine" icon={Shield} color="purple">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                <div><p className="text-[9px] font-bold text-blue-400 uppercase">Hydration</p><p className="text-sm font-bold text-slate-900">{dj.waterAmount || '--'}</p></div>
+                <Badge label={dj.waterIntake} color="blue" />
               </div>
-              <div className="h-px bg-slate-100 w-full"></div>
+              <div className="grid grid-cols-1 gap-3">
+                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Meal Timing</span> <span className="font-bold text-slate-700">{dj.mealTimingConsistency || '--'}</span></div>
+                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Routine Structure</span> <span className="font-bold text-slate-700">{dj.routineStructure || '--'}</span></div>
+                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Supplements</span> <span className="font-bold text-slate-700">{dj.supplements || '--'}</span></div>
+                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Alcohol Int.</span> <span className="font-bold text-slate-700">{dj.alcoholIntake || '--'}</span></div>
+                 <div className="flex justify-between text-[11px] items-center"><span className="text-slate-400 font-bold uppercase">Snacking</span> <Badge label={dj.snackingFrequency} color="amber" /></div>
+              </div>
+            </div>
+          </KPICard>
+
+          {/* Looking Ahead */}
+          <KPICard title="Looking Ahead" icon={Calendar} color="amber">
+            <div className="space-y-4">
+              <MetricItem label="Next Week Readiness" value={dj.readiness} color="emerald" />
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                <h4 className="text-[9px] font-bold text-amber-800 uppercase mb-2 tracking-widest">Non-Negotiables</h4>
+                <p className="text-sm text-slate-700 font-medium italic">"{dj.nonNegotiables || 'None set'}"</p>
+              </div>
+              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                <h4 className="text-[9px] font-bold text-blue-800 uppercase mb-2 tracking-widest">Requested Support</h4>
+                <p className="text-sm text-slate-700 font-medium italic">"{dj.supportNeeded || 'No specific requests'}"</p>
+              </div>
+              <div>
+                 <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Primary Focus Areas</h4>
+                 <div className="flex flex-wrap gap-2">
+                    {dj.improvementGoals?.map((g:string) => <Badge key={g} label={g} color="amber" />)}
+                 </div>
+              </div>
+            </div>
+          </KPICard>
+
+          {/* Pain Tracking (Conditionally visible) */}
+          {(dj.painLevel && dj.painLevel !== 'None') && (
+            <KPICard title="Pain Tracking" icon={AlertTriangle} color="red">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                 <MetricItem label="Pain Level" value={dj.painLevel} color="red" />
+                 <MetricItem label="Affected Area" value={dj.affectedArea} color="red" />
+              </div>
               <div className="space-y-3">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Signals</h4>
-                <div className="flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 border border-red-100 text-[10px] font-bold uppercase tracking-wider">
-                    Bloating
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-bold uppercase tracking-wider">
-                    Regular BM
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-bold uppercase tracking-wider">
-                    No Reflux
-                  </span>
-                </div>
+                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Pain Type</span> <span className="font-bold text-slate-900">{dj.painType}</span></div>
+                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Impact</span> <span className="font-bold text-slate-900">{dj.trainingImpact}</span></div>
+                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Progression</span> <span className="font-bold text-slate-900">{dj.painProgression}</span></div>
+                 <p className="text-xs text-slate-500 bg-red-50 p-2 rounded border border-red-100 italic">"{dj.painNotes}"</p>
               </div>
-              <div className="pt-4 border-t border-slate-100">
-                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm border border-emerald-200">
-                      4
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Stool Consistency</span>
-                      <span className="text-xs font-bold text-slate-700">Normal / Smooth</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            </KPICard>
+          )}
 
-        {/* Coach Assessment */}
-        <div className="col-span-1 lg:col-span-12">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-              <h2 className="font-bold text-slate-900 flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-emerald-500" />
+          {/* Coach Assessment Form */}
+          <div className="bg-white rounded-2xl shadow-sm border-2 border-slate-900 overflow-hidden">
+            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+              <h2 className="font-bold flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-emerald-400" />
                 Coach Assessment
               </h2>
-              <button className="text-[10px] font-bold text-slate-500 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm hover:text-emerald-600 transition-colors uppercase tracking-wider">
-                Load Template
-              </button>
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-2 relative">
+              <div className="space-y-6">
+                <div>
                   <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Internal Notes & Feedback</label>
                   <textarea 
-                    className="w-full bg-amber-50/20 border border-amber-100 rounded-xl p-4 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all min-h-[160px] resize-none outline-none" 
-                    placeholder="Write your feedback here... e.g. 'Great progress on waist measurements, let's keep the carb cycling for another week...'"
+                    value={coachNotes}
+                    onChange={(e) => setCoachNotes(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all min-h-[160px] resize-none outline-none" 
+                    placeholder="Write your feedback here..."
                   />
-                  <div className="absolute bottom-4 right-4 flex gap-2">
-                    <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
-                      <Mic className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
-                      <Paperclip className="w-4 h-4" />
-                    </button>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Next Week Focus</label>
+                  <div className="relative">
+                    <Target className="absolute top-3.5 left-3.5 text-slate-400 w-4 h-4" />
+                    <input 
+                      value={nextWeekFocus}
+                      onChange={(e) => setNextWeekFocus(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors outline-none font-medium" 
+                      placeholder="e.g. Focus on sleep quality" 
+                      type="text"
+                    />
                   </div>
                 </div>
-                <div className="md:col-span-1 flex flex-col justify-between">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Next Week Focus</label>
-                    <div className="relative">
-                      <Target className="absolute top-3.5 left-3.5 text-slate-400 w-4 h-4" />
-                      <input 
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 transition-colors outline-none font-medium" 
-                        placeholder="e.g. Increase daily steps to 10k" 
-                        type="text"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                        <input className="rounded border-slate-300 text-emerald-500 focus:ring-emerald-500/25 w-4 h-4" type="checkbox" />
-                        Send via Email
-                      </label>
-                      <button className="text-[10px] text-red-500 hover:text-red-700 font-bold uppercase tracking-wider">Clarification needed?</button>
-                    </div>
-                    <button className="w-full py-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-bold transition-all shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-[0.98]">
-                      <Send className="w-4 h-4" />
-                      Publish Feedback
-                    </button>
-                  </div>
-                </div>
+                <button 
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                  className="w-full py-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-bold transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                  {isPublishing ? 'Publishing...' : 'Publish Feedback'}
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div className="h-8"></div>
+      <div className="h-12"></div>
     </div>
   );
 }
