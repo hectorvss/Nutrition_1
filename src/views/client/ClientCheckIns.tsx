@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import WeeklyCheckinFlow from './WeeklyCheckinFlow';
 
 export default function ClientCheckIns() {
   const { user } = useAuth();
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,6 +31,10 @@ export default function ClientCheckIns() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#17cf54]"></div>
       </div>
     );
+  }
+
+  if (isCheckingIn) {
+    return <WeeklyCheckinFlow onComplete={() => setIsCheckingIn(false)} onCancel={() => setIsCheckingIn(false)} />;
   }
 
   return (
@@ -96,7 +102,7 @@ export default function ClientCheckIns() {
                 </p>
               </div>
               <button 
-                onClick={() => console.log('Start check-in flow triggered')}
+                onClick={() => setIsCheckingIn(true)}
                 className="bg-[#17cf54] hover:bg-[#15b84a] text-white px-8 py-4 rounded-xl transition-all shadow-lg shadow-[#17cf54]/20 flex items-center gap-3 font-bold text-base w-full md:w-auto justify-center shrink-0"
               >
                 <span>Start Check-in</span>
