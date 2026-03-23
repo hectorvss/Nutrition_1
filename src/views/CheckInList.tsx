@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Search,
   Download,
-  ChevronRight,
-  CheckCircle2,
-  Clock
+  ChevronRight
 } from 'lucide-react';
-import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 
 interface CheckInListProps {
@@ -14,51 +11,30 @@ interface CheckInListProps {
 }
 
 export default function CheckInList({ onViewHistory }: CheckInListProps) {
-  const { clients } = useClient();
+  const { clients, isLoading } = useClient();
   const [filter, setFilter] = useState<'All' | 'Unreviewed' | 'Completed'>('Unreviewed');
   const [searchQuery, setSearchQuery] = useState('');
-  const [clientCheckIns, setClientCheckIns] = useState<Record<string, any>>({});
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Load latest check-in for each client
-  useEffect(() => {
-    const fetchCheckIns = async () => {
-      setIsLoading(true);
-      const results: Record<string, any> = {};
-      await Promise.all(
-        clients.map(async (client) => {
-          try {
-            const data = await fetchWithAuth(`/check-ins/manager/clients/${client.id}/check-ins`);
-            if (data?.check_ins?.length > 0) {
-              results[client.id as string] = data.check_ins[0]; // most recent
-            }
-          } catch (e) {
-            // ignore per-client errors
-          }
-        })
-      );
-      setClientCheckIns(results);
-      setIsLoading(false);
-    };
-    if (clients.length > 0) fetchCheckIns();
-  }, [clients]);
+  const categories = [
+    { id: 'All', label: 'All Clients', count: clients.length },
+    { id: 'Unreviewed', label: 'Unreviewed', count: clients.filter(c => c.isUnreviewed).length },
+    { id: 'Completed', label: 'Completed', count: clients.filter(c => !c.isUnreviewed && c.lastCheckInDate).length },
+  ];
 
   const enrichedClients = clients.map((c) => {
-    const latestCheckIn = clientCheckIns[c.id as string];
-    const dj = latestCheckIn?.data_json || {};
     return {
-      id: c.id as string,
+      id: c.id,
       name: c.name,
       adherence: c.progress || 0,
-      weight: dj.weight ? `${dj.weight}kg` : (dj.avgWeight ? `${dj.avgWeight}kg` : '--'),
-      nutritionAdherence: dj.nutritionAdherence || '--',
-      submitted: latestCheckIn
-        ? new Date(latestCheckIn.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      weight: c.weight ? `${c.weight}kg` : '--',
+      nutritionAdherence: c.plan || '--',
+      submitted: c.lastCheckInDate
+        ? new Date(c.lastCheckInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         : 'No check-ins',
       avatar: c.avatar,
       initials: c.name.substring(0, 2).toUpperCase(),
-      unreviewed: latestCheckIn && !latestCheckIn.reviewed_at,
-      hasCheckIns: !!latestCheckIn,
+      unreviewed: c.isUnreviewed,
+      hasCheckIns: !!c.lastCheckInDate,
     };
   });
 

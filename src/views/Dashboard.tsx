@@ -28,20 +28,29 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { getEventsForDate } = useCalendar();
   const { clients } = useClient();
   const [activity, setActivity] = useState<any[]>([]);
+  const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
 
   useEffect(() => {
-    const loadActivity = async () => {
+    const loadAnalytics = async () => {
       try {
         const data = await fetchWithAuth('/manager/analytics');
         if (data.recentActivity) {
           setActivity(data.recentActivity);
         }
+        if (data.attentionRequired) {
+          setAttentionCheckIns(data.attentionRequired);
+        }
       } catch (error) {
-        console.error('Failed to load activity:', error);
+        console.error('Failed to load analytics:', error);
       }
     };
-    loadActivity();
+    loadAnalytics();
   }, []);
+
+  const combinedAttention = [
+    ...attentionCheckIns,
+    ...tasks.filter(t => t.status !== 'pending').map(t => ({...t, type: 'TASK'}))
+  ].sort((a,b) => (b.timeLabel || '').localeCompare(a.timeLabel || ''));
 
   const quickActions = [
     { id: 'add-client', label: 'Add New Client', icon: UserPlus, color: 'bg-emerald-50 text-emerald-600' },
@@ -54,18 +63,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const todayDateStr = new Date().toISOString().split('T')[0];
   const scheduleItems = getEventsForDate(todayDateStr).sort((a, b) => a.time.localeCompare(b.time));
 
-  // Sort tasks, take top 5
-  const activeTasks = tasks.filter(t => t.status !== 'pending'); // only overdue or today
-  const pendingCount = tasks.filter(t => t.status === 'pending').length;
-  const overdueCount = activeTasks.filter(t => t.status === 'overdue').length;
-
   return (
     <div className="p-6 md:p-8 lg:p-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
           <p className="text-slate-500 text-sm font-medium mb-1">Today, {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric'})}</p>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Good Morning, Manager</h1>
-          <p className="text-slate-500 mt-2 text-sm max-w-xl">You have {overdueCount} overdue tasks and {activeTasks.length - overdueCount} tasks for today.</p>
+          <p className="text-slate-500 mt-2 text-sm max-w-xl">You have {combinedAttention.length} pending items requiring your attention.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative hidden sm:block">
@@ -115,19 +119,35 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
                 <h3 className="font-bold text-lg text-slate-900">Attention Required</h3>
               </div>
-              <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-500">{activeTasks.length} Items</span>
+              <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-500">{combinedAttention.length} Items</span>
             </div>
             <div className="divide-y divide-slate-100">
-              {activeTasks.length === 0 && (
+              {combinedAttention.length === 0 && (
                 <div className="p-8 text-center text-slate-500">No pending attention tasks! Great job.</div>
               )}
-              {activeTasks.slice(0, 5).map((item) => (
-                <div key={item.id} className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" onClick={() => onNavigate('tasks')}>
+              {combinedAttention.slice(0, 5).map((item) => (
+                <div 
+                  key={item.id} 
+                  className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
+                  onClick={() => {
+                    if (item.type === 'CHECK_IN') onNavigate('check-ins');
+                    else onNavigate('tasks');
+                  }}
+                >
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style={{ backgroundImage: `url("${item.avatar}")` }} />
+                    {item.avatar ? (
+                      <div className="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style={{ backgroundImage: `url("${item.avatar}")` }} />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase">{item.client?.substring(0, 2)}</div>
+                    )}
                     {item.status === 'overdue' && (
                       <div className="absolute -bottom-1 -right-1 bg-red-500 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
                         <span className="text-[10px] text-white font-bold">!</span>
+                      </div>
+                    )}
+                    {item.type === 'CHECK_IN' && (
+                      <div className="absolute -bottom-1 -right-1 bg-amber-400 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
+                        <FilePlus className="text-[8px] text-white" />
                       </div>
                     )}
                   </div>
@@ -139,13 +159,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <p className="text-sm text-slate-500 truncate">{item.desc}</p>
                   </div>
                   <button className="text-emerald-600 opacity-0 group-hover:opacity-100 font-semibold text-sm transition-opacity capitalize">
-                    Resolve
+                    {item.type === 'CHECK_IN' ? 'Review' : 'Resolve'}
                   </button>
                 </div>
               ))}
             </div>
             <div className="p-3 bg-slate-50 text-center border-t border-slate-100">
-              <button onClick={() => onNavigate('tasks')} className="text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">View All Tasks</button>
+              <button onClick={() => onNavigate('tasks')} className="text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">View All Items</button>
             </div>
           </div>
 
@@ -212,7 +232,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               {activity.slice(0, 5).map((update, idx) => {
                 const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'NEW_CLIENT' ? UserPlus : Check);
                 return (
-                  <div key={idx} className="flex gap-3 relative before:absolute before:left-[19px] before:top-8 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden">
+                  <div 
+                    key={idx} 
+                    onClick={() => {
+                        if (update.type === 'CHECK_IN') onNavigate('check-ins');
+                    }}
+                    className={`flex gap-3 relative before:absolute before:left-[19px] before:top-8 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden ${update.type === 'CHECK_IN' ? 'cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded-lg transition-colors' : ''}`}
+                  >
                     <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white`}>
                       <Icon className="w-4 h-4" />
                     </div>

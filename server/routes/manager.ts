@@ -239,24 +239,32 @@ router.get('/clients', async (req: any, res) => {
         created_at,
         clients_profiles (weight, goal, notes, temp_password),
         nutrition_plans!client_id (id),
-        training_programs!client_id (id)
+        training_programs!client_id (id),
+        check_ins (id, date, reviewed_at)
       `)
       .eq('manager_id', req.user.id)
-      .eq('role', 'CLIENT');
+      .eq('role', 'CLIENT')
+      .order('date', { foreignTable: 'check_ins', ascending: false });
       
     if (error) throw error;
     
-    const formattedClients = clients.map((c: any) => ({
-      id: c.id,
-      email: c.email,
-      created_at: c.created_at,
-      weight: c.clients_profiles?.[0]?.weight || null,
-      goal: c.clients_profiles?.[0]?.goal || null,
-      notes: c.clients_profiles?.[0]?.notes || null,
-      temp_password: c.clients_profiles?.[0]?.temp_password || null,
-      nutritionPlanAssigned: !!(c.nutrition_plans && c.nutrition_plans.length > 0),
-      trainingPlanAssigned: !!(c.training_programs && c.training_programs.length > 0)
-    }));
+    const formattedClients = clients.map((c: any) => {
+      const latestCheckIn = c.check_ins?.[0] || null;
+      return {
+        id: c.id,
+        email: c.email,
+        created_at: c.created_at,
+        weight: c.clients_profiles?.[0]?.weight || null,
+        goal: c.clients_profiles?.[0]?.goal || null,
+        notes: c.clients_profiles?.[0]?.notes || null,
+        temp_password: c.clients_profiles?.[0]?.temp_password || null,
+        nutritionPlanAssigned: !!(c.nutrition_plans && c.nutrition_plans.length > 0),
+        trainingPlanAssigned: !!(c.training_programs && c.training_programs.length > 0),
+        lastCheckInDate: latestCheckIn?.date || null,
+        isUnreviewed: latestCheckIn ? !latestCheckIn.reviewed_at : false,
+        check_ins: c.check_ins || []
+      };
+    });
     
     res.json(formattedClients);
   } catch (error: any) {
@@ -1801,21 +1809,37 @@ router.get('/analytics', async (req: any, res) => {
     // 5. Compliance Score Calculation (Weighted aggregation of adherence)
     const complianceScore = training.avgCompletion * 0.4 + nutrition.avgHydration * 0.3 + (retentionRate) * 0.3;
 
-    // 6. Recent Activity
+    // 6. Recent Activity & Attention Required
     const { data: recentCheckIns } = await supabaseAdmin
       .from('check_ins')
-      .select('date, client_id, users(email)')
+      .select('id, date, client_id, reviewed_at, users!inner(name, email)')
       .eq('users.manager_id', managerId)
       .order('date', { ascending: false })
-      .limit(5);
+      .limit(10);
 
     const activity = (recentCheckIns || []).map(ci => ({
       type: 'CHECK_IN',
       title: 'New Check-in',
-      sub: `from ${(ci.users as any)?.email || 'Client'}`,
+      sub: `from ${(ci.users as any)?.name || (ci.users as any)?.email?.split('@')[0] || 'Client'}`,
       time: ci.date,
-      color: 'bg-emerald-100 text-emerald-600'
+      color: 'bg-emerald-100 text-emerald-600',
+      checkInId: ci.id,
+      clientId: ci.client_id
     }));
+
+    const attentionRequired = (recentCheckIns || [])
+      .filter(ci => !ci.reviewed_at)
+      .map(ci => ({
+        id: ci.id,
+        type: 'CHECK_IN',
+        client: (ci.users as any)?.name || 'Client',
+        clientId: ci.client_id,
+        title: 'Weekly Check-in',
+        desc: 'New submission pending review',
+        timeLabel: ci.date,
+        status: 'pending',
+        avatar: `https://ui-avatars.com/api/?name=${(ci.users as any)?.name || 'C'}&background=random`
+      }));
 
     // 7. Revenue & Stripe
     let revenue = 0;
@@ -1916,7 +1940,8 @@ router.get('/analytics', async (req: any, res) => {
       },
       recentActivity: activity.length > 0 ? activity : [
          { type: 'SYSTEM', title: 'Welcome', sub: 'to your dashboard', time: 'Just now', color: 'bg-blue-100 text-blue-600' }
-      ]
+      ],
+      attentionRequired: attentionRequired
     });
   } catch (error: any) {
     console.error('Error fetching analytics:', error);
