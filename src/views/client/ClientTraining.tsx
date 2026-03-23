@@ -238,7 +238,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 
                 <div className="px-6 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider pl-[4.5rem] hidden md:grid">
                   <div className="col-span-4">Exercise</div>
-                  <div className="col-span-8 grid grid-cols-5 gap-2 text-center">
+                  <div className="col-span-8 grid grid-cols-5 gap-2 text-center pr-12">
                     <div>Weight</div><div>Sets</div><div>Reps</div><div>RIR</div><div>Rest</div>
                   </div>
                 </div>
@@ -353,7 +353,7 @@ function DetailedExerciseRow({ name, type, weight, sets, reps, rir, rest }: any)
             </div>
           </div>
         </div>
-        <div className="md:col-span-8 grid grid-cols-5 gap-2 relative">
+        <div className="md:col-span-8 grid grid-cols-5 gap-2 relative pr-12">
           <div className="text-center text-sm p-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300">{weight}</div>
           <div className="text-center text-sm p-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300">{sets}</div>
           <div className="text-center text-sm p-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300">{reps}</div>
@@ -361,7 +361,7 @@ function DetailedExerciseRow({ name, type, weight, sets, reps, rir, rest }: any)
           <div className="text-center text-sm p-1.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300">{rest}</div>
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
-            className={`absolute -right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-[#17cf54] hover:bg-[#17cf54]/10 rounded-full transition-all flex items-center justify-center ${isExpanded ? 'bg-[#17cf54]/10 text-[#17cf54] rotate-180' : ''}`}
+            className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-[#17cf54] hover:bg-[#17cf54]/10 rounded-full transition-all flex items-center justify-center ${isExpanded ? 'bg-[#17cf54]/10 text-[#17cf54] rotate-180' : ''}`}
           >
             <span className="material-symbols-outlined text-[20px]">expand_more</span>
           </button>
