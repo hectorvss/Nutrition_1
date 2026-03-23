@@ -438,6 +438,30 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </div>
         </div>
       </div>
+
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mt-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-500">edit_note</span>
+            Latest Exercise Sensations
+          </h3>
+        </div>
+        <div className="space-y-4">
+          {[
+            { exercise: 'Back Squat', date: 'Oct 24', note: 'Sentí molestias ligeras en la rodilla al bajar, bajé el peso para asegurar técnica.' },
+            { exercise: 'Bulgarian Split Squat', date: 'Oct 24', note: 'Buen bombeo, me costó mantener el equilibrio en la última serie.' },
+            { exercise: 'Bench Press', date: 'Oct 22', note: 'RIR 1 real en la última serie. Muy buenas sensaciones y buena retracción escapular.' },
+          ].map((item, idx) => (
+            <div key={idx} className="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{item.exercise}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{item.date}</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{item.note}"</p>
+            </div>
+          ))}
+        </div>
+      </div>
       </>
       )}
     </div>
