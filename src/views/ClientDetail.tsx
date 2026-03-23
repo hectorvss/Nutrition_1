@@ -94,6 +94,7 @@ const mindsetData = [
 export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const { clients, deleteClient } = useClient();
   const [activeTab, setActiveTab] = useState<Tab>('Nutrition');
+  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Back Squat');
 
   // ─── Delete modal state ──────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -345,22 +346,25 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { name: 'Back Squat', value: stats?.training?.prs?.squat || '--', primary: true },
+            { name: 'Back Squat', value: stats?.training?.prs?.squat || '--' },
             { name: 'Deadlift', value: stats?.training?.prs?.deadlift || '--' },
             { name: 'Bench Press', value: stats?.training?.prs?.bench || '--' },
             { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0' },
-          ].map((ex, idx) => (
-            <div key={idx} className={`p-4 rounded-2xl border transition-all cursor-pointer ${ex.primary ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}>
+          ].map((ex, idx) => {
+            const isPrimary = ex.name === selectedAnalysisSubject;
+            return (
+            <div key={idx} onClick={() => setSelectedAnalysisSubject(ex.name)} className={`p-4 rounded-2xl border transition-all cursor-pointer ${isPrimary ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}>
               <div className="flex justify-between items-start mb-4">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${ex.primary ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isPrimary ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
                   <Dumbbell className="w-4 h-4" />
                 </div>
-                {ex.primary && <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded uppercase">Primary</span>}
+                {isPrimary && <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded uppercase">Primary</span>}
               </div>
               <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{ex.name}</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{ex.value} kg</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{ex.value} {ex.name === 'Weekly Volume' ? '' : 'kg'}</p>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="h-[300px] w-full">
@@ -447,19 +451,32 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </h3>
         </div>
         <div className="space-y-4">
-          {[
-            { exercise: 'Back Squat', date: 'Oct 24', note: 'Sentí molestias ligeras en la rodilla al bajar, bajé el peso para asegurar técnica.' },
-            { exercise: 'Bulgarian Split Squat', date: 'Oct 24', note: 'Buen bombeo, me costó mantener el equilibrio en la última serie.' },
-            { exercise: 'Bench Press', date: 'Oct 22', note: 'RIR 1 real en la última serie. Muy buenas sensaciones y buena retracción escapular.' },
-          ].map((item, idx) => (
-            <div key={idx} className="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-900 dark:text-white">{item.exercise}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{item.date}</span>
+          {(() => {
+            const sensationsData: Record<string, { exercise: string, date: string, note: string }[]> = {
+              'Back Squat': [
+                { exercise: 'Back Squat', date: 'Oct 24', note: 'Sentí molestias ligeras en la rodilla al bajar, bajé el peso para asegurar técnica.' },
+              ],
+              'Deadlift': [
+                { exercise: 'Deadlift', date: 'Oct 25', note: 'La barra subió muy rápida, la técnica y explosividad se sintieron on point.' },
+              ],
+              'Bench Press': [
+                { exercise: 'Bench Press', date: 'Oct 22', note: 'RIR 1 real en la última serie. Muy buenas sensaciones y buena retracción escapular.' },
+              ],
+              'Weekly Volume': [
+                { exercise: 'General', date: 'Current Week', note: 'El volumen semanal se siente digerible pero la fatiga empieza a acumularse. Listo para semana de descarga pronto.' },
+              ]
+            };
+            const items = sensationsData[selectedAnalysisSubject] || sensationsData['Back Squat'];
+            return items.map((item, idx) => (
+              <div key={idx} className="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{item.exercise}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{item.date}</span>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{item.note}"</p>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{item.note}"</p>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       </div>
       </>
