@@ -263,9 +263,6 @@ export default function App() {
           </AnimatePresence>
         </div>
       </main>
-      <div className="fixed bottom-2 right-2 text-[10px] text-slate-300 pointer-events-none z-[9999]">
-        Debug v2 - Check-in ID Fix
-      </div>
     </div>
   );
 }

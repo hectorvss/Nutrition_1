@@ -1812,20 +1812,38 @@ router.get('/analytics', async (req: any, res) => {
     // 6. Recent Activity & Attention Required
     const { data: recentCheckIns } = await supabaseAdmin
       .from('check_ins')
-      .select('id, date, client_id, reviewed_at, users!inner(name, email)')
+      .select(`
+        id, 
+        date, 
+        client_id, 
+        reviewed_at, 
+        users!inner (
+          email,
+          manager_id,
+          profiles!left (
+            full_name
+          )
+        )
+      `)
       .eq('users.manager_id', managerId)
       .order('date', { ascending: false })
       .limit(10);
 
-    const activity = (recentCheckIns || []).map(ci => ({
-      type: 'CHECK_IN',
-      title: 'New Check-in',
-      sub: `from ${(ci.users as any)?.name || (ci.users as any)?.email?.split('@')[0] || 'Client'}`,
-      time: ci.date,
-      color: 'bg-emerald-100 text-emerald-600',
-      checkInId: ci.id,
-      clientId: ci.client_id
-    }));
+    const activity = (recentCheckIns || []).map(ci => {
+      const userData = ci.users as any;
+      const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+      const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
+
+      return {
+        type: 'CHECK_IN',
+        title: 'New Check-in',
+        sub: `from ${clientName}`,
+        time: ci.date,
+        color: 'bg-emerald-100 text-emerald-600',
+        checkInId: ci.id,
+        clientId: ci.client_id
+      };
+    });
 
     const attentionRequired = (recentCheckIns || [])
       .filter(ci => !ci.reviewed_at)

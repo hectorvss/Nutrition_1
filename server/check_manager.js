@@ -14,17 +14,17 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function check() {
-  const clientId = 'd6d95f63-687b-4f2b-8a63-d530cc6df24f';
-  console.log('--- Checking Check-ins for Client:', clientId, '---');
-  const { data: checkins, error: err } = await supabase
-    .from('check_ins')
+  console.log('--- Checking Profiles Schema ---');
+  const { data: profiles, error: err } = await supabase
+    .from('profiles')
     .select('*')
-    .eq('client_id', clientId);
+    .limit(1);
   
   if (err) console.error('Error:', err);
-  else {
-    console.log(`Found ${checkins.length} check-ins`);
-    console.table(checkins);
+  else if (profiles && profiles.length > 0) {
+    console.log('Profile columns:', Object.keys(profiles[0]));
+  } else {
+    console.log('No profiles found');
   }
 }
 

@@ -102,29 +102,34 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res
     // 1. Verify client exists and check linkage
     const { data: userData, error: clientErr } = await supabaseAdmin
       .from('users')
-      .select('id, name, email, avatar, manager_id')
+      .select(`
+        id, 
+        email, 
+        manager_id,
+        profiles!left (
+          full_name,
+          avatar_url
+        )
+      `)
       .eq('id', id)
       .single();
 
     if (clientErr || !userData) {
-      console.warn(`Manager Access Denied: Client ${id} not found.`, clientErr);
-      return res.status(404).json({ 
-        error: 'Client not found',
-        debug: { managerId, clientId: id, databaseError: clientErr }
-      });
+      return res.status(404).json({ error: 'Client not found' });
     }
 
     if (userData.manager_id !== managerId) {
-      console.warn(`Manager Access Denied: Manager ${managerId} tried to access client ${id}. Client belongs to manager ${userData.manager_id}.`);
-      return res.status(403).json({ 
-        error: 'Access denied: Client belongs to another manager',
-        debug: { 
-          requestManagerId: managerId, 
-          storedManagerId: userData.manager_id,
-          clientId: id 
-        }
-      });
+      return res.status(403).json({ error: 'Access denied: Client belongs to another manager' });
     }
+
+    // Transform for frontend expected format (name/avatar)
+    const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+    const client = {
+      id: userData.id,
+      email: userData.email,
+      name: profile?.full_name || userData.email,
+      avatar: profile?.avatar_url
+    };
 
     // 2. Fetch check-ins
     const { data, error } = await supabaseAdmin
@@ -143,7 +148,7 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res
       next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
     }));
 
-    res.json({ client: userData, check_ins: formattedCheckIns });
+    res.json({ client: client, check_ins: formattedCheckIns });
   } catch (error: any) {
     console.error('Error fetching client check-ins for manager:', error);
     res.status(500).json({ error: 'Server error' });
@@ -159,15 +164,30 @@ router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (re
     // 1. Verify client belongs to this manager
     const { data: userData, error: clientErr } = await supabaseAdmin
       .from('users')
-      .select('id, name, email, avatar')
+      .select(`
+        id, 
+        email, 
+        manager_id,
+        profiles!left (
+          full_name,
+          avatar_url
+        )
+      `)
       .eq('id', id)
-      .eq('manager_id', managerId)
       .single();
 
-    if (clientErr || !userData) {
+    if (clientErr || !userData || userData.manager_id !== managerId) {
       console.warn(`Manager Single Check-in Access Denied: Manager ${managerId} tried to access client ${id}.`);
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
+
+    const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+    const client = {
+      id: userData.id,
+      email: userData.email,
+      name: profile?.full_name || userData.email,
+      avatar: profile?.avatar_url
+    };
 
     // 2. Fetch the check-in
     const { data, error } = await supabaseAdmin
@@ -192,7 +212,7 @@ router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (re
       next_week_focus: data.next_week_focus || dj?.next_week_focus || null
     };
 
-    res.json({ client: userData, check_in: formatted });
+    res.json({ client, check_in: formatted });
   } catch (error: any) {
     console.error('Error fetching single check-in for manager:', error);
     res.status(500).json({ error: 'Server error' });
@@ -209,12 +229,11 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
     // 1. Verify client belongs to this manager
     const { data: client, error: clientErr } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select('id, manager_id')
       .eq('id', id)
-      .eq('manager_id', managerId)
       .single();
 
-    if (clientErr || !client) {
+    if (clientErr || !client || client.manager_id !== managerId) {
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
 
