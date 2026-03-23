@@ -99,19 +99,30 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res
   const managerId = req.user.id;
 
   try {
-    // 1. Verify client belongs to this manager
+    // 1. Verify client exists and check linkage
     const { data: userData, error: clientErr } = await supabaseAdmin
       .from('users')
-      .select('id, name, email, avatar')
+      .select('id, name, email, avatar, manager_id')
       .eq('id', id)
-      .eq('manager_id', managerId)
       .single();
 
     if (clientErr || !userData) {
-      console.warn(`Manager Access Denied: Manager ${managerId} tried to access client ${id}.`, clientErr);
+      console.warn(`Manager Access Denied: Client ${id} not found.`, clientErr);
       return res.status(404).json({ 
-        error: 'Client not found or access denied',
-        debug: { managerId, clientId: id }
+        error: 'Client not found',
+        debug: { managerId, clientId: id, databaseError: clientErr }
+      });
+    }
+
+    if (userData.manager_id !== managerId) {
+      console.warn(`Manager Access Denied: Manager ${managerId} tried to access client ${id}. Client belongs to manager ${userData.manager_id}.`);
+      return res.status(403).json({ 
+        error: 'Access denied: Client belongs to another manager',
+        debug: { 
+          requestManagerId: managerId, 
+          storedManagerId: userData.manager_id,
+          clientId: id 
+        }
       });
     }
 
