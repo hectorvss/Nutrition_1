@@ -61,7 +61,6 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
             <p className="text-sm font-bold text-slate-900 dark:text-white">{new Date(checkIn.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
           </div>
         </div>
-
         {/* Section 1: Overview */}
         <Section title="Overall Experience" subtitle="Your general thoughts on the past week." icon="mood">
           <InfoField label="Overall Week" value={dj.overallWeek} />
@@ -70,19 +69,49 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
           <InfoField label="Consistency" value={dj.consistency} />
           <InfoField label="Mental Health" value={dj.mentalHealth} />
           <InfoField label="Weekly Notes" value={dj.weekNotes} fullWidth />
+          {dj.reviewNotes && <InfoField label="Review Request for Coach" value={dj.reviewNotes} fullWidth />}
         </Section>
 
-        {/* Section 2: Metrics */}
+        {/* Section 2: Body & Progress */}
         <Section title="Body & Progress" subtitle="Physical updates and measurements." icon="straighten">
           <InfoField label="Current Weight" value={dj.weight ? `${dj.weight} kg` : null} />
           <InfoField label="Average Weight" value={dj.avgWeight ? `${dj.avgWeight} kg` : null} />
-          <InfoField label="Waist Measurement" value={dj.waist ? `${dj.waist} cm` : null} />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 col-span-1 md:col-span-2">
+            <InfoField label="Waist" value={dj.waist ? `${dj.waist}cm` : null} />
+            <InfoField label="Hips" value={dj.hips ? `${dj.hips}cm` : null} />
+            <InfoField label="Chest" value={dj.chest ? `${dj.chest}cm` : null} />
+          </div>
           <InfoField label="Visible Changes" value={dj.visibleChanges} />
           <InfoField label="Body Perception" value={dj.bodyPerception} />
           <InfoField label="Satisfaction" value={dj.satisfaction} />
+          <InfoField label="Menstrual Impact" value={dj.menstrualImpact} />
+          <InfoField label="Biggest Change" value={dj.biggestChangeArea} />
+
+          {/* Progress Photos */}
+          <div className="col-span-1 md:col-span-2 mt-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center">Progress Photos</p>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { id: 'photoFront', label: 'Front' },
+                { id: 'photoSide', label: 'Side' },
+                { id: 'photoBack', label: 'Back' }
+              ].map(p => (
+                <div key={p.id} className="aspect-[3/4] rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 overflow-hidden flex items-center justify-center">
+                  {dj[p.id] ? (
+                    <img src={dj[p.id]} alt={p.label} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-slate-300 dark:text-slate-600 flex flex-col items-center">
+                      <span className="material-symbols-outlined text-2xl">no_photography</span>
+                      <span className="text-[9px] font-bold uppercase">{p.label}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </Section>
 
-        {/* Section 3: Nutrition */}
+        {/* Section 3: Nutrition Compliance */}
         <Section title="Nutrition Compliance" subtitle="Tracking and dietary adherence." icon="restaurant">
           <InfoField label="Adherence Level" value={dj.nutritionAdherence} />
           <InfoField label="Calorie Target" value={dj.hitCalories} />
@@ -90,41 +119,81 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
           <InfoField label="Hardest Meal" value={dj.hardestMeal} />
           <InfoField label="Obstacles" value={dj.adherenceObstacles} />
           <InfoField label="Off-Plan Frequency" value={dj.offPlanCount} />
+          <InfoField label="Eat Out Count" value={dj.eatOutCount} />
           <InfoField label="Tracking Accuracy" value={dj.trackingAccuracy} />
+          <InfoField label="Nutrition Notes" value={dj.foodNotes} fullWidth />
         </Section>
 
-        {/* Section 4: Digestion */}
+        {/* Section 4: Digestion & Biofeedback */}
         <Section title="Digestion & Biofeedback" icon="health_and_safety">
           <InfoField label="Digestion Quality" value={dj.digestionQuality} />
           <InfoField label="Stool Consistency" value={dj.bowelRegularity} />
           <InfoField label="Symptoms" value={dj.digestiveSymptoms} />
           <InfoField label="Energy Post-Meal" value={dj.energyResponse} />
           <InfoField label="Hunger Level" value={dj.hunger} />
-          <InfoField label="Energy Level" value={dj.energyFood} />
+          <InfoField label="Cravings Timing" value={dj.cravingsTime} />
+          <InfoField label="Fullness Response" value={dj.fullnessResponse} />
+          <InfoField label="Digestion Notes" value={dj.digestiveIssues} fullWidth />
         </Section>
 
-        {/* Section 5: Training */}
+        {/* Section 5: Habits */}
+        <Section title="Daily Habits" icon="task_alt">
+           <InfoField label="Water Amount" value={dj.waterAmount} />
+           <InfoField label="Water Consistency" value={dj.waterIntake} />
+           <InfoField label="Alcohol Intake" value={dj.alcoholIntake} />
+           <InfoField label="Snacking Frequency" value={dj.snackingFrequency} />
+           <InfoField label="Routine Structure" value={dj.routineStructure} />
+           <InfoField label="Meal Timing" value={dj.mealTimingConsistency} />
+           <InfoField label="Supplements" value={dj.supplements} />
+           <InfoField label="Habit Notes" value={dj.habitNotes} fullWidth />
+        </Section>
+
+        {/* Section 6: Training */}
         <Section title="Training Performance" icon="fitness_center">
            <InfoField label="Training Adherence" value={dj.trainingAdherence} />
            <InfoField label="Strength Levels" value={dj.strength} />
            <InfoField label="Overall Energy" value={dj.trainingEnergy} />
-           <InfoField label="Training Wins" value={dj.prWins} fullWidth />
+           <InfoField label="Training Quality" value={dj.trainingQuality} />
+           <InfoField label="Intensity" value={dj.trainingIntensity} />
+           <InfoField label="Recovery" value={dj.trainingRecovery} />
+           <InfoField label="Performance Drop" value={dj.performanceDropReasons} />
+           <InfoField label="Exercise Wins" value={dj.prWins} fullWidth />
+           <InfoField label="Training Notes" value={dj.trainingNotes} fullWidth />
         </Section>
 
-        {/* Section 6: Recovery */}
+        {/* Section 7: Recovery */}
         <Section title="Recovery & Sleep" icon="bedtime">
-           <InfoField label="Sleep Quantity" value={dj.sleepQuantity} />
+           <InfoField label="Average Sleep" value={dj.sleepQuantity} />
            <InfoField label="Sleep Quality" value={dj.sleepQuality} />
+           <InfoField label="Interruptions" value={dj.sleepInterruptions} />
+           <InfoField label="Consistency" value={dj.sleepScheduleConsistency} />
            <InfoField label="Stress Levels" value={dj.stress} />
            <InfoField label="General Fatigue" value={dj.generalFatigue} />
            <InfoField label="Motivation" value={dj.motivation} />
+           <InfoField label="Recovery Impacts" value={dj.recoveryImpacts} />
+           <InfoField label="Recovery Notes" value={dj.recoveryNotes} fullWidth />
         </Section>
 
-        {/* Section 7: Looking Ahead */}
+        {/* Section 8: Activity & Pain */}
+        <Section title="Activity & Pain" icon="healing">
+           <InfoField label="Step Range" value={dj.stepRange} />
+           <InfoField label="Steps Adherence" value={dj.stepsAdherence} />
+           <InfoField label="Cardio Adherence" value={dj.cardioAdherence} />
+           <InfoField label="Activity Level" value={dj.activityLevel} />
+           <InfoField label="Pain Level" value={dj.painLevel} />
+           <InfoField label="Affected Area" value={dj.affectedArea} />
+           <InfoField label="Modified Training?" value={dj.modifiedTraining} />
+           <InfoField label="Activity Notes" value={dj.activityNotes} />
+           <InfoField label="Pain Notes" value={dj.painNotes} fullWidth />
+        </Section>
+
+        {/* Section 9: Looking Ahead */}
         <Section title="Looking Ahead" icon="flag">
            <InfoField label="Improvement Focus" value={dj.improvementGoals} />
            <InfoField label="Next Week Readiness" value={dj.readiness} />
-           <InfoField label="Non-Negotiables" value={dj.nonNegotiables} fullWidth />
+           <InfoField label="Non-negotiables" value={dj.nonNegotiables} fullWidth />
+           <InfoField label="Coach Support Request" value={dj.supportNeeded} fullWidth />
+           <InfoField label="Final Thoughts" value={dj.extraNotes} fullWidth />
         </Section>
 
         {/* Coach Feedback Section (If available) */}

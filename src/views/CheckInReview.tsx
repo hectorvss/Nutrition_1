@@ -223,6 +223,17 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
           
+          {/* Section 0: Coach Review Request */}
+          {dj.reviewNotes && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6">
+              <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2 mb-2">
+                <Target className="w-5 h-5 text-amber-600" />
+                Client Review Request
+              </h2>
+              <p className="text-sm text-amber-800 font-medium leading-relaxed italic">"{dj.reviewNotes}"</p>
+            </div>
+          )}
+
           {/* Section 1: Overall & Body */}
           <KPICard title="Overall & Body metrics" icon={Smile} color="emerald">
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -230,6 +241,7 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                 <MetricItem label="Current Weight" value={dj.weight ? `${dj.weight}kg` : '--'} color="blue" />
                 <MetricItem label="Avg Weight" value={dj.avgWeight ? `${dj.avgWeight}kg` : '--'} color="blue" />
                 <MetricItem label="Satisfaction" value={dj.satisfaction} color="amber" />
+                <MetricItem label="Menstrual Impact" value={dj.menstrualImpact || 'N/A'} color="purple" />
              </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -273,6 +285,28 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                  </tbody>
                </table>
              </div>
+             {/* Progress Photos */}
+             <div className="mt-6">
+                <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Progress Photos</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { id: 'photoFront', label: 'Front' },
+                    { id: 'photoSide', label: 'Side' },
+                    { id: 'photoBack', label: 'Back' }
+                  ].map(p => (
+                    <div key={p.id} className="aspect-[3/4] rounded-xl bg-slate-50 border border-slate-100 shadow-sm overflow-hidden flex flex-col items-center justify-center">
+                      {dj[p.id] ? (
+                        <img src={dj[p.id]} alt={p.label} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center text-slate-300">
+                          <Camera className="w-6 h-6 mb-1 text-slate-200" />
+                          <span className="text-[10px] font-bold uppercase">{p.label}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
           </KPICard>
 
           {/* Section 2: Nutrition */}
@@ -281,6 +315,7 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
               <MetricItem label="Overall Adherence" value={dj.nutritionAdherence} color="emerald" />
               <MetricItem label="Calorie Target" value={dj.hitCalories} color="amber" />
               <MetricItem label="Protein Target" value={dj.hitProtein} color="red" />
+              <MetricItem label="Eat Out Count" value={dj.eatOutCount} color="amber" />
               <MetricItem label="Accuracy" value={dj.trackingAccuracy} color="slate" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -399,7 +434,6 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                 {dj.recoveryNotes && <p className="text-xs text-slate-500 italic mt-2">"{dj.recoveryNotes}"</p>}
              </div>
           </KPICard>
-
           {/* Activity & Cardio */}
           <KPICard title="Activity & Cardio" icon={Footprints} color="slate">
              <MetricItem label="Step Range" value={dj.stepRange} color="slate" />
@@ -416,6 +450,12 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                    </div>
                 )}
              </div>
+             {dj.activityNotes && (
+               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mt-4">
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Activity Notes</h4>
+                  <p className="text-sm text-slate-600 italic">"{dj.activityNotes}"</p>
+               </div>
+             )}
           </KPICard>
 
           {/* Habits & Routine */}
@@ -432,6 +472,12 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Alcohol Int.</span> <span className="font-bold text-slate-700">{dj.alcoholIntake || '--'}</span></div>
                  <div className="flex justify-between text-[11px] items-center"><span className="text-slate-400 font-bold uppercase">Snacking</span> <Badge label={dj.snackingFrequency} color="amber" /></div>
               </div>
+              {dj.habitNotes && (
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mt-2">
+                   <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Habit Notes</h4>
+                   <p className="text-sm text-slate-600 italic">"{dj.habitNotes}"</p>
+                </div>
+              )}
             </div>
           </KPICard>
 
@@ -453,6 +499,12 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                     {dj.improvementGoals?.map((g:string) => <Badge key={g} label={g} color="amber" />)}
                  </div>
               </div>
+              {dj.extraNotes && (
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 mt-4 shadow-sm text-center">
+                   <h4 className="text-[10px] font-bold text-amber-900 uppercase mb-2 flex items-center justify-center gap-1.5"><FileText className="w-3 h-3"/> Final Thoughts</h4>
+                   <p className="text-sm text-slate-700 leading-relaxed italic">"{dj.extraNotes}"</p>
+                </div>
+              )}
             </div>
           </KPICard>
 
@@ -467,6 +519,7 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                  <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Pain Type</span> <span className="font-bold text-slate-900">{dj.painType}</span></div>
                  <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Impact</span> <span className="font-bold text-slate-900">{dj.trainingImpact}</span></div>
                  <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Progression</span> <span className="font-bold text-slate-900">{dj.painProgression}</span></div>
+                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Modified Training?</span> <span className="font-bold text-slate-900">{dj.modifiedTraining}</span></div>
                  <p className="text-xs text-slate-500 bg-red-50 p-2 rounded border border-red-100 italic">"{dj.painNotes}"</p>
               </div>
             </KPICard>
