@@ -19,7 +19,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       try {
         const [plansData, checkInsData, profileData] = await Promise.all([
           fetchWithAuth('/client/plans'),
-          fetchWithAuth('/client/check-ins'),
+          fetchWithAuth('/check-ins/client/check-ins'),
           fetchWithAuth('/client/profile')
         ]);
         

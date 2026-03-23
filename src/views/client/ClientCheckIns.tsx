@@ -14,7 +14,7 @@ export default function ClientCheckIns() {
   const loadCheckIns = async () => {
     try {
       setIsLoading(true);
-      const data = await fetchWithAuth('/client/check-ins');
+      const data = await fetchWithAuth('/check-ins/client/check-ins');
       setCheckIns(data || []);
     } catch (err) {
       console.error('Error loading check-ins:', err);

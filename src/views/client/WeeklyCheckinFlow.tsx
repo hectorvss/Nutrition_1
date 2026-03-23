@@ -1082,6 +1082,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<CheckinAnswers>(defaultAnswers);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const TOTAL_STEPS = 12;
 
@@ -1101,14 +1102,16 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setError(null);
     try {
-      await fetchWithAuth('/client/check-ins', {
+      await fetchWithAuth('/check-ins/client/check-ins', {
         method: 'POST',
         body: JSON.stringify({ date: new Date().toISOString(), data_json: answers }),
       });
       setCurrentStep(TOTAL_STEPS);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error submitting check-in:', err);
+      setError(err.message || 'Failed to submit check-in. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -1138,6 +1141,31 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#f6f8f6] dark:bg-[#112116]">
+      {/* Loading Overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#17cf54]"></div>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">Submitting your check-in...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {error && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-2xl max-w-sm w-full space-y-4">
+            <div className="flex items-center gap-3 text-red-500">
+              <span className="material-symbols-outlined text-3xl">error</span>
+              <h3 className="text-lg font-bold">Submission Error</h3>
+            </div>
+            <p className="text-sm text-slate-500">{error}</p>
+            <button onClick={() => setError(null)} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm">
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
       {/* Toolbar Header */}
       {currentStep > 0 && currentStep < TOTAL_STEPS && (
         <div className="p-6 pb-0">
