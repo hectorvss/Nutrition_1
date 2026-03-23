@@ -161,12 +161,19 @@ router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (re
       .single();
     
     if (error) throw error;
+    
+    // Safety parse data_json if it's a string
+    let dj = data.data_json;
+    if (typeof dj === 'string') {
+      try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
+    }
 
     const formatted = {
       ...data,
-      reviewed_at: data.reviewed_at || (data.data_json?.reviewed_at) || null,
-      coach_notes: data.coach_notes || (data.data_json?.coach_notes) || null,
-      next_week_focus: data.next_week_focus || (data.data_json?.next_week_focus) || null
+      data_json: dj,
+      reviewed_at: data.reviewed_at || dj?.reviewed_at || null,
+      coach_notes: data.coach_notes || dj?.coach_notes || null,
+      next_week_focus: data.next_week_focus || dj?.next_week_focus || null
     };
 
     res.json({ client: userData, check_in: formatted });

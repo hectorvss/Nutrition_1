@@ -53,13 +53,15 @@ import {
   Bar
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
+import CheckInHistory from './CheckInHistory';
+import CheckInReview from './CheckInReview';
 
 interface ClientDetailProps {
-  clientId: number;
+  clientId: string;
   onBack: () => void;
 }
 
-type Tab = 'Nutrition' | 'Training' | 'Planning' | 'Mindset';
+type Tab = 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
 
 const weightData = [
   { date: 'Aug 1', weight: 78 },
@@ -94,6 +96,8 @@ const mindsetData = [
 export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const { clients, deleteClient } = useClient();
   const [activeTab, setActiveTab] = useState<Tab>('Nutrition');
+  const [innerView, setInnerView] = useState<'info' | 'review'>('info');
+  const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
   const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Back Squat');
 
   // ─── Delete modal state ──────────────────────────────────────────────────
@@ -962,8 +966,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
           </header>
 
-          <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-800 mb-8">
-            {(['Nutrition', 'Training', 'Planning', 'Mindset'] as Tab[]).map((tab) => (
+          <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto scrollbar-hide">
+            {(['Nutrition', 'Training', 'Planning', 'Mindset', 'Check-ins'] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -985,6 +989,27 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           {activeTab === 'Training' && renderTraining()}
           {activeTab === 'Planning' && renderPlanning()}
           {activeTab === 'Mindset' && renderMindset()}
+          {activeTab === 'Check-ins' && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[600px]">
+              {innerView === 'review' && selectedCheckInId ? (
+                <CheckInReview 
+                  clientId={clientId} 
+                  checkInId={selectedCheckInId} 
+                  onBack={() => setInnerView('info')} 
+                />
+              ) : (
+                <CheckInHistory 
+                  clientId={clientId} 
+                  onBack={() => onBack()} 
+                  hideHeader={true}
+                  onViewReview={(checkInId) => {
+                    setSelectedCheckInId(checkInId);
+                    setInnerView('review');
+                  }}
+                />
+              )}
+            </div>
+          )}
 
           {/* Global Insights Section */}
           {renderInsights()}

@@ -108,7 +108,18 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
   }
 
   const { client, check_in } = data;
-  const dj = check_in.data_json || {};
+  
+  // Robust parsing for data_json
+  let dj: any = {};
+  try {
+    dj = typeof check_in.data_json === 'string' ? JSON.parse(check_in.data_json) : (check_in.data_json || {});
+    if (Object.keys(dj).length === 0) {
+      console.warn('CheckInReview: data_json is empty for check-in', checkInId);
+    }
+  } catch (e) {
+    console.error('CheckInReview: Failed to parse data_json', e);
+    dj = {};
+  }
 
   const KPICard = ({ title, icon: Icon, children, color = "emerald" }: any) => {
     const colorClasses: any = {
