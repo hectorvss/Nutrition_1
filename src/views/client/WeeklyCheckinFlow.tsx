@@ -183,324 +183,243 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   );
 
   const renderPage1 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">How did your week go overall?</h2>
-      
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12">
-        {['Very bad', 'Bad', 'Average', 'Good', 'Excellent'].map(level => (
-          <OptionCard 
-            key={level} label={level} 
-            selected={answers.overallWeek === level} 
-            onClick={() => updateAnswer('overallWeek', level)} 
-          />
-        ))}
-      </div>
-
-      <div className="mb-12">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Context (Select all that apply)</h3>
-        <div className="flex flex-wrap gap-2 md:gap-3">
-          {['Stress', 'Travel', 'Busy week', 'Sick', 'Good routine', 'Low motivation', 'Great energy'].map(chip => (
-            <Chip 
-              key={chip} label={chip} 
-              selected={answers.contextChips.includes(chip)} 
-              onClick={() => toggleArrayItem('contextChips', chip)} 
-            />
-          ))}
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">How did your week go overall?</h2>
+          <p className="text-sm text-slate-500 mt-1">Reflect on the general sentiment of the past 7 days.</p>
         </div>
-      </div>
+        <div className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            {['Very bad', 'Bad', 'Average', 'Good', 'Excellent'].map(level => (
+              <OptionCard 
+                key={level} label={level} 
+                selected={answers.overallWeek === level} 
+                onClick={() => updateAnswer('overallWeek', level)} 
+              />
+            ))}
+          </div>
 
-      <div>
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Anything important about this week? (Optional)</h3>
-        <textarea 
-          placeholder="Briefly describe any major events or feelings..."
-          value={answers.weekNotes}
-          onChange={e => updateAnswer('weekNotes', e.target.value)}
-          className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-[120px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none"
-        />
+          <div className="mb-8">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Context (Select all that apply)</h3>
+            <div className="flex flex-wrap gap-2 md:gap-3">
+              {['Stress', 'Travel', 'Busy week', 'Sick', 'Good routine', 'Low motivation', 'Great energy'].map(chip => (
+                <Chip 
+                  key={chip} label={chip} 
+                  selected={answers.contextChips.includes(chip)} 
+                  onClick={() => toggleArrayItem('contextChips', chip)} 
+                />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Anything important about this week? (Optional)</h3>
+            <textarea 
+              placeholder="Briefly describe any major events or feelings..."
+              value={answers.weekNotes}
+              onChange={e => updateAnswer('weekNotes', e.target.value)}
+              className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white min-h-[120px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none transition-colors"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 
   const renderPage2 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">What changed in your body this week?</h2>
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
       
-      {/* Weight & Body Perception */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Current Weight (kg)</h3>
-          <input 
-            type="number" step="0.1" placeholder="00.0"
-            value={answers.weight} onChange={e => updateAnswer('weight', e.target.value)}
-            className="w-full text-4xl font-black bg-transparent border-b-2 border-slate-200 dark:border-slate-700 py-2 focus:border-[#17cf54] outline-none text-slate-900 dark:text-white"
-          />
+      {/* Weight & Body Perception Card */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">What changed in your body this week?</h2>
+          <p className="text-sm text-slate-500 mt-1">Track your physical progress and metrics.</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Body Perception</h3>
-          <select 
-            value={answers.bodyPerception} onChange={e => updateAnswer('bodyPerception', e.target.value)}
-            className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-200 focus:border-[#17cf54] outline-none"
-          >
-            <option value="">Select how you feel...</option>
-            {['Leaner', 'Same', 'More bloated', 'Stronger look', 'Softer', 'More defined'].map(o => (
-              <option key={o} value={o}>{o}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Measurements */}
-      <div className="mb-10">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Measurements (cm) - Optional</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {[
-            { id: 'waist', label: 'Waist' }, { id: 'hips', label: 'Hips' },
-            { id: 'chest', label: 'Chest' }, { id: 'arms', label: 'Arms' }, { id: 'thighs', label: 'Thighs' }
-          ].map(m => (
-            <div key={m.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 focus-within:border-[#17cf54]/50 transition-colors">
-              <label className="text-xs font-bold text-slate-400 block mb-1">{m.label}</label>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Activity className="w-4 h-4 text-blue-500"/> Current Weight (kg)</h3>
               <input 
-                type="number" step="0.5" placeholder="--"
-                value={(answers as any)[m.id]} onChange={e => updateAnswer(m.id as any, e.target.value)}
-                className="w-full text-lg font-bold bg-transparent border-none p-0 outline-none focus:ring-0 text-slate-900 dark:text-white"
+                type="number" step="0.1" placeholder="00.0"
+                value={answers.weight} onChange={e => updateAnswer('weight', e.target.value)}
+                className="w-full text-4xl font-black bg-transparent border-b-2 border-slate-200 dark:border-slate-700 py-2 focus:border-[#17cf54] outline-none text-slate-900 dark:text-white transition-colors"
               />
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Photos Placeholder */}
-      <div>
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Progress Photos</h3>
-        <div className="grid grid-cols-3 gap-4">
-          {['Front', 'Side', 'Back'].map(view => (
-            <div key={view} className="aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#17cf54] hover:border-[#17cf54] cursor-pointer transition-all">
-              <span className="material-symbols-outlined text-3xl mb-2">add_a_photo</span>
-              <span className="text-xs font-bold uppercase tracking-wider">{view}</span>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"><Target className="w-4 h-4 text-purple-500"/> Body Perception</h3>
+              <select 
+                value={answers.bodyPerception} onChange={e => updateAnswer('bodyPerception', e.target.value)}
+                className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200 focus:border-[#17cf54] outline-none transition-colors"
+              >
+                <option value="">Select how you feel...</option>
+                {['Leaner', 'Same', 'More bloated', 'Stronger look', 'Softer', 'More defined'].map(o => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
             </div>
-          ))}
+          </div>
+
+          {/* Measurements */}
+          <div className="mb-8">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Measurements (cm) - Optional</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { id: 'waist', label: 'Waist' }, { id: 'hips', label: 'Hips' },
+                { id: 'chest', label: 'Chest' }, { id: 'arms', label: 'Arms' }, { id: 'thighs', label: 'Thighs' }
+              ].map(m => (
+                <div key={m.id} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 focus-within:border-[#17cf54]/50 transition-colors">
+                  <label className="text-xs font-bold text-slate-400 block mb-1">{m.label}</label>
+                  <input 
+                    type="number" step="0.5" placeholder="--"
+                    value={(answers as any)[m.id]} onChange={e => updateAnswer(m.id as any, e.target.value)}
+                    className="w-full text-lg font-bold bg-transparent border-none p-0 outline-none focus:ring-0 text-slate-900 dark:text-white"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Photos Placeholder */}
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Progress Photos</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {['Front', 'Side', 'Back'].map(view => (
+                <div key={view} className="aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#17cf54] hover:border-[#17cf54] cursor-pointer transition-all">
+                  <span className="material-symbols-outlined text-3xl mb-2">add_a_photo</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">{view}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   const renderPage3 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">How well did you follow your nutrition plan?</h2>
-      
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-        {['Very poor', 'Poor', 'Moderate', 'Good', 'Excellent'].map(level => (
-          <OptionCard 
-            key={level} label={level} 
-            selected={answers.nutritionAdherence === level} 
-            onClick={() => updateAnswer('nutritionAdherence', level)} 
-          />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Meals missed or replaced?</h3>
-          <select 
-            value={answers.mealsMissed} onChange={e => updateAnswer('mealsMissed', e.target.value)}
-            className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200 focus:border-[#17cf54] outline-none"
-          >
-            <option value="">Select...</option>
-            <option value="None">None (Perfect)</option>
-            <option value="1-2 meals">1 - 2 meals</option>
-            <option value="3-5 meals">3 - 5 meals</option>
-            <option value="Many">Many meals</option>
-          </select>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Did you track your food?</h3>
-          <select 
-            value={answers.trackedFood} onChange={e => updateAnswer('trackedFood', e.target.value)}
-            className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-slate-700 dark:text-slate-200 focus:border-[#17cf54] outline-none"
-          >
-            <option value="">Select...</option>
-            <option value="Always">Always</option>
-            <option value="Most days">Most days</option>
-            <option value="Rarely">Rarely</option>
-            <option value="Not at all">Not at all</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">How often did you eat off-plan?</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {['Never', '1–2 meals', '3–5 meals', 'Many times'].map(freq => (
-            <OptionCard 
-              key={freq} label={freq} 
-              selected={answers.offPlanFrequency === freq} 
-              onClick={() => updateAnswer('offPlanFrequency', freq)} 
-            />
-          ))}
-        </div>
-        
-        {answers.offPlanFrequency && answers.offPlanFrequency !== 'Never' && (
-          <div className="animate-in fade-in slide-in-from-top-4">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Main reasons (Select all that apply)</h4>
-            <div className="flex flex-wrap gap-2">
-              {['Social events', 'Anxiety', 'Hunger', 'No time', 'Cravings', 'Travel', 'Bad planning', 'No appetite'].map(chip => (
-                <Chip 
-                  key={chip} label={chip} 
-                  selected={answers.offPlanReasons.includes(chip)} 
-                  onClick={() => toggleArrayItem('offPlanReasons', chip)} 
-                />
-              ))}
-            </div>
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">How was your nutrition adherence?</h2>
+            <p className="text-sm text-slate-500 mt-1">Reflect on your meals, cravings, and macro compliance.</p>
           </div>
-        )}
+          <Utensils className="w-5 h-5 text-emerald-500" />
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {['Perfect (>95%)', 'Good (80-95%)', 'Average (50-80%)', 'Poor (<50%)'].map(o => (
+              <OptionCard key={o} label={o} selected={answers.nutritionAdherence === o} onClick={() => updateAnswer('nutritionAdherence', o)} />
+            ))}
+          </div>
+
+          {(answers.nutritionAdherence === 'Average (50-80%)' || answers.nutritionAdherence === 'Poor (<50%)') && (
+            <div className="mb-8 p-6 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 animate-in fade-in slide-in-from-top-4">
+              <h4 className="text-sm font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-4">What made it difficult?</h4>
+              <div className="flex flex-wrap gap-2 md:gap-3">
+                {['Social event', 'Cravings', 'Lack of time', 'Poor planning', 'Too hungry', 'Emotional eating'].map(c => (
+                  <Chip key={c} label={c} selected={answers.offPlanReasons.includes(c)} onClick={() => toggleArrayItem('offPlanReasons', c)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors uppercase tracking-widest mb-4">Any extra context about your nutrition? (Optional)</h3>
+            <textarea 
+               value={answers.digestiveIssues} onChange={e => updateAnswer('digestiveIssues', e.target.value)}
+               className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white min-h-[100px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none transition-colors" 
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
 
   const renderPage4 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">How did your nutrition feel this week?</h2>
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10 mb-10">
-        {/* Hunger */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Hunger levels</h3>
-          <div className="flex flex-col gap-2">
-            {['Very low', 'Low', 'Normal', 'High', 'Very high'].map(opt => (
-              <label key={opt} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${answers.hunger === opt ? 'border-[#17cf54] bg-[#17cf54]/5' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300'}`}>
-                <input type="radio" checked={answers.hunger === opt} onChange={() => updateAnswer('hunger', opt)} className="hidden" />
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${answers.hunger === opt ? 'border-[#17cf54]' : 'border-slate-300'}`}>
-                  {answers.hunger === opt && <div className="w-2.5 h-2.5 rounded-full bg-[#17cf54]" />}
-                </div>
-                <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">{opt}</span>
-              </label>
-            ))}
-          </div>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Hunger, Cravings & Digestion</h2>
+          <p className="text-sm text-slate-500 mt-1">How did your body respond to the food this week?</p>
         </div>
-
-        {/* Cravings */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Cravings</h3>
-          <div className="flex flex-col gap-2">
-            {['None', 'Mild', 'Moderate', 'Strong', 'Uncontrollable'].map(opt => (
-              <label key={opt} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${answers.cravings === opt ? 'border-[#17cf54] bg-[#17cf54]/5' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300'}`}>
-                <input type="radio" checked={answers.cravings === opt} onChange={() => updateAnswer('cravings', opt)} className="hidden" />
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${answers.cravings === opt ? 'border-[#17cf54]' : 'border-slate-300'}`}>
-                  {answers.cravings === opt && <div className="w-2.5 h-2.5 rounded-full bg-[#17cf54]" />}
-                </div>
-                <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">{opt}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Digestion */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Digestion</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Great', 'Fine', 'Some discomfort', 'Poor'].map(opt => (
-              <Chip key={opt} label={opt} selected={answers.digestion === opt} onClick={() => updateAnswer('digestion', opt)} />
-            ))}
-          </div>
-        </div>
-
-        {/* Bloating */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Bloating</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Never', 'Sometimes', 'Often', 'Daily'].map(opt => (
-              <Chip key={opt} label={opt} selected={answers.bloating === opt} onClick={() => updateAnswer('bloating', opt)} />
-            ))}
-          </div>
-        </div>
-
-        {/* Energy from food */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Energy from food</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Very low', 'Low', 'Stable', 'Good', 'Excellent'].map(opt => (
-              <Chip key={opt} label={opt} selected={answers.energyFood === opt} onClick={() => updateAnswer('energyFood', opt)} />
-            ))}
-          </div>
-        </div>
-
-        {/* Bowel regularity */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Bowel Regularity</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Regular', 'Slightly irregular', 'Irregular'].map(opt => (
-              <Chip key={opt} label={opt} selected={answers.bowel === opt} onClick={() => updateAnswer('bowel', opt)} />
-            ))}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Average Hunger Level</h3>
+              <div className="flex flex-col gap-2">
+                {['No hunger', 'Manageable', 'Noticeable but OK', 'Very hungry', 'Starving'].map(o => (
+                  <Chip key={o} label={o} selected={answers.hunger === o} onClick={() => updateAnswer('hunger', o)} />
+                ))}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Cravings Level</h3>
+              <div className="flex flex-col gap-2">
+                {['None', 'Occasional', 'Frequent', 'Constant'].map(o => (
+                  <Chip key={o} label={o} selected={answers.cravings === o} onClick={() => updateAnswer('cravings', o)} />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div>
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Any digestive issue or food-related problem? (Optional)</h3>
-        <textarea 
-          placeholder="Describe any issues..."
-          value={answers.digestiveIssues}
-          onChange={e => updateAnswer('digestiveIssues', e.target.value)}
-          className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-[100px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none"
-        />
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+         <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Digestion</h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {['Perfect', 'Minor bloating', 'Uncomfortable', 'Very poor'].map(o => (
+              <OptionCard key={o} label={o} selected={answers.digestion === o} onClick={() => updateAnswer('digestion', o)} />
+            ))}
+          </div>
+
+          {(answers.digestion === 'Uncomfortable' || answers.digestion === 'Very poor') && (
+            <div className="animate-in fade-in slide-in-from-top-4">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Did any specific food cause this?</h3>
+              <input 
+                type="text" placeholder="e.g. Dairy, spicy food, too much fiber..."
+                value={answers.digestiveIssues} onChange={e => updateAnswer('digestiveIssues', e.target.value)}
+                className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-[#17cf54] focus:ring-0 outline-none transition-colors"
+              />
+            </div>
+          )}
+        </div>
       </div>
+
     </div>
   );
 
   const renderPage5 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">How were your daily habits?</h2>
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Droplets className="w-4 h-4 text-blue-500"/> Water Intake</h3>
-          <select value={answers.waterIntake} onChange={e => updateAnswer('waterIntake', e.target.value)} className="w-full p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none focus:border-[#17cf54]">
-            <option value="">Select...</option>
-            {['Too low', 'Low', 'Good', 'Very good'].map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Daily Habits Adherence</h2>
+          <p className="text-sm text-slate-500 mt-1">Water and supplement targets.</p>
         </div>
-
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-500"/> Steps / Daily Activity</h3>
-          <select value={answers.steps} onChange={e => updateAnswer('steps', e.target.value)} className="w-full p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none focus:border-[#17cf54]">
-            <option value="">Select...</option>
-            {['Very low', 'Low', 'Good', 'High'].map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Moon className="w-4 h-4 text-indigo-500"/> Meal Timing</h3>
-          <select value={answers.mealTiming} onChange={e => updateAnswer('mealTiming', e.target.value)} className="w-full p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none focus:border-[#17cf54]">
-            <option value="">Select...</option>
-            {['Poor', 'Average', 'Good'].map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2"><Utensils className="w-4 h-4 text-amber-500"/> Supplements</h3>
-          <select value={answers.supplements} onChange={e => updateAnswer('supplements', e.target.value)} className="w-full p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none focus:border-[#17cf54]">
-            <option value="">Select...</option>
-            {['Took all', 'Took most', 'Took some', 'Didn’t take them'].map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Alcohol consumption (Optional)</h3>
-          <div className="flex flex-wrap gap-2">
-            {['None', 'Low', 'Moderate', 'High'].map(opt => (
-              <Chip key={opt} label={opt} selected={answers.alcohol === opt} onClick={() => updateAnswer('alcohol', opt)} />
-            ))}
-          </div>
-        </div>
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Eating out (Optional)</h3>
-          <div className="flex flex-wrap gap-2">
-            {['None', '1–2 times', '3–5 times', 'Many times'].map(opt => (
-              <Chip key={opt} label={opt} selected={answers.eatingOut === opt} onClick={() => updateAnswer('eatingOut', opt)} />
-            ))}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">Water Intake</h3>
+              <div className="flex flex-col gap-2">
+                 {['Met goal daily', 'Met it most days', 'Struggled', 'Very low'].map(o => (
+                  <Chip key={o} label={o} selected={answers.waterIntake === o} onClick={() => updateAnswer('waterIntake', o)} />
+                ))}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">Supplements</h3>
+              <div className="flex flex-col gap-2">
+                 {['Took all', 'Missed some', 'Missed most', 'Did not take any'].map(o => (
+                  <Chip key={o} label={o} selected={answers.supplements === o} onClick={() => updateAnswer('supplements', o)} />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -508,103 +427,111 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   );
 
   const renderPage6 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">How did training go this week?</h2>
-      
-      <div className="space-y-10">
-        <div>
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Training Adherence</h3>
-          <select value={answers.trainingAdherence} onChange={e => updateAnswer('trainingAdherence', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold outline-none focus:border-[#17cf54]">
-            <option value="">Select...</option>
-            {['Completed all sessions', 'Missed 1 session', 'Missed 2 sessions', 'Missed several sessions'].map(o => <option key={o} value={o}>{o}</option>)}
-          </select>
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">How did training go this week?</h2>
         </div>
-
-        <div>
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Overall Performance</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {['Much worse', 'Slightly worse', 'Same', 'Slightly better', 'Much better'].map(o => (
-              <OptionCard key={o} label={o} selected={answers.performance === o} onClick={() => updateAnswer('performance', o)} />
-            ))}
+        
+        <div className="p-6 space-y-8">
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Training Adherence</h3>
+            <select value={answers.trainingAdherence} onChange={e => updateAnswer('trainingAdherence', e.target.value)} className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-bold outline-none focus:border-[#17cf54]">
+              <option value="">Select...</option>
+              {['Completed all sessions', 'Missed 1 session', 'Missed 2 sessions', 'Missed several sessions'].map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
           </div>
-          {(answers.performance === 'Much worse' || answers.performance === 'Slightly worse') && (
-            <div className="mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-4">
-              <h4 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-3">Why do you think performance dropped?</h4>
-              <div className="flex flex-wrap gap-2">
-                {['Sleep', 'Stress', 'Low calories', 'Pain', 'Motivation', 'Bad recovery'].map(c => (
-                  <Chip key={c} label={c} selected={answers.performanceDropReasons.includes(c)} onClick={() => toggleArrayItem('performanceDropReasons', c)} />
-                ))}
+
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Overall Performance</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {['Much worse', 'Slightly worse', 'Same', 'Slightly better', 'Much better'].map(o => (
+                <OptionCard key={o} label={o} selected={answers.performance === o} onClick={() => updateAnswer('performance', o)} />
+              ))}
+            </div>
+            {(answers.performance === 'Much worse' || answers.performance === 'Slightly worse') && (
+              <div className="mt-4 p-6 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 animate-in fade-in slide-in-from-top-4">
+                <h4 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-3">Why do you think performance dropped?</h4>
+                <div className="flex flex-wrap gap-2 md:gap-3">
+                  {['Sleep', 'Stress', 'Low calories', 'Pain', 'Motivation', 'Bad recovery'].map(c => (
+                    <Chip key={c} label={c} selected={answers.performanceDropReasons.includes(c)} onClick={() => toggleArrayItem('performanceDropReasons', c)} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Strength perception</h3>
+              <div className="flex flex-col gap-2">
+                {['Down', 'Same', 'Up'].map(o => <Chip key={o} label={o} selected={answers.strength === o} onClick={() => updateAnswer('strength', o)} />)}
               </div>
             </div>
-          )}
-        </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Cardio / Conditioning</h3>
+               <div className="flex flex-col gap-2">
+                {['Worse', 'Same', 'Better'].map(o => <Chip key={o} label={o} selected={answers.cardio === o} onClick={() => updateAnswer('cardio', o)} />)}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Session Quality</h3>
+               <div className="flex flex-col gap-2">
+                {['Poor', 'Average', 'Good', 'Excellent'].map(o => <Chip key={o} label={o} selected={answers.sessionQuality === o} onClick={() => updateAnswer('sessionQuality', o)} />)}
+              </div>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Strength perception</h3>
-            <div className="flex flex-col gap-2">
-              {['Down', 'Same', 'Up'].map(o => <Chip key={o} label={o} selected={answers.strength === o} onClick={() => updateAnswer('strength', o)} />)}
-            </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Any exercise felt especially good or bad? (Optional)</h3>
+            <textarea value={answers.trainingNotes} onChange={e => updateAnswer('trainingNotes', e.target.value)} className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white min-h-[100px] focus:border-[#17cf54] outline-none resize-none" />
           </div>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Cardio / Conditioning</h3>
-             <div className="flex flex-col gap-2">
-              {['Worse', 'Same', 'Better'].map(o => <Chip key={o} label={o} selected={answers.cardio === o} onClick={() => updateAnswer('cardio', o)} />)}
-            </div>
-          </div>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Session Quality</h3>
-             <div className="flex flex-col gap-2">
-              {['Poor', 'Average', 'Good', 'Excellent'].map(o => <Chip key={o} label={o} selected={answers.sessionQuality === o} onClick={() => updateAnswer('sessionQuality', o)} />)}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Any exercise felt especially good or bad? (Optional)</h3>
-          <textarea value={answers.trainingNotes} onChange={e => updateAnswer('trainingNotes', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-[100px] focus:border-[#17cf54] outline-none resize-none" />
         </div>
       </div>
     </div>
   );
 
   const renderPage7 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">How well did you recover this week?</h2>
-      
-      <div className="space-y-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Sleep Quantity</h3>
-            <div className="flex flex-wrap gap-2">
-              {['<5h', '5–6h', '6–7h', '7–8h', '8h+'].map(o => <Chip key={o} label={o} selected={answers.sleepQuantity === o} onClick={() => updateAnswer('sleepQuantity', o)} />)}
-            </div>
-          </div>
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Sleep Quality</h3>
-            <div className="flex flex-wrap gap-2">
-              {['Very poor', 'Poor', 'Average', 'Good', 'Excellent'].map(o => <Chip key={o} label={o} selected={answers.sleepQuality === o} onClick={() => updateAnswer('sleepQuality', o)} />)}
-            </div>
-          </div>
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">How well did you recover this week?</h2>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[{ id: 'stress', title: 'Stress Level' }, { id: 'energy', title: 'Energy Level' }, { id: 'motivation', title: 'Motivation' }].map(block => (
-            <div key={block.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">{block.title}</h3>
-              <div className="flex flex-col gap-2">
-                {['Very low', 'Low', 'Moderate/Average', 'High/Good', 'Very high/Excellent'].map(o => <Chip key={o} label={o} selected={(answers as any)[block.id] === o} onClick={() => updateAnswer(block.id as any, o)} />)}
+        
+        <div className="p-6 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Sleep Quantity</h3>
+              <div className="flex flex-wrap gap-2">
+                {['<5h', '5–6h', '6–7h', '7–8h', '8h+'].map(o => <Chip key={o} label={o} selected={answers.sleepQuantity === o} onClick={() => updateAnswer('sleepQuantity', o)} />)}
               </div>
             </div>
-          ))}
-        </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Sleep Quality</h3>
+              <div className="flex flex-wrap gap-2">
+                {['Very poor', 'Poor', 'Average', 'Good', 'Excellent'].map(o => <Chip key={o} label={o} selected={answers.sleepQuality === o} onClick={() => updateAnswer('sleepQuality', o)} />)}
+              </div>
+            </div>
+          </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">What impacted your recovery the most? (Optional)</h3>
-          <div className="flex flex-wrap gap-2">
-            {['Work', 'Studies', 'Family', 'Travel', 'Anxiety', 'Poor routine', 'Late meals', 'Screen time', 'Not sure'].map(c => (
-              <Chip key={c} label={c} selected={answers.recoveryImpacts.includes(c)} onClick={() => toggleArrayItem('recoveryImpacts', c)} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[{ id: 'stress', title: 'Stress Level' }, { id: 'energy', title: 'Energy Level' }, { id: 'motivation', title: 'Motivation' }].map(block => (
+              <div key={block.id} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">{block.title}</h3>
+                <div className="flex flex-col gap-2">
+                  {['Very low', 'Low', 'Moderate/Average', 'High/Good', 'Very high/Excellent'].map(o => <Chip key={o} label={o} selected={(answers as any)[block.id] === o} onClick={() => updateAnswer(block.id as any, o)} />)}
+                </div>
+              </div>
             ))}
+          </div>
+
+          <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">What impacted your recovery the most? (Optional)</h3>
+            <div className="flex flex-wrap gap-2 md:gap-3">
+              {['Work', 'Studies', 'Family', 'Travel', 'Anxiety', 'Poor routine', 'Late meals', 'Screen time', 'Not sure'].map(c => (
+                <Chip key={c} label={c} selected={answers.recoveryImpacts.includes(c)} onClick={() => toggleArrayItem('recoveryImpacts', c)} />
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -612,156 +539,190 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   );
 
   const renderPage8 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">Did you have any issue, pain or limitation?</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
-        {['No issues', 'Minor discomfort', 'Moderate pain', 'Serious issue'].map(o => (
-          <OptionCard key={o} label={o} selected={answers.painLevel === o} onClick={() => updateAnswer('painLevel', o)} />
-        ))}
-      </div>
-
-      {answers.painLevel && answers.painLevel !== 'No issues' && (
-        <div className="space-y-10 animate-in fade-in slide-in-from-top-4">
-          <div className="bg-amber-50 dark:bg-amber-900/10 p-6 rounded-2xl border border-amber-200 dark:border-amber-900/30">
-            <h3 className="text-sm font-bold text-amber-600 uppercase tracking-widest mb-4">Affected Area</h3>
-            <div className="flex flex-wrap gap-2">
-              {['Neck', 'Shoulder', 'Back', 'Elbow', 'Wrist', 'Hip', 'Knee', 'Ankle', 'Other'].map(o => <Chip key={o} label={o} selected={answers.affectedArea === o} onClick={() => updateAnswer('affectedArea', o)} />)}
-            </div>
-            
-            <h3 className="text-sm font-bold text-amber-600 uppercase tracking-widest mt-8 mb-4">Type of Issue</h3>
-             <div className="flex flex-wrap gap-2">
-              {['Pain', 'Tightness', 'Inflammation', 'Fatigue', 'Injury', 'Digestive issue', 'Other'].map(o => <Chip key={o} label={o} selected={answers.painType === o} onClick={() => updateAnswer('painType', o)} />)}
-            </div>
-
-            <h3 className="text-sm font-bold text-amber-600 uppercase tracking-widest mt-8 mb-4">Impact on Training</h3>
-             <select value={answers.trainingImpact} onChange={e => updateAnswer('trainingImpact', e.target.value)} className="w-full p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-white dark:bg-slate-900 font-bold outline-none focus:border-amber-400">
-              <option value="">Select...</option>
-              {['No impact', 'Small impact', 'Moderate impact', 'Couldn’t train well'].map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
-          </div>
-
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
           <div>
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Describe what happened</h3>
-             <textarea placeholder="How did it start? How bad is it?" value={answers.painNotes} onChange={e => updateAnswer('painNotes', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-[120px] focus:border-[#17cf54] outline-none resize-none" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Did you have any issue, pain or limitation?</h2>
           </div>
+          <AlertTriangle className="w-5 h-5 text-amber-500" />
         </div>
-      )}
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {['No issues', 'Minor discomfort', 'Moderate pain', 'Serious issue'].map(o => (
+              <OptionCard key={o} label={o} selected={answers.painLevel === o} onClick={() => updateAnswer('painLevel', o)} />
+            ))}
+          </div>
+
+          {answers.painLevel && answers.painLevel !== 'No issues' && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
+              <div className="bg-amber-50 dark:bg-amber-900/10 p-6 rounded-xl border border-amber-200 dark:border-amber-900/30">
+                <h3 className="text-sm font-bold text-amber-600 uppercase tracking-widest mb-4">Affected Area</h3>
+                <div className="flex flex-wrap gap-2 md:gap-3">
+                  {['Neck', 'Shoulder', 'Back', 'Elbow', 'Wrist', 'Hip', 'Knee', 'Ankle', 'Other'].map(o => <Chip key={o} label={o} selected={answers.affectedArea === o} onClick={() => updateAnswer('affectedArea', o)} />)}
+                </div>
+                
+                <h3 className="text-sm font-bold text-amber-600 uppercase tracking-widest mt-8 mb-4">Type of Issue</h3>
+                 <div className="flex flex-wrap gap-2 md:gap-3">
+                  {['Pain', 'Tightness', 'Inflammation', 'Fatigue', 'Injury', 'Digestive issue', 'Other'].map(o => <Chip key={o} label={o} selected={answers.painType === o} onClick={() => updateAnswer('painType', o)} />)}
+                </div>
+
+                <h3 className="text-sm font-bold text-amber-600 uppercase tracking-widest mt-8 mb-4">Impact on Training</h3>
+                 <select value={answers.trainingImpact} onChange={e => updateAnswer('trainingImpact', e.target.value)} className="w-full p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-white dark:bg-slate-900 font-bold outline-none focus:border-amber-400">
+                  <option value="">Select...</option>
+                  {['No impact', 'Small impact', 'Moderate impact', 'Couldn’t train well'].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Describe what happened</h3>
+                 <textarea placeholder="How did it start? How bad is it?" value={answers.painNotes} onChange={e => updateAnswer('painNotes', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white min-h-[120px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none transition-colors" />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 
   const renderPage9 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">How did you do with cardio and activity goals?</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Cardio Adherence</h3>
-          <div className="flex flex-col gap-2">
-            {['Did all', 'Missed some', 'Did very little', 'Did none'].map(o => <Chip key={o} label={o} selected={answers.cardioAdherence === o} onClick={() => updateAnswer('cardioAdherence', o)} />)}
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">How did you do with cardio and activity goals?</h2>
+          <Flame className="w-5 h-5 text-orange-500" />
+        </div>
+        
+        <div className="p-6 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Cardio Adherence</h3>
+              <div className="flex flex-col gap-2">
+                {['Did all', 'Missed some', 'Did very little', 'Did none'].map(o => <Chip key={o} label={o} selected={answers.cardioAdherence === o} onClick={() => updateAnswer('cardioAdherence', o)} />)}
+              </div>
+            </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Daily Steps Adherence</h3>
+              <div className="flex flex-col gap-2">
+                {['Met goal daily', 'Met it most days', 'Rarely met it', 'Didn’t track'].map(o => <Chip key={o} label={o} selected={answers.stepsAdherence === o} onClick={() => updateAnswer('stepsAdherence', o)} />)}
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Daily Steps Adherence</h3>
-          <div className="flex flex-col gap-2">
-            {['Met goal daily', 'Met it most days', 'Rarely met it', 'Didn’t track'].map(o => <Chip key={o} label={o} selected={answers.stepsAdherence === o} onClick={() => updateAnswer('stepsAdherence', o)} />)}
+
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">General Activity Level</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {['Sedentary', 'Low', 'Moderate', 'High'].map(o => <OptionCard key={o} label={o} selected={answers.activityLevel === o} onClick={() => updateAnswer('activityLevel', o)} />)}
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="space-y-4 mb-10">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">General Activity Level</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {['Sedentary', 'Low', 'Moderate', 'High'].map(o => <OptionCard key={o} label={o} selected={answers.activityLevel === o} onClick={() => updateAnswer('activityLevel', o)} />)}
-        </div>
-      </div>
-
-      <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">Did you feel more tired than usual from activity? (Optional)</h3>
-        <div className="flex gap-4">
-          {['Yes', 'No'].map(o => <Chip key={o} label={o} selected={answers.activityTired === o} onClick={() => updateAnswer('activityTired', o)} />)}
+          <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">Did you feel more tired than usual from activity? (Optional)</h3>
+            <div className="flex gap-4">
+              {['Yes', 'No'].map(o => <Chip key={o} label={o} selected={answers.activityTired === o} onClick={() => updateAnswer('activityTired', o)} />)}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   const renderPage10 = () => (
-    <div className="max-w-3xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-8">What would you like to improve or change next week?</h2>
-      
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 mb-8">
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Focus areas (Select multiple)</h3>
-        <div className="flex flex-wrap gap-2">
-          {['Nutrition', 'Hunger control', 'Meal organization', 'Training performance', 'Energy', 'Sleep', 'Motivation', 'Consistency', 'Digestion', 'Stress management'].map(c => (
-            <Chip key={c} label={c} selected={answers.improvementGoals.includes(c)} onClick={() => toggleArrayItem('improvementGoals', c)} />
-          ))}
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">What would you like to improve or change next week?</h2>
+            <p className="text-sm text-slate-500 mt-1">Reflect on your upcoming week's strategy.</p>
+          </div>
+          <Target className="w-5 h-5 text-indigo-500" />
         </div>
-      </div>
+        
+        <div className="p-6 space-y-8">
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Focus areas (Select multiple)</h3>
+            <div className="flex flex-wrap gap-2 md:gap-3">
+              {['Nutrition', 'Hunger control', 'Meal organization', 'Training performance', 'Energy', 'Sleep', 'Motivation', 'Consistency', 'Digestion', 'Stress management'].map(c => (
+                <Chip key={c} label={c} selected={answers.improvementGoals.includes(c)} onClick={() => toggleArrayItem('improvementGoals', c)} />
+              ))}
+            </div>
+          </div>
 
-      <div className="space-y-6 mb-8">
-        <div>
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Is there anything you want help with?</h3>
-           <textarea value={answers.helpNotes} onChange={e => updateAnswer('helpNotes', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-[100px] focus:border-[#17cf54] outline-none resize-none" />
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Anything you want your coach to review?</h3>
-           <textarea value={answers.reviewNotes} onChange={e => updateAnswer('reviewNotes', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-[100px] focus:border-[#17cf54] outline-none resize-none" />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Is there anything you want help with?</h3>
+               <textarea value={answers.helpNotes} onChange={e => updateAnswer('helpNotes', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white min-h-[120px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none transition-colors" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Anything you want your coach to review?</h3>
+               <textarea value={answers.reviewNotes} onChange={e => updateAnswer('reviewNotes', e.target.value)} className="w-full p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white min-h-[120px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none transition-colors" />
+            </div>
+          </div>
 
-      <div>
-        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">How ready do you feel for next week?</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {['Not ready', 'Somewhat ready', 'Ready', 'Very ready'].map(o => <OptionCard key={o} label={o} selected={answers.readiness === o} onClick={() => updateAnswer('readiness', o)} />)}
+          <div>
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">How ready do you feel for next week?</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {['Not ready', 'Somewhat ready', 'Ready', 'Very ready'].map(o => <OptionCard key={o} label={o} selected={answers.readiness === o} onClick={() => updateAnswer('readiness', o)} />)}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   const renderPage11 = () => (
-    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300">
-      <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2">Review before submit</h2>
-      <p className="text-slate-500 mb-8">Make sure your answers look correct before locking them in.</p>
+    <div className="max-w-4xl mx-auto py-8 animate-in fade-in slide-in-from-right-8 duration-300 space-y-6">
       
-      <div className="space-y-4">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-start group">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
           <div>
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Activity className="w-4 h-4 text-[#17cf54]"/> Overall & Body</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Week: {answers.overallWeek || '--'}, Weight: {answers.weight ? `${answers.weight}kg` : '--'}, Perception: {answers.bodyPerception || '--'}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Review before submit</h2>
+            <p className="text-sm text-slate-500 mt-1">Make sure your answers look correct before locking them in.</p>
           </div>
-          <button onClick={() => setCurrentStep(1)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
+          <RefreshCcw className="w-5 h-5 text-blue-500" />
         </div>
+        
+        <div className="p-6 space-y-4">
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700 flex justify-between items-start group">
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Activity className="w-4 h-4 text-[#17cf54]"/> Overall & Body</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Week: <span className="font-bold">{answers.overallWeek || '--'}</span> • Weight: <span className="font-bold">{answers.weight ? `${answers.weight}kg` : '--'}</span> • Perception: <span className="font-bold">{answers.bodyPerception || '--'}</span></p>
+            </div>
+            <button onClick={() => setCurrentStep(1)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
+          </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-start group">
-          <div>
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Utensils className="w-4 h-4 text-emerald-500"/> Nutrition & Digestion</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Adherence: {answers.nutritionAdherence || '--'}, Hunger: {answers.hunger || '--'}, Digestion: {answers.digestion || '--'}</p>
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700 flex justify-between items-start group">
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Utensils className="w-4 h-4 text-emerald-500"/> Nutrition & Digestion</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Adherence: <span className="font-bold">{answers.nutritionAdherence || '--'}</span> • Hunger: <span className="font-bold">{answers.hunger || '--'}</span> • Digestion: <span className="font-bold">{answers.digestion || '--'}</span></p>
+            </div>
+            <button onClick={() => setCurrentStep(3)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
           </div>
-          <button onClick={() => setCurrentStep(3)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-start group">
-          <div>
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Dumbbell className="w-4 h-4 text-blue-500"/> Training & Cardio</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Training Adherence: {answers.trainingAdherence || '--'}, Perf: {answers.performance || '--'}, Cardio: {answers.cardioAdherence || '--'}</p>
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700 flex justify-between items-start group">
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Dumbbell className="w-4 h-4 text-indigo-500"/> Training & Cardio</h3>
+               <p className="text-sm text-slate-600 dark:text-slate-300">Training Adherence: <span className="font-bold">{answers.trainingAdherence || '--'}</span> • Perf: <span className="font-bold">{answers.performance || '--'}</span> • Cardio: <span className="font-bold">{answers.cardioAdherence || '--'}</span></p>
+            </div>
+            <button onClick={() => setCurrentStep(6)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
           </div>
-          <button onClick={() => setCurrentStep(6)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
-        </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex justify-between items-start group">
-          <div>
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Moon className="w-4 h-4 text-purple-500"/> Recovery & Issues</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-300">Sleep: {answers.sleepQuantity || '--'}, Stress: {answers.stress || '--'}, Issues: {answers.painLevel || 'No issues'}</p>
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-xl border border-slate-100 dark:border-slate-700 flex justify-between items-start group">
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2"><Moon className="w-4 h-4 text-purple-500"/> Recovery & Issues</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Sleep: <span className="font-bold">{answers.sleepQuantity || '--'}</span> • Stress: <span className="font-bold">{answers.stress || '--'}</span> • Issues: <span className="font-bold">{answers.painLevel || 'No issues'}</span></p>
+            </div>
+            <button onClick={() => setCurrentStep(7)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
           </div>
-          <button onClick={() => setCurrentStep(7)} className="text-slate-400 hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all font-bold text-sm uppercase">Edit</button>
-        </div>
-      </div>
-      
-      <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/10 rounded-2xl flex gap-4 border border-blue-100 dark:border-blue-900/30">
-        <Brain className="w-8 h-8 text-blue-500 shrink-0" />
-        <div>
-          <h4 className="font-bold text-blue-900 dark:text-blue-100">Smart Insight</h4>
-          <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">Based on your selections, you had strong training performance but high stress levels. Prioritize rest this upcoming week to maintain gains.</p>
+
+          <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl flex gap-4">
+            <Brain className="w-8 h-8 text-blue-500 shrink-0" />
+            <div>
+              <h4 className="font-bold text-blue-900 dark:text-blue-100">Smart Insight</h4>
+              <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">Based on your selections, you had strong training performance but high stress levels. Prioritize rest this upcoming week to maintain gains.</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
