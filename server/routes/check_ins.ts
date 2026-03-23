@@ -108,6 +108,7 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res
       .single();
 
     if (clientErr || !userData) {
+      console.warn(`Manager Access Denied: Manager ${managerId} tried to access client ${id}. Client not found or doesn't belong to manager.`);
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
 
@@ -150,6 +151,7 @@ router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (re
       .single();
 
     if (clientErr || !userData) {
+      console.warn(`Manager Single Check-in Access Denied: Manager ${managerId} tried to access client ${id}.`);
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
 

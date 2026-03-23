@@ -46,6 +46,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
   const [selectedTaskDate, setSelectedTaskDate] = useState<string | null>(null);
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
@@ -94,7 +95,11 @@ export default function App() {
           />
         );
       case 'dashboard':
-        return <Dashboard onNavigate={(view) => setCurrentView(view as View)} />;
+        return <Dashboard onNavigate={(view, data) => {
+          if (data?.clientId) setSelectedClientId(data.clientId);
+          if (data?.checkInId) setSelectedCheckInId(data.checkInId);
+          setCurrentView(view as View);
+        }} />;
       case 'tasks':
         return <Tasks onNavigate={(view, data) => {
           if (data?.taskId) setSelectedTaskId(data.taskId);
@@ -128,7 +133,16 @@ export default function App() {
       case 'clients':
         return <Clients />;
       case 'check-ins':
-        return <CheckIns />;
+        return (
+          <CheckIns 
+            initialClientId={selectedClientId || undefined} 
+            initialCheckInId={selectedCheckInId || undefined}
+            onViewChange={(cid, checkid) => {
+              if (cid) setSelectedClientId(cid);
+              if (checkid) setSelectedCheckInId(checkid);
+            }}
+          />
+        );
       case 'messages':
         return <Messages />;
       case 'automations':

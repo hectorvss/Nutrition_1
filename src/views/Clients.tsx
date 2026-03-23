@@ -7,9 +7,9 @@ export type ClientViewMode = 'list' | 'detail' | 'add';
 
 export default function Clients() {
   const [viewMode, setViewMode] = useState<ClientViewMode>('list');
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
-  const handleViewDetail = (id: number) => {
+  const handleViewDetail = (id: string) => {
     setSelectedClientId(id);
     setViewMode('detail');
   };
