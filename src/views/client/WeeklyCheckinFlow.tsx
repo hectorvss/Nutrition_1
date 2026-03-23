@@ -523,7 +523,7 @@ const Page3 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
   </Section>
 );
 const Page4 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
-  <Section title="Digestion & Satiety" subtitle="Internal biofeedback is key to adjusting your plan." icon="stomach">
+  <Section title="Digestion & Satiety" subtitle="Internal biofeedback is key to adjusting your plan." icon="health_and_safety">
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
       <div>
         <FieldLabel>Hunger Levels</FieldLabel>
@@ -1026,7 +1026,7 @@ const Page11 = ({ answers, setCurrentStep }: PageProps) => (
       {[
         { title: 'Overall & Progress', icon: 'mood', step: 1, desc: `Week: ${answers.overallWeek || '--'} • Weight Avg: ${answers.avgWeight ? `${answers.avgWeight}kg` : '--'} • Mental: ${answers.mentalHealth || '--'}` },
         { title: 'Nutrition & Adherence', icon: 'restaurant', step: 3, desc: `Adherence: ${answers.nutritionAdherence || '--'} • Nutri-Notes: ${answers.digestiveIssues?.substring(0, 30)}${answers.digestiveIssues?.length > 30 ? '...' : ''}` },
-        { title: 'Digestion & Biofeedback', icon: 'stomach', step: 4, desc: `Digestion: ${answers.digestionQuality || '--'} • Hunger: ${answers.hunger || '--'} • Energy: ${answers.energyResponse || '--'}` },
+        { title: 'Digestion & Biofeedback', icon: 'health_and_safety', step: 4, desc: `Digestion: ${answers.digestionQuality || '--'} • Hunger: ${answers.hunger || '--'} • Energy: ${answers.energyResponse || '--'}` },
         { title: 'Training & Performance', icon: 'fitness_center', step: 6, desc: `Sessions: ${answers.trainingAdherence || '--'} • Performance: ${answers.performance || '--'} • Energy: ${answers.trainingEnergy || '--'}` },
         { title: 'Recovery & Vitality', icon: 'dark_mode', step: 7, desc: `Sleep: ${answers.sleepQuantity || '--'} • Quality: ${answers.sleepQuality || '--'} • Stress: ${answers.stress || '--'}` },
         { title: 'Activity & Pain', icon: 'healing', step: 8, desc: `Pain: ${answers.painLevel || 'No issues'} • Steps: ${answers.stepRange || '--'} • Cardio: ${answers.cardioAdherence || '--'}` }
