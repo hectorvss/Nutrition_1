@@ -39,6 +39,7 @@ router.get('/profile', async (req: any, res) => {
       .select(`
         id, 
         email,
+        manager_id,
         clients_profiles (weight, goal, notes)
       `)
       .eq('id', req.user.id)
@@ -49,6 +50,7 @@ router.get('/profile', async (req: any, res) => {
     const formattedProfile = {
       id: profile.id,
       email: profile.email,
+      manager_id: profile.manager_id,
       weight: profile.clients_profiles?.[0]?.weight || null,
       goal: profile.clients_profiles?.[0]?.goal || null,
       notes: profile.clients_profiles?.[0]?.notes || null,
