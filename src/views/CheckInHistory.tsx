@@ -15,9 +15,10 @@ interface CheckInHistoryProps {
   clientId: string;
   onBack: () => void;
   onViewReview: (checkInId: string) => void;
+  hideHeader?: boolean;
 }
 
-export default function CheckInHistory({ clientId, onBack, onViewReview }: CheckInHistoryProps) {
+export default function CheckInHistory({ clientId, onBack, onViewReview, hideHeader = false }: CheckInHistoryProps) {
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [client, setClient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,42 +65,46 @@ export default function CheckInHistory({ clientId, onBack, onViewReview }: Check
   }
 
   return (
-    <div className="p-6 md:p-8 w-full space-y-6">
-      <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
-        <div className="flex items-center gap-2">
-          <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Check-ins</button>
-          <ChevronRight className="w-4 h-4" />
-          <span className="font-medium text-slate-900">{clientName}</span>
+    <div className={`w-full space-y-6 ${hideHeader ? '' : 'p-6 md:p-8'}`}>
+      {!hideHeader && (
+        <>
+        <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
+          <div className="flex items-center gap-2">
+            <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Check-ins</button>
+            <ChevronRight className="w-4 h-4" />
+            <span className="font-medium text-slate-900">{clientName}</span>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            {clientAvatar ? (
-              <img src={clientAvatar} alt={clientName} className="w-16 h-16 rounded-2xl object-cover shadow-md border-2 border-white" referrerPolicy="no-referrer" />
-            ) : (
-              <div className="w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xl shadow-md border-2 border-white">
-                {clientName.substring(0, 2).toUpperCase()}
-              </div>
-            )}
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white"></div>
-          </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{clientName}</h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                <History className="w-3 h-3" /> History
-              </span>
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              {clientAvatar ? (
+                <img src={clientAvatar} alt={clientName} className="w-16 h-16 rounded-2xl object-cover shadow-md border-2 border-white" referrerPolicy="no-referrer" />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xl shadow-md border-2 border-white">
+                  {clientName.substring(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white"></div>
             </div>
-            <p className="text-slate-500 text-sm mt-1 font-medium">{checkIns.length} check-ins submitted</p>
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-slate-900">{clientName}</h1>
+                <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
+                  <History className="w-3 h-3" /> History
+                </span>
+              </div>
+              <p className="text-slate-500 text-sm mt-1 font-medium">{checkIns.length} check-ins submitted</p>
+            </div>
           </div>
+          <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
+            <Filter className="w-4 h-4" />
+            Filter
+          </button>
         </div>
-        <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
-          <Filter className="w-4 h-4" />
-          Filter
-        </button>
-      </div>
+        </>
+      )}
 
       <div className="space-y-4">
         {checkIns.length === 0 ? (
