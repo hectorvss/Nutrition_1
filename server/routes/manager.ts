@@ -2211,6 +2211,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     const allExercisesMap: Record<string, { pr: number, latest: number, latestDate: string }> = {};
     const dayBuckets: Record<string, { volume: number; logs: any }> = {};
 
+    const primaryExercises = ['Peso Muerto', 'Sentadilla', 'Press Banca', 'Press Militar', 'Remo con Barra'];
+
     for (const log of workoutLogs) {
       const d = new Date(log.logged_at);
       const key = d.toISOString().split('T')[0];
@@ -2219,30 +2221,36 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       dayBuckets[key].volume += calcSessionVolume(log);
 
       for (const ex of (log.exercises || [])) {
-        const exName = ex.name || 'Unknown Exercise';
+        const exNameRaw = ex.name || 'Unknown Exercise';
+        // Find canonical name
+        const canonicalName = primaryExercises.find(p => p.toLowerCase() === exNameRaw.toLowerCase()) || exNameRaw;
+        
         const sets = (ex.sets_logged || []);
-        const maxW = sets.reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
+        const maxWTotal = sets.reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
         
         // Track PR & Latest
-        if (!allExercisesMap[exName]) {
-          allExercisesMap[exName] = { pr: maxW, latest: maxW, latestDate: log.logged_at };
+        if (!allExercisesMap[canonicalName]) {
+          allExercisesMap[canonicalName] = { pr: maxWTotal, latest: maxWTotal, latestDate: log.logged_at };
         } else {
-          allExercisesMap[exName].pr = Math.max(allExercisesMap[exName].pr, maxW);
-          if (new Date(log.logged_at) > new Date(allExercisesMap[exName].latestDate)) {
-            allExercisesMap[exName].latest = maxW;
-            allExercisesMap[exName].latestDate = log.logged_at;
+          allExercisesMap[canonicalName].pr = Math.max(allExercisesMap[canonicalName].pr, maxWTotal);
+          if (new Date(log.logged_at) > new Date(allExercisesMap[canonicalName].latestDate)) {
+            allExercisesMap[canonicalName].latest = maxWTotal;
+            allExercisesMap[canonicalName].latestDate = log.logged_at;
           }
         }
 
         // GRANULAR LOGS: Track max weight FOR EACH rep count on this DAY
-        if (!(dayBuckets[key].logs as any)[exName]) (dayBuckets[key].logs as any)[exName] = {};
-        const exLogs = (dayBuckets[key].logs as any)[exName];
+        if (!(dayBuckets[key].logs as any)[canonicalName]) {
+          (dayBuckets[key].logs as any)[canonicalName] = { max_weight: 0 };
+        }
+        const exBucket = (dayBuckets[key].logs as any)[canonicalName];
+        exBucket.max_weight = Math.max(exBucket.max_weight, maxWTotal);
 
         for (const s of sets) {
           const w = Number(s.weight) || 0;
           const r = Number(s.reps) || 0;
           if (r > 0 && w > 0) {
-            exLogs[r] = Math.max(exLogs[r] || 0, w);
+            exBucket[r] = Math.max(exBucket[r] || 0, w);
           }
         }
       }
