@@ -115,16 +115,18 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
         ) : checkIns.map((item, idx) => {
           const dj = item.data_json || {};
           const compliance = getComplianceScore(dj);
-          const isNew = !item.reviewed_at && idx === 0;
+          const reviewedAt = item.reviewed_at || item.data_json?.reviewed_at;
+          const isPending = !reviewedAt;
+          const isNew = isPending && idx === 0;
           const isArchived = false;
           return (
             <div
               key={item.id}
               className={`bg-white rounded-2xl shadow-sm p-5 border transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden group ${
-                isNew ? 'border-amber-200' : 'border-slate-200 hover:border-slate-300'
+                isPending ? 'border-amber-200' : 'border-slate-200 hover:border-slate-300'
               } ${isArchived ? 'opacity-60 border-dashed' : ''}`}
             >
-              {isNew && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400" />}
+              {isPending && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400" />}
 
               <div className="flex items-center gap-6 min-w-[180px] pl-2">
                 <div className="flex flex-col">
@@ -170,9 +172,9 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
 
                 <div className="flex items-center gap-2">
                   <span className={`px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 ${
-                    isNew ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-slate-500 bg-slate-100 border-slate-200'
+                    isPending ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-slate-500 bg-slate-100 border-slate-200'
                   }`}>
-                    {isNew ? <><Flag className="w-3 h-3" />Pending</> : <><CheckCircle2 className="w-3 h-3" />Reviewed</>}
+                    {isPending ? <><Flag className="w-3 h-3" />Pending</> : <><CheckCircle2 className="w-3 h-3" />Reviewed</>}
                   </span>
                 </div>
               </div>
@@ -186,8 +188,8 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
                       : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  {isNew ? 'Review' : 'View'}
-                  {isNew && <ChevronRight className="w-4 h-4" />}
+                  {isPending ? 'Review' : 'View'}
+                  {isPending && <ChevronRight className="w-4 h-4" />}
                 </button>
               </div>
             </div>

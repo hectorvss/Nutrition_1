@@ -280,7 +280,7 @@ router.get('/clients', async (req: any, res) => {
         plan_name: planName,
         progress: mapAdherence(dj.nutritionAdherence),
         lastCheckInDate: latestCheckIn?.date || null,
-        isUnreviewed: latestCheckIn ? !latestCheckIn.reviewed_at : false,
+        isUnreviewed: latestCheckIn ? !(latestCheckIn.reviewed_at || latestCheckIn.data_json?.reviewed_at) : false,
         check_ins: c.check_ins || []
       };
     });
