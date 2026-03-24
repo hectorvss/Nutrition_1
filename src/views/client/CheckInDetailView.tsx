@@ -19,14 +19,14 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
           <p className="text-sm text-slate-500">{subtitle}</p>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {children}
       </div>
     </div>
   );
 
   const InfoField = ({ label, value, fullWidth = false }: any) => (
-    <div className={fullWidth ? "col-span-1 md:col-span-2" : ""}>
+    <div className="w-full">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
       <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
         <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -46,7 +46,7 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#f6f8f6] dark:bg-[#112116] p-6">
-      <div className="max-w-4xl mx-auto w-full space-y-6">
+      <div className="w-full space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <button 

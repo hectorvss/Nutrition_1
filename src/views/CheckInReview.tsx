@@ -122,62 +122,44 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
     dj = {};
   }
 
-  const KPICard = ({ title, icon: Icon, children, color = "emerald" }: any) => {
-    const colorClasses: any = {
-      emerald: "text-emerald-500",
-      blue: "text-blue-500",
-      amber: "text-amber-500",
-      purple: "text-purple-500",
-      red: "text-red-500",
-      slate: "text-slate-500"
-    };
-    return (
-      <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 h-full">
-        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-6">
-          <Icon className={`w-5 h-5 ${colorClasses[color]}`} />
-          {title}
-        </h2>
+  const Section = ({ title, subtitle, icon, children }: any) => (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 mb-6">
+      <div className="flex items-center gap-4 mb-2">
+        <div className="w-12 h-12 rounded-2xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center">
+          <span className="material-symbols-outlined text-2xl">{icon}</span>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+          <p className="text-sm text-slate-500">{subtitle}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-6">
         {children}
       </div>
-    );
-  };
+    </div>
+  );
 
-  const MetricItem = ({ label, value, subtext, color = "emerald" }: any) => {
-    const colorClasses: any = {
-      emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
-      blue: "bg-blue-50 text-blue-600 border-blue-100",
-      amber: "bg-amber-50 text-amber-600 border-amber-100",
-      purple: "bg-purple-50 text-purple-600 border-purple-100",
-      red: "bg-red-50 text-red-600 border-red-100",
-      slate: "bg-slate-50 text-slate-600 border-slate-100"
-    };
-    return (
-      <div className={`p-4 rounded-xl border ${colorClasses[color]} text-center relative overflow-hidden h-full flex flex-col justify-center`}>
-        <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-70">{label}</p>
-        <p className="text-xl font-bold truncate">{value || '--'}</p>
-        {subtext && <p className="text-[10px] font-bold mt-1 opacity-70">{subtext}</p>}
+  const InfoField = ({ label, value }: any) => (
+    <div className="w-full">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
+      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+          {Array.isArray(value) ? (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {value.map((v: string) => (
+                <span key={v} className="px-3 py-1 bg-[#17cf54]/10 text-[#17cf54] rounded-lg text-[11px] font-bold uppercase">{v}</span>
+              ))}
+            </div>
+          ) : (
+            value || '—'
+          )}
+        </p>
       </div>
-    );
-  };
-
-  const Badge = ({ label, color = "emerald" }: any) => {
-    const colorClasses: any = {
-      emerald: "bg-emerald-50 text-emerald-600 border-emerald-100",
-      blue: "bg-blue-50 text-blue-600 border-blue-100",
-      amber: "bg-amber-50 text-amber-600 border-amber-100",
-      purple: "bg-purple-50 text-purple-600 border-purple-100",
-      red: "bg-red-50 text-red-600 border-red-100",
-      slate: "bg-slate-50 text-slate-600 border-slate-100"
-    };
-    return (
-      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase ${colorClasses[color]}`}>
-        {label}
-      </span>
-    );
-  };
+    </div>
+  );
 
   return (
-    <div className="p-6 md:p-8 w-full space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 md:p-8 w-full space-y-6">
       {/* Breadcrumb & Header */}
       <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
         <div className="flex items-center gap-2">
@@ -232,352 +214,188 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 space-y-6">
-          
-          {/* Section 0: Coach Review Request */}
-          {dj.reviewNotes && (
-            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 mb-6">
-              <h2 className="text-lg font-bold text-amber-900 flex items-center gap-2 mb-2">
-                <Target className="w-5 h-5 text-amber-600" />
-                Client Review Request
-              </h2>
-              <p className="text-sm text-amber-800 font-medium leading-relaxed italic">"{dj.reviewNotes}"</p>
-            </div>
-          )}
+      <div className="w-full space-y-6">
+        {/* Section 1: Overview */}
+        <Section title="Overall Experience" subtitle="Client's general thoughts on the past week." icon="mood">
+          <InfoField label="Overall Week" value={dj.overallWeek} />
+          <InfoField label="Primary Context" value={dj.contextChips} />
+          <InfoField label="Plan Alignment" value={dj.matchPlan} />
+          <InfoField label="Consistency" value={dj.consistency} />
+          <InfoField label="Mental Health" value={dj.mentalHealth} />
+          <InfoField label="Weekly Notes" value={dj.weekNotes} />
+          {dj.reviewNotes && <InfoField label="Review Request for Coach" value={dj.reviewNotes} />}
+        </Section>
 
-          {/* Section 1: Overall & Body */}
-          <KPICard title="Overall & Body metrics" icon={Smile} color="emerald">
-             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <MetricItem label="Overall Week" value={dj.overallWeek} color="emerald" />
-                <MetricItem label="Current Weight" value={dj.weight ? `${dj.weight}kg` : '--'} color="blue" />
-                <MetricItem label="Avg Weight" value={dj.avgWeight ? `${dj.avgWeight}kg` : '--'} color="blue" />
-                <MetricItem label="Satisfaction" value={dj.satisfaction} color="amber" />
-                <MetricItem label="Menstrual Impact" value={dj.menstrualImpact || 'N/A'} color="purple" />
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Body Perception</h4>
-                  <p className="text-sm text-slate-700 font-medium">{dj.bodyPerception || '—'}</p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Visible Changes</h4>
-                  <p className="text-sm text-slate-700 font-medium">{dj.visibleChanges || '—'}</p>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Plan Alignment</h4>
-                  <p className="text-sm text-slate-700 font-medium">{dj.matchPlan || '—'}</p>
-                </div>
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                   <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Consistency</span> <span className="font-bold text-slate-900">{dj.consistency || '--'}</span></div>
-                   <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Mental Health</span> <span className="font-bold text-slate-900">{dj.mentalHealth || '--'}</span></div>
-                   <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Biggest Change</span> <span className="font-bold text-slate-900">{dj.biggestChangeArea || '--'}</span></div>
-                </div>
-                <div className="p-4 bg-blue-50/40 rounded-xl border border-blue-100/50">
-                   <h4 className="text-[9px] font-bold text-blue-400 uppercase mb-2 tracking-widest">Client Feedback</h4>
-                   <p className="text-sm text-slate-600 font-medium italic">"{dj.weekNotes || 'No notes provided'}"</p>
-                </div>
-             </div>
-             {/* Measurements Table */}
-             <div className="mt-6 overflow-hidden rounded-xl border border-slate-100">
-               <table className="w-full text-[11px] text-left">
-                 <thead className="bg-slate-50 font-bold uppercase tracking-widest text-slate-400 text-[9px] border-b border-slate-100">
-                   <tr><th className="px-4 py-3">Waist</th><th className="px-4 py-3">Hips</th><th className="px-4 py-3">Chest</th><th className="px-4 py-3">Arms</th><th className="px-4 py-3">Thighs</th></tr>
-                 </thead>
-                 <tbody className="divide-y divide-slate-50">
-                   <tr className="font-bold text-slate-700">
-                     <td className="px-4 py-3">{dj.waist ? dj.waist+'cm' : '--'}</td>
-                     <td className="px-4 py-3">{dj.hips ? dj.hips+'cm' : '--'}</td>
-                     <td className="px-4 py-3">{dj.chest ? dj.chest+'cm' : '--'}</td>
-                     <td className="px-4 py-3">{dj.arms ? dj.arms+'cm' : '--'}</td>
-                     <td className="px-4 py-3">{dj.thighs ? dj.thighs+'cm' : '--'}</td>
-                   </tr>
-                 </tbody>
-               </table>
-             </div>
-             {/* Progress Photos */}
-             <div className="mt-6">
-                <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Progress Photos</h4>
-                <div className="grid grid-cols-3 gap-4">
-                  {[
-                    { id: 'photoFront', label: 'Front' },
-                    { id: 'photoSide', label: 'Side' },
-                    { id: 'photoBack', label: 'Back' }
-                  ].map(p => (
-                    <div key={p.id} className="aspect-[3/4] rounded-xl bg-slate-50 border border-slate-100 shadow-sm overflow-hidden flex flex-col items-center justify-center">
-                      {dj[p.id] ? (
-                        <img src={dj[p.id]} alt={p.label} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="flex flex-col items-center text-slate-300">
-                          <Camera className="w-6 h-6 mb-1 text-slate-200" />
-                          <span className="text-[10px] font-bold uppercase">{p.label}</span>
-                        </div>
-                      )}
+        {/* Section 2: Body & Progress */}
+        <Section title="Body & Progress" subtitle="Physical updates and measurements." icon="straighten">
+          <InfoField label="Current Weight" value={dj.weight ? `${dj.weight} kg` : null} />
+          <InfoField label="Average Weight" value={dj.avgWeight ? `${dj.avgWeight} kg` : null} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <InfoField label="Waist" value={dj.waist ? `${dj.waist}cm` : null} />
+            <InfoField label="Hips" value={dj.hips ? `${dj.hips}cm` : null} />
+            <InfoField label="Chest" value={dj.chest ? `${dj.chest}cm` : null} />
+          </div>
+          <InfoField label="Visible Changes" value={dj.visibleChanges} />
+          <InfoField label="Body Perception" value={dj.bodyPerception} />
+          <InfoField label="Satisfaction" value={dj.satisfaction} />
+          <InfoField label="Menstrual Impact" value={dj.menstrualImpact} />
+          <InfoField label="Biggest Change" value={dj.biggestChangeArea} />
+
+          {/* Progress Photos */}
+          <div className="w-full mt-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Progress Photos</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { id: 'photoFront', label: 'Front' },
+                { id: 'photoSide', label: 'Side' },
+                { id: 'photoBack', label: 'Back' }
+              ].map(p => (
+                <div key={p.id} className="aspect-[3/4] rounded-2xl bg-slate-50 border border-slate-100 overflow-hidden flex items-center justify-center">
+                  {dj[p.id] ? (
+                    <img src={dj[p.id]} alt={p.label} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-slate-300 flex flex-col items-center">
+                      <Camera className="w-8 h-8 mb-2" />
+                      <span className="text-[10px] font-bold uppercase">{p.label}</span>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-          </KPICard>
+              ))}
+            </div>
+          </div>
+        </Section>
 
-          {/* Section 2: Nutrition */}
-          <KPICard title="Nutrition Adherence" icon={PieChart} color="emerald">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <MetricItem label="Overall Adherence" value={dj.nutritionAdherence} color="emerald" />
-              <MetricItem label="Calorie Target" value={dj.hitCalories} color="amber" />
-              <MetricItem label="Protein Target" value={dj.hitProtein} color="red" />
-              <MetricItem label="Eat Out Count" value={dj.eatOutCount} color="amber" />
-              <MetricItem label="Accuracy" value={dj.trackingAccuracy} color="slate" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="space-y-4">
-                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Meals Followed</span> <span className="font-bold text-slate-900">{dj.mealsFollowed || '--'}</span></div>
-                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Off-Plan Count</span> <span className="font-bold text-slate-900">{dj.offPlanCount || '0'}</span></div>
-                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Skipped Meals</span> <span className="font-bold text-slate-900">{dj.skippedMeals || 'None'}</span></div>
-                  <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Hardest Meal</span> <span className="font-bold text-slate-900">{dj.hardestMeal || '--'}</span></div>
-               </div>
-               <div className="space-y-4">
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Obstacles & Context</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {dj.adherenceObstacles?.length > 0 ? dj.adherenceObstacles.map((o:string) => <Badge key={o} label={o} color="red" />) : <span className="text-xs text-slate-400 italic">None reported</span>}
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mt-2">
-                     <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Digestive Issues?</h4>
-                     <p className="text-sm font-bold text-slate-700">{dj.digestiveIssues || 'No'}</p>
-                  </div>
-               </div>
-            </div>
-          </KPICard>
+        {/* Section 3: Nutrition Compliance */}
+        <Section title="Nutrition Compliance" subtitle="Tracking and dietary adherence." icon="restaurant">
+          <InfoField label="Adherence Level" value={dj.nutritionAdherence} />
+          <InfoField label="Calorie Target" value={dj.hitCalories} />
+          <InfoField label="Protein Target" value={dj.hitProtein} />
+          <InfoField label="Hardest Meal" value={dj.hardestMeal} />
+          <InfoField label="Obstacles" value={dj.adherenceObstacles} />
+          <InfoField label="Off-Plan Frequency" value={dj.offPlanCount} />
+          <InfoField label="Eat Out Count" value={dj.eatOutCount} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InfoField label="Tracking Accuracy" value={dj.trackingAccuracy} />
+            <InfoField label="Meals Followed" value={dj.mealsFollowed} />
+          </div>
+          <InfoField label="Nutrition Notes" value={dj.foodNotes || dj.digestiveIssues} />
+        </Section>
 
-          {/* Section 3: Digestion & Biofeedback */}
-          <KPICard title="Digestion & Biofeedback" icon={Stethoscope} color="purple">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <MetricItem label="Digestion" value={dj.digestionQuality} color="purple" />
-              <MetricItem label="Bloating" value={dj.bloatingLevel} color="purple" />
-              <MetricItem label="Hunger" value={dj.hunger} color="amber" />
-              <MetricItem label="Cravings" value={dj.cravings} color="red" />
-            </div>
+        {/* Section 4: Digestion & Biofeedback */}
+        <Section title="Digestion & Biofeedback" icon="health_and_safety">
+          <InfoField label="Digestion Quality" value={dj.digestionQuality} />
+          <InfoField label="Stool Consistency" value={dj.bowelRegularity} />
+          <InfoField label="Symptoms" value={dj.digestiveSymptoms} />
+          <InfoField label="Energy Post-Meal" value={dj.energyResponse} />
+          <InfoField label="Hunger Level" value={dj.hunger} />
+          <InfoField label="Cravings Intensity" value={dj.cravings} />
+          <InfoField label="Cravings Timing" value={dj.cravingsTime} />
+          <InfoField label="Fullness Response" value={dj.fullnessResponse} />
+          <InfoField label="Bloating Level" value={dj.bloatingLevel} />
+          <InfoField label="Digestion Notes" value={dj.foodNotes} />
+        </Section>
+
+        {/* Section 5: Habits */}
+        <Section title="Daily Habits" icon="task_alt">
+           <InfoField label="Water Amount" value={dj.waterAmount} />
+           <InfoField label="Water Consistency" value={dj.waterIntake} />
+           <InfoField label="Alcohol Intake" value={dj.alcoholIntake} />
+           <InfoField label="Snacking Frequency" value={dj.snackingFrequency} />
+           <InfoField label="Routine Structure" value={dj.routineStructure} />
+           <InfoField label="Meal Timing" value={dj.mealTimingConsistency} />
+           <InfoField label="Supplements" value={dj.supplements} />
+           <InfoField label="Habit Notes" value={dj.habitNotes} />
+        </Section>
+
+        {/* Section 6: Training */}
+        <Section title="Training Performance" icon="fitness_center">
+           <InfoField label="Training Adherence" value={dj.trainingAdherence} />
+           <InfoField label="Strength Levels" value={dj.strength} />
+           <InfoField label="Overall Energy" value={dj.trainingEnergy} />
+           <InfoField label="Training Quality" value={dj.trainingQuality} />
+           <InfoField label="Intensity" value={dj.trainingIntensity} />
+           <InfoField label="Recovery" value={dj.trainingRecovery} />
+           <InfoField label="Performance Trend" value={dj.performance} />
+           <InfoField label="Performance Drop" value={dj.performanceDropReasons} />
+           <InfoField label="Exercise Wins" value={dj.prWins} />
+           <InfoField label="Training Notes" value={dj.trainingNotes || dj.awkwardExerciseNotes} />
+        </Section>
+
+        {/* Section 7: Recovery */}
+        <Section title="Recovery & Sleep" icon="bedtime">
+           <InfoField label="Average Sleep" value={dj.sleepQuantity} />
+           <InfoField label="Sleep Quality" value={dj.sleepQuality} />
+           <InfoField label="Interruptions" value={dj.sleepInterruptions} />
+           <InfoField label="Consistency" value={dj.sleepScheduleConsistency} />
+           <InfoField label="Stress Levels" value={dj.stress} />
+           <InfoField label="General Fatigue" value={dj.generalFatigue} />
+           <InfoField label="Motivation" value={dj.motivation} />
+           <InfoField label="Recovery Impacts" value={dj.recoveryImpacts} />
+           <InfoField label="Recovery Notes" value={dj.recoveryNotes} />
+        </Section>
+
+        {/* Section 8: Activity & Pain */}
+        <Section title="Activity & Pain" icon="healing">
+           <InfoField label="Step Range" value={dj.stepRange} />
+           <InfoField label="Steps Adherence" value={dj.stepsAdherence} />
+           <InfoField label="Cardio Adherence" value={dj.cardioAdherence} />
+           <InfoField label="Activity Level" value={dj.activityLevel} />
+           <InfoField label="Pain Level" value={dj.painLevel} />
+           <InfoField label="Affected Area" value={dj.affectedArea} />
+           <InfoField label="Modified Training?" value={dj.modifiedTraining} />
+           <InfoField label="Activity Notes" value={dj.activityNotes} />
+           <InfoField label="Pain Notes" value={dj.painNotes} />
+        </Section>
+
+        {/* Section 9: Looking Ahead */}
+        <Section title="Looking Ahead" icon="flag">
+           <InfoField label="Improvement Focus" value={dj.improvementGoals} />
+           <InfoField label="Next Week Readiness" value={dj.readiness} />
+           <InfoField label="Non-negotiables" value={dj.nonNegotiables} />
+           <InfoField label="Coach Support Request" value={dj.supportNeeded} />
+           <InfoField label="Final Thoughts" value={dj.extraNotes} />
+        </Section>
+
+        {/* Coach Assessment Form */}
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-slate-900 overflow-hidden">
+          <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
+            <h2 className="font-bold flex items-center gap-2">
+              <Edit3 className="w-5 h-5 text-emerald-400" />
+              Coach Assessment
+            </h2>
+          </div>
+          <div className="p-6">
             <div className="space-y-6">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                     <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Bowel Regularity</h4>
-                     <p className="text-sm font-bold text-slate-700">{dj.bowelRegularity || '--'}</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                     <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Cravings Timing</h4>
-                     <p className="text-sm font-bold text-slate-700">{dj.cravingsTime || '--'}</p>
-                  </div>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <MetricItem label="Energy Post-Meal" value={dj.energyResponse} color="emerald" />
-                  <MetricItem label="Fullness Response" value={dj.fullnessResponse} color="blue" />
-               </div>
-               <div>
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Reported Symptoms</h4>
-                  <div className="flex flex-wrap gap-2">
-                     {dj.digestiveSymptoms?.length > 0 ? dj.digestiveSymptoms.map((s:string) => <Badge key={s} label={s} color="purple" />) : <span className="text-xs text-slate-400 italic">None reported</span>}
-                  </div>
-               </div>
-               {dj.foodNotes && (
-                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Biofeedback Notes</h4>
-                    <p className="text-sm text-slate-600 italic">"{dj.foodNotes}"</p>
-                 </div>
-               )}
-            </div>
-          </KPICard>
-
-          {/* Section 4: Training Performance */}
-          <KPICard title="Training Performance" icon={Dumbbell} color="emerald">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <MetricItem label="Adherence" value={dj.trainingAdherence} color="emerald" />
-              <MetricItem label="Performance" value={dj.performance} color="blue" />
-              <MetricItem label="Strength" value={dj.strength} color="red" />
-              <MetricItem label="Intensity" value={dj.trainingIntensity} color="amber" />
-            </div>
-            <div className="space-y-4">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-emerald-50/30 rounded-xl border border-emerald-100/50">
-                    <h4 className="text-[9px] font-bold text-emerald-600 uppercase mb-2 flex items-center gap-1.5"><Zap className="w-3 h-3"/> Training Wins & PRs</h4>
-                    <p className="text-sm text-slate-700 font-bold mb-1">{dj.prWins || 'No PRs this week'}</p>
-                    <p className="text-xs text-slate-500">{dj.strongExerciseNotes}</p>
-                  </div>
-                  <div className="p-4 bg-red-50/30 rounded-xl border border-red-100/50">
-                    <h4 className="text-[9px] font-bold text-red-600 uppercase mb-2 flex items-center gap-1.5"><AlertTriangle className="w-3 h-3"/> Struggles & Drops</h4>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {dj.performanceDropReasons?.map((r:string) => <Badge key={r} label={r} color="red" />)}
-                    </div>
-                    <p className="text-xs text-slate-500">{dj.awkwardExerciseNotes}</p>
-                  </div>
-               </div>
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex justify-between text-[11px] items-center p-2 bg-slate-50 rounded-lg"><span className="text-slate-400 font-bold uppercase">Energy</span> <span className="font-bold text-slate-900">{dj.trainingEnergy || '--'}</span></div>
-                  <div className="flex justify-between text-[11px] items-center p-2 bg-slate-50 rounded-lg"><span className="text-slate-400 font-bold uppercase">Quality</span> <span className="font-bold text-slate-900">{dj.trainingQuality || '--'}</span></div>
-                  <div className="flex justify-between text-[11px] items-center p-2 bg-slate-50 rounded-lg"><span className="text-slate-400 font-bold uppercase">Recovery</span> <span className="font-bold text-slate-900">{dj.trainingRecovery || '--'}</span></div>
-               </div>
-               {dj.trainingNotes && <p className="text-xs text-slate-500 italic">"{dj.trainingNotes}"</p>}
-            </div>
-          </KPICard>
-
-        </div>
-
-        {/* Sidebar Column */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Recovery & Foundations */}
-          <KPICard title="Recovery & Sleep" icon={Moon} color="blue">
-             <div className="grid grid-cols-2 gap-4 mb-4">
-                <MetricItem label="Sleep Qty" value={dj.sleepQuantity} color="blue" />
-                <MetricItem label="Sleep Qual" value={dj.sleepQuality} color="blue" />
-                <MetricItem label="Stress" value={dj.stress} color="red" />
-                <MetricItem label="Motivation" value={dj.motivation} color="amber" />
-             </div>
-             <div className="space-y-4">
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Interruptions</span> <span className="font-bold text-slate-900">{dj.sleepInterruptions || '--'}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Consistency</span> <span className="font-bold text-slate-900">{dj.sleepScheduleConsistency || '--'}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Fatigue</span> <span className="font-bold text-slate-900">{dj.generalFatigue || '--'}</span></div>
-                <div className="mt-4">
-                   <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Recovery Impacts</h4>
-                   <div className="flex flex-wrap gap-2">
-                      {dj.recoveryImpacts?.map((i:string) => <Badge key={i} label={i} color="slate" />)}
-                   </div>
-                </div>
-                {dj.recoveryNotes && <p className="text-xs text-slate-500 italic mt-2">"{dj.recoveryNotes}"</p>}
-             </div>
-          </KPICard>
-          {/* Activity & Cardio */}
-          <KPICard title="Activity & Cardio" icon={Footprints} color="slate">
-             <MetricItem label="Step Range" value={dj.stepRange} color="slate" />
-             <div className="mt-4 space-y-3">
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Steps Adherence</span> <span className="font-bold text-slate-700">{dj.stepsAdherence || '--'}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Cardio Adherence</span> <span className="font-bold text-slate-700">{dj.cardioAdherence || '--'}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Cardio Perf.</span> <span className="font-bold text-slate-700">{dj.cardioPerformance || '--'}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Activity Level</span> <span className="font-bold text-slate-700">{dj.activityLevel || '--'}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Tired post-act</span> <span className="font-bold text-slate-700">{dj.activityTired || '--'}</span></div>
-                {dj.activityLimitations?.length > 0 && (
-                   <div className="mt-2">
-                      <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Limitations</h4>
-                      <div className="flex flex-wrap gap-1">{dj.activityLimitations.map((l:string) => <span key={l} className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{l}</span>)}</div>
-                   </div>
-                )}
-             </div>
-             {dj.activityNotes && (
-               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mt-4">
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Activity Notes</h4>
-                  <p className="text-sm text-slate-600 italic">"{dj.activityNotes}"</p>
-               </div>
-             )}
-          </KPICard>
-
-          {/* Habits & Routine */}
-          <KPICard title="Habits & Routine" icon={Shield} color="purple">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                <div><p className="text-[9px] font-bold text-blue-400 uppercase">Hydration</p><p className="text-sm font-bold text-slate-900">{dj.waterAmount || '--'}</p></div>
-                <Badge label={dj.waterIntake} color="blue" />
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Meal Timing</span> <span className="font-bold text-slate-700">{dj.mealTimingConsistency || '--'}</span></div>
-                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Routine Structure</span> <span className="font-bold text-slate-700">{dj.routineStructure || '--'}</span></div>
-                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Supplements</span> <span className="font-bold text-slate-700">{dj.supplements || '--'}</span></div>
-                 <div className="flex justify-between text-[11px]"><span className="text-slate-400 font-bold uppercase">Alcohol Int.</span> <span className="font-bold text-slate-700">{dj.alcoholIntake || '--'}</span></div>
-                 <div className="flex justify-between text-[11px] items-center"><span className="text-slate-400 font-bold uppercase">Snacking</span> <Badge label={dj.snackingFrequency} color="amber" /></div>
-              </div>
-              {dj.habitNotes && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 mt-2">
-                   <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-1">Habit Notes</h4>
-                   <p className="text-sm text-slate-600 italic">"{dj.habitNotes}"</p>
-                </div>
-              )}
-            </div>
-          </KPICard>
-
-          {/* Looking Ahead */}
-          <KPICard title="Looking Ahead" icon={Calendar} color="amber">
-            <div className="space-y-4">
-              <MetricItem label="Next Week Readiness" value={dj.readiness} color="emerald" />
-              <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-                <h4 className="text-[9px] font-bold text-amber-800 uppercase mb-2 tracking-widest">Non-Negotiables</h4>
-                <p className="text-sm text-slate-700 font-medium italic">"{dj.nonNegotiables || 'None set'}"</p>
-              </div>
-              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                <h4 className="text-[9px] font-bold text-blue-800 uppercase mb-2 tracking-widest">Requested Support</h4>
-                <p className="text-sm text-slate-700 font-medium italic">"{dj.supportNeeded || 'No specific requests'}"</p>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Internal Notes & Feedback</label>
+                <textarea 
+                  value={coachNotes}
+                  onChange={(e) => setCoachNotes(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all min-h-[160px] resize-none outline-none" 
+                  placeholder="Write your feedback here..."
+                />
               </div>
               <div>
-                 <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 tracking-widest">Primary Focus Areas</h4>
-                 <div className="flex flex-wrap gap-2">
-                    {dj.improvementGoals?.map((g:string) => <Badge key={g} label={g} color="amber" />)}
-                 </div>
-              </div>
-              {dj.extraNotes && (
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 mt-4 shadow-sm text-center">
-                   <h4 className="text-[10px] font-bold text-amber-900 uppercase mb-2 flex items-center justify-center gap-1.5"><FileText className="w-3 h-3"/> Final Thoughts</h4>
-                   <p className="text-sm text-slate-700 leading-relaxed italic">"{dj.extraNotes}"</p>
-                </div>
-              )}
-            </div>
-          </KPICard>
-
-          {/* Pain Tracking (Conditionally visible) */}
-          {(dj.painLevel && dj.painLevel !== 'None') && (
-            <KPICard title="Pain Tracking" icon={AlertTriangle} color="red">
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                 <MetricItem label="Pain Level" value={dj.painLevel} color="red" />
-                 <MetricItem label="Affected Area" value={dj.affectedArea} color="red" />
-              </div>
-              <div className="space-y-3">
-                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Pain Type</span> <span className="font-bold text-slate-900">{dj.painType}</span></div>
-                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Impact</span> <span className="font-bold text-slate-900">{dj.trainingImpact}</span></div>
-                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Progression</span> <span className="font-bold text-slate-900">{dj.painProgression}</span></div>
-                 <div className="flex justify-between text-[10px]"><span className="text-slate-400 font-bold uppercase">Modified Training?</span> <span className="font-bold text-slate-900">{dj.modifiedTraining}</span></div>
-                 <p className="text-xs text-slate-500 bg-red-50 p-2 rounded border border-red-100 italic">"{dj.painNotes}"</p>
-              </div>
-            </KPICard>
-          )}
-
-          {/* Coach Assessment Form */}
-          <div className="bg-white rounded-2xl shadow-sm border-2 border-slate-900 overflow-hidden">
-            <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
-              <h2 className="font-bold flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-emerald-400" />
-                Coach Assessment
-              </h2>
-            </div>
-            <div className="p-6">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Internal Notes & Feedback</label>
-                  <textarea 
-                    value={coachNotes}
-                    onChange={(e) => setCoachNotes(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all min-h-[160px] resize-none outline-none" 
-                    placeholder="Write your feedback here..."
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Next Week Focus</label>
+                <div className="relative">
+                  <Target className="absolute top-3.5 left-3.5 text-slate-400 w-4 h-4" />
+                  <input 
+                    value={nextWeekFocus}
+                    onChange={(e) => setNextWeekFocus(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors outline-none font-medium" 
+                    placeholder="e.g. Focus on sleep quality" 
+                    type="text"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Next Week Focus</label>
-                  <div className="relative">
-                    <Target className="absolute top-3.5 left-3.5 text-slate-400 w-4 h-4" />
-                    <input 
-                      value={nextWeekFocus}
-                      onChange={(e) => setNextWeekFocus(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors outline-none font-medium" 
-                      placeholder="e.g. Focus on sleep quality" 
-                      type="text"
-                    />
-                  </div>
-                </div>
-                <button 
-                  onClick={handlePublish}
-                  disabled={isPublishing}
-                  className="w-full py-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-bold transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4" />
-                  {isPublishing ? 'Publishing...' : 'Publish Feedback'}
-                </button>
               </div>
+              <button 
+                onClick={handlePublish}
+                disabled={isPublishing}
+                className="w-full py-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-bold transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+              >
+                <Send className="w-4 h-4" />
+                {isPublishing ? 'Publishing...' : 'Publish Feedback'}
+              </button>
             </div>
           </div>
         </div>

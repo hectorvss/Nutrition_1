@@ -2144,60 +2144,121 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       }))
     ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
 
-    // 8. Training Stats
+    // 8. Training Stats — from workout_logs
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - 7);
+
+    const { data: allWorkoutLogs } = await supabaseAdmin
+      .from('workout_logs')
+      .select('*')
+      .eq('client_id', id)
+      .order('logged_at', { ascending: false })
+      .limit(100);
+
+    const workoutLogs = allWorkoutLogs || [];
+    const weeklyLogs = workoutLogs.filter(w => new Date(w.logged_at) >= startOfWeek);
+
     let weeklyVolume = 0;
     let avgRPE = 0;
-    let workoutCount = 0;
-    let fatigue = 5;
-    
-    if (recentCheckIns.length > 0) {
-      let totalVol = 0;
-      let totalRPE = 0;
-      let countRPE = 0;
-      
-      recentCheckIns.forEach(ci => {
-        const d = ci.data_json as any;
-        if (d.total_volume) totalVol += Number(d.total_volume);
-        if (d.avg_rpe) { totalRPE += Number(d.avg_rpe); countRPE++; }
-        if (d.workout_completion > 0) workoutCount++;
-      });
-      
-      weeklyVolume = totalVol;
-      avgRPE = countRPE > 0 ? Number((totalRPE / countRPE).toFixed(1)) : 0;
-      
-      const latestWithFatigue = [...recentCheckIns].reverse().find(ci => (ci.data_json as any).fatigue_level !== undefined);
-      if (latestWithFatigue) fatigue = (latestWithFatigue.data_json as any).fatigue_level;
-    }
+    let workoutCount = weeklyLogs.length;
 
-    // 9. Strength PRs & History
-    const lastWithPRs = [...checkIns].reverse().find(ci => 
-      (ci.data_json as any).pr_back_squat || (ci.data_json as any).pr_deadlift || (ci.data_json as any).pr_bench_press
-    );
-    const prs = {
-      squat: lastWithPRs ? (lastWithPRs.data_json as any).pr_back_squat || '--' : '--',
-      deadlift: lastWithPRs ? (lastWithPRs.data_json as any).pr_deadlift || '--' : '--',
-      bench: lastWithPRs ? (lastWithPRs.data_json as any).pr_bench_press || '--' : '--',
-      date: lastWithPRs ? lastWithPRs.date : null
+    // Helper: compute total volume for a session (sum of weight × reps for all sets of all exercises)
+    const calcSessionVolume = (log: any): number => {
+      let vol = 0;
+      for (const ex of (log.exercises || [])) {
+        for (const s of (ex.sets_logged || [])) {
+          const w = Number(s.weight) || 0;
+          const r = Number(s.reps) || 0;
+          vol += w * r;
+        }
+      }
+      return vol;
     };
 
-    const strengthHistory = (checkIns || []).map(ci => ({
-      date: ci.date,
-      squat: (ci.data_json as any).pr_back_squat || null,
-      deadlift: (ci.data_json as any).pr_deadlift || null,
-      bench: (ci.data_json as any).pr_bench_press || null,
-      volume: (ci.data_json as any).total_volume || 0
-    })).filter(h => h.squat || h.deadlift || h.bench || h.volume > 0);
+    weeklyLogs.forEach(log => {
+      weeklyVolume += calcSessionVolume(log);
+    });
 
-    const recentWorkouts = (checkIns || [])
-      .filter(ci => (ci.data_json as any).workout_completion > 0)
-      .slice(-3)
-      .map(ci => ({
-        name: 'Workout Session', 
-        date: ci.date,
-        status: 'Completed',
-        volume: (ci.data_json as any).total_volume || 0,
-        rpe: (ci.data_json as any).avg_rpe || 0
+    const logsWithRPE = weeklyLogs.filter(l => l.session_rpe);
+    avgRPE = logsWithRPE.length > 0
+      ? Number((logsWithRPE.reduce((s, l) => s + Number(l.session_rpe), 0) / logsWithRPE.length).toFixed(1))
+      : 0;
+
+    // Fatigue: if latest RPE > 8 consider high  
+    const fatigue = logsWithRPE.length > 0 ? Number(logsWithRPE[0].session_rpe) : 5;
+
+    // 9. Strength PRs & History from workout_logs
+    // PRs: highest weight lifted per exercise (across all logs)
+    const prMap: Record<string, { weight: number; date: string }> = {};
+    for (const log of workoutLogs) {
+      for (const ex of (log.exercises || [])) {
+        const exName = (ex.name || '').toLowerCase();
+        const maxSet = (ex.sets_logged || []).reduce((best: any, s: any) => {
+          const w = Number(s.weight) || 0;
+          return w > (best?.weight || 0) ? s : best;
+        }, null);
+        if (maxSet) {
+          const w = Number(maxSet.weight) || 0;
+          if (!prMap[exName] || w > prMap[exName].weight) {
+            prMap[exName] = { weight: w, date: log.logged_at };
+          }
+        }
+      }
+    }
+
+    // Map canonical PRs for common exercises
+    const findPR = (keywords: string[]) => {
+      const key = Object.keys(prMap).find(k => keywords.some(kw => k.includes(kw)));
+      return key ? prMap[key] : null;
+    };
+    const squatPR = findPR(['squat', 'sentadilla']);
+    const deadliftPR = findPR(['deadlift', 'peso muerto']);
+    const benchPR = findPR(['bench', 'press banca', 'press plano', 'chest press']);
+
+    const prs = {
+      squat: squatPR ? squatPR.weight : '--',
+      deadlift: deadliftPR ? deadliftPR.weight : '--',
+      bench: benchPR ? benchPR.weight : '--',
+      date: squatPR?.date || deadliftPR?.date || benchPR?.date || null
+    };
+
+    // Strength history: weekly aggregated volume for chart
+    const weekBuckets: Record<string, { volume: number; squat: number; deadlift: number; bench: number }> = {};
+    for (const log of workoutLogs) {
+      const d = new Date(log.logged_at);
+      // ISO week start (Monday)
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const weekStart = new Date(d.setDate(diff));
+      const key = weekStart.toISOString().split('T')[0];
+      if (!weekBuckets[key]) weekBuckets[key] = { volume: 0, squat: 0, deadlift: 0, bench: 0 };
+      weekBuckets[key].volume += calcSessionVolume(log);
+      for (const ex of (log.exercises || [])) {
+        const exName = (ex.name || '').toLowerCase();
+        const maxW = (ex.sets_logged || []).reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
+        if (['squat', 'sentadilla'].some(kw => exName.includes(kw))) weekBuckets[key].squat = Math.max(weekBuckets[key].squat, maxW);
+        if (['deadlift', 'peso muerto'].some(kw => exName.includes(kw))) weekBuckets[key].deadlift = Math.max(weekBuckets[key].deadlift, maxW);
+        if (['bench', 'press banca', 'press plano'].some(kw => exName.includes(kw))) weekBuckets[key].bench = Math.max(weekBuckets[key].bench, maxW);
+      }
+    }
+    const strengthHistory = Object.entries(weekBuckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, vals]) => ({
+        date,
+        squat: vals.squat || null,
+        deadlift: vals.deadlift || null,
+        bench: vals.bench || null,
+        volume: vals.volume
       }));
+
+    // Recent workouts: last 5 sessions
+    const recentWorkouts = workoutLogs.slice(0, 5).map(log => ({
+      name: log.workout_name || 'Workout Session',
+      date: log.logged_at,
+      status: 'Completed',
+      volume: Math.round(calcSessionVolume(log)),
+      rpe: log.session_rpe || 0
+    }));
 
     // 10. Mindset Stats & History
     const latestCheckIn = checkIns.length > 0 ? checkIns[checkIns.length - 1] : null;
