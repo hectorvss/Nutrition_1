@@ -82,12 +82,26 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
   }, [clientId, checkInId]);
 
   const handlePublish = async () => {
+    if (!coachNotes.trim()) return;
     setIsPublishing(true);
     try {
+      // 1. Update the check-in review in the DB
       await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}/review`, {
         method: 'POST',
         body: JSON.stringify({ coach_notes: coachNotes, next_week_focus: nextWeekFocus })
       });
+
+      // 2. Send the feedback message to the chat
+      await fetchWithAuth('/messages', {
+        method: 'POST',
+        body: JSON.stringify({
+          receiver_id: clientId,
+          content: coachNotes,
+          attachment_type: 'check_in',
+          attachment_url: checkInId
+        })
+      });
+
       onBack();
     } catch (err) {
       console.error('Error publishing review:', err);
@@ -356,46 +370,92 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
            <InfoField label="Final Thoughts" value={dj.extraNotes} />
         </Section>
 
-        {/* Coach Assessment Form */}
-        <div className="bg-white rounded-2xl shadow-sm border-2 border-slate-900 overflow-hidden">
-          <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
-            <h2 className="font-bold flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-emerald-400" />
+        {/* Coach Assessment Form - Redesigned to match image */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden mb-8">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center">
+                <span className="material-symbols-outlined text-xl">reviews</span>
+              </div>
               Coach Assessment
             </h2>
+            <button className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shadow-sm bg-white dark:bg-slate-900 ring-1 ring-slate-950/5">
+              Load Template
+            </button>
           </div>
-          <div className="p-6">
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Internal Notes & Feedback</label>
+          
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Feedback Column */}
+            <div className="lg:col-span-2 space-y-3">
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Internal Notes & Feedback</label>
+              <div className="relative group">
                 <textarea 
                   value={coachNotes}
                   onChange={(e) => setCoachNotes(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all min-h-[160px] resize-none outline-none" 
-                  placeholder="Write your feedback here..."
+                  className="w-full bg-yellow-50/50 dark:bg-amber-900/10 border-2 border-yellow-100/50 dark:border-amber-900/20 rounded-2xl p-6 text-[15px] leading-relaxed text-slate-700 dark:text-slate-200 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-200 transition-all min-h-[200px] resize-none outline-none font-medium placeholder-slate-400" 
+                  placeholder="Write your feedback here... e.g. 'Great progress on waist measurements, let's keep the carb cycling for another week...'"
                 />
+                <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                  <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                    <Mic className="w-4 h-4" />
+                  </button>
+                  <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
+            </div>
+
+            {/* Actions & Next Focus Column */}
+            <div className="space-y-6 flex flex-col justify-between">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Next Week Focus</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Next Week Focus</label>
                 <div className="relative">
-                  <Target className="absolute top-3.5 left-3.5 text-slate-400 w-4 h-4" />
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <Target className="w-3.5 h-3.5 text-slate-400" />
+                    </div>
+                  </div>
                   <input 
                     value={nextWeekFocus}
                     onChange={(e) => setNextWeekFocus(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-emerald-500/20 focus:border-emerald-500 transition-colors outline-none font-medium" 
-                    placeholder="e.g. Focus on sleep quality" 
+                    className="w-full pl-12 pr-4 py-4 bg-blue-50/50 dark:bg-blue-900/10 border-2 border-blue-100/50 dark:border-blue-900/20 rounded-2xl text-[14px] font-semibold text-slate-700 dark:text-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-200 transition-all outline-none placeholder-slate-400" 
+                    placeholder="e.g. Increase daily steps to 10k" 
                     type="text"
                   />
                 </div>
               </div>
-              <button 
-                onClick={handlePublish}
-                disabled={isPublishing}
-                className="w-full py-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-sm font-bold transition-all shadow-xl shadow-slate-900/20 flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
-              >
-                <Send className="w-4 h-4" />
-                {isPublishing ? 'Publishing...' : 'Publish Feedback'}
-              </button>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                   <label className="flex items-center gap-3 cursor-pointer group">
+                     <div className="relative flex items-center">
+                        <input type="checkbox" className="peer sr-only" />
+                        <div className="w-5 h-5 border-2 border-slate-200 dark:border-slate-700 rounded-lg group-hover:border-slate-300 transition-all"></div>
+                        <Check className="absolute w-3.5 h-3.5 text-emerald-500 opacity-0 peer-checked:opacity-100 left-0.5 transition-opacity" />
+                     </div>
+                     <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Send via Email</span>
+                   </label>
+                   <button className="text-[12px] font-bold text-red-500 hover:text-red-600 transition-colors">
+                     Clarification needed?
+                   </button>
+                </div>
+
+                <button 
+                  onClick={handlePublish}
+                  disabled={isPublishing || !coachNotes.trim()}
+                  className="w-full py-4 rounded-2xl bg-slate-950 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-900 dark:hover:bg-slate-100 text-[15px] font-bold transition-all shadow-xl shadow-slate-900/20 dark:shadow-none flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group h-[56px]"
+                >
+                  {isPublishing ? (
+                    <div className="w-5 h-5 border-2 border-white/30 dark:border-slate-900/30 border-t-white dark:border-t-slate-900 rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      Publish Feedback
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
