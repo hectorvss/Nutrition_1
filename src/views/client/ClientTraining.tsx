@@ -236,8 +236,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         })
       });
       setSaveSuccess(true);
-      // Clear draft for this day
-      setDayData(selectedDay, { exerciseLogs: {}, rpe: '', notes: '' });
+      // Removed clearing draft so data remains visible to user
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err) {
       console.error('Error saving workout log:', err);

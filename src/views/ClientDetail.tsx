@@ -469,10 +469,18 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     const now = new Date();
     let cutoff = new Date();
     if (strengthRange === '1W') {
-      const { monday, sunday } = getWeekRange(strengthWeekOffset);
-      const start = monday.toISOString().split('T')[0];
-      const end = sunday.toISOString().split('T')[0];
-      return stats.training.strengthHistory.filter((h: any) => h.date >= start && h.date <= end);
+      const days = [];
+      const endDate = new Date(now);
+      endDate.setDate(now.getDate() - (strengthWeekOffset * 7));
+      
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(endDate);
+        d.setDate(endDate.getDate() - i);
+        const k = d.toISOString().split('T')[0];
+        const match = stats.training.strengthHistory.find((h: any) => h.date === k);
+        days.push(match || { date: k, volume: 0, logs: {} });
+      }
+      return days;
     }
     
     if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
