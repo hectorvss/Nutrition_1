@@ -239,7 +239,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [activeTab, setActiveTab] = useState<Tab>('Nutrition');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
-  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Back Squat');
+  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Weekly Volume');
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
 
   // ─── Delete modal state ──────────────────────────────────────────────────
@@ -489,22 +489,26 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Deep dive analytics for primary compound lifts</p>
           </div>
           <div className="flex items-center gap-3">
-            <select 
-              value={strengthRange}
-              onChange={(e) => setStrengthRange(e.target.value)}
-              className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 py-2 px-4 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none"
-            >
-              <option value="3M">Last 3 Months</option>
-              <option value="6M">Last 6 Months</option>
-              <option value="YTD">Year to Date (YTD)</option>
-              <option value="ALL">All Time</option>
-            </select>
+            <div className="relative group">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors pointer-events-none" />
+              <select 
+                value={strengthRange}
+                onChange={(e) => setStrengthRange(e.target.value)}
+                className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 shadow-sm transition-all outline-none"
+              >
+                <option value="3M">Latest 90 Days</option>
+                <option value="6M">Last 6 Months</option>
+                <option value="YTD">Year to Date</option>
+                <option value="ALL">All History</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none transition-transform group-hover:translate-y-[-40%]" />
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 scrollbar-hide">
+        <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 scrollbar-hide no-scrollbar">
           {[
-            { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: '' },
+            { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
             ...(stats?.training?.allExercises || []).map((ex: any) => ({
               name: ex.name,
               value: ex.pr || '--',
@@ -516,16 +520,23 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               <div 
                 key={idx} 
                 onClick={() => setSelectedAnalysisSubject(ex.name)} 
-                className={`flex-shrink-0 w-48 p-4 rounded-2xl border transition-all cursor-pointer ${isSelected ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}
+                className={`flex-shrink-0 w-48 p-5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/10 shadow-md shadow-emerald-50' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm'}`}
               >
-                <div className="flex justify-between items-start mb-4">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
-                    <Dumbbell className="w-4 h-4" />
+                <div className="flex justify-between items-start mb-5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${isSelected ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                    <Dumbbell className="w-4.5 h-4.5" />
                   </div>
-                  {isSelected && <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded uppercase">Selected</span>}
+                  {isSelected && (
+                    <span className="flex items-center gap-1 text-[8px] font-black tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-lg uppercase">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> Selected
+                    </span>
+                  )}
                 </div>
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1 truncate">{ex.name}</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{ex.value} {ex.unit}</p>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1.5 truncate group-hover:text-emerald-600 transition-colors uppercase tracking-tight">{ex.name}</h4>
+                <div className="flex items-baseline gap-1.5">
+                   <span className="text-lg font-black text-slate-900 dark:text-white leading-none tracking-tighter">{ex.value}</span>
+                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{ex.unit}</span>
+                </div>
               </div>
             );
           })}
@@ -533,25 +544,59 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={getFilteredStrengthData()}>
+            <AreaChart data={getFilteredStrengthData()}>
+              <defs>
+                <linearGradient id="colorStrength" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}} />
-              <YAxis hide domain={['auto', 'auto']} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)', color: 'var(--tw-colors-slate-900)' }}
-                labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
+              <XAxis 
+                dataKey="date" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}}
+                tickFormatter={(date) => {
+                  try {
+                    return new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                  } catch {
+                    return date;
+                  }
+                }}
               />
-              <Line 
+              <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
+              <Tooltip 
+                contentStyle={{ 
+                  borderRadius: '12px', 
+                  border: 'none', 
+                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', 
+                  backgroundColor: 'var(--tw-colors-white)', 
+                  color: 'var(--tw-colors-slate-900)' 
+                }}
+                labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
+                formatter={(value: any) => [`${value} ${selectedAnalysisSubject === 'Weekly Volume' ? 'kg' : 'kg'}`, selectedAnalysisSubject]}
+                labelFormatter={(label) => {
+                  try {
+                    return new Date(label).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+                  } catch {
+                    return label;
+                  }
+                }}
+              />
+              <Area 
                 name={selectedAnalysisSubject} 
                 type="monotone" 
-                dataKey={(row) => selectedAnalysisSubject === 'Weekly Volume' ? row.volume : (row.logs?.[selectedAnalysisSubject] || null)} 
+                dataKey={(row: any) => selectedAnalysisSubject === 'Weekly Volume' ? row.volume : (row.logs?.[selectedAnalysisSubject] || null)} 
                 stroke="#10b981" 
                 strokeWidth={3} 
+                fillOpacity={1} 
+                fill="url(#colorStrength)"
                 dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
-                activeDot={{ r: 6 }} 
+                activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }}
                 connectNulls 
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
