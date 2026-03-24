@@ -436,14 +436,15 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     </div>
   );
 
-  const [strengthRange, setStrengthRange] = useState('3M');
+  const [strengthRange, setStrengthRange] = useState('30D');
 
   const getFilteredStrengthData = () => {
     if (!stats?.training?.strengthHistory) return [];
     
     const now = new Date();
     let cutoff = new Date();
-    if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
+    if (strengthRange === '30D') cutoff.setDate(now.getDate() - 30);
+    else if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
     else if (strengthRange === '6M') cutoff.setMonth(now.getMonth() - 6);
     else if (strengthRange === 'YTD') cutoff.setFullYear(now.getFullYear(), 0, 1);
     else return stats.training.strengthHistory;
@@ -497,6 +498,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 onChange={(e) => setStrengthRange(e.target.value)}
                 className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 shadow-sm transition-all outline-none"
               >
+                <option value="30D">Latest 30 Days</option>
                 <option value="3M">Latest 90 Days</option>
                 <option value="6M">Last 6 Months</option>
                 <option value="YTD">Year to Date</option>
@@ -572,7 +574,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   } catch { return date; }
                 }}
               />
-              <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
+              <YAxis hide domain={['dataMin - 5', 'dataMax + 10']} />
               <Tooltip 
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#fff' }}
                 labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
@@ -582,7 +584,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   } catch { return label; }
                 }}
               />
-              <Legend verticalAlign="top" height={36}/>
+              <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
               
               {(() => {
                 if (selectedAnalysisSubject === 'Weekly Volume') {
