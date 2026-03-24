@@ -2219,7 +2219,10 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       dailyBuckets[key].volume += calcSessionVolume(log);
 
       for (const ex of (log.exercises || [])) {
-        const exName = ex.name || 'Unknown Exercise';
+        // Normalize name: Title Case & Trim
+        const rawName = ex.name || 'Unknown Exercise';
+        const exName = rawName.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        
         const sets = (ex.sets_logged || []);
         const maxW = sets.reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
         
