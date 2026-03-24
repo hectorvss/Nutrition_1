@@ -27,7 +27,7 @@ export default function CheckInList({ onViewHistory }: CheckInListProps) {
       name: c.name,
       adherence: c.progress || 0,
       weight: c.weight ? `${c.weight}kg` : '--',
-      nutritionAdherence: c.plan || '--',
+      nutritionAdherence: c.plan_name || '--',
       submitted: c.lastCheckInDate
         ? new Date(c.lastCheckInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         : 'No check-ins',
