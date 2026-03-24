@@ -2209,14 +2209,18 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     // 9. Strength PRs & History from workout_logs
     // PRs & Latest status for ALL exercises
     const allExercisesMap: Record<string, { pr: number, latest: number, latestDate: string }> = {};
-    const dayBuckets: Record<string, { volume: number; logs: any }> = {};
+    const weekBuckets: Record<string, { volume: number; logs: any }> = {};
 
     for (const log of workoutLogs) {
       const d = new Date(log.logged_at);
-      const key = d.toISOString().split('T')[0]; // Daily bucket
+      // ISO week start (Monday)
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const weekStart = new Date(d.setDate(diff));
+      const key = weekStart.toISOString().split('T')[0];
       
-      if (!dayBuckets[key]) dayBuckets[key] = { volume: 0, logs: {} };
-      dayBuckets[key].volume += calcSessionVolume(log);
+      if (!weekBuckets[key]) weekBuckets[key] = { volume: 0, logs: {} };
+      weekBuckets[key].volume += calcSessionVolume(log);
 
       for (const ex of (log.exercises || [])) {
         const exName = ex.name || 'Unknown Exercise';
@@ -2234,9 +2238,9 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
           }
         }
 
-        // GRANULAR LOGS: Track max weight FOR EACH rep count on this specific DAY
-        if (!(dayBuckets[key].logs as any)[exName]) (dayBuckets[key].logs as any)[exName] = {};
-        const exLogs = (dayBuckets[key].logs as any)[exName];
+        // GRANULAR LOGS: Track max weight FOR EACH rep count on this specific WEEK
+        if (!(weekBuckets[key].logs as any)[exName]) (weekBuckets[key].logs as any)[exName] = {};
+        const exLogs = (weekBuckets[key].logs as any)[exName];
 
         for (const s of sets) {
           const w = Number(s.weight) || 0;
@@ -2274,7 +2278,7 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       date: squatPR?.date || deadliftPR?.date || benchPR?.date || null
     };
 
-    const strengthHistory = Object.entries(dayBuckets)
+    const strengthHistory = Object.entries(weekBuckets)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, vals]) => ({
         date,
