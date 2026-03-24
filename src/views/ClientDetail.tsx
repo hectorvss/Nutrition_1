@@ -58,6 +58,12 @@ import { useClient } from '../context/ClientContext';
 import CheckInHistory from './CheckInHistory';
 import CheckInReview from './CheckInReview';
 
+const primaryExercises = [
+  'Bench Press', 'Squat', 'Deadlift', 'Military Press', 'Barbell Row',
+  'Sentadilla', 'Peso Muerto', 'Press Banca', 'Press Militar', 'Remo con Barra',
+  'Buenos Días', 'Romanian Deadlift', '90-90 Hip Switch', 'Adductor Rock-Back'
+];
+
 interface ClientDetailProps {
   clientId: string;
   onBack: () => void;
@@ -469,13 +475,11 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     const now = new Date();
     let cutoff = new Date();
     if (strengthRange === '1W') {
+      const { monday, sunday } = getWeekRange(strengthWeekOffset);
       const days = [];
-      const endDate = new Date(now);
-      endDate.setDate(now.getDate() - (strengthWeekOffset * 7));
-      
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(endDate);
-        d.setDate(endDate.getDate() - i);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
         const k = d.toISOString().split('T')[0];
         const match = stats.training.strengthHistory.find((h: any) => h.date === k);
         days.push(match || { date: k, volume: 0, logs: {} });
@@ -678,8 +682,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 const repCounts = new Set<string>();
                 getFilteredStrengthData().forEach((row: any) => {
                   const exData = findExData(row.logs);
-                  if (exData && typeof exData === 'object') {
-                    Object.keys(exData).forEach(r => repCounts.add(r));
+                  if (exData && exData.repMaxes && typeof exData.repMaxes === 'object') {
+                    Object.keys(exData.repMaxes).forEach(r => repCounts.add(r));
                   }
                 });
 
@@ -693,7 +697,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                     type="natural" 
                     dataKey={(row: any) => {
                       const exData = findExData(row.logs);
-                      return (exData && exData[reps]) || null;
+                      return (exData && exData.repMaxes && exData.repMaxes[reps]) || null;
                     }}
                     stroke={colors[i % colors.length]} 
                     strokeWidth={2.5} 

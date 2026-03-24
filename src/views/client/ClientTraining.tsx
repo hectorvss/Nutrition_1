@@ -94,8 +94,46 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         setIsLoading(false);
       }
     };
+
+    const fetchWorkoutHistory = async () => {
+      try {
+        const history = await fetchWithAuth('/client/workout-logs');
+        if (Array.isArray(history)) {
+          setAllLogs(prev => {
+            const newLogs = { ...prev };
+            history.forEach(log => {
+              if (log.day_key) {
+                // Formatting for consistency with ExerciseLogs structure
+                const exerciseLogs: ExerciseLogs = {};
+                log.exercises?.forEach((ex: any, idx: number) => {
+                  exerciseLogs[`0-${idx}`] = { 
+                    name: ex.name,
+                    muscle_group: ex.muscle_group,
+                    sets_logged: ex.sets_logged || [],
+                    notes: ex.notes || ''
+                  };
+                });
+                
+                if (!newLogs[log.day_key] || Object.keys(newLogs[log.day_key].exerciseLogs).length === 0) {
+                  newLogs[log.day_key] = {
+                    exerciseLogs,
+                    rpe: String(log.session_rpe || ''),
+                    notes: log.notes || ''
+                  };
+                }
+              }
+            });
+            return newLogs;
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching history:', err);
+      }
+    };
+
     fetchMyPlans();
-  }, []);
+    fetchWorkoutHistory();
+  }, [user?.id, refreshExercises]);
 
   const updateExerciseLog = useCallback((key: string, field: keyof ExerciseLog, value: any) => {
     setAllLogs(prev => {
