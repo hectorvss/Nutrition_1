@@ -223,7 +223,13 @@ export default function App() {
     <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden">
       <Sidebar 
         currentView={currentView} 
-        onNavigate={(view) => setCurrentView(view as View)} 
+        onNavigate={(view) => {
+          if (['check-ins', 'clients', 'dashboard', 'analytics'].includes(view)) {
+            setSelectedClientId(null);
+            setSelectedCheckInId(null);
+          }
+          setCurrentView(view as View);
+        }} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
