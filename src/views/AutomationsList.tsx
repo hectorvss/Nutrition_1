@@ -83,22 +83,22 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
               </div>
             )}
             {filtered.map((auto) => {
-              const Icon = iconMap[auto.iconName] || FileText;
+              const Icon = iconMap[auto.icon_info?.iconName] || FileText;
               return (
                 <div key={auto.id} className="group border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <div className="grid grid-cols-12 gap-4 p-5 items-center">
                     <div className="col-span-4 flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl ${auto.iconBg} ${auto.iconColor} flex items-center justify-center flex-shrink-0`}>
+                      <div className={`w-10 h-10 rounded-xl ${auto.icon_info?.iconBg || 'bg-slate-100'} ${auto.icon_info?.iconColor || 'text-slate-500'} flex items-center justify-center flex-shrink-0`}>
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold text-slate-900 dark:text-white text-sm truncate">{auto.name}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{auto.desc}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate text-slate-500">{auto.description}</p>
                       </div>
                     </div>
                     <div className="col-span-3 hidden md:flex items-center text-sm text-slate-500 dark:text-slate-300">
                       <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium truncate">
-                        {auto.trigger}
+                        {auto.trigger_id}
                       </span>
                     </div>
                     <div className="col-span-3 hidden sm:block">

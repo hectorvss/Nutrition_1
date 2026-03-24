@@ -225,6 +225,17 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                         {stopCondition && (
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Stops when: <span className="font-medium">{stopWhen}</span></p>
                         )}
+                        {wizardData.deliveryRules.activation_conditions?.some(c => c.enabled) && (
+                          <div className="mt-3 flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activation Conditions:</span>
+                            {wizardData.deliveryRules.activation_conditions.filter(c => c.enabled).map((c, i) => (
+                              <p key={i} className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                                <Check className="w-3 h-3" />
+                                If {c.type} {c.operator} {c.value}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

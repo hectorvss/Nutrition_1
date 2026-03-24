@@ -18,7 +18,8 @@ import {
   BatteryFull, 
   Send,
   Copy,
-  CheckCheck
+  CheckCheck,
+  Plus
 } from 'lucide-react';
 import { AutomationDeliveryRules } from '../context/AutomationContext';
 
@@ -35,11 +36,12 @@ const VARIABLES = [
   { label: '{Client Name}', desc: "Client's full name" },
   { label: '{First Name}', desc: "Client's first name" },
   { label: '{Coach Name}', desc: "Your name" },
-  { label: '{Weight Goal}', desc: "Client's target weight" },
-  { label: '{Current Week}', desc: "Program week number" },
-  { label: '{Last Check-in Date}', desc: "Date of last check-in" },
-  { label: '{Next Workout}', desc: "Upcoming scheduled workout" },
-  { label: '{Program Name}', desc: "Active plan name" },
+  { label: '{Current Weight}', desc: "Latest logged weight" },
+  { label: '{Goal Weight}', desc: "Client's target weight" },
+  { label: '{Adherence Rate}', desc: "Weekly adherence %" },
+  { label: '{Check-in Day}', desc: "Scheduled check-in day" },
+  { label: '{Days Inactive}', desc: "Days since last login" },
+  { label: '{Days Until Expiry}', desc: "Days until plan ends" },
 ];
 
 function getPreviewText(text: string) {
@@ -296,36 +298,88 @@ export default function AutomationCreateMessage({
                       )}
                     </div>
 
-                    {/* Stop Condition */}
-                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-4">
-                      <div className="flex items-start gap-3">
-                        <input
-                          id="stop-condition"
-                          type="checkbox"
-                          checked={rules.stopCondition}
-                          onChange={e => updateRule('stopCondition', e.target.checked)}
-                          className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer mt-0.5"
-                        />
-                        <div className="flex flex-col">
-                          <label htmlFor="stop-condition" className="text-sm font-bold text-slate-900 dark:text-white cursor-pointer">Enable Stop Condition</label>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Automatically stop sending this message if a specific event occurs.</p>
+                    {/* Stop & Activation Conditions */}
+                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Stop Condition */}
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-start gap-3">
+                          <input
+                            id="stop-condition"
+                            type="checkbox"
+                            checked={rules.stopCondition}
+                            onChange={e => updateRule('stopCondition', e.target.checked)}
+                            className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer mt-0.5"
+                          />
+                          <div className="flex flex-col">
+                            <label htmlFor="stop-condition" className="text-sm font-bold text-slate-900 dark:text-white cursor-pointer">Enable Stop Condition</label>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Automatically stop sending if a specific event occurs.</p>
+                          </div>
                         </div>
+                        {rules.stopCondition && (
+                          <div className="flex items-center gap-3 ml-8">
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Stop when:</span>
+                            <select 
+                              value={rules.stopWhen}
+                              onChange={e => updateRule('stopWhen', e.target.value)}
+                              className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+                            >
+                              <option>Client replies to message</option>
+                              <option>Client completes check-in</option>
+                              <option>Client logs a workout</option>
+                              <option>Manual stop</option>
+                            </select>
+                          </div>
+                        )}
                       </div>
-                      {rules.stopCondition && (
-                        <div className="flex items-center gap-3 ml-8">
-                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Stop when:</span>
-                          <select 
-                            value={rules.stopWhen}
-                            onChange={e => updateRule('stopWhen', e.target.value)}
-                            className="min-w-[240px] rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
-                          >
-                            <option>Client replies to message</option>
-                            <option>Client completes check-in</option>
-                            <option>Client logs a workout</option>
-                            <option>Manual stop</option>
-                          </select>
+
+                      {/* Activation Conditions */}
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col">
+                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1">Activation Conditions</label>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Define specific rules that must be met to send this message.</p>
                         </div>
-                      )}
+                        
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { type: 'weight', label: 'Weight Goal', op: '>', val: 'Target' },
+                            { type: 'activity', label: 'Inactivity', op: '>', val: '3 Days' },
+                            { type: 'adherence', label: 'Low Adherence', op: '<', val: '70%' },
+                            { type: 'expiry', label: 'Expiring Soon', op: '<', val: '7 Days' }
+                          ].map(cond => {
+                            const active = rules.activation_conditions?.some(c => c.type === cond.type && c.enabled);
+                            return (
+                              <button
+                                key={cond.type}
+                                onClick={() => {
+                                  const current = rules.activation_conditions || [];
+                                  const exists = current.find(c => c.type === cond.type);
+                                  if (exists) {
+                                    updateRule('activation_conditions', current.map(c => c.type === cond.type ? { ...c, enabled: !c.enabled } : c));
+                                  } else {
+                                    updateRule('activation_conditions', [...current, { type: cond.type, operator: cond.op as any, value: cond.val, enabled: true }]);
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-2 ${
+                                  active 
+                                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' 
+                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50'
+                                }`}
+                              >
+                                {active ? <CheckCheck className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                {cond.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        
+                        {(rules.activation_conditions || []).filter(c => c.enabled).length > 0 && (
+                          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 flex flex-col gap-1 italic">
+                            {(rules.activation_conditions || []).filter(c => c.enabled).map((c, i) => (
+                              <span key={i}>• If {c.type} {c.operator} {c.value}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
