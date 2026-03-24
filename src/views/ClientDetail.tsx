@@ -13,6 +13,7 @@ import {
   BarChart3, 
   Brain,
   ChevronRight,
+  ChevronLeft,
   TrendingUp,
   TrendingDown,
   Clock,
@@ -243,6 +244,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Weekly Volume');
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
+  const [strengthWeekOffset, setStrengthWeekOffset] = useState(0);
 
   // ─── Delete modal state ──────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -446,13 +448,34 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
   const [strengthRange, setStrengthRange] = useState('1W');
 
+  const getWeekRange = (offset: number) => {
+    const now = new Date();
+    const todayIdx = now.getDay();
+    const isoToday = todayIdx === 0 ? 7 : todayIdx;
+    
+    // Get Monday of the week (ISO)
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (isoToday - 1) + (offset * 7));
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    return { monday, sunday };
+  };
+
   const getFilteredStrengthData = () => {
     if (!stats?.training?.strengthHistory) return [];
     
     const now = new Date();
     let cutoff = new Date();
-    if (strengthRange === '1W') cutoff.setDate(now.getDate() - 7);
-    else if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
+    if (strengthRange === '1W') {
+      const { monday, sunday } = getWeekRange(strengthWeekOffset);
+      const start = monday.toISOString().split('T')[0];
+      const end = sunday.toISOString().split('T')[0];
+      return stats.training.strengthHistory.filter((h: any) => h.date >= start && h.date <= end);
+    }
+    
+    if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
     else if (strengthRange === '6M') cutoff.setMonth(now.getMonth() - 6);
     else if (strengthRange === 'YTD') cutoff.setFullYear(now.getFullYear(), 0, 1);
     else return stats.training.strengthHistory;
@@ -500,6 +523,31 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Deep dive analytics for primary compound lifts</p>
           </div>
           <div className="flex items-center gap-3">
+            {strengthRange === '1W' && (
+              <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 relative items-center mr-2">
+                <button 
+                  onClick={() => setStrengthWeekOffset(prev => prev - 1)}
+                  className="px-2 py-1.5 rounded-lg text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 transition-all"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <div className="px-3 py-1 flex flex-col items-center min-w-[120px]">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Semana</span>
+                  <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                    {(() => {
+                      const { monday, sunday } = getWeekRange(strengthWeekOffset);
+                      return `${monday.toLocaleDateString([], { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
+                    })()}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setStrengthWeekOffset(prev => prev + 1)}
+                  className="px-2 py-1.5 rounded-lg text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 transition-all"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             <div className="relative group">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors pointer-events-none" />
               <select 
