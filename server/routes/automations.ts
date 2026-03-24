@@ -41,7 +41,13 @@ export async function processTrigger(managerId: string, triggerId: string, data:
       let clientIds: string[] = [];
       const rules = automation.delivery_rules || {};
 
-      if (data.clientId) {
+      if (rules.audience === 'Specific Clients') {
+        clientIds = rules.selected_client_ids || [];
+        // If data.clientId is provided, only process if it's in the selected list
+        if (data.clientId) {
+          clientIds = clientIds.includes(data.clientId) ? [data.clientId] : [];
+        }
+      } else if (data.clientId) {
         clientIds = [data.clientId];
       } else if (rules.audience === 'All Clients') {
         const { data: clients } = await supabaseAdmin
@@ -67,10 +73,10 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         
         if (clientError || !client) continue;
 
-        // Fetch latest weight from check-ins
+        // Fetch latest check-in for weight, RPE, Mood
         const { data: latestCheckIn } = await supabaseAdmin
           .from('check_ins')
-          .select('weight, created_at')
+          .select('weight, created_at, mood_score, rpe_score')
           .eq('client_id', clientId)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -99,25 +105,68 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         const daysInactive = Math.floor((new Date().getTime() - lastLogin.getTime()) / (1000 * 3600 * 24));
         const checkInDay = cProfile?.check_in_day || 'Monday';
         
-        // 4. Evaluate Activation Conditions
-        if (rules.activation_conditions && rules.activation_conditions.length > 0) {
-          let allMet = true;
-          for (const cond of rules.activation_conditions) {
+        // Days since last check-in
+        const lastCheckinDate = latestCheckIn?.created_at ? new Date(latestCheckIn.created_at) : null;
+        const daysSinceCheckin = lastCheckinDate 
+          ? Math.floor((new Date().getTime() - lastCheckinDate.getTime()) / (1000 * 3600 * 24))
+          : 999;
+
+        const mood = latestCheckIn?.mood_score || 0;
+        const rpe = latestCheckIn?.rpe_score || 0;
+
+        // 4. Unified Condition Evaluation Helper
+        const evalConditions = (conditions: any[]) => {
+          if (!conditions || conditions.length === 0) return true;
+          for (const cond of conditions) {
             if (!cond.enabled) continue;
             
             let val = 0;
             if (cond.type === 'weight') val = currentWeight;
             else if (cond.type === 'activity') val = daysInactive;
             else if (cond.type === 'adherence') val = adherence;
+            else if (cond.type === 'last_checkin') val = daysSinceCheckin;
+            else if (cond.type === 'mood') val = mood;
+            else if (cond.type === 'rpe') val = rpe;
+            else if (cond.type === 'weight_goal') val = currentWeight; // For stop conditions
             
-            const target = parseFloat(cond.value) || 0;
-            if (cond.operator === '>' && !(val > target)) allMet = false;
-            if (cond.operator === '<' && !(val < target)) allMet = false;
-            if (cond.operator === '==' && !(val === target)) allMet = false;
+            const target = cond.value === 'Target' ? goalWeight : parseFloat(cond.value) || 0;
             
-            if (!allMet) break;
+            if (cond.operator === '>' && !(val > target)) return false;
+            if (cond.operator === '<' && !(val < target)) return false;
+            if (cond.operator === '==' && !(val === target)) return false;
+            if (cond.operator === '<=' && !(val <= target)) return false;
+            if (cond.operator === '>=' && !(val >= target)) return false;
           }
-          if (!allMet) continue; // Skip this client
+          return true;
+        };
+
+        // 4a. Check Activation Conditions
+        if (!evalConditions(rules.activation_conditions)) continue;
+
+        // 4b. Check Stop Conditions
+        if (rules.stop_conditions && rules.stop_conditions.length > 0) {
+          // Special cases for triggers like 'reply' or 'checkin'
+          let stopMet = false;
+          for (const cond of rules.stop_conditions) {
+            if (!cond.enabled) continue;
+            
+            // System event stop conditions (requires data from the trigger)
+            if (cond.type === 'reply' && triggerId === 'client-reply') stopMet = true;
+            if (cond.type === 'checkin' && triggerId === 'checkin-submitted') stopMet = true;
+            
+            // Data-based stop conditions
+            if (['weight_goal', 'adherence', 'activity'].includes(cond.type)) {
+              if (evalConditions([cond])) stopMet = true;
+            }
+            if (stopMet) break;
+          }
+          
+          if (stopMet) {
+            console.log(`Automation ${automation.id} stopped for client ${clientId} due to stop condition.`);
+            // Optionally disable the automation for this client if it's recurring?
+            // For now, we just skip sending.
+            continue;
+          }
         }
 
         // 5. Check for duplicates or "Once" rules
@@ -195,7 +244,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
           description: 'Sent to new clients',
           trigger_id: 'new-client',
           message: "Hi {Client Name}! Welcome to NutriDash. I'm excited to start working with you on your health goals. Please complete your onboarding profile so we can get started!",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients' },
+          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'Hand', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
           enabled: true
         },
@@ -205,7 +254,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
           description: 'Recurring weekly',
           trigger_id: 'weekly-checkin',
           message: "Hey {Client Name}, it's time for your weekly check-in! Please fill out the form linked below. Staying consistent is key to reaching your goal! 💪",
-          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Morning', audience: 'All Clients' },
+          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'Repeat', iconBg: 'bg-purple-100', iconColor: 'text-purple-600' },
           enabled: true
         },
@@ -215,7 +264,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
           description: 'Re-engagement campaign',
           trigger_id: 'inactivity',
           message: "Hi {Client Name}, we've missed you! Just wanted to check in and see how things are going. Remember, small steps forward still count — let's reconnect whenever you're ready!",
-          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients' },
+          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'AlertTriangle', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
           enabled: true
         },
@@ -225,7 +274,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
           description: 'Celebration message',
           trigger_id: 'milestone',
           message: "Congratulations {Client Name}! 🎉 You've reached your weight goal. This is a huge achievement — let's talk about your next goal!",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Afternoon', audience: 'All Clients' },
+          delivery_rules: { frequency: 'Once', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'PartyPopper', iconBg: 'bg-green-100', iconColor: 'text-green-600' },
           enabled: true
         },
@@ -235,7 +284,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
           description: 'Personal touch',
           trigger_id: 'birthday',
           message: "Happy Birthday {Client Name}! 🎂 Wishing you a healthy and happy year ahead. You deserve to celebrate! — your coach",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients' },
+          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'Cake', iconBg: 'bg-pink-100', iconColor: 'text-pink-600' },
           enabled: true
         },
@@ -245,7 +294,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
           description: 'Retention',
           trigger_id: 'plan-expiry',
           message: "Hi {Client Name}, your nutrition plan is expiring in 7 days. Let's schedule a call to review your progress and plan your next phase. You've come so far — let's keep the momentum going!",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients' },
+          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'FileText', iconBg: 'bg-teal-100', iconColor: 'text-teal-600' },
           enabled: true
         }

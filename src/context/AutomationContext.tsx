@@ -3,21 +3,23 @@ import { fetchWithAuth } from '../api';
 
 export type TriggerCategory = 'check-in' | 'activity' | 'milestone' | 'logistics' | 'custom';
 
+export interface AutomationCondition {
+  type: string;
+  operator: '>' | '<' | '==' | 'contains' | 'is';
+  value: any;
+  enabled: boolean;
+}
+
 export interface AutomationDeliveryRules {
   frequency: 'Once' | 'Every';
   frequencyValue: number;
   frequencyUnit: 'Days' | 'Weeks' | 'Months';
   deliveryTime: 'Morning' | 'Afternoon' | 'Evening' | 'Custom';
   customTime?: string;
-  audience: 'All Clients' | 'By Tag';
-  stopCondition: boolean;
-  stopWhen: string;
-  activation_conditions?: {
-    type: string;
-    operator: '>' | '<' | '==' | 'contains';
-    value: any;
-    enabled: boolean;
-  }[];
+  audience: 'All Clients' | 'Specific Clients'; 
+  selected_client_ids?: string[];
+  activation_conditions: AutomationCondition[];
+  stop_conditions: AutomationCondition[];
 }
 
 export interface Automation {

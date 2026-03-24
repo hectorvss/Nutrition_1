@@ -93,12 +93,15 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
     frequencyValue = 1, 
     frequencyUnit = 'Days', 
     deliveryTime = 'Morning', 
-    audience = 'All Clients', 
-    stopCondition = false, 
-    stopWhen = 'Goal Reached' 
+    audience = 'All Clients',
+    selected_client_ids = [],
+    activation_conditions = [],
+    stop_conditions = []
   } = wizardData.deliveryRules || {};
   
   const frequencyLabel = frequency === 'Once' ? 'One-time message' : `Every ${frequencyValue} ${frequencyUnit}`;
+
+  const selectedClients = clients.filter(c => selected_client_ids.includes(c.id));
 
   return (
     <div className="flex flex-1 h-full overflow-hidden p-6 gap-6">
@@ -230,21 +233,50 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                           {audience === 'All Clients' && (
                             <span className="text-xs text-slate-500 dark:text-slate-500">({activeClients.length} active clients)</span>
                           )}
+                          {audience === 'Specific Clients' && (
+                            <span className="text-xs text-slate-500 dark:text-slate-500">({selectedClients.length} users selected)</span>
+                          )}
                         </div>
-                        {stopCondition && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Stops when: <span className="font-medium">{stopWhen}</span></p>
-                        )}
-                        {wizardData.deliveryRules.activation_conditions?.some(c => c.enabled) && (
-                          <div className="mt-3 flex flex-col gap-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activation Conditions:</span>
-                            {wizardData.deliveryRules.activation_conditions.filter(c => c.enabled).map((c, i) => (
-                              <p key={i} className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-                                <Check className="w-3 h-3" />
-                                If {c.type} {c.operator} {c.value}
-                              </p>
+                        
+                        {audience === 'Specific Clients' && selectedClients.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {selectedClients.map(c => (
+                              <span key={c.id} className="text-[10px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded text-slate-600 dark:text-slate-400 font-medium">
+                                {c.name}
+                              </span>
                             ))}
                           </div>
                         )}
+
+                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {activation_conditions.some(c => c.enabled) && (
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activation Triggers:</span>
+                              <div className="flex flex-col gap-1">
+                                {activation_conditions.filter(c => c.enabled).map((c, i) => (
+                                  <p key={i} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
+                                    <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                                    {c.type}: {c.operator} {c.value}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {stop_conditions.some(c => c.enabled) && (
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stop Conditions:</span>
+                              <div className="flex flex-col gap-1">
+                                {stop_conditions.filter(c => c.enabled).map((c, i) => (
+                                  <p key={i} className="text-xs text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1.5">
+                                    <div className="w-1 h-1 rounded-full bg-rose-500" />
+                                    {c.type}: {c.operator} {c.value}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

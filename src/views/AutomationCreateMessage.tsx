@@ -19,9 +19,14 @@ import {
   Send,
   Copy,
   CheckCheck,
-  Plus
+  Plus,
+  User,
+  Search,
+  X,
+  ChevronDown
 } from 'lucide-react';
-import { AutomationDeliveryRules } from '../context/AutomationContext';
+import { AutomationDeliveryRules, AutomationCondition } from '../context/AutomationContext';
+import { useClient } from '../context/ClientContext';
 
 interface AutomationCreateMessageProps {
   triggerName: string;
@@ -65,6 +70,7 @@ export default function AutomationCreateMessage({
   onBack,
   onNext,
 }: AutomationCreateMessageProps) {
+  const { clients } = useClient();
   const [message, setMessage] = useState(initialMessage);
   const [rules, setRules] = useState<AutomationDeliveryRules>(initialRules || {
     frequency: 'Once',
@@ -72,16 +78,44 @@ export default function AutomationCreateMessage({
     frequencyUnit: 'Days',
     deliveryTime: 'Morning',
     audience: 'All Clients',
-    stopCondition: false,
-    stopWhen: 'Goal Reached',
-    activation_conditions: []
+    selected_client_ids: [],
+    activation_conditions: [],
+    stop_conditions: []
   });
   const [copied, setCopied] = useState<string | null>(null);
+  const [showClientSelector, setShowClientSelector] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const updateRule = <K extends keyof AutomationDeliveryRules>(key: K, value: AutomationDeliveryRules[K]) => {
     setRules(prev => ({ ...prev, [key]: value }));
   };
+
+  const toggleCondition = (rulesKey: 'activation_conditions' | 'stop_conditions', type: string, defaultOp: any, defaultVal: any) => {
+    const current = rules[rulesKey] || [];
+    const exists = current.find(c => c.type === type);
+    if (exists) {
+      updateRule(rulesKey, current.map(c => c.type === type ? { ...c, enabled: !c.enabled } : c));
+    } else {
+      updateRule(rulesKey, [...current, { type, operator: defaultOp, value: defaultVal, enabled: true }]);
+    }
+  };
+
+  const removeClient = (clientId: string) => {
+    updateRule('selected_client_ids', (rules.selected_client_ids || []).filter(id => id !== clientId));
+  };
+
+  const addClient = (clientId: string) => {
+    if (!(rules.selected_client_ids || []).includes(clientId)) {
+      updateRule('selected_client_ids', [...(rules.selected_client_ids || []), clientId]);
+    }
+    setClientSearch('');
+  };
+
+  const filteredClients = clients.filter(c => 
+    c.name.toLowerCase().includes(clientSearch.toLowerCase()) && 
+    !(rules.selected_client_ids || []).includes(c.id)
+  );
 
   // Insert variable at current cursor position
   const insertVariable = (variable: string) => {
@@ -254,10 +288,13 @@ export default function AutomationCreateMessage({
                       <div className="flex flex-col gap-2">
                         <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Target Audience</label>
                         <div className="flex rounded-xl bg-slate-100 dark:bg-slate-900/50 p-1 border border-slate-200 dark:border-slate-800">
-                          {(['All Clients', 'By Tag'] as const).map(opt => (
+                          {(['All Clients', 'Specific Clients'] as const).map(opt => (
                             <button
                               key={opt}
-                              onClick={() => updateRule('audience', opt)}
+                              onClick={() => {
+                                updateRule('audience', opt);
+                                if (opt === 'Specific Clients') setShowClientSelector(true);
+                              }}
                               className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                                 rules.audience === opt 
                                   ? 'bg-white dark:bg-slate-800 shadow-sm text-emerald-600 border border-slate-200 dark:border-slate-800' 
@@ -268,6 +305,66 @@ export default function AutomationCreateMessage({
                             </button>
                           ))}
                         </div>
+
+                        {/* Client Selector UI */}
+                        {rules.audience === 'Specific Clients' && (
+                          <div className="mt-3 space-y-3">
+                            <div className="flex flex-wrap gap-2">
+                              {(rules.selected_client_ids || []).map(id => {
+                                const client = clients.find(c => c.id === id);
+                                return (
+                                  <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-500/20">
+                                    {client?.name || 'Unknown'}
+                                    <button onClick={() => removeClient(id)} className="hover:text-emerald-800 dark:hover:text-emerald-200 flex shrink-0">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                              {(!rules.selected_client_ids || rules.selected_client_ids.length === 0) && (
+                                <span className="text-[10px] text-slate-400 italic font-medium">No clients selected yet</span>
+                              )}
+                            </div>
+                            
+                            <div className="relative">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                <input 
+                                  type="text"
+                                  placeholder="Search and add client..."
+                                  value={clientSearch}
+                                  onFocus={() => setShowClientSelector(true)}
+                                  onChange={e => setClientSearch(e.target.value)}
+                                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 text-xs focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                                />
+                                {clientSearch && (
+                                  <button onClick={() => setClientSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              
+                              {showClientSelector && clientSearch && (
+                                <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl max-h-48 overflow-y-auto overflow-x-hidden scrollbar-hide ring-1 ring-black/5">
+                                  {filteredClients.length > 0 ? (
+                                    filteredClients.map(c => (
+                                      <button
+                                        key={c.id}
+                                        onClick={() => addClient(c.id)}
+                                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs text-slate-700 dark:text-slate-300 flex items-center gap-3 transition-colors border-b border-slate-50 dark:border-slate-800 last:border-0"
+                                      >
+                                        <div className="w-6 h-6 rounded-full bg-cover bg-center shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm" style={{ backgroundImage: `url("${c.avatar}")` }} />
+                                        <span className="font-semibold">{c.name}</span>
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <div className="px-4 py-3 text-xs text-slate-400 italic">No matching clients found</div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -307,70 +404,32 @@ export default function AutomationCreateMessage({
                       )}
                     </div>
 
-                    {/* Stop & Activation Conditions */}
-                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Stop Condition */}
-                      <div className="flex flex-col gap-4">
-                        <div className="flex items-start gap-3">
-                          <input
-                            id="stop-condition"
-                            type="checkbox"
-                            checked={rules.stopCondition}
-                            onChange={e => updateRule('stopCondition', e.target.checked)}
-                            className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer mt-0.5"
-                          />
-                          <div className="flex flex-col">
-                            <label htmlFor="stop-condition" className="text-sm font-bold text-slate-900 dark:text-white cursor-pointer">Enable Stop Condition</label>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Automatically stop sending if a specific event occurs.</p>
-                          </div>
-                        </div>
-                        {rules.stopCondition && (
-                          <div className="flex items-center gap-3 ml-8">
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Stop when:</span>
-                            <select 
-                              value={rules.stopWhen}
-                              onChange={e => updateRule('stopWhen', e.target.value)}
-                              className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
-                            >
-                              <option>Client replies to message</option>
-                              <option>Client completes check-in</option>
-                              <option>Client logs a workout</option>
-                              <option>Manual stop</option>
-                            </select>
-                          </div>
-                        )}
-                      </div>
-
+                    {/* Unified Condition Builder */}
+                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-8">
                       {/* Activation Conditions */}
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col">
-                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1">Activation Conditions</label>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Define specific rules that must be met to send this message.</p>
+                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">Activation Triggers</label>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">The message is sent ONLY if these conditions are met.</p>
                         </div>
                         
                         <div className="flex flex-wrap gap-2">
                           {[
-                            { type: 'weight', label: 'Weight Goal', op: '>', val: 'Target' },
-                            { type: 'activity', label: 'Inactivity', op: '>', val: '3 Days' },
-                            { type: 'adherence', label: 'Low Adherence', op: '<', val: '70%' },
-                            { type: 'expiry', label: 'Expiring Soon', op: '<', val: '7 Days' }
+                            { type: 'weight', label: 'Weight Goal', op: '>', val: 'Target', color: 'bg-blue-500' },
+                            { type: 'activity', label: 'Inactivity', op: '>', val: '3', color: 'bg-orange-500' },
+                            { type: 'adherence', label: 'Low Adherence', op: '<', val: '70', color: 'bg-red-500' },
+                            { type: 'last_checkin', label: 'Last Check-in', op: '>', val: '7', color: 'bg-purple-500' },
+                            { type: 'mood', label: 'Low Mood', op: '<', val: '3', color: 'bg-indigo-500' },
+                            { type: 'rpe', label: 'High RPE', op: '>', val: '8', color: 'bg-rose-500' }
                           ].map(cond => {
                             const active = rules.activation_conditions?.some(c => c.type === cond.type && c.enabled);
                             return (
                               <button
                                 key={cond.type}
-                                onClick={() => {
-                                  const current = rules.activation_conditions || [];
-                                  const exists = current.find(c => c.type === cond.type);
-                                  if (exists) {
-                                    updateRule('activation_conditions', current.map(c => c.type === cond.type ? { ...c, enabled: !c.enabled } : c));
-                                  } else {
-                                    updateRule('activation_conditions', [...current, { type: cond.type, operator: cond.op as any, value: cond.val, enabled: true }]);
-                                  }
-                                }}
+                                onClick={() => toggleCondition('activation_conditions', cond.type, cond.op as any, cond.val)}
                                 className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-2 ${
                                   active 
-                                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' 
+                                    ? `${cond.color} border-transparent text-white shadow-sm ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-${cond.color.split('-')[1]}-500/50` 
                                     : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50'
                                 }`}
                               >
@@ -381,10 +440,85 @@ export default function AutomationCreateMessage({
                           })}
                         </div>
                         
-                        {(rules.activation_conditions || []).filter(c => c.enabled).length > 0 && (
-                          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 flex flex-col gap-1 italic">
-                            {(rules.activation_conditions || []).filter(c => c.enabled).map((c, i) => (
-                              <span key={i}>• If {c.type} {c.operator} {c.value}</span>
+                        {rules.activation_conditions?.some(c => c.enabled) && (
+                          <div className="space-y-2 max-w-md">
+                            {rules.activation_conditions.filter(c => c.enabled).map((c, i) => (
+                              <div key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800 group">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase w-20">If {c.type}:</span>
+                                <select 
+                                  value={c.operator}
+                                  onChange={e => {
+                                    const next = [...rules.activation_conditions];
+                                    next[rules.activation_conditions.indexOf(c)].operator = e.target.value as any;
+                                    updateRule('activation_conditions', next);
+                                  }}
+                                  className="bg-transparent border-none p-0 text-xs font-bold text-emerald-600 dark:text-emerald-400 focus:ring-0 cursor-pointer"
+                                >
+                                  <option value=">">{'>'}</option>
+                                  <option value="<">{'<'}</option>
+                                  <option value="==">{'='}</option>
+                                </select>
+                                <input 
+                                  type="text"
+                                  value={c.value}
+                                  onChange={e => {
+                                    const next = [...rules.activation_conditions];
+                                    next[rules.activation_conditions.indexOf(c)].value = e.target.value;
+                                    updateRule('activation_conditions', next);
+                                  }}
+                                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs w-20 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                />
+                                <button onClick={() => toggleCondition('activation_conditions', c.type, '>', '')} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stop Conditions */}
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col">
+                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">Stop Conditions</label>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">The automation will STOP sending if any of these are met.</p>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { type: 'reply', label: 'Client Replies', op: 'is', val: 'true', color: 'bg-emerald-500' },
+                            { type: 'checkin', label: 'Check-in Done', op: 'is', val: 'true', color: 'bg-cyan-500' },
+                            { type: 'weight_goal', label: 'Weight Reached', op: '<=', val: 'Target', color: 'bg-rose-500' },
+                            { type: 'manual', label: 'Manual Stop', op: 'is', val: 'true', color: 'bg-slate-500' }
+                          ].map(cond => {
+                            const active = rules.stop_conditions?.some(c => c.type === cond.type && c.enabled);
+                            return (
+                              <button
+                                key={cond.type}
+                                onClick={() => toggleCondition('stop_conditions', cond.type, cond.op as any, cond.val)}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-2 ${
+                                  active 
+                                    ? `${cond.color} border-transparent text-white shadow-sm ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-${cond.color.split('-')[1]}-500/50` 
+                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50'
+                                }`}
+                              >
+                                {active ? <CheckCheck className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                {cond.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {rules.stop_conditions?.some(c => c.enabled) && (
+                          <div className="space-y-2 max-w-md">
+                            {rules.stop_conditions.filter(c => c.enabled).map((c, i) => (
+                              <div key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800 group">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase w-20">Stop if {c.type.split('_')[0]}:</span>
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{c.operator} {c.value}</span>
+                                <button onClick={() => toggleCondition('stop_conditions', c.type, 'is', 'true')} className="ml-auto opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-all">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             ))}
                           </div>
                         )}
