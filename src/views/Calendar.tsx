@@ -382,7 +382,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
   };
 
   return (
-    <div className="flex flex-col xl:flex-row h-full overflow-hidden bg-slate-50">
+    <div className="flex flex-col h-full overflow-hidden bg-slate-50">
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <header className="p-6 sm:p-8 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0 z-10">
           <div>
@@ -436,92 +436,6 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
           {viewMode === 'Day' && renderDayView()}
         </div>
       </div>
-
-      {/* Sidebar */}
-      <aside className="w-full xl:w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 h-full">
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-slate-900">Quick Filters</h2>
-            <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700">Reset</button>
-          </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input 
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 placeholder:text-slate-400 transition-all" 
-              placeholder="Search clients..." 
-              type="text"
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide">
-          <section>
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Activity Type</h3>
-            <div className="space-y-3">
-              {[
-                { label: 'Training', icon: Dumbbell, color: 'bg-emerald-100 text-emerald-600', checked: true },
-                { label: 'Nutrition', icon: Utensils, color: 'bg-orange-100 text-orange-600', checked: true },
-                { label: 'Check-ins', icon: ClipboardCheck, color: 'bg-blue-100 text-blue-600', checked: true },
-              ].map((type, idx) => (
-                <label key={idx} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 cursor-pointer group transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-9 w-9 rounded-lg ${type.color} flex items-center justify-center shadow-sm`}>
-                      <type.icon className="w-4.5 h-4.5" />
-                    </div>
-                    <span className="text-sm font-bold text-slate-700">{type.label}</span>
-                  </div>
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${type.checked ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'}`}>
-                    {type.checked && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                  </div>
-                </label>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Priority Clients</h3>
-            <div className="space-y-3">
-              {[
-                { name: 'Sarah Jenkins', sub: 'Hypertrophy • 3 tasks', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop', active: true },
-                { name: 'Mike K.', sub: 'Fat Loss • 2 tasks', avatar: null, initials: 'MK' },
-                { name: 'Alice L.', sub: 'Strength • 1 task', avatar: null, initials: 'AL' },
-              ].map((client, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-all group">
-                  <div className="relative">
-                    {client.avatar ? (
-                      <img src={client.avatar} alt="" className="rounded-full h-10 w-10 object-cover border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
-                    ) : (
-                      <div className="rounded-full h-10 w-10 bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border-2 border-white shadow-sm">{client.initials}</div>
-                    )}
-                    {client.active && <div className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900 truncate group-hover:text-emerald-600 transition-colors">{client.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{client.sub}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <div className="p-6 border-t border-slate-100 bg-slate-50/50">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Upcoming Deadlines</h4>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded uppercase">Tomorrow</span>
-                <span className="text-xs font-bold text-slate-700">Sarah J. Monthly Review</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded uppercase">Oct 6</span>
-                <span className="text-xs font-bold text-slate-700">New Program Releases</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
 
     </div>
   );
