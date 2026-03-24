@@ -12,7 +12,7 @@ interface CheckInListProps {
 
 export default function CheckInList({ onViewHistory }: CheckInListProps) {
   const { clients, isLoading } = useClient();
-  const [filter, setFilter] = useState<'All' | 'Unreviewed' | 'Completed'>('Unreviewed');
+  const [filter, setFilter] = useState<'All' | 'Unreviewed' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   const categories = [
