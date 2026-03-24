@@ -47,6 +47,7 @@ import {
   Cell
 } from 'recharts';
 import { fetchWithAuth } from '../api';
+import { useClient } from '../context/ClientContext';
 
 interface CheckInReviewProps {
   clientId: string;
@@ -55,6 +56,7 @@ interface CheckInReviewProps {
 }
 
 export default function CheckInReview({ clientId, checkInId, onBack }: CheckInReviewProps) {
+  const { reloadClients } = useClient();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [coachNotes, setCoachNotes] = useState('');
@@ -101,6 +103,9 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
           attachment_url: checkInId
         })
       });
+
+      // 3. Refresh the manager's client list to sync review status
+      await reloadClients();
 
       onBack();
     } catch (err) {

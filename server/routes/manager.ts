@@ -238,9 +238,9 @@ router.get('/clients', async (req: any, res) => {
         email, 
         created_at,
         clients_profiles (weight, goal, notes, temp_password),
-        nutrition_plans!client_id (id),
-        training_programs!client_id (id),
-        check_ins (id, date, reviewed_at)
+        nutrition_plans!client_id (id, name),
+        training_programs!client_id (id, name),
+        check_ins (id, date, reviewed_at, data_json)
       `)
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
@@ -248,18 +248,37 @@ router.get('/clients', async (req: any, res) => {
       
     if (error) throw error;
     
+    // Helper to map adherence string to percentage
+    const mapAdherence = (str: string): number => {
+      if (!str) return 0;
+      if (str.includes('>95%')) return 98;
+      if (str.includes('80-95%')) return 85;
+      if (str.includes('50-80%')) return 65;
+      if (str.includes('<50%')) return 30;
+      return 0;
+    };
+
     const formattedClients = clients.map((c: any) => {
       const latestCheckIn = c.check_ins?.[0] || null;
+      let dj = latestCheckIn?.data_json || {};
+      if (typeof dj === 'string') {
+        try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
+      }
+
+      const planName = c.nutrition_plans?.[0]?.name || c.training_programs?.[0]?.name || 'No Plan';
+
       return {
         id: c.id,
         email: c.email,
         created_at: c.created_at,
-        weight: c.clients_profiles?.[0]?.weight || null,
+        weight: dj.weight || c.clients_profiles?.[0]?.weight || null,
         goal: c.clients_profiles?.[0]?.goal || null,
         notes: c.clients_profiles?.[0]?.notes || null,
         temp_password: c.clients_profiles?.[0]?.temp_password || null,
         nutritionPlanAssigned: !!(c.nutrition_plans && c.nutrition_plans.length > 0),
         trainingPlanAssigned: !!(c.training_programs && c.training_programs.length > 0),
+        plan_name: planName,
+        progress: mapAdherence(dj.nutritionAdherence),
         lastCheckInDate: latestCheckIn?.date || null,
         isUnreviewed: latestCheckIn ? !latestCheckIn.reviewed_at : false,
         check_ins: c.check_ins || []
@@ -268,8 +287,8 @@ router.get('/clients', async (req: any, res) => {
     
     res.json(formattedClients);
   } catch (error: any) {
-    console.error('Error fetching clients. Full error object:', JSON.stringify(error, null, 2));
-    res.status(500).json({ error: error?.message || 'Server error', details: error });
+    console.error('Error fetching clients:', error);
+    res.status(500).json({ error: error?.message || 'Server error' });
   }
 });
 
