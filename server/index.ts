@@ -6,6 +6,7 @@ import clientRoutes from './routes/client.js';
 import messageRoutes from './routes/messages.js';
 import checkInRoutes from './routes/check_ins.js';
 import stripeRoutes from './routes/stripe.js';
+import automationRoutes from './routes/automations.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3005;
@@ -27,6 +28,7 @@ app.use('/api/client', clientRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/check-ins', checkInRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/automations', automationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

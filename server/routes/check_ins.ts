@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
+import { processTrigger } from './automations.js';
 
 const router = Router();
+// ... (rest of the code until POST /client/check-ins)
 
 // Middleware to verify if the user is a CLIENT
 const verifyClient = async (req: any, res: any, next: any) => {
@@ -50,6 +52,32 @@ router.post('/client/check-ins', verifyClient, async (req: any, res) => {
       .single();
 
     if (error) throw error;
+
+    // Trigger Automations
+    try {
+      const { data: client } = await supabaseAdmin
+        .from('users')
+        .select('manager_id, clients_profiles(goal, weight)')
+        .eq('id', clientId)
+        .single();
+      
+      if (client?.manager_id) {
+        const weight = data_json?.weight;
+        const goal = client.clients_profiles?.[0]?.goal;
+        
+        if (weight && goal) {
+          // Check if goal hit (assuming simple weight target for milestone)
+          // Adjust logic based on goal type if needed
+          const isGoalMet = Math.abs(Number(weight) - Number(goal)) < 0.5;
+          if (isGoalMet) {
+            processTrigger(client.manager_id, 'milestone', { clientId, weight, goal });
+          }
+        }
+      }
+    } catch (triggerErr) {
+      console.error('Automation trigger error (check-in):', triggerErr);
+    }
+
     res.json(data);
   } catch (error: any) {
     console.error('Error submitting check-in:', error);

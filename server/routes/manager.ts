@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { supabase, supabaseAdmin } from '../db/index.js';
 import Stripe from 'stripe';
 import { google } from 'googleapis';
+import { processTrigger } from './automations.js';
 
 const router = Router();
+// ... (rest of the code until POST /clients)
 
 // Middleware to verify MANAGER role using Supabase Auth
 const verifyManager = async (req: any, res: any, next: any) => {
@@ -330,9 +332,13 @@ router.post('/clients', async (req: any, res) => {
 
       if (profileError) {
         console.error('Error saving client profile:', profileError);
-        // We do not fail the whole request if profile fails, but log it
       }
     }
+
+    // 4. Trigger "Welcome Message" automation
+    processTrigger(managerId, 'new-client', { clientId }).catch(err => {
+      console.error('Trigger error (new-client):', err);
+    });
 
     res.json({ success: true, client_id: clientId });
   } catch (error: any) {
