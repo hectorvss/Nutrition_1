@@ -251,6 +251,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
   const [strengthWeekOffset, setStrengthWeekOffset] = useState(0);
+  const [visiblePRs, setVisiblePRs] = useState(4);
+  const [visibleWorkouts, setVisibleWorkouts] = useState(4);
 
   // ─── Delete modal state ──────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -723,21 +725,36 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Personal Records</h3>
             <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">History</button>
           </div>
-          <div className="space-y-4">
-            {(stats?.training?.allExercises || []).slice(0, 3).map((ex: any, idx: number) => (
-              <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <Target className="w-4 h-4" />
+          <div className="h-[400px] flex flex-col">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-hide no-scrollbar">
+              {(stats?.training?.allExercises || []).slice(0, visiblePRs).map((ex: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{ex.name}</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{ex.name}</span>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{ex.pr}kg</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">{ex.latestDate ? new Date(ex.latestDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{ex.pr}kg</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">{ex.latestDate ? new Date(ex.latestDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}</p>
-                </div>
-              </div>
-            ))}
+              ))}
+              {(stats?.training?.allExercises || []).length > visiblePRs && (
+                <button 
+                  onClick={() => setVisiblePRs(prev => prev + 4)}
+                  className="w-full py-2.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors uppercase tracking-widest mt-2"
+                >
+                  Load More Records
+                </button>
+              )}
+              {(!stats?.training?.allExercises || stats.training.allExercises.length === 0) && (
+                <p className="text-center text-slate-400 text-sm py-8 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                  No records found.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -746,21 +763,31 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Recent Workout Activity</h3>
             <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">View Log</button>
           </div>
-          <div className="space-y-4">
-            {stats?.training?.recentWorkouts?.map((workout: any) => (
-              <WorkoutLogItem 
-                key={workout.id}
-                workout={workout}
-                isExpanded={expandedWorkoutId === workout.id}
-                onToggle={setExpandedWorkoutId}
-                onUpdate={handleUpdateWorkoutLog}
-              />
-            ))}
-            {(!stats?.training?.recentWorkouts || stats.training.recentWorkouts.length === 0) && (
-              <p className="text-center text-slate-400 text-sm py-8 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800 transition-all hover:border-slate-300">
-                No recent workouts logged yet.
-              </p>
-            )}
+          <div className="h-[400px] flex flex-col">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-hide no-scrollbar">
+              {(stats?.training?.recentWorkouts || []).slice(0, visibleWorkouts).map((workout: any) => (
+                <WorkoutLogItem 
+                  key={workout.id}
+                  workout={workout}
+                  isExpanded={expandedWorkoutId === workout.id}
+                  onToggle={setExpandedWorkoutId}
+                  onUpdate={handleUpdateWorkoutLog}
+                />
+              ))}
+              {(stats?.training?.recentWorkouts || []).length > visibleWorkouts && (
+                <button 
+                  onClick={() => setVisibleWorkouts(prev => prev + 4)}
+                  className="w-full py-2.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors uppercase tracking-widest mt-2"
+                >
+                  Load More Activity
+                </button>
+              )}
+              {(!stats?.training?.recentWorkouts || stats.training.recentWorkouts.length === 0) && (
+                <p className="text-center text-slate-400 text-sm py-8 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                  No recent workouts logged yet.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
