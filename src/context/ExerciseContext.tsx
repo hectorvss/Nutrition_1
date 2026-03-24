@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Exercise } from '../constants/exercises';
 import { supabase } from '../supabase';
 import { useLanguage } from './LanguageContext';
@@ -21,7 +21,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { language } = useLanguage();
 
-  const fetchExercises = async () => {
+  const fetchExercises = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -29,9 +29,9 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
         .select('*')
         .eq('language', language)
         .order('name');
-
+  
       if (error) throw error;
-
+  
       const mappedExercises: Exercise[] = (data || []).map(item => ({
         id: item.id,
         name: item.name,
@@ -46,18 +46,18 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
         level: item.difficulty_level as any,
         icon: item.icon || 'fitness_center'
       }));
-
+  
       setExercises(mappedExercises);
     } catch (err) {
       console.error('Error fetching exercises:', err);
     } finally {
       setIsLoading(false);
     }
-  };
-
+  }, [language]);
+  
   useEffect(() => {
     fetchExercises();
-  }, [language]);
+  }, [fetchExercises]);
 
   const addExercise = async (exercise: Omit<Exercise, 'id'>) => {
     try {
