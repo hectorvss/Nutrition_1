@@ -96,6 +96,51 @@ router.get('/roadmap', async (req: any, res) => {
   }
 });
 
+// Save a completed workout session
+router.post('/workout-logs', async (req: any, res) => {
+  try {
+    const { plan_id, workout_name, day_key, exercises, notes, session_rpe } = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('workout_logs')
+      .insert({
+        client_id: req.user.id,
+        plan_id: plan_id || null,
+        workout_name: workout_name || 'Workout Session',
+        day_key: day_key || null,
+        exercises: exercises || [],
+        notes: notes || null,
+        session_rpe: session_rpe || null,
+        logged_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error saving workout log:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Get my workout history
+router.get('/workout-logs', async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('workout_logs')
+      .select('*')
+      .eq('client_id', req.user.id)
+      .order('logged_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    console.error('Error fetching workout logs:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 // --- ONBOARDING ROUTES ---
 
 // Get active onboarding message for the client

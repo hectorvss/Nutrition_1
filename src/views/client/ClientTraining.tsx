@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useExerciseContext } from '../../context/ExerciseContext';
 import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
@@ -7,13 +7,35 @@ interface ClientTrainingProps {
   onViewExercise?: (name: string) => void;
 }
 
+// Shape for a single set logged by the client
+interface SetLog {
+  reps: string;
+  weight: string;
+  rir: string;
+}
+
+// Shape for a single exercise log
+interface ExerciseLog {
+  name: string;
+  muscle_group?: string;
+  sets_logged: SetLog[];
+  notes: string;
+}
+
+// Key: "blockIdx-exerciseIdx"
+type ExerciseLogs = Record<string, ExerciseLog>;
+
 export default function ClientTraining({ onViewExercise }: ClientTrainingProps) {
   const { exercises, isLoading: exercisesLoading, refreshExercises } = useExerciseContext();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('');
   const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [trainingProgram, setTrainingProgram] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [sessionRPE, setSessionRPE] = useState('');
+  const [sessionNotes, setSessionNotes] = useState('');
+  // Lifted state: collects all exercise data entered by the client
+  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLogs>({});
   const { user } = useAuth();
 
   useEffect(() => {
@@ -32,6 +54,76 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     };
     fetchMyPlans();
   }, []);
+
+  // Reset logs when changing day
+  useEffect(() => {
+    setExerciseLogs({});
+    setSessionRPE('');
+    setSessionNotes('');
+    setSaveSuccess(false);
+  }, [selectedDay]);
+
+  const updateExerciseLog = useCallback((key: string, field: keyof ExerciseLog, value: any) => {
+    setExerciseLogs(prev => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: value }
+    }));
+  }, []);
+
+  const initExerciseLog = useCallback((key: string, name: string, muscle_group: string, defaultSets: number) => {
+    setExerciseLogs(prev => {
+      if (prev[key]) return prev;
+      const sets_logged: SetLog[] = Array.from({ length: defaultSets || 1 }, () => ({ reps: '', weight: '', rir: '' }));
+      return { ...prev, [key]: { name, muscle_group, sets_logged, notes: '' } };
+    });
+  }, []);
+
+  const updateSet = useCallback((exKey: string, setIdx: number, field: keyof SetLog, value: string) => {
+    setExerciseLogs(prev => {
+      const current = prev[exKey];
+      if (!current) return prev;
+      const sets_logged = current.sets_logged.map((s, i) =>
+        i === setIdx ? { ...s, [field]: value } : s
+      );
+      return { ...prev, [exKey]: { ...current, sets_logged } };
+    });
+  }, []);
+
+  const addSet = useCallback((exKey: string) => {
+    setExerciseLogs(prev => {
+      const current = prev[exKey];
+      if (!current) return prev;
+      return { ...prev, [exKey]: { ...current, sets_logged: [...current.sets_logged, { reps: '', weight: '', rir: '' }] } };
+    });
+  }, []);
+
+  const handleSaveSession = async () => {
+    if (!trainingProgram) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      const exercises = Object.values(exerciseLogs).filter(ex =>
+        ex.sets_logged.some(s => s.weight || s.reps)
+      );
+      await fetchWithAuth('/client/workout-logs', {
+        method: 'POST',
+        body: JSON.stringify({
+          plan_id: trainingProgram.id,
+          workout_name: currentWorkoutName || `${selectedDay} session`,
+          day_key: selectedDay,
+          exercises,
+          notes: sessionNotes,
+          session_rpe: sessionRPE ? Number(sessionRPE) : null
+        })
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err) {
+      console.error('Error saving workout log:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -56,7 +148,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const dataJson = trainingProgram.data_json || {};
   const isWeekly = !!dataJson.weeklySchedule;
   
-  let blocks = [];
+  let blocks: any[] = [];
   let currentWorkoutName = '';
   
   if (isWeekly) {
@@ -98,15 +190,6 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       </div>
     );
   };
-
-
-  const filteredLibraryExercises = exercises.filter(ex => {
-    const matchesSearch = ex.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !activeCategory || ex.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const categories = Array.from(new Set(exercises.map(e => e.category))).filter(Boolean);
 
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#f6f8f6] dark:bg-[#112116]">
@@ -167,13 +250,20 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
             </button>
           </div>
           <div className="flex items-center gap-3 pr-2">
-            <span className="text-xs text-slate-400 hidden sm:inline-block mr-2">Last autosave: 2 min ago</span>
-            <button className="text-slate-500 hover:text-[#17cf54] dark:text-slate-400 p-2 rounded-xl hover:bg-[#17cf54]/5 transition-colors"><span className="material-symbols-outlined">more_horiz</span></button>
-            <button className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm">
-              <span className="material-symbols-outlined text-[18px]">edit_note</span> Edit
-            </button>
-            <button className="bg-[#17cf54] hover:bg-[#15b84a] text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm">
-              <span className="material-symbols-outlined text-[18px]">publish</span> Publish
+            {saveSuccess && (
+              <span className="text-xs font-bold text-[#17cf54] flex items-center gap-1 animate-pulse">
+                <span className="material-symbols-outlined text-[16px]">check_circle</span> Session saved!
+              </span>
+            )}
+            <button
+              onClick={handleSaveSession}
+              disabled={isSaving || blocks.length === 0}
+              className="bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm"
+            >
+              {isSaving
+                ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Saving...</>
+                : <><span className="material-symbols-outlined text-[18px]">save</span> Save Session</>
+              }
             </button>
           </div>
         </div>
@@ -181,7 +271,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         <div className="flex flex-col gap-8 pb-20">
           {renderDaySelector()}
           
-          {/* Workout Summary - Full Width */}
+          {/* Session Summary */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm p-6 md:p-8 flex-shrink-0 w-full">
              <div className="flex items-center justify-between mb-8">
               <div>
@@ -203,15 +293,38 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                   <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">Exercises</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-8 gap-y-4 w-full max-w-lg">
-                <SummaryStat label="Legs" value="50%" color="bg-blue-500" />
-                <SummaryStat label="Chest" value="25%" color="bg-purple-500" />
-                <SummaryStat label="Shoulders" value="25%" color="bg-orange-500" />
+              {/* Session RPE input */}
+              <div className="flex flex-col gap-4 w-full max-w-xs">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Session RPE (1-10)</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setSessionRPE(String(n))}
+                        className={`w-9 h-9 rounded-full text-sm font-bold border transition-all ${
+                          sessionRPE === String(n)
+                            ? 'bg-[#17cf54] border-[#17cf54] text-white shadow'
+                            : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[#17cf54]/50'
+                        }`}
+                      >{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Session Notes</label>
+                  <textarea
+                    placeholder="How did the session feel?"
+                    value={sessionNotes}
+                    onChange={e => setSessionNotes(e.target.value)}
+                    className="w-full p-3 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white min-h-[70px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Workout Blocks - Full Width */}
+          {/* Workout Blocks */}
           <div className="w-full flex flex-col gap-6">
             {blocks.length === 0 ? (
               <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center shadow-sm">
@@ -239,28 +352,37 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 <div className="px-6 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider pl-[4.5rem] hidden md:grid">
                   <div className="col-span-4">Exercise</div>
                   <div className="col-span-8 grid grid-cols-5 gap-2 text-center pr-12">
-                    <div>Weight</div><div>Sets</div><div>Reps</div><div>RIR</div><div>Rest</div>
+                    <div>Target</div><div>Sets</div><div>Reps</div><div>RIR</div><div>Rest</div>
                   </div>
                 </div>
 
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {(block.exercises || []).map((ex: any, eIdx: number) => (
-                    <DetailedExerciseRow 
-                      key={eIdx}
-                      name={ex.name} 
-                      type={ex.type} 
-                      weight={ex.weight} 
-                      sets={ex.sets} 
-                      reps={ex.reps} 
-                      rir={ex.rir} 
-                      rest={ex.rest} 
-                    />
-                  ))}
+                  {(block.exercises || []).map((ex: any, eIdx: number) => {
+                    const key = `${bIdx}-${eIdx}`;
+                    return (
+                      <DetailedExerciseRow
+                        key={key}
+                        exKey={key}
+                        name={ex.name}
+                        muscle_group={ex.muscle_group}
+                        type={ex.type}
+                        weight={ex.weight}
+                        sets={ex.sets}
+                        reps={ex.reps}
+                        rir={ex.rir}
+                        rest={ex.rest}
+                        logData={exerciseLogs[key]}
+                        onInit={initExerciseLog}
+                        onUpdateSet={updateSet}
+                        onAddSet={addSet}
+                        onUpdateNotes={(notes) => updateExerciseLog(key, 'notes', notes)}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )))}
           </div>
-
         </div>
       </div>
     </div>
@@ -279,61 +401,31 @@ function SummaryStat({ label, value, color }: any) {
   );
 }
 
-function LibraryItem({ name, onClick }: any) {
-  return (
-    <button 
-      onClick={onClick}
-      className="w-full text-left px-3 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg flex items-center justify-between group transition-colors border border-transparent"
-    >
-      <span className="text-sm font-medium text-slate-900 dark:text-white">{name}</span>
-      <div className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-[#17cf54]/10 group-hover:text-[#17cf54] transition-colors">
-        <span className="material-symbols-outlined text-[16px]">visibility</span>
-      </div>
-    </button>
-  );
+interface DetailedExerciseRowProps {
+  exKey: string;
+  name: string;
+  muscle_group?: string;
+  type?: string;
+  weight?: string;
+  sets?: string | number;
+  reps?: string;
+  rir?: string;
+  rest?: string;
+  logData?: { name: string; muscle_group?: string; sets_logged: { reps: string; weight: string; rir: string }[]; notes: string };
+  onInit: (key: string, name: string, muscle_group: string, defaultSets: number) => void;
+  onUpdateSet: (key: string, setIdx: number, field: 'reps' | 'weight' | 'rir', value: string) => void;
+  onAddSet: (key: string) => void;
+  onUpdateNotes: (notes: string) => void;
 }
 
-function SimpleExerciseRow({ name, sub }: any) {
-  return (
-    <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
-      <div className="flex items-center gap-4">
-        <div className="cursor-grab text-slate-300 dark:text-slate-700 group-hover:text-slate-400">
-          <span className="material-symbols-outlined text-[20px]">drag_handle</span>
-        </div>
-        <div className="w-12 h-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0 text-slate-400">
-          <span className="material-symbols-outlined text-[24px]">play_circle</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{name}</h4>
-          <p className="text-xs text-slate-500 mt-1">{sub}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="text-xs font-medium text-[#17cf54] hover:text-[#15b84a] flex items-center gap-1 px-2 py-1 bg-[#17cf54]/5 rounded-lg transition-colors">
-            <span className="material-symbols-outlined text-[16px]">videocam</span> Watch Video
-          </button>
-          <button className="p-2 text-slate-300 hover:text-[#17cf54] hover:bg-[#17cf54]/5 rounded-lg transition-colors">
-            <span className="material-symbols-outlined text-[18px]">edit</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DetailedExerciseRow({ name, type, weight, sets, reps, rir, rest }: any) {
+function DetailedExerciseRow({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes }: DetailedExerciseRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [clientData, setClientData] = useState({
-    weight: '',
-    sets: '',
-    reps: '',
-    rir: '',
-    rest: '',
-    notes: ''
-  });
 
-  const handleClientDataChange = (field: string, value: string) => {
-    setClientData(prev => ({ ...prev, [field]: value }));
-  };
+  useEffect(() => {
+    onInit(exKey, name, muscle_group || '', Number(sets) || 1);
+  }, [exKey]);
+
+  const setsLogged = logData?.sets_logged || [];
 
   return (
     <div className="flex flex-col border-b border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-colors">
@@ -370,7 +462,7 @@ function DetailedExerciseRow({ name, type, weight, sets, reps, rir, rest }: any)
       </div>
 
       {isExpanded && (
-        <div className="px-4 pb-4 pt-2 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800/50">
+        <div className="px-4 pb-5 pt-2 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800/50">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-4 flex items-center justify-end md:justify-start">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-2">
@@ -379,48 +471,55 @@ function DetailedExerciseRow({ name, type, weight, sets, reps, rir, rest }: any)
               </span>
             </div>
             <div className="md:col-span-8 flex flex-col gap-3">
-              <div className="grid grid-cols-5 gap-2 pb-2">
-                <input 
-                  type="text" 
-                  placeholder={typeof weight === 'string' ? weight : '-'} 
-                  value={clientData.weight}
-                  onChange={(e) => handleClientDataChange('weight', e.target.value)}
-                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
-                />
-                <input 
-                  type="text" 
-                  placeholder={typeof sets === 'string' ? sets : '-'} 
-                  value={clientData.sets}
-                  onChange={(e) => handleClientDataChange('sets', e.target.value)}
-                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
-                />
-                <input 
-                  type="text" 
-                  placeholder={typeof reps === 'string' ? reps : '-'}
-                  value={clientData.reps}
-                  onChange={(e) => handleClientDataChange('reps', e.target.value)} 
-                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
-                />
-                <input 
-                  type="text" 
-                  placeholder={typeof rir === 'string' ? rir : '-'} 
-                  value={clientData.rir}
-                  onChange={(e) => handleClientDataChange('rir', e.target.value)}
-                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
-                />
-                <input 
-                  type="text" 
-                  placeholder={typeof rest === 'string' ? rest : '-'} 
-                  value={clientData.rest}
-                  onChange={(e) => handleClientDataChange('rest', e.target.value)}
-                  className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
-                />
+              {/* Set headers */}
+              <div className="grid grid-cols-4 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center pb-1">
+                <div>Set</div><div>Weight (kg)</div><div>Reps</div><div>RIR</div>
               </div>
+              {/* Set rows */}
+              {setsLogged.map((s, i) => (
+                <div key={i} className="grid grid-cols-4 gap-2 items-center">
+                  <div className="text-center text-xs font-bold text-slate-400">#{i + 1}</div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    placeholder={typeof weight === 'string' ? weight : '—'}
+                    value={s.weight}
+                    onChange={e => onUpdateSet(exKey, i, 'weight', e.target.value)}
+                    className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder={typeof reps === 'string' ? reps : '—'}
+                    value={s.reps}
+                    onChange={e => onUpdateSet(exKey, i, 'reps', e.target.value)}
+                    className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="5"
+                    placeholder={typeof rir === 'string' ? rir : '—'}
+                    value={s.rir}
+                    onChange={e => onUpdateSet(exKey, i, 'rir', e.target.value)}
+                    className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300"
+                  />
+                </div>
+              ))}
+              {/* Add set button */}
+              <button
+                onClick={() => onAddSet(exKey)}
+                className="self-start text-xs font-bold text-[#17cf54] hover:text-[#15b84a] flex items-center gap-1 px-2 py-1 bg-[#17cf54]/5 rounded-lg transition-colors"
+              >
+                <span className="material-symbols-outlined text-[14px]">add</span> Add Set
+              </button>
+              {/* Notes */}
               <div className="relative">
-                <textarea 
-                  placeholder="Notes, sensations, difficulties..." 
-                  value={clientData.notes}
-                  onChange={(e) => handleClientDataChange('notes', e.target.value)}
+                <textarea
+                  placeholder="Notes, sensations, difficulties..."
+                  value={logData?.notes || ''}
+                  onChange={e => onUpdateNotes(e.target.value)}
                   className="w-full text-sm p-3 pr-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-[#17cf54]/20 focus:border-[#17cf54] transition-all resize-none h-20 placeholder:text-slate-400 dark:placeholder:text-slate-600"
                 />
                 <div className="absolute top-3 right-3 text-slate-300 dark:text-slate-600">

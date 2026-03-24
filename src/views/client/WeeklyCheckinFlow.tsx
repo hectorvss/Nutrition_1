@@ -208,13 +208,13 @@ interface PageProps {
 }
 
 const PageIntro = ({ nextStep, onCancel, answers }: PageProps) => (
-  <div className="flex-1 flex flex-col gap-6">
+  <div className="flex-1 flex flex-col gap-6 w-full">
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="font-bold text-slate-900 dark:text-white">Weekly Check-in</h3>
         <span className="text-xs font-semibold px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-md uppercase">Due Today</span>
       </div>
-      <div className="flex flex-col md:flex-row items-center gap-6">
+      <div className="flex flex-col items-start gap-6">
         <div className="flex-1">
           <p className="text-slate-500 text-sm mb-4">Detailed feedback = Better results. Complete your weekly check-in to keep your coach updated on your progress, biofeedback, and adherence. It only takes 3-5 minutes.</p>
         </div>
@@ -257,7 +257,7 @@ const PageIntro = ({ nextStep, onCancel, answers }: PageProps) => (
 
 const Page1 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
   <Section title="How did your week go overall?" subtitle="Your general sentiment sets the context for everything else." icon="mood">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>Select Sentiment</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -275,7 +275,7 @@ const Page1 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
         </div>
       </div>
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>How did you feel mentally this week?</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -311,7 +311,7 @@ const Page1 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
 
 const Page2 = ({ answers, updateAnswer }: PageProps) => (
   <Section title="Body Progress" subtitle="Track your physical metrics and how you feel in your own skin." icon="monitoring">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6">
       <div>
         <FieldLabel>Current Weight (kg)</FieldLabel>
         <div className="relative">
@@ -338,7 +338,7 @@ const Page2 = ({ answers, updateAnswer }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Did you notice any visible changes?</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -357,7 +357,7 @@ const Page2 = ({ answers, updateAnswer }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>How satisfied are you with your current progress?</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -429,7 +429,7 @@ const Page2 = ({ answers, updateAnswer }: PageProps) => (
 
 const Page3 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
   <Section title="Nutrition Adherence" subtitle="How consistently did you follow your fuel plan?" icon="restaurant">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>Weekly Compliance (Overall %)</FieldLabel>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -448,7 +448,7 @@ const Page3 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Did you hit your calorie target?</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -467,7 +467,7 @@ const Page3 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>How often did you eat off-plan?</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -486,7 +486,7 @@ const Page3 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Did you track your food accurately?</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -524,7 +524,7 @@ const Page3 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
 );
 const Page4 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
   <Section title="Digestion & Satiety" subtitle="Internal biofeedback is key to adjusting your plan." icon="health_and_safety">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>Hunger Levels</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -551,7 +551,7 @@ const Page4 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Digestion Quality</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -570,7 +570,7 @@ const Page4 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Bowel Movement Regularity</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -589,7 +589,7 @@ const Page4 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Energy Response After Meals</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -617,7 +617,7 @@ const Page4 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
 );
 const Page5 = ({ answers, updateAnswer }: PageProps) => (
   <Section title="Daily Foundations" subtitle="The small habits that drive the big results." icon="water_drop">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>Hydration Consistency</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -636,7 +636,7 @@ const Page5 = ({ answers, updateAnswer }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Supplements Consistency</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -655,7 +655,7 @@ const Page5 = ({ answers, updateAnswer }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Eating out frequency</FieldLabel>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -700,7 +700,7 @@ const Page5 = ({ answers, updateAnswer }: PageProps) => (
 );
 const Page6 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
   <Section title="Training Performance" subtitle="Analyze your physical execution and strength levels." icon="fitness_center">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>Training Adherence</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -719,7 +719,7 @@ const Page6 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Energy during training</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -738,7 +738,7 @@ const Page6 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Recovery between sessions</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -776,7 +776,7 @@ const Page6 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       )}
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Exercise wins (PRs, progress)</FieldLabel>
         <textarea placeholder="Did any exercise feel especially strong? Any PRs?" value={answers.prWins} onChange={e => updateAnswer('prWins', e.target.value)}
@@ -799,7 +799,7 @@ const Page6 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
 
 const Page7 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
   <Section title="Recovery & Sleep" subtitle="The foundation of your progress happens while you rest." icon="dark_mode">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>Sleep Quantity (Average nightly)</FieldLabel>
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -814,7 +814,7 @@ const Page7 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Sleep Interruptions</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -829,11 +829,11 @@ const Page7 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
       {[{ id: 'stress', title: 'Stress Level' }, { id: 'energy', title: 'Energy Level' }, { id: 'motivation', title: 'Motivation' }, { id: 'generalFatigue', title: 'General Fatigue' }].map(block => (
         <div key={block.id}>
           <FieldLabel>{block.title}</FieldLabel>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {['Very low', 'Low', 'Average', 'High', 'Extreme'].map(o => <Chip key={o} label={o} selected={(answers as any)[block.id] === o} onClick={() => updateAnswer(block.id as any, o)} />)}
           </div>
         </div>
@@ -869,7 +869,7 @@ const Page8 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
     </div>
     {answers.painLevel && answers.painLevel !== 'No issues' && (
       <>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-1 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div>
             <FieldLabel>Affected Area</FieldLabel>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
@@ -884,7 +884,7 @@ const Page8 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div>
             <FieldLabel>Impact on Training</FieldLabel>
             <div className="grid grid-cols-2 gap-3">
@@ -899,7 +899,7 @@ const Page8 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div>
             <FieldLabel>Progression</FieldLabel>
             <div className="grid grid-cols-3 gap-3">
@@ -926,7 +926,7 @@ const Page8 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
 
 const Page9 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
   <Section title="Activity & Movement" subtitle="Tracking your non-exercise activity and cardio adherence." icon="directions_run">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 gap-8">
       <div>
         <FieldLabel>Cardio Adherence</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -941,7 +941,7 @@ const Page9 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
       </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Was cardio performance normal?</FieldLabel>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -996,7 +996,7 @@ const Page10 = ({ answers, updateAnswer, toggleArrayItem }: PageProps) => (
         className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white min-h-[100px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none transition-all text-sm" />
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div className="grid grid-cols-1 gap-8 pt-4 border-t border-slate-100 dark:border-slate-800">
       <div>
         <FieldLabel>Coach Review Request</FieldLabel>
         <textarea placeholder="Anything specific your coach should analyze or explain? (e.g. 'check my technique on deadlifts')" value={answers.reviewNotes} onChange={e => updateAnswer('reviewNotes', e.target.value)}
