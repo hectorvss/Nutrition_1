@@ -28,6 +28,7 @@ type ExerciseLogs = Record<string, ExerciseLog>;
 export default function ClientTraining({ onViewExercise }: ClientTrainingProps) {
   const { exercises, isLoading: exercisesLoading, refreshExercises } = useExerciseContext();
   const [selectedDay, setSelectedDay] = useState<string>('monday');
+  const [weekOffset, setWeekOffset] = useState(0);
   const [trainingProgram, setTrainingProgram] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +43,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     }
   });
 
-  const dayData = allLogs[selectedDay] || { exerciseLogs: {} as ExerciseLogs, rpe: '', notes: '' };
+  const logKey = `${weekOffset}-${selectedDay}`;
+  const dayData = allLogs[logKey] || { exerciseLogs: {} as ExerciseLogs, rpe: '', notes: '' };
   const exerciseLogs = dayData.exerciseLogs || {};
   const sessionRPE = dayData.rpe || '';
   const sessionNotes = dayData.notes || '';
@@ -61,14 +63,15 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   }, [user?.id]);
 
   const setDayData = useCallback((day: string, data: Partial<{ exerciseLogs: ExerciseLogs; rpe: string; notes: string }>) => {
+    const key = `${weekOffset}-${day}`;
     setAllLogs(prev => ({
       ...prev,
-      [day]: {
-        ...(prev[day] || { exerciseLogs: {}, rpe: '', notes: '' }),
+      [key]: {
+        ...(prev[key] || { exerciseLogs: {}, rpe: '', notes: '' }),
         ...data
       }
     }));
-  }, []);
+  }, [weekOffset]);
 
   useEffect(() => {
     if (user?.id) {
@@ -111,7 +114,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
 
   const initExerciseLog = useCallback((key: string, name: string, muscle_group: string, defaultSets: any) => {
     setAllLogs(prev => {
-      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      const activeLogKey = `${weekOffset}-${selectedDay}`;
+      const dayData = prev[activeLogKey] || { exerciseLogs: {}, rpe: '', notes: '' };
       if (dayData.exerciseLogs[key]) return prev;
       
       const numSets = Math.max(1, parseInt(String(defaultSets), 10) || 1);
@@ -119,7 +123,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       
       return {
         ...prev,
-        [selectedDay]: {
+        [activeLogKey]: {
           ...dayData,
           exerciseLogs: {
             ...dayData.exerciseLogs,
@@ -128,11 +132,12 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         }
       };
     });
-  }, [selectedDay]);
+  }, [selectedDay, weekOffset]);
 
   const updateSet = useCallback((exKey: string, setIdx: number, field: keyof SetLog, value: string) => {
     setAllLogs(prev => {
-      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      const activeLogKey = `${weekOffset}-${selectedDay}`;
+      const dayData = prev[activeLogKey] || { exerciseLogs: {}, rpe: '', notes: '' };
       let current = dayData.exerciseLogs[exKey];
       
       if (!current) {
@@ -146,7 +151,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       
       return {
         ...prev,
-        [selectedDay]: {
+        [activeLogKey]: {
           ...dayData,
           exerciseLogs: {
             ...dayData.exerciseLogs,
@@ -155,11 +160,12 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         }
       };
     });
-  }, [selectedDay]);
+  }, [selectedDay, weekOffset]);
 
   const addSet = useCallback((exKey: string) => {
     setAllLogs(prev => {
-      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      const activeLogKey = `${weekOffset}-${selectedDay}`;
+      const dayData = prev[activeLogKey] || { exerciseLogs: {}, rpe: '', notes: '' };
       let current = dayData.exerciseLogs[exKey];
       
       if (!current) {
@@ -168,7 +174,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       
       return {
         ...prev,
-        [selectedDay]: {
+        [activeLogKey]: {
           ...dayData,
           exerciseLogs: {
             ...dayData.exerciseLogs,
@@ -177,23 +183,31 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         }
       };
     });
-  }, [selectedDay]);
+  }, [selectedDay, weekOffset]);
+
+  const getWeekRange = (offset: number) => {
+    const now = new Date();
+    const todayIdx = now.getDay();
+    const isoToday = todayIdx === 0 ? 7 : todayIdx;
+    
+    // Get Monday of the week (ISO)
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - (isoToday - 1) + (offset * 7));
+    
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    return { monday, sunday };
+  };
 
   const getLoggedAtDate = (dayKey: string): string => {
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const targetIdx = days.indexOf(dayKey.toLowerCase());
     if (targetIdx === -1) return new Date().toISOString();
 
-    const now = new Date();
-    const todayIdx = now.getDay(); // 0-6 (Sun-Sat)
-    
-    // ISO Week logic: Monday=1, Sunday=7
-    const isoToday = todayIdx === 0 ? 7 : todayIdx;
-    const isoTarget = targetIdx === 0 ? 7 : targetIdx;
-    
-    const diff = isoTarget - isoToday;
-    const targetDate = new Date(now);
-    targetDate.setDate(now.getDate() + diff);
+    const { monday } = getWeekRange(weekOffset);
+    const targetDate = new Date(monday);
+    targetDate.setDate(monday.getDate() + targetIdx);
     
     return targetDate.toISOString();
   };
@@ -350,22 +364,40 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
 
       {/* Main Content Area */}
       <div className="flex-1 p-6 pt-2">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm mb-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between shadow-sm mb-6 gap-4 sm:gap-0">
           <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 relative">
-            <button className="relative px-6 py-2 rounded-lg text-sm font-semibold transition-all z-10 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm">
-              Workout View
+            <button 
+              onClick={() => setWeekOffset(prev => prev - 1)}
+              className="px-3 py-2 rounded-lg text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">chevron_left</span>
+            </button>
+            <div className="px-4 py-2 flex flex-col items-center min-w-[140px]">
+              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Semana</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                {(() => {
+                  const { monday, sunday } = getWeekRange(weekOffset);
+                  return `${monday.toLocaleDateString([], { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
+                })()}
+              </span>
+            </div>
+            <button 
+              onClick={() => setWeekOffset(prev => prev + 1)}
+              className="px-3 py-2 rounded-lg text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">chevron_right</span>
             </button>
           </div>
-          <div className="flex items-center gap-3 pr-2">
+          <div className="flex items-center gap-3 pr-2 w-full sm:w-auto overflow-x-auto justify-center scrollbar-hide">
             {saveSuccess && (
-              <span className="text-xs font-bold text-[#17cf54] flex items-center gap-1 animate-pulse">
+              <span className="text-xs font-bold text-[#17cf54] flex items-center gap-1 animate-pulse whitespace-nowrap">
                 <span className="material-symbols-outlined text-[16px]">check_circle</span> Session saved!
               </span>
             )}
             <button
               onClick={handleSaveSession}
               disabled={isSaving || blocks.length === 0}
-              className="bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm"
+              className="bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
             >
               {isSaving
                 ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Saving...</>
