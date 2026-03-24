@@ -133,8 +133,12 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const updateSet = useCallback((exKey: string, setIdx: number, field: keyof SetLog, value: string) => {
     setAllLogs(prev => {
       const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
-      const current = dayData.exerciseLogs[exKey];
-      if (!current) return prev;
+      let current = dayData.exerciseLogs[exKey];
+      
+      if (!current) {
+        // Fallback initialization if missing
+        current = { name: '', sets_logged: [], notes: '' };
+      }
       
       const sets_logged = current.sets_logged.map((s, i) =>
         i === setIdx ? { ...s, [field]: value } : s
@@ -156,8 +160,11 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const addSet = useCallback((exKey: string) => {
     setAllLogs(prev => {
       const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
-      const current = dayData.exerciseLogs[exKey];
-      if (!current) return prev;
+      let current = dayData.exerciseLogs[exKey];
+      
+      if (!current) {
+         current = { name: '', sets_logged: [], notes: '' };
+      }
       
       return {
         ...prev,
@@ -522,8 +529,10 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    onInit(exKey, name, muscle_group || '', Number(sets) || 1);
-  }, [exKey]);
+    if (!logData) {
+      onInit(exKey, name, muscle_group || '', Number(sets) || 1);
+    }
+  }, [exKey, logData, onInit, name, muscle_group, sets]);
 
   const setsLogged = logData?.sets_logged || [];
 

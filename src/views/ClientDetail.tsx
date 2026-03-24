@@ -457,7 +457,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     else if (strengthRange === 'YTD') cutoff.setFullYear(now.getFullYear(), 0, 1);
     else return stats.training.strengthHistory;
 
-    return stats.training.strengthHistory.filter((h: any) => new Date(h.date) >= cutoff);
+    const todayStr = now.toISOString().split('T')[0];
+    return stats.training.strengthHistory.filter((h: any) => new Date(h.date) >= cutoff && h.date <= todayStr);
   };
 
   const renderTraining = () => (
@@ -599,7 +600,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   return (
                     <Area 
                       name="Weekly Volume" 
-                      type="monotone" 
+                      type="natural" 
                       dataKey="volume" 
                       stroke="#10b981" 
                       strokeWidth={3} 
@@ -633,7 +634,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   <Area 
                     key={reps}
                     name={`${reps} Reps`}
-                    type="monotone" 
+                    type="natural" 
                     dataKey={(row: any) => {
                       const exData = findExData(row.logs);
                       return (exData && exData[reps]) || null;
