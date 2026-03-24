@@ -2276,13 +2276,16 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         logs: vals.logs // Contains max weight for every exercise done this week
       }));
 
-    // Recent workouts: last 5 sessions
-    const recentWorkouts = workoutLogs.slice(0, 5).map(log => ({
+    // Recent workouts: last 10 sessions with full exercise detail
+    const recentWorkouts = workoutLogs.slice(0, 10).map(log => ({
+      id: log.id,
       name: log.workout_name || 'Workout Session',
       date: log.logged_at,
       status: 'Completed',
       volume: Math.round(calcSessionVolume(log)),
-      rpe: log.session_rpe || 0
+      rpe: log.session_rpe || 0,
+      notes: log.notes,
+      exercises: log.exercises || [] // This includes sets_logged and notes for each exercise
     }));
 
     // Sensations: collect notes for specific exercises across all logs
@@ -2791,6 +2794,58 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
     res.json(result);
   } catch (error: any) {
     console.error('Error saving roadmap:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+
+// Save or update a workout log for a client (Manager side)
+router.post('/clients/:id/workout-logs', async (req: any, res) => {
+  const clientId = req.params.id;
+  try {
+    const { plan_id, workout_name, day_key, exercises, notes, session_rpe, logged_at } = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('workout_logs')
+      .insert({
+        client_id: clientId,
+        plan_id: plan_id || null,
+        workout_name: workout_name || 'Workout Session',
+        day_key: day_key || null,
+        exercises: exercises || [],
+        notes: notes || null,
+        session_rpe: session_rpe || null,
+        logged_at: logged_at || new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error saving workout log:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
+  const { logId } = req.params;
+  try {
+    const { exercises, notes, session_rpe } = req.body;
+    const { data, error } = await supabaseAdmin
+      .from('workout_logs')
+      .update({
+        exercises: exercises || [],
+        notes: notes || null,
+        session_rpe: session_rpe || null
+      })
+      .eq('id', logId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating workout log:', error);
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
