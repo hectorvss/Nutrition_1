@@ -666,8 +666,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Personal Records</h3>
             <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">History</button>
           </div>
-          <div className="space-y-4 max-h-[195px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent">
-            {(stats?.training?.allExercises || []).map((ex: any, idx: number) => (
+          <div className="space-y-4">
+            {(stats?.training?.allExercises || []).slice(0, 3).map((ex: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -689,7 +689,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Recent Workout Activity</h3>
             <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">View Log</button>
           </div>
-          <div className="space-y-4 max-h-[285px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent">
+          <div className="space-y-4">
             {stats?.training?.recentWorkouts?.map((workout: any) => (
               <WorkoutLogItem 
                 key={workout.id}
