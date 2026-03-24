@@ -2286,10 +2286,10 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     const currentMonday = new Date(nowLocal);
     currentMonday.setDate(nowLocal.getDate() - (isoToday - 1));
     
-    // Fill 21 days: from 14 days ago to the end of the current week (Sunday)
-    for (let i = 0; i < 21; i++) {
+    // Fill 35 days: from 28 days ago to the end of the current week (Sunday)
+    for (let i = 0; i < 35; i++) {
         const d = new Date(currentMonday);
-        d.setDate(currentMonday.getDate() - 14 + i);
+        d.setDate(currentMonday.getDate() - 28 + i);
         const k = d.toISOString().split('T')[0];
         if (!dayBuckets[k]) {
             dayBuckets[k] = { volume: 0, logs: {} };
