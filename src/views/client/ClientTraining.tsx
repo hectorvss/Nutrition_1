@@ -32,11 +32,35 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [sessionRPE, setSessionRPE] = useState('');
-  const [sessionNotes, setSessionNotes] = useState('');
-  // Lifted state: collects all exercise data entered by the client
-  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLogs>({});
   const { user } = useAuth();
+  const [allLogs, setAllLogs] = useState<Record<string, { exerciseLogs: ExerciseLogs; rpe: string; notes: string }>>(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem(`workout_draft_${user?.id}`) : null;
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const { exerciseLogs, rpe, notes } = allLogs[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+  const sessionRPE = rpe;
+  const sessionNotes = notes;
+
+  const setDayData = useCallback((day: string, data: Partial<{ exerciseLogs: ExerciseLogs; rpe: string; notes: string }>) => {
+    setAllLogs(prev => ({
+      ...prev,
+      [day]: {
+        ...(prev[day] || { exerciseLogs: {}, rpe: '', notes: '' }),
+        ...data
+      }
+    }));
+  }, []);
+
+  useEffect(() => {
+    if (user?.id) {
+      localStorage.setItem(`workout_draft_${user.id}`, JSON.stringify(allLogs));
+    }
+  }, [allLogs, user?.id]);
 
   useEffect(() => {
     refreshExercises();
@@ -55,54 +79,57 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     fetchMyPlans();
   }, []);
 
-  // Reset logs when changing day
-  useEffect(() => {
-    setExerciseLogs({});
-    setSessionRPE('');
-    setSessionNotes('');
-    setSaveSuccess(false);
-  }, [selectedDay]);
-
   const updateExerciseLog = useCallback((key: string, field: keyof ExerciseLog, value: any) => {
-    setExerciseLogs(prev => ({
-      ...prev,
-      [key]: { ...prev[key], [field]: value }
-    }));
-  }, []);
+    setDayData(selectedDay, {
+      exerciseLogs: {
+        ...exerciseLogs,
+        [key]: { ...exerciseLogs[key], [field]: value }
+      }
+    });
+  }, [selectedDay, exerciseLogs, setDayData]);
 
   const initExerciseLog = useCallback((key: string, name: string, muscle_group: string, defaultSets: number) => {
-    setExerciseLogs(prev => {
-      if (prev[key]) return prev;
-      const sets_logged: SetLog[] = Array.from({ length: defaultSets || 1 }, () => ({ reps: '', weight: '', rir: '' }));
-      return { ...prev, [key]: { name, muscle_group, sets_logged, notes: '' } };
+    if (exerciseLogs[key]) return;
+    const sets_logged: SetLog[] = Array.from({ length: defaultSets || 1 }, () => ({ reps: '', weight: '', rir: '' }));
+    setDayData(selectedDay, {
+      exerciseLogs: {
+        ...exerciseLogs,
+        [key]: { name, muscle_group, sets_logged, notes: '' }
+      }
     });
-  }, []);
+  }, [selectedDay, exerciseLogs, setDayData]);
 
   const updateSet = useCallback((exKey: string, setIdx: number, field: keyof SetLog, value: string) => {
-    setExerciseLogs(prev => {
-      const current = prev[exKey];
-      if (!current) return prev;
-      const sets_logged = current.sets_logged.map((s, i) =>
-        i === setIdx ? { ...s, [field]: value } : s
-      );
-      return { ...prev, [exKey]: { ...current, sets_logged } };
+    const current = exerciseLogs[exKey];
+    if (!current) return;
+    const sets_logged = current.sets_logged.map((s, i) =>
+      i === setIdx ? { ...s, [field]: value } : s
+    );
+    setDayData(selectedDay, {
+      exerciseLogs: {
+        ...exerciseLogs,
+        [exKey]: { ...current, sets_logged }
+      }
     });
-  }, []);
+  }, [selectedDay, exerciseLogs, setDayData]);
 
   const addSet = useCallback((exKey: string) => {
-    setExerciseLogs(prev => {
-      const current = prev[exKey];
-      if (!current) return prev;
-      return { ...prev, [exKey]: { ...current, sets_logged: [...current.sets_logged, { reps: '', weight: '', rir: '' }] } };
+    const current = exerciseLogs[exKey];
+    if (!current) return;
+    setDayData(selectedDay, {
+      exerciseLogs: {
+        ...exerciseLogs,
+        [exKey]: { ...current, sets_logged: [...current.sets_logged, { reps: '', weight: '', rir: '' }] }
+      }
     });
-  }, []);
+  }, [selectedDay, exerciseLogs, setDayData]);
 
   const handleSaveSession = async () => {
     if (!trainingProgram) return;
     setIsSaving(true);
     setSaveSuccess(false);
     try {
-      const exercises = Object.values(exerciseLogs).filter(ex =>
+      const exercisesToSave = (Object.values(exerciseLogs) as ExerciseLog[]).filter(ex =>
         ex.sets_logged.some(s => s.weight || s.reps)
       );
       await fetchWithAuth('/client/workout-logs', {
@@ -111,12 +138,14 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           plan_id: trainingProgram.id,
           workout_name: currentWorkoutName || `${selectedDay} session`,
           day_key: selectedDay,
-          exercises,
+          exercises: exercisesToSave,
           notes: sessionNotes,
           session_rpe: sessionRPE ? Number(sessionRPE) : null
         })
       });
       setSaveSuccess(true);
+      // Clear draft for this day
+      setDayData(selectedDay, { exerciseLogs: {}, rpe: '', notes: '' });
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err) {
       console.error('Error saving workout log:', err);
@@ -301,7 +330,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                     {[1,2,3,4,5,6,7,8,9,10].map(n => (
                       <button
                         key={n}
-                        onClick={() => setSessionRPE(String(n))}
+                        onClick={() => setDayData(selectedDay, { rpe: String(n) })}
                         className={`w-9 h-9 rounded-full text-sm font-bold border transition-all ${
                           sessionRPE === String(n)
                             ? 'bg-[#17cf54] border-[#17cf54] text-white shadow'
@@ -316,7 +345,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                   <textarea
                     placeholder="How did the session feel?"
                     value={sessionNotes}
-                    onChange={e => setSessionNotes(e.target.value)}
+                    onChange={e => setDayData(selectedDay, { notes: e.target.value })}
                     className="w-full p-3 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white min-h-[70px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none"
                   />
                 </div>
@@ -418,7 +447,7 @@ interface DetailedExerciseRowProps {
   onUpdateNotes: (notes: string) => void;
 }
 
-function DetailedExerciseRow({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes }: DetailedExerciseRowProps) {
+const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
