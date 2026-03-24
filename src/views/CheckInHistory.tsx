@@ -16,9 +16,10 @@ interface CheckInHistoryProps {
   onBack: () => void;
   onViewReview: (checkInId: string) => void;
   hideHeader?: boolean;
+  isClient?: boolean;
 }
 
-export default function CheckInHistory({ clientId, onBack, onViewReview, hideHeader = false }: CheckInHistoryProps) {
+export default function CheckInHistory({ clientId, onBack, onViewReview, hideHeader = false, isClient = false }: CheckInHistoryProps) {
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [client, setClient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,11 +28,17 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        console.log('DEBUG: CheckInHistory fetching history for clientId:', clientId);
-        const data = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins`);
-        if (data) {
-          setClient(data.client);
-          setCheckIns(data.check_ins || []);
+        console.log('DEBUG: CheckInHistory fetching history for clientId:', clientId, 'isClient:', isClient);
+        if (isClient) {
+          const data = await fetchWithAuth(`/check-ins/client/check-ins`);
+          setCheckIns(data || []);
+          // For client view, we don't need the client object from history as it's the user themselves
+        } else {
+          const data = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins`);
+          if (data) {
+            setClient(data.client);
+            setCheckIns(data.check_ins || []);
+          }
         }
       } catch (err) {
         console.error('Error loading check-in history:', err);
