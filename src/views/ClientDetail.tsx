@@ -436,20 +436,45 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     </div>
   );
 
-  const [strengthRange, setStrengthRange] = useState('30D');
+  const [strengthRange, setStrengthRange] = useState('7D');
+
+  const findExData = (logs: any) => {
+    if (!logs) return null;
+    const key = Object.keys(logs).find(k => k.toLowerCase() === selectedAnalysisSubject.toLowerCase());
+    return key ? logs[key] : null;
+  };
 
   const getFilteredStrengthData = () => {
     if (!stats?.training?.strengthHistory) return [];
     
     const now = new Date();
     let cutoff = new Date();
-    if (strengthRange === '30D') cutoff.setDate(now.getDate() - 30);
+    if (strengthRange === '7D') cutoff.setDate(now.getDate() - 7);
+    else if (strengthRange === '30D') cutoff.setDate(now.getDate() - 30);
     else if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
     else if (strengthRange === '6M') cutoff.setMonth(now.getMonth() - 6);
     else if (strengthRange === 'YTD') cutoff.setFullYear(now.getFullYear(), 0, 1);
-    else return stats.training.strengthHistory;
+    else cutoff = new Date(0); // All history
 
-    return stats.training.strengthHistory.filter((h: any) => new Date(h.date) >= cutoff);
+    const baseData = stats.training.strengthHistory.filter((h: any) => new Date(h.date) >= cutoff);
+    if (selectedAnalysisSubject === 'Weekly Volume') return baseData;
+
+    // Detailed visualization: every set is a point
+    const detailedData: any[] = [];
+    baseData.forEach((day: any) => {
+      const sets = findExData(day.logs);
+      if (Array.isArray(sets)) {
+        sets.forEach((set: any, idx: number) => {
+          detailedData.push({
+            date: day.date,
+            timestamp: new Date(day.date).getTime() + idx, // Mini-offset to preserve chart order
+            [`${set.reps}Reps`]: Number(set.weight)
+          });
+        });
+      }
+    });
+
+    return detailedData.sort((a, b) => a.timestamp - b.timestamp);
   };
 
   const renderTraining = () => (
@@ -498,7 +523,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 onChange={(e) => setStrengthRange(e.target.value)}
                 className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 shadow-sm transition-all outline-none"
               >
-                <option value="30D">Latest 30 Days</option>
+                <option value="7D">Last Week</option>
+                <option value="30D">Last 30 Days</option>
                 <option value="3M">Latest 90 Days</option>
                 <option value="6M">Last 6 Months</option>
                 <option value="YTD">Year to Date</option>
@@ -602,13 +628,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   );
                 }
 
-                // Helper to match exercise name case-insensitively
-                const findExData = (logs: any) => {
-                  if (!logs) return null;
-                  const key = Object.keys(logs).find(k => k.toLowerCase() === selectedAnalysisSubject.toLowerCase());
-                  return key ? logs[key] : null;
-                };
-
                 // Find all unique rep counts
                 const repCounts = new Set<string>();
                 getFilteredStrengthData().forEach((row: any) => {
@@ -626,10 +645,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                     key={reps}
                     name={`${reps} Reps`}
                     type="monotone" 
-                    dataKey={(row: any) => {
-                      const exData = findExData(row.logs);
-                      return (exData && exData[reps]) || null;
-                    }}
+                    dataKey={`${reps}Reps`}
                     stroke={colors[i % colors.length]} 
                     strokeWidth={2.5} 
                     fill={`url(#colorStrength${(i % 5) + 1})`}
