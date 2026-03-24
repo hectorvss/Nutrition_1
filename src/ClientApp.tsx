@@ -51,7 +51,7 @@ export default function ClientApp() {
           />
         );
       case 'messages':
-        return <Messages />;
+        return <Messages onNavigate={(view) => setCurrentView(view as ClientView)} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 p-10">

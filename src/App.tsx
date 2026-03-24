@@ -145,7 +145,11 @@ export default function App() {
           />
         );
       case 'messages':
-        return <Messages />;
+        return <Messages onNavigate={(view, data) => {
+          if (data?.clientId) setSelectedClientId(data.clientId);
+          if (data?.checkInId) setSelectedCheckInId(data.checkInId);
+          setCurrentView(view as View);
+        }} />;
       case 'automations':
         return <Automations />;
       case 'nutrition':

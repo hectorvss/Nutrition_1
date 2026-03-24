@@ -41,12 +41,16 @@ interface Message {
   receiver_id: string;
   content: string;
   attachment_url?: string;
-  attachment_type?: 'image' | 'file' | 'audio';
+  attachment_type?: 'image' | 'file' | 'audio' | 'check_in';
   attachment_name?: string;
   created_at: string;
 }
 
-export default function Messages() {
+interface MessagesProps {
+  onNavigate?: (view: string, data?: any) => void;
+}
+
+export default function Messages({ onNavigate }: MessagesProps) {
   const { user } = useAuth();
   const { clients } = useClient();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -795,9 +799,44 @@ export default function Messages() {
                           </audio>
                         </div>
                       )}
+                      {msg.attachment_type === 'check_in' && (
+                        <div className={`flex flex-col gap-3 p-4 rounded-xl border transition-all ${
+                          isOwn 
+                            ? 'bg-white/40 border-green-200 shadow-sm' 
+                            : 'bg-white/50 border-slate-200 shadow-sm'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOwn ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                              <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                               <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900' : 'text-slate-900'}`}>Weekly Check-in Assessment</p>
+                               <p className="text-[11px] text-slate-500 font-medium">Review your progress and feedback</p>
+                            </div>
+                          </div>
+                          
+                          {msg.content && (
+                            <div className={`text-xs p-3 rounded-lg border italic ${isOwn ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-slate-100/50 border-slate-100 text-slate-600 line-clamp-2'}`}>
+                               "{msg.content}"
+                            </div>
+                          )}
+
+                          <button 
+                            onClick={() => onNavigate?.('check-ins', { checkInId: msg.attachment_url, clientId: isOwn ? msg.receiver_id : msg.sender_id })}
+                            className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                              isOwn 
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
+                                : 'bg-slate-900 text-white hover:bg-slate-800'
+                            }`}
+                          >
+                            <FileText className="w-4 h-4" />
+                            View Check-in Details
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
-                  {msg.content && (
+                  {msg.content && msg.attachment_type !== 'check_in' && (
                     <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   )}
                 </div>
