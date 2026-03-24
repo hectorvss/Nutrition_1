@@ -80,49 +80,83 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   }, []);
 
   const updateExerciseLog = useCallback((key: string, field: keyof ExerciseLog, value: any) => {
-    setDayData(selectedDay, {
-      exerciseLogs: {
-        ...exerciseLogs,
-        [key]: { ...exerciseLogs[key], [field]: value }
-      }
+    setAllLogs(prev => {
+      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      return {
+        ...prev,
+        [selectedDay]: {
+          ...dayData,
+          exerciseLogs: {
+            ...dayData.exerciseLogs,
+            [key]: { ...dayData.exerciseLogs[key], [field]: value }
+          }
+        }
+      };
     });
-  }, [selectedDay, exerciseLogs, setDayData]);
+  }, [selectedDay]);
 
-  const initExerciseLog = useCallback((key: string, name: string, muscle_group: string, defaultSets: number) => {
-    if (exerciseLogs[key]) return;
-    const sets_logged: SetLog[] = Array.from({ length: defaultSets || 1 }, () => ({ reps: '', weight: '', rir: '' }));
-    setDayData(selectedDay, {
-      exerciseLogs: {
-        ...exerciseLogs,
-        [key]: { name, muscle_group, sets_logged, notes: '' }
-      }
+  const initExerciseLog = useCallback((key: string, name: string, muscle_group: string, defaultSets: any) => {
+    setAllLogs(prev => {
+      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      if (dayData.exerciseLogs[key]) return prev;
+      
+      const numSets = Math.max(1, parseInt(String(defaultSets), 10) || 1);
+      const sets_logged: SetLog[] = Array.from({ length: numSets }, () => ({ reps: '', weight: '', rir: '' }));
+      
+      return {
+        ...prev,
+        [selectedDay]: {
+          ...dayData,
+          exerciseLogs: {
+            ...dayData.exerciseLogs,
+            [key]: { name, muscle_group, sets_logged, notes: '' }
+          }
+        }
+      };
     });
-  }, [selectedDay, exerciseLogs, setDayData]);
+  }, [selectedDay]);
 
   const updateSet = useCallback((exKey: string, setIdx: number, field: keyof SetLog, value: string) => {
-    const current = exerciseLogs[exKey];
-    if (!current) return;
-    const sets_logged = current.sets_logged.map((s, i) =>
-      i === setIdx ? { ...s, [field]: value } : s
-    );
-    setDayData(selectedDay, {
-      exerciseLogs: {
-        ...exerciseLogs,
-        [exKey]: { ...current, sets_logged }
-      }
+    setAllLogs(prev => {
+      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      const current = dayData.exerciseLogs[exKey];
+      if (!current) return prev;
+      
+      const sets_logged = current.sets_logged.map((s, i) =>
+        i === setIdx ? { ...s, [field]: value } : s
+      );
+      
+      return {
+        ...prev,
+        [selectedDay]: {
+          ...dayData,
+          exerciseLogs: {
+            ...dayData.exerciseLogs,
+            [exKey]: { ...current, sets_logged }
+          }
+        }
+      };
     });
-  }, [selectedDay, exerciseLogs, setDayData]);
+  }, [selectedDay]);
 
   const addSet = useCallback((exKey: string) => {
-    const current = exerciseLogs[exKey];
-    if (!current) return;
-    setDayData(selectedDay, {
-      exerciseLogs: {
-        ...exerciseLogs,
-        [exKey]: { ...current, sets_logged: [...current.sets_logged, { reps: '', weight: '', rir: '' }] }
-      }
+    setAllLogs(prev => {
+      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      const current = dayData.exerciseLogs[exKey];
+      if (!current) return prev;
+      
+      return {
+        ...prev,
+        [selectedDay]: {
+          ...dayData,
+          exerciseLogs: {
+            ...dayData.exerciseLogs,
+            [exKey]: { ...current, sets_logged: [...current.sets_logged, { reps: '', weight: '', rir: '' }] }
+          }
+        }
+      };
     });
-  }, [selectedDay, exerciseLogs, setDayData]);
+  }, [selectedDay]);
 
   const handleSaveSession = async () => {
     if (!trainingProgram) return;
