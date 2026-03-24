@@ -35,8 +35,9 @@ const defaultWizard: WizardData = {
     frequencyUnit: 'Days',
     deliveryTime: 'Afternoon',
     audience: 'All Clients',
-    stopCondition: false,
-    stopWhen: 'Client replies to message'
+    selected_client_ids: [],
+    activation_conditions: [],
+    stop_conditions: []
   }
 };
 
@@ -59,15 +60,16 @@ export default function Automations() {
       triggerName: automation.name,
       message: automation.message,
       automationName: automation.name,
-      deliveryRules: automation.delivery_rules || {
+      deliveryRules: {
         frequency: 'Once',
         frequencyValue: 1,
         frequencyUnit: 'Days',
         deliveryTime: 'Morning',
         audience: 'All Clients',
-        stopCondition: false,
-        stopWhen: 'Goal Reached',
-        activation_conditions: []
+        selected_client_ids: [],
+        activation_conditions: [],
+        stop_conditions: [],
+        ...(automation.delivery_rules || {})
       },
       editingId: automation.id,
       iconName: automation.icon_info?.iconName || 'Repeat',
