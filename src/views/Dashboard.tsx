@@ -29,6 +29,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { clients } = useClient();
   const [activity, setActivity] = useState<any[]>([]);
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
+  const [showAllUpdates, setShowAllUpdates] = useState(false);
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -59,9 +60,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     { id: 'broadcast', label: 'Broadcast Message', icon: Send, color: 'bg-purple-50 text-purple-600' },
   ];
 
-  // Derive today's properties
   const todayDateStr = new Date().toISOString().split('T')[0];
   const scheduleItems = getEventsForDate(todayDateStr).sort((a, b) => a.time.localeCompare(b.time));
+
+  const displayedUpdates = showAllUpdates ? activity : activity.slice(0, 6);
 
   return (
     <div className="p-6 md:p-8 lg:p-10">
@@ -130,7 +132,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   key={item.id} 
                   className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
                   onClick={() => {
-                    console.log('DEBUG: Dashboard navigating with:', { clientId: item.clientId, checkInId: item.id });
                     if (item.type === 'CHECK_IN') onNavigate('check-ins', { clientId: item.clientId, checkInId: item.id });
                     else onNavigate('tasks');
                   }}
@@ -207,7 +208,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
 
         <div className="flex flex-col gap-6">
-
           <div className="bg-emerald-500 text-white rounded-2xl p-6 shadow-lg shadow-emerald-500/20 relative overflow-hidden">
             <div className="absolute right-[-20px] top-[-20px] bg-white/10 w-32 h-32 rounded-full blur-2xl" />
             <div className="relative z-10">
@@ -227,10 +227,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex-1">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Latest Updates</h3>
-            <div className="space-y-6">
-              {activity.slice(0, 5).map((update, idx) => {
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full min-h-[500px]">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">Latest Updates</h3>
+            <div className={`flex-1 ${showAllUpdates ? 'overflow-y-auto pr-2 custom-scrollbar' : 'overflow-hidden'} space-y-6 max-h-[420px]`}>
+              {displayedUpdates.map((update, idx) => {
                 const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'NEW_CLIENT' ? UserPlus : Check);
                 return (
                   <div 
@@ -243,8 +243,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white`}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-sm text-slate-900"><span className="font-bold">{update.title}</span> {update.sub}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm text-slate-900 leading-tight"><span className="font-bold">{update.title}</span> {update.sub}</p>
                       <p className="text-xs text-slate-400 mt-1">{update.time}</p>
                     </div>
                   </div>
@@ -254,8 +254,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <p className="text-sm text-slate-500 italic">No recent activity found.</p>
               )}
             </div>
-            <button className="w-full mt-6 py-2.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-              View All Activity
+            <button 
+              onClick={() => setShowAllUpdates(!showAllUpdates)}
+              className="w-full mt-6 py-2.5 text-sm font-bold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-[0.98] shrink-0"
+            >
+              {showAllUpdates ? 'Show Less' : 'View All Activity'}
             </button>
           </div>
         </div>
