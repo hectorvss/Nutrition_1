@@ -2234,15 +2234,15 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
           }
         }
 
-        // GRANULAR LOGS: Track max weight FOR EACH rep count
-        if (!(dailyBuckets[key].logs as any)[exName]) (dailyBuckets[key].logs as any)[exName] = {};
-        const exLogs = (dailyBuckets[key].logs as any)[exName];
+        // Raw sets for detailed visualization
+        if (!(dailyBuckets[key].logs as any)[exName]) (dailyBuckets[key].logs as any)[exName] = [];
+        const exSets = (dailyBuckets[key].logs as any)[exName];
 
         for (const s of sets) {
           const w = Number(s.weight) || 0;
           const r = Number(s.reps) || 0;
           if (r > 0 && w > 0) {
-            exLogs[r] = Math.max(exLogs[r] || 0, w);
+            exSets.push({ weight: w, reps: r });
           }
         }
       }
