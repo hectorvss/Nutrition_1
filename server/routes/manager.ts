@@ -2207,28 +2207,55 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     const fatigue = logsWithRPE.length > 0 ? Number(logsWithRPE[0].session_rpe) : 5;
 
     // 9. Strength PRs & History from workout_logs
-    // PRs: highest weight lifted per exercise (across all logs)
-    const prMap: Record<string, { weight: number; date: string }> = {};
+    // PRs & Latest status for ALL exercises
+    const allExercisesMap: Record<string, { pr: number, latest: number, latestDate: string }> = {};
+    const weekBuckets: Record<string, { volume: number; logs: Record<string, number> }> = {};
+
     for (const log of workoutLogs) {
+      const d = new Date(log.logged_at);
+      // ISO week start (Monday)
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const weekStart = new Date(d.setDate(diff));
+      const key = weekStart.toISOString().split('T')[0];
+      
+      if (!weekBuckets[key]) weekBuckets[key] = { volume: 0, logs: {} };
+      weekBuckets[key].volume += calcSessionVolume(log);
+
       for (const ex of (log.exercises || [])) {
-        const exName = (ex.name || '').toLowerCase();
-        const maxSet = (ex.sets_logged || []).reduce((best: any, s: any) => {
-          const w = Number(s.weight) || 0;
-          return w > (best?.weight || 0) ? s : best;
-        }, null);
-        if (maxSet) {
-          const w = Number(maxSet.weight) || 0;
-          if (!prMap[exName] || w > prMap[exName].weight) {
-            prMap[exName] = { weight: w, date: log.logged_at };
+        const exName = ex.name || 'Unknown Exercise';
+        const maxW = (ex.sets_logged || []).reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
+        
+        // Track PR & Latest
+        if (!allExercisesMap[exName]) {
+          allExercisesMap[exName] = { pr: maxW, latest: maxW, latestDate: log.logged_at };
+        } else {
+          allExercisesMap[exName].pr = Math.max(allExercisesMap[exName].pr, maxW);
+          if (new Date(log.logged_at) > new Date(allExercisesMap[exName].latestDate)) {
+            allExercisesMap[exName].latest = maxW;
+            allExercisesMap[exName].latestDate = log.logged_at;
           }
         }
+
+        // Weekly max for this exercise in this week's bucket
+        weekBuckets[key].logs[exName] = Math.max(weekBuckets[key].logs[exName] || 0, maxW);
       }
     }
 
-    // Map canonical PRs for common exercises
+    // Convert allExercisesMap to a sorted array for the UI (sorted by latest activity)
+    const allExercises = Object.entries(allExercisesMap)
+      .map(([name, data]) => ({
+        name,
+        pr: data.pr,
+        latest: data.latest,
+        latestDate: data.latestDate
+      }))
+      .sort((a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime());
+
+    // Canonical PRs for compatibility/legacy if still needed elsewhere
     const findPR = (keywords: string[]) => {
-      const key = Object.keys(prMap).find(k => keywords.some(kw => k.includes(kw)));
-      return key ? prMap[key] : null;
+      const entry = allExercises.find(ex => keywords.some(kw => ex.name.toLowerCase().includes(kw)));
+      return entry ? { weight: entry.pr, date: entry.latestDate } : null;
     };
     const squatPR = findPR(['squat', 'sentadilla']);
     const deadliftPR = findPR(['deadlift', 'peso muerto']);
@@ -2241,33 +2268,12 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       date: squatPR?.date || deadliftPR?.date || benchPR?.date || null
     };
 
-    // Strength history: weekly aggregated volume for chart
-    const weekBuckets: Record<string, { volume: number; squat: number; deadlift: number; bench: number }> = {};
-    for (const log of workoutLogs) {
-      const d = new Date(log.logged_at);
-      // ISO week start (Monday)
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      const weekStart = new Date(d.setDate(diff));
-      const key = weekStart.toISOString().split('T')[0];
-      if (!weekBuckets[key]) weekBuckets[key] = { volume: 0, squat: 0, deadlift: 0, bench: 0 };
-      weekBuckets[key].volume += calcSessionVolume(log);
-      for (const ex of (log.exercises || [])) {
-        const exName = (ex.name || '').toLowerCase();
-        const maxW = (ex.sets_logged || []).reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
-        if (['squat', 'sentadilla'].some(kw => exName.includes(kw))) weekBuckets[key].squat = Math.max(weekBuckets[key].squat, maxW);
-        if (['deadlift', 'peso muerto'].some(kw => exName.includes(kw))) weekBuckets[key].deadlift = Math.max(weekBuckets[key].deadlift, maxW);
-        if (['bench', 'press banca', 'press plano'].some(kw => exName.includes(kw))) weekBuckets[key].bench = Math.max(weekBuckets[key].bench, maxW);
-      }
-    }
     const strengthHistory = Object.entries(weekBuckets)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, vals]) => ({
         date,
-        squat: vals.squat || null,
-        deadlift: vals.deadlift || null,
-        bench: vals.bench || null,
-        volume: vals.volume
+        volume: vals.volume,
+        logs: vals.logs // Contains max weight for every exercise done this week
       }));
 
     // Recent workouts: last 5 sessions
@@ -2337,6 +2343,7 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         fatigue,
         prs,
         strengthHistory,
+        allExercises,
         recentWorkouts,
         sensations
       },

@@ -348,25 +348,31 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 scrollbar-hide">
           {[
-            { name: 'Back Squat', value: stats?.training?.prs?.squat || '--' },
-            { name: 'Deadlift', value: stats?.training?.prs?.deadlift || '--' },
-            { name: 'Bench Press', value: stats?.training?.prs?.bench || '--' },
-            { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0' },
+            { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: '' },
+            ...(stats?.training?.allExercises || []).map((ex: any) => ({
+              name: ex.name,
+              value: ex.pr || '--',
+              unit: 'kg'
+            }))
           ].map((ex, idx) => {
-            const isPrimary = ex.name === selectedAnalysisSubject;
+            const isSelected = ex.name === selectedAnalysisSubject;
             return (
-            <div key={idx} onClick={() => setSelectedAnalysisSubject(ex.name)} className={`p-4 rounded-2xl border transition-all cursor-pointer ${isPrimary ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}>
-              <div className="flex justify-between items-start mb-4">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isPrimary ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
-                  <Dumbbell className="w-4 h-4" />
+              <div 
+                key={idx} 
+                onClick={() => setSelectedAnalysisSubject(ex.name)} 
+                className={`flex-shrink-0 w-48 p-4 rounded-2xl border transition-all cursor-pointer ${isSelected ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+                    <Dumbbell className="w-4 h-4" />
+                  </div>
+                  {isSelected && <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded uppercase">Selected</span>}
                 </div>
-                {isPrimary && <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded uppercase">Primary</span>}
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1 truncate">{ex.name}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{ex.value} {ex.unit}</p>
               </div>
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{ex.name}</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{ex.value} {ex.name === 'Weekly Volume' ? '' : 'kg'}</p>
-            </div>
             );
           })}
         </div>
@@ -381,9 +387,16 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)', color: 'var(--tw-colors-slate-900)' }}
                 labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
               />
-              <Line name="Squat" type="monotone" dataKey="squat" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
-              <Line name="Deadlift" type="monotone" dataKey="deadlift" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
-              <Line name="Bench" type="monotone" dataKey="bench" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} connectNulls />
+              <Line 
+                name={selectedAnalysisSubject} 
+                type="monotone" 
+                dataKey={(row) => selectedAnalysisSubject === 'Weekly Volume' ? row.volume : (row.logs?.[selectedAnalysisSubject] || null)} 
+                stroke="#10b981" 
+                strokeWidth={3} 
+                dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
+                activeDot={{ r: 6 }} 
+                connectNulls 
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -396,21 +409,17 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">History</button>
           </div>
           <div className="space-y-4">
-            {[
-              { exercise: 'Back Squat', weight: stats?.training?.prs?.squat ? `${stats.training.prs.squat}kg` : '--', date: stats?.training?.prs?.date },
-              { exercise: 'Deadlift', weight: stats?.training?.prs?.deadlift ? `${stats.training.prs.deadlift}kg` : '--', date: stats?.training?.prs?.date },
-              { exercise: 'Bench Press', weight: stats?.training?.prs?.bench ? `${stats.training.prs.bench}kg` : '--', date: stats?.training?.prs?.date },
-            ].map((pr, idx) => (
+            {(stats?.training?.allExercises || []).slice(0, 3).map((ex: any, idx: number) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <Target className="w-4 h-4" />
                   </div>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{pr.exercise}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{ex.name}</span>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{pr.weight}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">{pr.date ? new Date(pr.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">{ex.pr}kg</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">{ex.latestDate ? new Date(ex.latestDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}</p>
                 </div>
               </div>
             ))}
