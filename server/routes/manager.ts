@@ -2224,7 +2224,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
 
       for (const ex of (log.exercises || [])) {
         const exName = ex.name || 'Unknown Exercise';
-        const maxW = (ex.sets_logged || []).reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
+        const sets = (ex.sets_logged || []);
+        const maxW = sets.reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
         
         // Track PR & Latest
         if (!allExercisesMap[exName]) {
@@ -2237,8 +2238,17 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
           }
         }
 
-        // Weekly max for this exercise in this week's bucket
-        weekBuckets[key].logs[exName] = Math.max(weekBuckets[key].logs[exName] || 0, maxW);
+        // GRANULAR LOGS: Track max weight FOR EACH rep count
+        if (!(weekBuckets[key].logs as any)[exName]) (weekBuckets[key].logs as any)[exName] = {};
+        const exLogs = (weekBuckets[key].logs as any)[exName];
+
+        for (const s of sets) {
+          const w = Number(s.weight) || 0;
+          const r = Number(s.reps) || 0;
+          if (r > 0 && w > 0) {
+            exLogs[r] = Math.max(exLogs[r] || 0, w);
+          }
+        }
       }
     }
 

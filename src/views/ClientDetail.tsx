@@ -542,14 +542,22 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           })}
         </div>
 
-        <div className="h-[300px] w-full">
+        <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={getFilteredStrengthData()}>
               <defs>
-                <linearGradient id="colorStrength" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                </linearGradient>
+                {[
+                  { id: 'colorStrength1', color: '#10b981' },
+                  { id: 'colorStrength2', color: '#3b82f6' },
+                  { id: 'colorStrength3', color: '#f59e0b' },
+                  { id: 'colorStrength4', color: '#ef4444' },
+                  { id: 'colorStrength5', color: '#8b5cf6' }
+                ].map(grad => (
+                  <linearGradient key={grad.id} id={grad.id} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={grad.color} stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor={grad.color} stopOpacity={0}/>
+                  </linearGradient>
+                ))}
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
               <XAxis 
@@ -560,42 +568,73 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 tickFormatter={(date) => {
                   try {
                     return new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric' });
-                  } catch {
-                    return date;
-                  }
+                  } catch { return date; }
                 }}
               />
-              <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
+              <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
               <Tooltip 
-                contentStyle={{ 
-                  borderRadius: '12px', 
-                  border: 'none', 
-                  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', 
-                  backgroundColor: 'var(--tw-colors-white)', 
-                  color: 'var(--tw-colors-slate-900)' 
-                }}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#fff' }}
                 labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
-                formatter={(value: any) => [`${value} ${selectedAnalysisSubject === 'Weekly Volume' ? 'kg' : 'kg'}`, selectedAnalysisSubject]}
                 labelFormatter={(label) => {
                   try {
                     return new Date(label).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
-                  } catch {
-                    return label;
-                  }
+                  } catch { return label; }
                 }}
               />
-              <Area 
-                name={selectedAnalysisSubject} 
-                type="monotone" 
-                dataKey={(row: any) => selectedAnalysisSubject === 'Weekly Volume' ? row.volume : (row.logs?.[selectedAnalysisSubject] || null)} 
-                stroke="#10b981" 
-                strokeWidth={3} 
-                fillOpacity={1} 
-                fill="url(#colorStrength)"
-                dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
-                activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }}
-                connectNulls 
-              />
+              <Legend verticalAlign="top" height={36}/>
+              
+              {(() => {
+                if (selectedAnalysisSubject === 'Weekly Volume') {
+                  return (
+                    <Area 
+                      name="Weekly Volume" 
+                      type="monotone" 
+                      dataKey="volume" 
+                      stroke="#10b981" 
+                      strokeWidth={3} 
+                      fill="url(#colorStrength1)"
+                      dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} 
+                      connectNulls 
+                    />
+                  );
+                }
+
+                // Helper to match exercise name case-insensitively
+                const findExData = (logs: any) => {
+                  if (!logs) return null;
+                  const key = Object.keys(logs).find(k => k.toLowerCase() === selectedAnalysisSubject.toLowerCase());
+                  return key ? logs[key] : null;
+                };
+
+                // Find all unique rep counts
+                const repCounts = new Set<string>();
+                getFilteredStrengthData().forEach((row: any) => {
+                  const exData = findExData(row.logs);
+                  if (exData && typeof exData === 'object') {
+                    Object.keys(exData).forEach(r => repCounts.add(r));
+                  }
+                });
+
+                const sortedReps = Array.from(repCounts).sort((a, b) => Number(a) - Number(b));
+                const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+                return sortedReps.map((reps, i) => (
+                  <Area 
+                    key={reps}
+                    name={`${reps} Reps`}
+                    type="monotone" 
+                    dataKey={(row: any) => {
+                      const exData = findExData(row.logs);
+                      return (exData && exData[reps]) || null;
+                    }}
+                    stroke={colors[i % colors.length]} 
+                    strokeWidth={2.5} 
+                    fill={`url(#colorStrength${(i % 5) + 1})`}
+                    dot={{ r: 3, fill: colors[i % colors.length], strokeWidth: 1.5, stroke: '#fff' }} 
+                    connectNulls 
+                  />
+                ));
+              })()}
             </AreaChart>
           </ResponsiveContainer>
         </div>
