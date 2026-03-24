@@ -172,6 +172,25 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     });
   }, [selectedDay]);
 
+  const getLoggedAtDate = (dayKey: string): string => {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const targetIdx = days.indexOf(dayKey.toLowerCase());
+    if (targetIdx === -1) return new Date().toISOString();
+
+    const now = new Date();
+    const todayIdx = now.getDay(); // 0-6 (Sun-Sat)
+    
+    // ISO Week logic: Monday=1, Sunday=7
+    const isoToday = todayIdx === 0 ? 7 : todayIdx;
+    const isoTarget = targetIdx === 0 ? 7 : targetIdx;
+    
+    const diff = isoTarget - isoToday;
+    const targetDate = new Date(now);
+    targetDate.setDate(now.getDate() + diff);
+    
+    return targetDate.toISOString();
+  };
+
   const handleSaveSession = async () => {
     if (!trainingProgram) return;
     setIsSaving(true);
@@ -180,6 +199,9 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       const exercisesToSave = (Object.values(exerciseLogs) as ExerciseLog[]).filter(ex =>
         ex.sets_logged.some(s => s.weight || s.reps)
       );
+      
+      const loggedAt = isWeekly ? getLoggedAtDate(selectedDay) : new Date().toISOString();
+
       await fetchWithAuth('/client/workout-logs', {
         method: 'POST',
         body: JSON.stringify({
@@ -188,7 +210,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           day_key: selectedDay,
           exercises: exercisesToSave,
           notes: sessionNotes,
-          session_rpe: sessionRPE ? Number(sessionRPE) : null
+          session_rpe: sessionRPE ? Number(sessionRPE) : null,
+          logged_at: loggedAt
         })
       });
       setSaveSuccess(true);

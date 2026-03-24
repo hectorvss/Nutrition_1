@@ -99,7 +99,7 @@ router.get('/roadmap', async (req: any, res) => {
 // Save a completed workout session
 router.post('/workout-logs', async (req: any, res) => {
   try {
-    const { plan_id, workout_name, day_key, exercises, notes, session_rpe } = req.body;
+    const { plan_id, workout_name, day_key, exercises, notes, session_rpe, logged_at } = req.body;
     const { data, error } = await supabaseAdmin
       .from('workout_logs')
       .insert({
@@ -110,7 +110,7 @@ router.post('/workout-logs', async (req: any, res) => {
         exercises: exercises || [],
         notes: notes || null,
         session_rpe: session_rpe || null,
-        logged_at: new Date().toISOString()
+        logged_at: logged_at || new Date().toISOString()
       })
       .select()
       .single();
