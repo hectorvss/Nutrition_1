@@ -2209,18 +2209,14 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     // 9. Strength PRs & History from workout_logs
     // PRs & Latest status for ALL exercises
     const allExercisesMap: Record<string, { pr: number, latest: number, latestDate: string }> = {};
-    const weekBuckets: Record<string, { volume: number; logs: Record<string, number> }> = {};
+    const dailyBuckets: Record<string, { volume: number; logs: Record<string, any> }> = {};
 
     for (const log of workoutLogs) {
       const d = new Date(log.logged_at);
-      // ISO week start (Monday)
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      const weekStart = new Date(d.setDate(diff));
-      const key = weekStart.toISOString().split('T')[0];
+      const key = d.toISOString().split('T')[0];
       
-      if (!weekBuckets[key]) weekBuckets[key] = { volume: 0, logs: {} };
-      weekBuckets[key].volume += calcSessionVolume(log);
+      if (!dailyBuckets[key]) dailyBuckets[key] = { volume: 0, logs: {} };
+      dailyBuckets[key].volume += calcSessionVolume(log);
 
       for (const ex of (log.exercises || [])) {
         const exName = ex.name || 'Unknown Exercise';
@@ -2239,8 +2235,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         }
 
         // GRANULAR LOGS: Track max weight FOR EACH rep count
-        if (!(weekBuckets[key].logs as any)[exName]) (weekBuckets[key].logs as any)[exName] = {};
-        const exLogs = (weekBuckets[key].logs as any)[exName];
+        if (!(dailyBuckets[key].logs as any)[exName]) (dailyBuckets[key].logs as any)[exName] = {};
+        const exLogs = (dailyBuckets[key].logs as any)[exName];
 
         for (const s of sets) {
           const w = Number(s.weight) || 0;
@@ -2278,9 +2274,9 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       date: squatPR?.date || deadliftPR?.date || benchPR?.date || null
     };
 
-    const strengthHistory = Object.entries(weekBuckets)
+    const strengthHistory = Object.entries(dailyBuckets)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, vals]) => ({
+      .map(([date, vals]: [string, any]) => ({
         date,
         volume: vals.volume,
         logs: vals.logs // Contains max weight for every exercise done this week
