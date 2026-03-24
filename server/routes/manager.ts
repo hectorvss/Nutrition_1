@@ -2209,20 +2209,17 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     // 9. Strength PRs & History from workout_logs
     // PRs & Latest status for ALL exercises
     const allExercisesMap: Record<string, { pr: number, latest: number, latestDate: string }> = {};
-    const dailyBuckets: Record<string, { volume: number; logs: Record<string, any> }> = {};
+    const dayBuckets: Record<string, { volume: number; logs: any }> = {};
 
     for (const log of workoutLogs) {
       const d = new Date(log.logged_at);
-      const key = d.toISOString().split('T')[0];
+      const key = d.toISOString().split('T')[0]; // Daily bucket
       
-      if (!dailyBuckets[key]) dailyBuckets[key] = { volume: 0, logs: {} };
-      dailyBuckets[key].volume += calcSessionVolume(log);
+      if (!dayBuckets[key]) dayBuckets[key] = { volume: 0, logs: {} };
+      dayBuckets[key].volume += calcSessionVolume(log);
 
       for (const ex of (log.exercises || [])) {
-        // Normalize name: Title Case & Trim
-        const rawName = ex.name || 'Unknown Exercise';
-        const exName = rawName.trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-        
+        const exName = ex.name || 'Unknown Exercise';
         const sets = (ex.sets_logged || []);
         const maxW = sets.reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
         
@@ -2237,15 +2234,15 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
           }
         }
 
-        // Raw sets for detailed visualization
-        if (!(dailyBuckets[key].logs as any)[exName]) (dailyBuckets[key].logs as any)[exName] = [];
-        const exSets = (dailyBuckets[key].logs as any)[exName];
+        // GRANULAR LOGS: Track max weight FOR EACH rep count on this specific DAY
+        if (!(dayBuckets[key].logs as any)[exName]) (dayBuckets[key].logs as any)[exName] = {};
+        const exLogs = (dayBuckets[key].logs as any)[exName];
 
         for (const s of sets) {
           const w = Number(s.weight) || 0;
           const r = Number(s.reps) || 0;
           if (r > 0 && w > 0) {
-            exSets.push({ weight: w, reps: r });
+            exLogs[r] = Math.max(exLogs[r] || 0, w);
           }
         }
       }
@@ -2277,9 +2274,9 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       date: squatPR?.date || deadliftPR?.date || benchPR?.date || null
     };
 
-    const strengthHistory = Object.entries(dailyBuckets)
+    const strengthHistory = Object.entries(dayBuckets)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, vals]: [string, any]) => ({
+      .map(([date, vals]) => ({
         date,
         volume: vals.volume,
         logs: vals.logs // Contains max weight for every exercise done this week
