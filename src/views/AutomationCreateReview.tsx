@@ -88,7 +88,16 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
     onActivate();
   };
 
-  const { frequency, frequencyValue, frequencyUnit, deliveryTime, audience, stopCondition, stopWhen } = wizardData.deliveryRules;
+  const { 
+    frequency = 'Once', 
+    frequencyValue = 1, 
+    frequencyUnit = 'Days', 
+    deliveryTime = 'Morning', 
+    audience = 'All Clients', 
+    stopCondition = false, 
+    stopWhen = 'Goal Reached' 
+  } = wizardData.deliveryRules || {};
+  
   const frequencyLabel = frequency === 'Once' ? 'One-time message' : `Every ${frequencyValue} ${frequencyUnit}`;
 
   return (

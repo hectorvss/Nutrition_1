@@ -66,7 +66,16 @@ export default function AutomationCreateMessage({
   onNext,
 }: AutomationCreateMessageProps) {
   const [message, setMessage] = useState(initialMessage);
-  const [rules, setRules] = useState<AutomationDeliveryRules>(initialRules);
+  const [rules, setRules] = useState<AutomationDeliveryRules>(initialRules || {
+    frequency: 'Once',
+    frequencyValue: 1,
+    frequencyUnit: 'Days',
+    deliveryTime: 'Morning',
+    audience: 'All Clients',
+    stopCondition: false,
+    stopWhen: 'Goal Reached',
+    activation_conditions: []
+  });
   const [copied, setCopied] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

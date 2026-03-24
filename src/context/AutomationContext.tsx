@@ -88,14 +88,13 @@ export const AutomationProvider = ({ children }: { children: ReactNode }) => {
 
   const addAutomation = async (automation: any) => {
     try {
-      // Map frontend-style keys to DB-style keys if necessary
       const payload = {
         name: automation.name,
-        description: automation.desc,
-        trigger_id: automation.triggerId,
+        description: automation.description || automation.desc,
+        trigger_id: automation.trigger_id || automation.triggerId,
         message: automation.message,
-        delivery_rules: automation.deliveryRules,
-        icon_info: {
+        delivery_rules: automation.delivery_rules || automation.deliveryRules || { frequency: 'Once' },
+        icon_info: automation.icon_info || {
           iconName: automation.iconName,
           iconBg: automation.iconBg,
           iconColor: automation.iconColor
@@ -117,17 +116,25 @@ export const AutomationProvider = ({ children }: { children: ReactNode }) => {
     try {
       const payload: any = {};
       if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.description !== undefined) payload.description = updates.description;
       if (updates.desc !== undefined) payload.description = updates.desc;
+      if (updates.trigger_id !== undefined) payload.trigger_id = updates.trigger_id;
       if (updates.triggerId !== undefined) payload.trigger_id = updates.triggerId;
       if (updates.message !== undefined) payload.message = updates.message;
+      if (updates.delivery_rules !== undefined) payload.delivery_rules = updates.delivery_rules;
       if (updates.deliveryRules !== undefined) payload.delivery_rules = updates.deliveryRules;
-      if (updates.iconName !== undefined || updates.iconBg !== undefined || updates.iconColor !== undefined) {
+      
+      if (updates.icon_info) {
+        payload.icon_info = updates.icon_info;
+      } else if (updates.iconName !== undefined || updates.iconBg !== undefined || updates.iconColor !== undefined) {
+        const current = automations.find(a => a.id === id);
         payload.icon_info = {
-          iconName: updates.iconName ?? updates.icon_info?.iconName,
-          iconBg: updates.iconBg ?? updates.icon_info?.iconBg,
-          iconColor: updates.iconColor ?? updates.icon_info?.iconColor
+          iconName: updates.iconName !== undefined ? updates.iconName : current?.icon_info?.iconName,
+          iconBg: updates.iconBg !== undefined ? updates.iconBg : current?.icon_info?.iconBg,
+          iconColor: updates.iconColor !== undefined ? updates.iconColor : current?.icon_info?.iconColor
         };
       }
+      
       if (updates.enabled !== undefined) payload.enabled = updates.enabled;
 
       const updated = await fetchWithAuth(`/automations/${id}`, {
