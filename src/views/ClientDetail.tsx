@@ -456,22 +456,18 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         </div>
         <div className="space-y-4">
           {(() => {
-            const sensationsData: Record<string, { exercise: string, date: string, note: string }[]> = {
-              'Back Squat': [
-                { exercise: 'Back Squat', date: 'Oct 24', note: 'Sentí molestias ligeras en la rodilla al bajar, bajé el peso para asegurar técnica.' },
-              ],
-              'Deadlift': [
-                { exercise: 'Deadlift', date: 'Oct 25', note: 'La barra subió muy rápida, la técnica y explosividad se sintieron on point.' },
-              ],
-              'Bench Press': [
-                { exercise: 'Bench Press', date: 'Oct 22', note: 'RIR 1 real en la última serie. Muy buenas sensaciones y buena retracción escapular.' },
-              ],
-              'Weekly Volume': [
-                { exercise: 'General', date: 'Current Week', note: 'El volumen semanal se siente digerible pero la fatiga empieza a acumularse. Listo para semana de descarga pronto.' },
-              ]
-            };
-            const items = sensationsData[selectedAnalysisSubject] || sensationsData['Back Squat'];
-            return items.map((item, idx) => (
+            const allSensations = stats?.training?.sensations || [];
+            
+            // Filter by selected lift if it's not "Weekly Volume"
+            const filtered = selectedAnalysisSubject === 'Weekly Volume' 
+              ? allSensations 
+              : allSensations.filter((s: any) => s.exercise.toLowerCase().includes(selectedAnalysisSubject.toLowerCase()));
+            
+            if (filtered.length === 0) {
+              return <p className="text-center text-slate-400 text-sm py-4 italic">No specific sensations logged for this lift yet.</p>;
+            }
+
+            return filtered.map((item: any, idx: number) => (
               <div key={idx} className="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-slate-900 dark:text-white">{item.exercise}</span>

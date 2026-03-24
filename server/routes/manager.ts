@@ -2279,6 +2279,21 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       rpe: log.session_rpe || 0
     }));
 
+    // Sensations: collect notes for specific exercises across all logs
+    const sensations: { exercise: string, date: string, note: string }[] = [];
+    for (const log of workoutLogs) {
+      for (const ex of (log.exercises || [])) {
+        if (ex.notes && ex.notes.trim()) {
+          sensations.push({
+            exercise: ex.name,
+            date: new Date(log.logged_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+            note: ex.notes
+          });
+        }
+      }
+      if (sensations.length >= 10) break; // Limit to 10 latest sensations
+    }
+
     // 10. Mindset Stats & History
     const latestCheckIn = checkIns.length > 0 ? checkIns[checkIns.length - 1] : null;
     const latestData = latestCheckIn ? (latestCheckIn.data_json as any) : {};
@@ -2322,7 +2337,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         fatigue,
         prs,
         strengthHistory,
-        recentWorkouts
+        recentWorkouts,
+        sensations
       },
       mindset,
       measurements,
