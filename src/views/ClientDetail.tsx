@@ -489,11 +489,14 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     
     if (strengthRange === '3M') cutoff.setMonth(now.getMonth() - 3);
     else if (strengthRange === '6M') cutoff.setMonth(now.getMonth() - 6);
+    else if (strengthRange === '14D') cutoff.setDate(now.getDate() - 14);
+    else if (strengthRange === '30D') cutoff.setDate(now.getDate() - 30);
     else if (strengthRange === 'YTD') cutoff.setFullYear(now.getFullYear(), 0, 1);
     else return stats.training.strengthHistory;
 
     const todayStr = now.toISOString().split('T')[0];
-    return stats.training.strengthHistory.filter((h: any) => new Date(h.date) >= cutoff && h.date <= todayStr);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    return stats.training.strengthHistory.filter((h: any) => h.date >= cutoffStr && h.date <= todayStr);
   };
 
   const renderTraining = () => (
@@ -568,6 +571,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 shadow-sm transition-all outline-none"
               >
                 <option value="1W">Last 7 Days</option>
+                <option value="14D">Last 14 Days</option>
+                <option value="30D">Last 30 Days</option>
                 <option value="3M">Latest 90 Days</option>
                 <option value="6M">Last 6 Months</option>
                 <option value="YTD">Year to Date</option>
