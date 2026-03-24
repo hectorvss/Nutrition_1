@@ -50,7 +50,8 @@ import {
   ResponsiveContainer, 
   AreaChart, 
   Area,
-  Bar
+  Bar,
+  Legend
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
 import CheckInHistory from './CheckInHistory';
