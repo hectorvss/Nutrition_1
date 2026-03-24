@@ -33,6 +33,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const { user } = useAuth();
   const [allLogs, setAllLogs] = useState<Record<string, { exerciseLogs: ExerciseLogs; rpe: string; notes: string }>>(() => {
     try {
@@ -236,10 +237,13 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         })
       });
       setSaveSuccess(true);
+      setSaveError(null);
       // Removed clearing draft so data remains visible to user
       setTimeout(() => setSaveSuccess(false), 4000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving workout log:', err);
+      setSaveError(err.message || 'Failed to sync with database');
+      setTimeout(() => setSaveError(null), 6000);
     } finally {
       setIsSaving(false);
     }
@@ -390,7 +394,12 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           <div className="flex items-center gap-3 pr-2 w-full sm:w-auto overflow-x-auto justify-center scrollbar-hide">
             {saveSuccess && (
               <span className="text-xs font-bold text-[#17cf54] flex items-center gap-1 animate-pulse whitespace-nowrap">
-                <span className="material-symbols-outlined text-[16px]">check_circle</span> Session saved!
+                <span className="material-symbols-outlined text-[16px]">cloud_done</span> Synced!
+              </span>
+            )}
+            {saveError && (
+              <span className="text-xs font-bold text-red-500 flex items-center gap-1 whitespace-nowrap">
+                <span className="material-symbols-outlined text-[16px]">error</span> {saveError}
               </span>
             )}
             <button
@@ -399,8 +408,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
               className="bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
             >
               {isSaving
-                ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Saving...</>
-                : <><span className="material-symbols-outlined text-[18px]">save</span> Save Session</>
+                ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Syncing...</>
+                : <><span className="material-symbols-outlined text-[18px]">cloud_upload</span> Sync Session</>
               }
             </button>
           </div>
