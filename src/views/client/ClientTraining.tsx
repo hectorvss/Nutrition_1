@@ -42,9 +42,23 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     }
   });
 
-  const { exerciseLogs, rpe, notes } = allLogs[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
-  const sessionRPE = rpe;
-  const sessionNotes = notes;
+  const dayData = allLogs[selectedDay] || { exerciseLogs: {} as ExerciseLogs, rpe: '', notes: '' };
+  const exerciseLogs = dayData.exerciseLogs || {};
+  const sessionRPE = dayData.rpe || '';
+  const sessionNotes = dayData.notes || '';
+
+  useEffect(() => {
+    if (user?.id) {
+      try {
+        const saved = localStorage.getItem(`workout_draft_${user.id}`);
+        if (saved) {
+          setAllLogs(JSON.parse(saved));
+        }
+      } catch (e) {
+        console.error('Error loading draft:', e);
+      }
+    }
+  }, [user?.id]);
 
   const setDayData = useCallback((day: string, data: Partial<{ exerciseLogs: ExerciseLogs; rpe: string; notes: string }>) => {
     setAllLogs(prev => ({
@@ -424,7 +438,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                     const key = `${bIdx}-${eIdx}`;
                     return (
                       <DetailedExerciseRow
-                        key={key}
+                        key={`${selectedDay}-${key}`}
                         exKey={key}
                         name={ex.name}
                         muscle_group={ex.muscle_group}
