@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import AutomationsList from './AutomationsList';
 import AutomationCreateTrigger from './AutomationCreateTrigger';
@@ -55,15 +55,24 @@ export default function Automations() {
 
   const startEdit = (automation: Automation) => {
     setWizard({
-      triggerId: automation.triggerId,
-      triggerName: automation.trigger,
+      triggerId: automation.trigger_id,
+      triggerName: automation.name,
       message: automation.message,
       automationName: automation.name,
-      deliveryRules: automation.deliveryRules,
+      deliveryRules: automation.delivery_rules || {
+        frequency: 'Once',
+        frequencyValue: 1,
+        frequencyUnit: 'Days',
+        deliveryTime: 'Morning',
+        audience: 'All Clients',
+        stopCondition: false,
+        stopWhen: 'Goal Reached',
+        activation_conditions: []
+      },
       editingId: automation.id,
-      iconName: automation.iconName,
-      iconBg: automation.iconBg,
-      iconColor: automation.iconColor
+      iconName: automation.icon_info?.iconName || 'Repeat',
+      iconBg: automation.icon_info?.iconBg || 'bg-blue-100',
+      iconColor: automation.icon_info?.iconColor || 'text-blue-600'
     });
     setCurrentView('step-message'); // go straight to message editor when editing
   };
