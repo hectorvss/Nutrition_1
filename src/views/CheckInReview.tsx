@@ -53,9 +53,11 @@ interface CheckInReviewProps {
   clientId: string;
   checkInId: string;
   onBack: () => void;
+  readonly?: boolean;
+  isClient?: boolean;
 }
 
-export default function CheckInReview({ clientId, checkInId, onBack }: CheckInReviewProps) {
+export default function CheckInReview({ clientId, checkInId, onBack, readonly = false, isClient = false }: CheckInReviewProps) {
   const { reloadClients } = useClient();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,8 +69,11 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
     const loadCheckIn = async () => {
       setIsLoading(true);
       try {
-        console.log('DEBUG: CheckInReview fetching for:', { clientId, checkInId });
-        const result = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}`);
+        console.log('DEBUG: CheckInReview fetching for:', { clientId, checkInId, isClient });
+        const endpoint = isClient 
+          ? `/check-ins/client/check-ins/${checkInId}`
+          : `/check-ins/manager/clients/${clientId}/check-ins/${checkInId}`;
+        const result = await fetchWithAuth(endpoint);
         if (result) {
           setData(result);
           setCoachNotes(result.check_in?.coach_notes || '');
@@ -398,7 +403,8 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
            <InfoField label="Final Thoughts" value={dj.extraNotes} />
         </Section>
 
-        {/* Coach Assessment Form - Redesigned to match image */}
+        {/* Coach Assessment Form - Hidden for clients */}
+        {!isClient && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden mb-8">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
@@ -504,6 +510,40 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
             </div>
           </div>
         </div>
+        )}
+
+        {/* Display coach feedback to client if available */}
+        {isClient && check_in.reviewed_at && (
+          <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-3xl p-8 border border-emerald-100 dark:border-emerald-800/50 mb-8">
+            <h3 className="text-xl font-bold text-emerald-900 dark:text-emerald-400 mb-6 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
+                <Brain className="w-5 h-5" />
+              </div>
+              Coach Feedback
+            </h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-emerald-900 dark:text-emerald-200">
+              <div className="lg:col-span-2 space-y-4">
+                <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest uppercase mb-1">Internal Notes & Feedback</p>
+                <div className="bg-white/50 dark:bg-slate-800/50 rounded-2xl p-6 border border-emerald-100 dark:border-emerald-800/50 whitespace-pre-wrap italic font-semibold leading-relaxed">
+                  {check_in.coach_notes || 'No feedback provided yet.'}
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest uppercase mb-1">Next Week Focus</p>
+                <div className="bg-white/50 dark:bg-slate-800/50 rounded-2xl p-6 border border-emerald-100 dark:border-emerald-800/50 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-800/50 flex items-center justify-center shadow-sm">
+                    <Target className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{check_in.next_week_focus || 'Keep it up!'}</h4>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <div className="h-12"></div>
     </div>
