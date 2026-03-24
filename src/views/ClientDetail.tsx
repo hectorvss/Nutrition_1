@@ -631,10 +631,11 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 // Find all unique rep counts
                 const repCounts = new Set<string>();
                 getFilteredStrengthData().forEach((row: any) => {
-                  const exData = findExData(row.logs);
-                  if (exData && typeof exData === 'object') {
-                    Object.keys(exData).forEach(r => repCounts.add(r));
-                  }
+                  Object.keys(row).forEach(k => {
+                    if (k.toLocaleLowerCase().endsWith('reps')) {
+                      repCounts.add(k.replace(/Reps/i, ''));
+                    }
+                  });
                 });
 
                 const sortedReps = Array.from(repCounts).sort((a, b) => Number(a) - Number(b));
