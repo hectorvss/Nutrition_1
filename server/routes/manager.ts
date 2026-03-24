@@ -2211,7 +2211,11 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     const allExercisesMap: Record<string, { pr: number, latest: number, latestDate: string }> = {};
     const dayBuckets: Record<string, { volume: number; logs: any }> = {};
 
-    const primaryExercises = ['Peso Muerto', 'Sentadilla', 'Press Banca', 'Press Militar', 'Remo con Barra'];
+    const primaryExercises = [
+      'Bench Press', 'Squat', 'Deadlift', 'Military Press', 'Barbell Row',
+      'Sentadilla', 'Peso Muerto', 'Press Banca', 'Press Militar', 'Remo con Barra',
+      'Buenos Días', 'Romanian Deadlift', '90-90 Hip Switch', 'Adductor Rock-Back'
+    ];
 
     for (const log of workoutLogs) {
       const d = new Date(log.logged_at);
@@ -2221,9 +2225,22 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       dayBuckets[key].volume += calcSessionVolume(log);
 
       for (const ex of (log.exercises || [])) {
-        const exNameRaw = ex.name || 'Unknown Exercise';
-        // Find canonical name
-        const canonicalName = primaryExercises.find(p => p.toLowerCase() === exNameRaw.toLowerCase()) || exNameRaw;
+        const exNameRaw = (ex.name || 'Unknown Exercise').trim();
+        
+        const canonicalMapping: Record<string, string> = {
+          'press banca': 'Bench Press',
+          'press de banca': 'Bench Press',
+          'sentadilla': 'Squat',
+          'peso muerto': 'Deadlift',
+          'press militar': 'Military Press',
+          'remo con barra': 'Barbell Row',
+          'buenos dias': 'Buenos Días',
+          'buenos días': 'Buenos Días',
+          'peso muerto rumano': 'Romanian Deadlift'
+        };
+
+        const mappedName = canonicalMapping[exNameRaw.toLowerCase()] || exNameRaw;
+        const canonicalName = primaryExercises.find(p => p.toLowerCase() === mappedName.toLowerCase()) || mappedName;
         
         const sets = (ex.sets_logged || []);
         const maxWTotal = sets.reduce((m: number, s: any) => Math.max(m, Number(s.weight) || 0), 0);
@@ -2241,7 +2258,10 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
 
         // GRANULAR LOGS: Track max weight FOR EACH rep count on this DAY
         if (!(dayBuckets[key].logs as any)[canonicalName]) {
-          (dayBuckets[key].logs as any)[canonicalName] = { max_weight: 0 };
+          (dayBuckets[key].logs as any)[canonicalName] = { 
+             repMaxes: {} as Record<string, number>,
+             max_weight: 0 
+          };
         }
         const exBucket = (dayBuckets[key].logs as any)[canonicalName];
         exBucket.max_weight = Math.max(exBucket.max_weight, maxWTotal);
@@ -2250,17 +2270,26 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
           const w = Number(s.weight) || 0;
           const r = Number(s.reps) || 0;
           if (r > 0 && w > 0) {
-            exBucket[r] = Math.max(exBucket[r] || 0, w);
+            const rStr = String(r);
+            exBucket.repMaxes[rStr] = Math.max(exBucket.repMaxes[rStr] || 0, w);
           }
         }
       }
     }
 
-    // FILL GAPS: Ensure the last 14 days are present in the buckets
-    const today = new Date();
-    for (let i = 0; i < 14; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
+    // FILL GAPS: Ensure the current week (Mon-Sun) is present, plus some history
+    const nowLocal = new Date();
+    const dayIdx = nowLocal.getDay();
+    const isoToday = dayIdx === 0 ? 7 : dayIdx;
+    
+    // Get Monday of current week
+    const currentMonday = new Date(nowLocal);
+    currentMonday.setDate(nowLocal.getDate() - (isoToday - 1));
+    
+    // Fill 21 days: from 14 days ago to the end of the current week (Sunday)
+    for (let i = 0; i < 21; i++) {
+        const d = new Date(currentMonday);
+        d.setDate(currentMonday.getDate() - 14 + i);
         const k = d.toISOString().split('T')[0];
         if (!dayBuckets[k]) {
             dayBuckets[k] = { volume: 0, logs: {} };
