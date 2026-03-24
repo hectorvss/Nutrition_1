@@ -115,6 +115,29 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
     }
   };
 
+  const handleMarkAsReviewed = async () => {
+    setIsPublishing(true);
+    try {
+      // 1. Update the check-in as reviewed in the DB
+      await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}/review`, {
+        method: 'POST',
+        body: JSON.stringify({ 
+          coach_notes: coachNotes || '', 
+          next_week_focus: nextWeekFocus || '' 
+        })
+      });
+
+      // 2. Refresh the manager's client list
+      await reloadClients();
+
+      onBack();
+    } catch (err) {
+      console.error('Error marking as reviewed:', err);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -446,20 +469,37 @@ export default function CheckInReview({ clientId, checkInId, onBack }: CheckInRe
                    </button>
                 </div>
 
-                <button 
-                  onClick={handlePublish}
-                  disabled={isPublishing || !coachNotes.trim()}
-                  className="w-full py-4 rounded-2xl bg-slate-950 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-900 dark:hover:bg-slate-100 text-[15px] font-bold transition-all shadow-xl shadow-slate-900/20 dark:shadow-none flex items-center justify-center gap-3 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group h-[56px]"
-                >
-                  {isPublishing ? (
-                    <div className="w-5 h-5 border-2 border-white/30 dark:border-slate-900/30 border-t-white dark:border-t-slate-900 rounded-full animate-spin"></div>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                      Publish Feedback
-                    </>
-                  )}
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button 
+                    onClick={handleMarkAsReviewed}
+                    disabled={isPublishing}
+                    className="w-full py-4 rounded-2xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-[14px] font-bold transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 h-[56px]"
+                  >
+                    {isPublishing ? (
+                      <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Mark Reviewed
+                      </>
+                    )}
+                  </button>
+
+                  <button 
+                    onClick={handlePublish}
+                    disabled={isPublishing || !coachNotes.trim()}
+                    className="w-full py-4 rounded-2xl bg-slate-950 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-900 dark:hover:bg-slate-100 text-[14px] font-bold transition-all shadow-xl shadow-slate-900/20 dark:shadow-none flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group h-[56px]"
+                  >
+                    {isPublishing ? (
+                      <div className="w-4 h-4 border-2 border-white/30 dark:border-slate-900/30 border-t-white dark:border-t-slate-900 rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        Publish Feedback
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
