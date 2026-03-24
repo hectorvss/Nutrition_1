@@ -2213,11 +2213,7 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
 
     for (const log of workoutLogs) {
       const d = new Date(log.logged_at);
-      // ISO week start (Monday)
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      const weekStart = new Date(d.setDate(diff));
-      const key = weekStart.toISOString().split('T')[0];
+      const key = d.toISOString().split('T')[0];
       
       if (!weekBuckets[key]) weekBuckets[key] = { volume: 0, logs: {} };
       weekBuckets[key].volume += calcSessionVolume(log);
