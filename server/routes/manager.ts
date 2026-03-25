@@ -239,6 +239,7 @@ router.get('/clients', async (req: any, res) => {
         id, 
         email, 
         created_at,
+        status,
         clients_profiles (weight, goal, notes, temp_password),
         nutrition_plans!client_id (id, name),
         training_programs!client_id (id, name),
