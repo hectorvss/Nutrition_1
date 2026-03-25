@@ -35,7 +35,7 @@ const getEventMins = (duration: string | number) => {
     if (dur.includes(':')) {
       const parts = dur.split(':').map(Number);
       if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        return (parts[0] * 60) + parts[1];
+        return Math.min((parts[0] * 60) + parts[1], 1440);
       }
     }
 
@@ -56,7 +56,7 @@ const getEventMins = (duration: string | number) => {
       matched = true;
     }
     
-    if (matched) return totalMins;
+    if (matched) return Math.min(totalMins, 1440);
 
     // 3. Fallback for pure numbers (e.g. "90" or "2")
     const fallbackMatch = dur.match(/^(\d+(?:\.\d+)?)$/);
@@ -64,8 +64,8 @@ const getEventMins = (duration: string | number) => {
       const val = parseFloat(fallbackMatch[1]);
       // If val >= 15, assume it means minutes (e.g. 15, 30, 90). 
       // If val < 15, assume it means hours (e.g. 1, 1.5, 2).
-      if (val >= 15) return val;
-      return val * 60;
+      if (val >= 15) return Math.min(val, 1440);
+      return Math.min(val * 60, 1440);
     }
     
     return 60;
@@ -455,7 +455,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                     <div 
                       key={event.id}
                       onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
-                      className={`absolute p-1 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-3 transition-all hover:shadow-md cursor-pointer ${info.color.split(' ')[0]}`}
+                      className={`absolute p-1 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-3 transition-all hover:shadow-md cursor-pointer ${info.color}`}
                       style={{ 
                         top: `${top}px`, 
                         height: `${height}px`,
