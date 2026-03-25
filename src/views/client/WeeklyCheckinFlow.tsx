@@ -17,6 +17,7 @@ interface CheckInModel {
   name: string;
   description: string;
   questions: CheckInQuestion[];
+  isDefault?: boolean;
 }
 
 interface WeeklyCheckinFlowProps {
@@ -69,16 +70,16 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
   // Load assigned model or default
   useEffect(() => {
-    // In a real app, we'd fetch the client's assigned model ID from the user object
     // For this implementation, we'll try to find a mock assignment in localStorage
     const loadModel = () => {
       const savedModels = localStorage.getItem('check_in_models');
       const models: CheckInModel[] = savedModels ? JSON.parse(savedModels) : [];
       
-      // Try to get assigned model for current user (would need actual user ID)
-      // Default to "standard-weekly" if not found
+      // Try to get assigned model for current user
+      // For this implementation, we'll try to find an assignment in localStorage
+      // In a real scenario, this would come from the client's profile in the database
       const assignedModelId = localStorage.getItem('current_client_model_id') || 'standard-weekly';
-      const selected = models.find(m => m.id === assignedModelId) || models[0];
+      const selected = models.find(m => m.id === assignedModelId) || models.find(m => m.isDefault) || models[0];
       
       if (selected) {
         setModel(selected);
