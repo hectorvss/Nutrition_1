@@ -26,33 +26,49 @@ import { useCalendar, getEventPresentationInfo, EventType } from '../context/Cal
 
 type ViewMode = 'Month' | 'Week' | 'Day';
 
-const getEventMins = (duration: string) => {
+const getEventMins = (duration: string | number) => {
   if (!duration) return 60; // default 1h
   try {
-    const dur = duration.toLowerCase().trim();
+    const dur = duration.toString().toLowerCase().trim().replace(',', '.');
+    
+    // 1. Handle HH:MM format (e.g. "01:30" or "1:30")
+    if (dur.includes(':')) {
+      const parts = dur.split(':').map(Number);
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return (parts[0] * 60) + parts[1];
+      }
+    }
+
     let totalMins = 0;
     
-    // Regular expression to extract hours and minutes
-    // Matches "1h 30m", "1.5h", "45m", "2 hours", etc.
+    // 2. Extract hours and minutes from strings like "1h 30m" or "2 hours"
     const hMatch = dur.match(/(\d+(?:\.\d+)?)\s*h/);
     const mMatch = dur.match(/(\d+)\s*m/);
     
+    let matched = false;
     if (hMatch) {
       totalMins += parseFloat(hMatch[1]) * 60;
+      matched = true;
     }
     
     if (mMatch) {
       totalMins += parseInt(mMatch[1]);
+      matched = true;
     }
     
-    // If no matches, try to parse at least one number as hours
-    if (!hMatch && !mMatch) {
-      const fallbackMatch = dur.match(/(\d+)/);
-      if (fallbackMatch) return parseInt(fallbackMatch[1]) * 60;
-      return 60;
+    if (matched) return totalMins;
+
+    // 3. Fallback for pure numbers (e.g. "90" or "2")
+    const fallbackMatch = dur.match(/^(\d+(?:\.\d+)?)$/);
+    if (fallbackMatch) {
+      const val = parseFloat(fallbackMatch[1]);
+      // If val >= 15, assume it means minutes (e.g. 15, 30, 90). 
+      // If val < 15, assume it means hours (e.g. 1, 1.5, 2).
+      if (val >= 15) return val;
+      return val * 60;
     }
     
-    return totalMins;
+    return 60;
   } catch (e) {
     return 60;
   }
