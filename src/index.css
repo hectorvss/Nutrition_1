@@ -75,6 +75,11 @@
 @layer base {
   :root {
     --brand-primary: #10b981;
+    scrollbar-gutter: stable;
+  }
+  
+  html, body {
+    scrollbar-gutter: stable;
   }
 }
 

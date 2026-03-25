@@ -238,13 +238,17 @@ router.get('/clients', async (req: any, res) => {
       .select(`
         id, 
         email, 
+        name,
+        gender,
+        age,
         created_at,
         status,
         clients_profiles (weight, goal, notes, temp_password),
         nutrition_plans!client_id (id, name),
         training_programs!client_id (id, name),
         check_ins (id, date, reviewed_at, data_json),
-        workout_logs!client_id (logged_at)
+        workout_logs!client_id (logged_at),
+        tasks!client_id (*)
       `)
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
@@ -298,6 +302,22 @@ router.get('/clients', async (req: any, res) => {
         plan_name: planName,
         progress: mapAdherence(dj.nutritionAdherence),
         lastCheckInDate: latestCheckIn?.date || null,
+        lastCheckIn: latestCheckIn ? (() => {
+          const diff = now.getTime() - lastCheckInDate!.getTime();
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          if (days === 0) return 'Today';
+          if (days === 1) return 'Yesterday';
+          return `${days} days ago`;
+        })() : 'Never',
+        nextAppointment: (() => {
+          const futureTasks = (c.tasks || [])
+            .filter((t: any) => new Date(`${t.date}T${t.time}`) >= now)
+            .sort((a: any, b: any) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
+          
+          if (futureTasks.length === 0) return 'Not Scheduled';
+          const next = futureTasks[0];
+          return `${new Date(next.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} ${next.time.substring(0, 5)}`;
+        })(),
         isUnreviewed: latestCheckIn ? !(latestCheckIn.reviewed_at || latestCheckIn.data_json?.reviewed_at) : false,
         check_ins: c.check_ins || []
       };
@@ -2631,6 +2651,7 @@ router.post('/tasks', async (req: any, res) => {
         type: req.body.type,
         date: req.body.date,
         time: req.body.time,
+        end_time: req.body.end_time || (parseInt(req.body.time?.split(':')[0] || '09') + 1).toString().padStart(2, '0') + ':' + (req.body.time?.split(':')[1] || '00'),
         duration: req.body.duration,
         client_id: req.body.client_id,
         status: req.body.status || 'pending',
@@ -2763,6 +2784,7 @@ router.patch('/tasks/:id', async (req: any, res) => {
         type: req.body.type,
         date: req.body.date,
         time: req.body.time,
+        end_time: req.body.end_time,
         duration: req.body.duration,
         client_id: req.body.client_id,
         status: req.body.status,
