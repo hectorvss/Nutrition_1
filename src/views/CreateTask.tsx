@@ -66,7 +66,28 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
         setStartTime(task.time || '09:00');
         // If we had end_time or duration, we'd set it here
         if (task.duration) {
-          // simple duration to end time estimate if needed
+          try {
+            const [h, m] = task.time.split(':').map(Number);
+            let totalMins = h * 60 + m;
+            
+            const dur = task.duration;
+            if (dur.includes('h')) {
+              const hPart = parseInt(dur.split('h')[0]);
+              totalMins += hPart * 60;
+              if (dur.includes('m')) {
+                const mPart = parseInt(dur.split('h')[1].split('m')[0].trim());
+                totalMins += mPart;
+              }
+            } else if (dur.includes('m')) {
+              totalMins += parseInt(dur.split('m')[0]);
+            }
+            
+            const h2 = Math.floor((totalMins / 60) % 24);
+            const m2 = totalMins % 60;
+            setEndTime(`${h2.toString().padStart(2, '0')}:${m2.toString().padStart(2, '0')}`);
+          } catch(e) {
+            setEndTime('10:00');
+          }
         }
         if (task.clientId) setSelectedClientId(task.clientId);
       }
@@ -94,6 +115,26 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       'Admin': 'Internal'
     };
 
+    // Calculate duration from startTime and endTime
+    const calculateDuration = () => {
+      try {
+        const [h1, m1] = startTime.split(':').map(Number);
+        const [h2, m2] = endTime.split(':').map(Number);
+        const totalMins1 = h1 * 60 + m1;
+        const totalMins2 = h2 * 60 + m2;
+        let diff = totalMins2 - totalMins1;
+        
+        if (diff <= 0) diff = 60; // Default to 1h if invalid
+        
+        if (diff < 60) return `${diff}m`;
+        const hrs = Math.floor(diff / 60);
+        const mins = diff % 60;
+        return `${hrs}h${mins > 0 ? ` ${mins}m` : ''}`;
+      } catch (e) {
+        return '1h';
+      }
+    };
+
     const taskData: any = {
       title,
       desc: description,
@@ -101,7 +142,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       type: typeMap[category] || category,
       date,
       time: startTime,
-      duration: '1h', // Default or calculated
+      duration: calculateDuration(),
       clientId: selectedClientId,
       client: client?.name || 'General Task',
       avatar: client?.avatar || null,

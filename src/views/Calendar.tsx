@@ -18,15 +18,17 @@ import {
 
 interface CalendarProps {
   onNavigate: (view: string, data?: any) => void;
+  initialView?: ViewMode;
+  initialDate?: Date;
 }
 
 import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
 
 type ViewMode = 'Month' | 'Week' | 'Day';
 
-export default function CalendarView({ onNavigate }: CalendarProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('Day');
-  const [currentDate, setCurrentDate] = useState(new Date());
+export default function CalendarView({ onNavigate, initialView, initialDate }: CalendarProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView || 'Day');
+  const [currentDate, setCurrentDate] = useState(initialDate || new Date());
   const [now, setNow] = useState(new Date());
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -149,7 +151,17 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
           {calendarDays.map((dayObj, idx) => {
             const dayEvents = dayObj ? getEventsForDate(dayObj.dateStr) : [];
             return (
-              <div key={idx} onClick={() => dayObj && onNavigate('create-task', { date: dayObj.dateStr })} className={`border-b border-r border-slate-100 p-2 min-h-[100px] transition-colors group relative cursor-pointer ${dayObj === null ? 'bg-slate-50/30' : 'hover:bg-slate-50'}`}>
+              <div 
+                key={idx} 
+                onClick={() => {
+                  if (dayObj) {
+                    const d = new Date(dayObj.dateStr + 'T12:00:00');
+                    setCurrentDate(d);
+                    setViewMode('Day');
+                  }
+                }} 
+                className={`border-b border-r border-slate-100 p-2 min-h-[100px] transition-colors group relative cursor-pointer ${dayObj === null ? 'bg-slate-50/30' : 'hover:bg-slate-50'}`}
+              >
                 {dayObj !== null && (
                   <>
                     <div className="flex justify-between items-start">
@@ -164,7 +176,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                             key={eIdx} 
                             onClick={(e) => {
                               e.stopPropagation();
-                              onNavigate('create-task', { taskId: ev.id });
+                              onNavigate('create-task', { taskId: ev.id, returnTo: 'Month', currentDate: dayObj.dateStr });
                             }}
                             className={`text-[10px] font-bold px-1.5 py-0.5 rounded truncate bg-opacity-30 border ${info.color.split(' ')[0]} border-${info.color.split(' ')[0].split('-')[1]}-200 text-${info.color.split(' ')[0].split('-')[1]}-700 cursor-pointer hover:brightness-95`}
                           >
@@ -252,19 +264,34 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                   const top = hourIdx * 96 + minuteOffset;
                   const left = dayIdx * (100 / 7);
                   
-                  let height = 72; // default
-                  if (event.duration === '30m') height = 48;
-                  if (event.duration === '45m') height = 72;
-                  if (event.duration === '1h') height = 96;
-                  if (event.duration === '1h 30m') height = 144;
-                  if (event.duration === '2h') height = 192;
+                  const getEventHeight = (duration: string, rowHeight: number) => {
+                    if (!duration) return rowHeight; // default 1h
+                    try {
+                      let totalMins = 0;
+                      if (duration.includes('h')) {
+                        const hPart = parseInt(duration.split('h')[0]);
+                        totalMins += hPart * 60;
+                        if (duration.includes('m')) {
+                          const mPart = parseInt(duration.split('h')[1].split('m')[0].trim());
+                          totalMins += mPart;
+                        }
+                      } else if (duration.includes('m')) {
+                        totalMins += parseInt(duration.split('m')[0]);
+                      }
+                      return (totalMins / 60) * rowHeight;
+                    } catch (e) {
+                      return rowHeight;
+                    }
+                  };
+                  
+                  const height = getEventHeight(event.duration, 96);
                   
                   return (
                     <div 
                       key={`${weekDay.dateStr}-${event.id || idx}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onNavigate('create-task', { taskId: event.id });
+                        onNavigate('create-task', { taskId: event.id, returnTo: 'Week', currentDate: weekDay.dateStr });
                       }}
                       className={`absolute p-2 border-l-4 rounded-r-lg shadow-sm z-10 overflow-hidden ${info.color} cursor-pointer hover:brightness-95 transition-all`}
                       style={{ 
@@ -321,12 +348,27 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                 const minuteOff = event.time.includes(':') ? parseInt(event.time.split(':')[1]) * (128 / 60) : 0;
                 const top = hourIdx * 128 + 16 + minuteOff;
                 
-                let height = 80; // default
-                if (event.duration === '30m') height = 64;
-                if (event.duration === '45m') height = 96;
-                if (event.duration === '1h') height = 120;
-                if (event.duration === '1h 30m') height = 180;
-                if (event.duration === '2h') height = 240;
+                const getEventHeight = (duration: string, rowHeight: number) => {
+                  if (!duration) return rowHeight; // default 1h
+                  try {
+                    let totalMins = 0;
+                    if (duration.includes('h')) {
+                      const hPart = parseInt(duration.split('h')[0]);
+                      totalMins += hPart * 60;
+                      if (duration.includes('m')) {
+                        const mPart = parseInt(duration.split('h')[1].split('m')[0].trim());
+                        totalMins += mPart;
+                      }
+                    } else if (duration.includes('m')) {
+                      totalMins += parseInt(duration.split('m')[0]);
+                    }
+                    return (totalMins / 60) * rowHeight;
+                  } catch (e) {
+                    return rowHeight;
+                  }
+                };
+
+                const height = getEventHeight(event.duration, 128);
                 
                 const info = getEventPresentationInfo(event.type);
                 const EventIcon = info.icon;
@@ -334,7 +376,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
                 return (
                   <div 
                     key={event.id}
-                    onClick={() => onNavigate('create-task', { taskId: event.id })}
+                    onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
                     className={`absolute left-4 right-4 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
                     style={{ top: `${top}px`, height: `${height}px` }}
                   >
@@ -423,7 +465,7 @@ export default function CalendarView({ onNavigate }: CalendarProps) {
               </button>
             </div>
 
-            <button onClick={() => onNavigate('create-task')} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95">
+            <button onClick={() => onNavigate('create-task', { date: getLocalDateString(currentDate), returnTo: viewMode })} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95">
               <Plus className="w-4 h-4" />
               New Event
             </button>
