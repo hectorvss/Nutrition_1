@@ -64,7 +64,7 @@ interface RoadmapData {
   };
 }
 
-// --- MOCK DATA FOR INITIALIZATION ---
+// --- INITIAL DATA FACTORY ---
 const getInitialData = (): RoadmapData => ({
   status: 'LIVE',
   currentWeek: 4,
@@ -145,7 +145,7 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
       const data = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`);
       const roadmapData = data.data_json && data.data_json.nutrition ? data.data_json : getInitialData();
       
-      // Migration/Safety checks for new fields
+      // Safety/Migration checks
       if (!roadmapData.milestones) roadmapData.milestones = getInitialData().milestones;
       if (!roadmapData.assumptions) roadmapData.assumptions = getInitialData().assumptions;
       
@@ -164,6 +164,7 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
   const handleSave = async () => {
     try {
+      if (!roadmap) return;
       await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
         method: 'POST',
         body: JSON.stringify(roadmap)
@@ -191,60 +192,57 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   if (loading || !roadmap) return null;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] font-['Manrope'] selection:bg-[#17cf54]/20">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-[#0f172a] font-sans selection:bg-emerald-100 selection:text-emerald-900">
       
-      {/* --- SIDEBAR PLACEHOLDER (Managed by App.tsx) --- */}
-      {/* We only implement the main content area for this view */}
-
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
-        <div className="w-full mx-auto flex flex-col gap-6 max-w-[1240px]">
+      <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
+        <div className="w-full mx-auto flex flex-col gap-6">
           
           {/* --- 1. HEADER SECTION --- */}
           <div className="flex flex-col gap-4">
-            <nav aria-label="Breadcrumb" className="flex text-sm text-[#64748b] dark:text-slate-400">
+            <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 dark:text-slate-400">
               <ol className="inline-flex items-center space-x-1 md:space-x-3">
                 <li className="inline-flex items-center">
-                  <button onClick={() => onNavigate('planning')} className="inline-flex items-center hover:text-[#17cf54] transition-colors focus:outline-none">
+                  <button onClick={() => onNavigate('planning')} className="inline-flex items-center hover:text-emerald-500 transition-colors focus:outline-none">
                     Planning
                   </button>
                 </li>
                 <li>
                   <div className="flex items-center">
                     <Icon name="chevron_right" className="text-[16px] mx-1" />
-                    <span className="text-[#0f172a] dark:text-white font-medium">{client?.name}</span>
+                    <span className="text-slate-900 dark:text-white font-medium">{client?.name}</span>
                   </div>
                 </li>
               </ol>
             </nav>
 
-            <div className="relative bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-amber-200 dark:border-amber-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 overflow-hidden">
-              <div className="absolute top-0 right-0 bg-amber-400 text-amber-900 text-[10px] font-bold px-4 py-1 rounded-bl-lg shadow-sm z-10">
-                EDITING DRAFT
+            <div className="relative bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-amber-200 dark:border-amber-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 overflow-hidden">
+              <div className="absolute top-0 right-0 bg-amber-400 text-amber-900 text-[10px] font-bold px-4 py-1 rounded-bl-lg shadow-sm z-10 uppercase tracking-wider">
+                Editing Draft
               </div>
               
               <div className="flex items-center gap-4 relative z-10">
                 <div 
-                  className="w-16 h-16 rounded-full bg-cover bg-center shadow-sm border-2 border-slate-50" 
+                  className="w-16 h-16 rounded-full bg-cover bg-center shadow-inner border-2 border-slate-50" 
                   style={{ backgroundImage: `url("${client?.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'}")` }}
                 />
                 <div>
-                  <h2 className="text-2xl font-bold text-[#0f172a] dark:text-white leading-tight">{client?.name}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{client?.name}</h2>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-sm text-[#64748b]">{client?.gender}, {client?.age} y.o.</span>
+                    <span className="text-sm text-slate-500">{client?.gender}, {client?.age} y.o.</span>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 relative z-10">
-                <div className="bg-[#17cf54] text-white rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
+                <div className="bg-emerald-500 text-white rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
                   <Icon name="play_circle" className="fill-1" />
                   <span className="font-bold text-sm">Program: {roadmap.status}</span>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <button className="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-sm transition-colors border border-[#e2e8f0] dark:border-[#334155]">
+                  <button className="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-sm transition-colors border border-slate-200 dark:border-slate-700">
                     Discard
                   </button>
-                  <button onClick={handleSave} className="flex-1 sm:flex-none py-2 px-6 rounded-xl bg-[#17cf54] hover:bg-[#14b549] text-white font-bold text-sm transition-colors shadow-sm active:scale-[0.98]">
+                  <button onClick={handleSave} className="flex-1 sm:flex-none py-2 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-md active:scale-95">
                     Save Draft
                   </button>
                 </div>
@@ -253,33 +251,33 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
           </div>
 
           {/* --- 2. MASTER ROADMAP --- */}
-          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
+          <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white flex items-center gap-2">
-                <Icon name="map" className="text-[#17cf54]" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Icon name="map" className="text-emerald-500" />
                 Master Roadmap
               </h3>
               <div className="flex gap-3">
-                <button className="flex items-center gap-1 text-sm font-semibold text-amber-600 dark:text-amber-500 hover:text-amber-700 transition-colors bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg">
+                <button className="group flex items-center gap-1 text-sm font-bold text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 px-3 py-1.5 rounded-xl transition-all">
                   <Icon name="add" className="text-[18px]" /> Nutrition Phase
                 </button>
-                <button className="flex items-center gap-1 text-sm font-semibold text-purple-600 dark:text-purple-500 hover:text-purple-700 transition-colors bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg">
+                <button className="group flex items-center gap-1 text-sm font-bold text-purple-600 dark:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 px-3 py-1.5 rounded-xl transition-all">
                   <Icon name="add" className="text-[18px]" /> Training Block
                 </button>
               </div>
             </div>
 
-            <div className="relative w-full overflow-x-auto pb-4 no-scrollbar">
+            <div className="relative w-full overflow-x-auto pb-4 scrollbar-hide">
               <div className="min-w-[1000px]">
                 {/* Week Labels */}
-                <div className="flex justify-between px-2 mb-2 text-xs font-semibold text-slate-400">
+                <div className="flex justify-between px-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
                   {Array.from({ length: 12 }).map((_, i) => (
                     <span key={i} className="w-1/12 text-center">W{i + 1}</span>
                   ))}
                 </div>
 
                 {/* Nutrition Lane */}
-                <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-[#e2e8f0] dark:border-[#334155] mb-4">
+                <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Nutrition</h4>
                   <div className="flex gap-1 h-12 relative">
                     {roadmap.nutrition.map((block) => (
@@ -287,11 +285,11 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                         key={block.id}
                         onClick={() => setSelectedBlockId(block.id)}
                         style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-[#17cf54]/50' : ''} ${block.color} ${block.startWeek === 1 ? 'rounded-l-lg' : ''} ${block.endWeek === 12 ? 'rounded-r-lg' : ''}`}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.color} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
                       >
-                        <span className="text-sm font-semibold truncate px-2">{block.title}</span>
+                        <span className="text-sm font-bold truncate px-2">{block.title}</span>
                         {block.startWeek <= roadmap.currentWeek && block.endWeek >= roadmap.currentWeek && (
-                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#17cf54] rotate-45 z-10 shrink-0 shadow-sm" />
+                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-emerald-500 rotate-45 z-10 shrink-0 shadow-sm" />
                         )}
                         <button className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md">
                           <Icon name="edit" className="text-[16px]" />
@@ -302,7 +300,7 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                 </div>
 
                 {/* Training Lane */}
-                <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-[#e2e8f0] dark:border-[#334155]">
+                <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
                   <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Training</h4>
                   <div className="flex gap-1 h-12">
                     {roadmap.training.map((block) => (
@@ -310,9 +308,9 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                         key={block.id}
                         onClick={() => setSelectedBlockId(block.id)}
                         style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-[#17cf54]/50' : ''} ${block.color} ${block.startWeek === 1 ? 'rounded-l-lg' : ''} ${block.endWeek === 12 ? 'rounded-r-lg' : ''}`}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.color} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
                       >
-                        <span className="text-sm font-semibold truncate px-2">{block.title}</span>
+                        <span className="text-sm font-bold truncate px-2">{block.title}</span>
                         <button className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md">
                           <Icon name="edit" className="text-[16px]" />
                         </button>
@@ -324,99 +322,23 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
             </div>
           </div>
 
-          {/* --- 3. GOAL TRAJECTORY & PREDICTIONS --- */}
-          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155] overflow-hidden">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white flex items-center gap-2">
-                <Icon name="analytics" className="text-[#17cf54]" />
-                Goal Trajectory & Predictions
-              </h3>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                  <span className="text-xs font-semibold text-slate-500">Actual Progress</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-[#17cf54]"></span>
-                  <span className="text-xs font-semibold text-slate-500">Projected Outcome</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="flex flex-col gap-4">
-                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
-                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Projected End Weight</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">141.2</span>
-                    <span className="text-sm font-semibold text-blue-600">lbs</span>
-                  </div>
-                  <p className="text-[11px] text-blue-600/70 mt-1 flex items-center gap-1">
-                    <Icon name="trending_down" className="text-[12px]" />
-                    Estimated -8.8 lbs from start
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50">
-                  <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1">Strength Capability</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">+12%</span>
-                  </div>
-                  <p className="text-[11px] text-purple-600/70 mt-1 flex items-center gap-1">
-                    <Icon name="bolt" className="text-[12px]" />
-                    Peak expected at Week 12
-                  </p>
-                </div>
-              </div>
-
-              <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-5 border border-[#e2e8f0] dark:border-[#334155] relative">
-                <div className="absolute inset-0 pointer-events-none opacity-5">
-                  <div className="h-full w-full grid grid-cols-12 divide-x divide-slate-400">
-                    <div/><div/><div/><div/><div/><div/><div/><div/><div/><div/><div/><div/>
-                  </div>
-                </div>
-                <div className="h-40 flex items-end justify-between relative mb-6">
-                  <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 160">
-                    <path d="M 0,20 L 100,28 L 200,45 L 300,65" fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="3" />
-                    <path d="M 300,65 L 400,85 L 500,105 L 600,125 L 700,120 L 800,115 L 900,125 L 1000,135 L 1100,145 L 1200,150" fill="none" stroke="#17cf54" strokeDasharray="8 6" strokeLinecap="round" strokeWidth="3" />
-                    <circle cx="300" cy="65" fill="white" r="5" stroke="#3b82f6" strokeWidth="2" />
-                  </svg>
-                  <div className="absolute left-1/4 top-1/4 -translate-x-1/2 -mt-10">
-                    <div className="bg-white dark:bg-slate-900 border border-[#e2e8f0] dark:border-[#334155] px-2 py-1 rounded shadow-sm text-[10px] font-bold">
-                      CURRENT: 148.5
-                    </div>
-                  </div>
-                  <div className="absolute right-0 bottom-0 mb-4 mr-2">
-                    <div className="bg-[#17cf54]/10 border border-[#17cf54]/30 text-[#17cf54] px-3 py-1.5 rounded-lg shadow-sm text-[10px] font-bold">
-                      TARGET PHASE END: 141.2
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                  <span>W1</span><span>W2</span><span>W3</span>
-                  <span className="text-[#17cf54] bg-[#17cf54]/10 px-2 py-0.5 rounded-full ring-1 ring-[#17cf54]/30">Week 4 (Now)</span>
-                  <span>W5</span><span>W6</span><span>W7</span><span>W8</span><span>W9</span><span>W10</span><span>W11</span><span>W12</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* --- 4. BLOCK STRATEGIC DETAILS --- */}
-          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] shadow-sm border border-[#e2e8f0] dark:border-[#334155] overflow-hidden">
-            <div className="border-b border-[#e2e8f0] dark:border-[#334155] bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          {/* --- 3. BLOCK STRATEGIC DETAILS (Swapped to Top) --- */}
+          <div className="bg-white dark:bg-[#1e293b] rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54]">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                   <Icon name="intelligence_board" className="font-variation-fill" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-[#0f172a] dark:text-white">Block Strategic Details</h3>
-                  <p className="text-xs text-[#64748b] dark:text-slate-400">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Block Strategic Details</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     {selectedBlock?.type === 'nutrition' ? 'Nutrition Phase' : 'Training Block'}: {selectedBlock?.title} • Weeks {selectedBlock?.startWeek}-{selectedBlock?.endWeek}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tight">ACTIVE PHASE</span>
-                <button className="p-2 text-slate-400 hover:text-[#0f172a] transition-colors"><Icon name="settings" /></button>
+                <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-widest">Active Phase</span>
+                <button className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><Icon name="settings" /></button>
               </div>
             </div>
 
@@ -425,51 +347,51 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                 {selectedBlock ? (
                   <motion.div 
                     key={selectedBlock.id}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, scale: 0.99 }}
+                    animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col gap-10"
                   >
                     {/* Nutrition Section */}
                     <div className="flex flex-col gap-6">
-                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 border-b border-[#e2e8f0] dark:border-[#334155] pb-2">
+                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 border-b border-slate-100 dark:border-slate-700 pb-2">
                         <Icon name="restaurant" className="text-[20px]" />
-                        <h4 className="font-bold text-xs uppercase tracking-wider">Nutrition Strategy</h4>
+                        <h4 className="font-bold text-xs uppercase tracking-widest">Nutrition Strategy</h4>
                       </div>
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Daily Calories</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Daily Calories</p>
                           <div className="flex items-center gap-1.5 font-bold">
                             <input 
-                              className="text-xl bg-transparent border-none p-0 focus:ring-0 w-24 outline-none text-[#0f172a] dark:text-white"
+                              className="text-xl bg-transparent border-none p-0 focus:ring-0 w-full outline-none text-slate-900 dark:text-white"
                               value={selectedBlock.kcal}
                               onChange={(e) => updateBlock(selectedBlock.id, { kcal: e.target.value })}
                             />
-                            <span className="text-xs text-amber-600 font-medium">kcal</span>
+                            <span className="text-xs text-amber-600 font-medium shrink-0">kcal</span>
                           </div>
                         </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Macro Split</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Macro Split</p>
                           <div className="flex flex-col">
                             <input 
-                              className="text-sm font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                              className="text-sm font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                               value={selectedBlock.macros}
                               onChange={(e) => updateBlock(selectedBlock.id, { macros: e.target.value })}
                             />
-                            <span className="text-[9px] text-slate-400 font-bold">P / C / F</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">P / C / F</span>
                           </div>
                         </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Meal Frequency</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Meal Freq</p>
                           <input 
-                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={selectedBlock.freq}
                             onChange={(e) => updateBlock(selectedBlock.id, { freq: e.target.value })}
                           />
                         </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Hydration Target</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Hydration</p>
                           <input 
-                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={selectedBlock.water}
                             onChange={(e) => updateBlock(selectedBlock.id, { water: e.target.value })}
                           />
@@ -478,26 +400,26 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div>
-                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
                             <Icon name="target" className="text-sm" /> Primary Intent
                           </h5>
                           <textarea 
-                            className="w-full text-sm text-[#0f172a] dark:text-slate-300 bg-white dark:bg-slate-900/50 p-4 rounded-lg border border-[#e2e8f0] dark:border-[#334155] leading-relaxed outline-none focus:ring-1 focus:ring-[#17cf54]/30 resize-none h-32"
+                            className="w-full text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 resize-none h-32 transition-all"
                             value={selectedBlock.rationale}
                             onChange={(e) => updateBlock(selectedBlock.id, { rationale: e.target.value })}
                             placeholder="Add strategic intent here..."
                           />
                         </div>
                         <div>
-                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
                             <Icon name="assignment" className="text-sm" /> Specific Focus
                           </h5>
                           <ul className="grid grid-cols-1 gap-2.5">
                             {(selectedBlock.focusItems || ['No specifics defined']).map((item, idx) => (
-                              <li key={idx} className="flex items-center gap-3 text-sm text-[#64748b] dark:text-slate-400 p-2.5 rounded-lg bg-slate-50/50 dark:bg-slate-800/30 border border-[#e2e8f0]/50 dark:border-[#334155]/50">
+                              <li key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
                                 <input 
-                                  className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none"
+                                  className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-medium"
                                   value={item}
                                   onChange={(e) => {
                                     const newItems = [...(selectedBlock.focusItems || [])];
@@ -514,42 +436,41 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
                     {/* Training Section */}
                     <div className="flex flex-col gap-6">
-                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 border-b border-[#e2e8f0] dark:border-[#334155] pb-2">
+                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 border-b border-slate-100 dark:border-slate-700 pb-2">
                         <Icon name="fitness_center" className="text-[20px]" />
-                        <h4 className="font-bold text-xs uppercase tracking-wider">Training Strategy</h4>
+                        <h4 className="font-bold text-xs uppercase tracking-widest">Training Strategy</h4>
                       </div>
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Block Focus</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Block Focus</p>
                           <input 
-                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={selectedBlock.focus}
                             onChange={(e) => updateBlock(selectedBlock.id, { focus: e.target.value })}
                           />
                         </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Volume/Freq</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Volume/Freq</p>
                           <div className="flex items-center gap-1 font-bold">
                             <input 
-                              className="text-xl bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                              className="text-xl bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white w-full"
                               value={selectedBlock.sessions}
                               onChange={(e) => updateBlock(selectedBlock.id, { sessions: e.target.value })}
                             />
-                            <span className="text-xs text-purple-600 font-medium">/wk</span>
                           </div>
                         </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Avg Duration</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Avg Session</p>
                           <input 
-                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={selectedBlock.duration}
                             onChange={(e) => updateBlock(selectedBlock.id, { duration: e.target.value })}
                           />
                         </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Deload Protocol</p>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Deload</p>
                           <input 
-                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={selectedBlock.deload}
                             onChange={(e) => updateBlock(selectedBlock.id, { deload: e.target.value })}
                           />
@@ -558,14 +479,14 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div>
-                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
                             <Icon name="trending_up" className="text-sm" /> Intensity Targets
                           </h5>
                           <div className="flex flex-wrap gap-2">
                             {(selectedBlock.intensityTargets || []).map((target, idx) => (
                               <input 
                                 key={idx}
-                                className="px-3 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold border border-purple-100 dark:border-purple-800 outline-none focus:ring-1 focus:ring-purple-400"
+                                className="px-3 py-2 bg-purple-50 dark:bg-purple-900/10 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-bold border border-purple-100 dark:border-purple-800 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
                                 value={target}
                                 onChange={(e) => {
                                   const newTargets = [...(selectedBlock.intensityTargets || [])];
@@ -577,23 +498,23 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                           </div>
                         </div>
                         <div>
-                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
                             <Icon name="emoji_events" className="text-sm" /> Key Milestones
                           </h5>
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between p-2.5 bg-white dark:bg-[#1e293b]/50 rounded-lg border border-[#e2e8f0] dark:border-[#334155] shadow-sm">
+                            <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                               <div className="flex items-center gap-2">
                                 <Icon name="check_circle" className="text-slate-400 text-sm" />
-                                <span className="text-sm text-[#0f172a] dark:text-slate-300">Form validation for Squat/Deadlift</span>
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Phase validation complete</span>
                               </div>
-                              <span className="text-[10px] font-bold text-[#17cf54]">W2</span>
+                              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">W2</span>
                             </div>
-                            <div className="flex items-center justify-between p-2.5 bg-white dark:bg-[#1e293b]/50 rounded-lg border border-[#e2e8f0] dark:border-[#334155] shadow-sm">
+                            <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                               <div className="flex items-center gap-2">
                                 <Icon name="schedule" className="text-slate-400 text-sm" />
-                                <span className="text-sm text-[#0f172a] dark:text-slate-300">Mid-block de-load protocol</span>
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Mid-block check-in</span>
                               </div>
-                              <span className="text-[10px] font-bold text-slate-400">W4</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">W4</span>
                             </div>
                           </div>
                         </div>
@@ -601,42 +522,113 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                     </div>
                   </motion.div>
                 ) : (
-                  <div className="p-20 text-center text-slate-400 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-                    Select a roadmap phase to see strategic details
+                  <div className="p-20 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                    <Icon name="touch_app" className="mb-2 text-3xl opacity-20" />
+                    <p className="font-bold uppercase tracking-widest text-[11px]">Select a roadmap phase to inspect strategic intelligence</p>
                   </div>
                 )}
               </AnimatePresence>
             </div>
           </div>
 
-          {/* --- 5. GOALS & TARGETS --- */}
-          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
+          {/* --- 4. GOAL TRAJECTORY & PREDICTIONS (Moved Down) --- */}
+          <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white flex items-center gap-2">
-                <Icon name="flag" className="text-[#17cf54]" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Icon name="analytics" className="text-emerald-500" />
+                Goal Trajectory & Predictions
+              </h3>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Actual</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-emerald-500"></span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Projected</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
+                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">Projected Weight</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-blue-700 dark:text-blue-300">141.2</span>
+                    <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">lbs</span>
+                  </div>
+                  <p className="text-[10px] text-blue-600/70 mt-2 flex items-center gap-1 font-bold uppercase tracking-tight">
+                    <Icon name="trending_down" className="text-[14px]" /> -8.8 lbs vs start
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
+                  <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">Strength Peak</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-purple-700 dark:text-purple-300">+12%</span>
+                  </div>
+                  <p className="text-[10px] text-purple-600/70 mt-2 flex items-center gap-1 font-bold uppercase tracking-tight">
+                    <Icon name="bolt" className="text-[14px]" /> Expected Week 12
+                  </p>
+                </div>
+              </div>
+
+              <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 relative shadow-inner">
+                <div className="h-40 flex items-end justify-between relative mb-8">
+                  <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 160">
+                    <path d="M 0,20 L 100,28 L 200,45 L 300,65" fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="4" />
+                    <path d="M 300,65 L 400,85 L 500,105 L 600,125 L 700,120 L 800,115 L 900,125 L 1000,135 L 1100,145 L 1200,150" fill="none" stroke="#10b981" strokeDasharray="10 8" strokeLinecap="round" strokeWidth="4" />
+                    <circle cx="300" cy="65" fill="white" r="6" stroke="#3b82f6" strokeWidth="3" />
+                  </svg>
+                  <div className="absolute left-1/4 top-1/4 -translate-x-1/2 -mt-12">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg shadow-md text-[10px] font-bold uppercase tracking-widest">
+                      Current: 148.5
+                    </div>
+                    <div className="w-px h-10 bg-slate-300 mx-auto mt-1" />
+                  </div>
+                  <div className="absolute right-0 bottom-0 mb-4 mr-2">
+                    <div className="bg-emerald-500 text-white px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 text-[10px] font-bold uppercase tracking-widest ring-4 ring-white dark:ring-slate-800">
+                      Target: 141.2
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>W1</span><span>W2</span><span>W3</span>
+                  <span className="text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full ring-1 ring-emerald-500/30">W4 (Now)</span>
+                  <span>W5</span><span>W6</span><span>W7</span><span>W8</span><span>W9</span><span>W10</span><span>W11</span><span>W12</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* --- 5. GOALS & TARGETS --- */}
+          <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Icon name="flag" className="text-emerald-500" />
                 Goals & Targets
               </h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {roadmap.goals.map((goal) => (
-                <div key={goal.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-[#e2e8f0] dark:border-[#334155] relative group cursor-pointer hover:border-blue-300 transition-colors">
-                  <button className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-[#17cf54]"><Icon name="edit" className="text-[16px]" /></button>
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white flex items-center gap-2">
-                      <Icon name={goal.type === 'physical' ? 'accessibility' : goal.type === 'nutrition' ? 'restaurant_menu' : goal.type === 'training' ? 'fitness_center' : 'psychology'} className={`text-sm ${goal.type === 'physical' ? 'text-blue-500' : goal.type === 'nutrition' ? 'text-amber-500' : goal.type === 'training' ? 'text-purple-500' : 'text-rose-500'}`} />
+                <div key={goal.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 relative group cursor-pointer hover:border-emerald-500 transition-all hover:shadow-md">
+                  <button className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-slate-400 hover:text-emerald-500 bg-white rounded-lg shadow-sm border border-slate-100"><Icon name="edit" className="text-[16px]" /></button>
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Icon name={goal.type === 'physical' ? 'accessibility' : goal.type === 'nutrition' ? 'restaurant_menu' : goal.type === 'training' ? 'fitness_center' : 'psychology'} className={`text-[20px] ${goal.type === 'physical' ? 'text-blue-500' : goal.type === 'nutrition' ? 'text-amber-500' : goal.type === 'training' ? 'text-purple-500' : 'text-rose-500'}`} />
                       {goal.label}
                     </h4>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${goal.type === 'physical' ? 'bg-blue-100 text-blue-600' : goal.type === 'nutrition' ? 'bg-amber-100 text-amber-600' : goal.type === 'training' ? 'bg-purple-100 text-purple-600' : 'bg-rose-100 text-rose-600'}`}>{goal.value}%</span>
+                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider ${goal.type === 'physical' ? 'bg-blue-100 text-blue-600' : goal.type === 'nutrition' ? 'bg-amber-100 text-amber-600' : goal.type === 'training' ? 'bg-purple-100 text-purple-600' : 'bg-rose-100 text-rose-600'}`}>{goal.value}%</span>
                   </div>
-                  <p className="text-[11px] text-[#64748b] mb-3 line-clamp-1">{goal.desc}</p>
-                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 shadow-inner">
+                  <p className="text-[11px] font-medium text-slate-500 mb-4 line-clamp-1">{goal.desc}</p>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 shadow-inner overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${goal.value}%` }}
                       className={`h-full rounded-full ${goal.type === 'physical' ? 'bg-blue-500' : goal.type === 'nutrition' ? 'bg-amber-500' : goal.type === 'training' ? 'bg-purple-500' : 'bg-rose-500'}`}
                     />
                   </div>
-                  <div className="flex justify-between text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                  <div className="flex justify-between text-[9px] font-black text-slate-400 mt-2 uppercase tracking-widest">
                     <span>{goal.currentLabel}</span>
                     <span>{goal.targetLabel}</span>
                   </div>
@@ -647,28 +639,28 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
             
-            {/* --- 6. KEY ROADMAP MILESTONES --- */}
-            <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
+            {/* --- 6. MILESTONES --- */}
+            <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-[13px] font-bold text-[#0f172a] dark:text-white flex items-center gap-2 uppercase tracking-wide">
+                <h3 className="text-[11px] font-black text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">
                   <Icon name="timeline" className="text-slate-400" />
-                  Key Roadmap Milestones
+                  Key Milestones
                 </h3>
-                <button className="text-[12px] font-bold text-[#17cf54] hover:text-[#14b549] transition-colors uppercaseTracking-widest">+ Add Milestone</button>
+                <button className="text-[10px] font-black text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ Add Milestone</button>
               </div>
               <div className="space-y-3">
                 {roadmap.milestones.map((m) => (
-                  <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${m.status === 'next' ? 'bg-white dark:bg-[#1e293b] border-[#17cf54] ring-1 ring-[#17cf54]/20' : 'bg-slate-50 dark:bg-slate-800/50 border-[#e2e8f0] dark:border-[#334155]'}`}>
+                  <div key={m.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${m.status === 'next' ? 'bg-white dark:bg-[#1e293b] border-emerald-500 ring-4 ring-emerald-500/5' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'}`}>
                     <div className="flex items-center gap-4">
-                      <div className={`w-2 h-2 rounded-full ${m.status === 'done' ? 'bg-green-500' : m.status === 'next' ? 'bg-[#17cf54] shadow-[0_0_0_2px_rgba(23,207,84,0.2)]' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                      <div className={`w-2.5 h-2.5 rounded-full ${m.status === 'done' ? 'bg-green-500' : m.status === 'next' ? 'bg-emerald-500 shadow-lg shadow-emerald-500/40' : 'bg-slate-300 dark:bg-slate-600'}`} />
                       <div>
-                        <p className="text-sm font-semibold text-[#0f172a] dark:text-white leading-none mb-1">{m.label}</p>
-                        <p className={`text-[10px] font-bold uppercase ${m.status === 'next' ? 'text-[#17cf54]' : 'text-slate-500'}`}>{m.week}</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white leading-none mb-1.5">{m.label}</p>
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${m.status === 'next' ? 'text-emerald-500' : 'text-slate-400'}`}>{m.week}</p>
                       </div>
                     </div>
                     {m.status !== 'done' && (
-                      <button className="px-3 py-1.5 text-[10px] font-bold bg-white dark:bg-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 rounded-lg border border-[#e2e8f0] dark:border-[#334155] transition-all flex items-center gap-1 uppercase tracking-tight">
-                        <Icon name="task" className="text-[14px]" /> Convert to Task
+                      <button className="px-3 py-1.5 text-[9px] font-black bg-white dark:bg-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 uppercase tracking-widest shadow-sm">
+                        <Icon name="task" className="text-[14px]" /> Connect
                       </button>
                     )}
                   </div>
@@ -676,36 +668,35 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
               </div>
             </div>
 
-            {/* --- 7. ASSUMPTIONS & VARIABLES --- */}
-            <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
-              <h3 className="text-[13px] font-bold text-[#0f172a] dark:text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+            {/* --- 7. ASSUMPTIONS --- */}
+            <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+              <h3 className="text-[11px] font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-widest">
                 <Icon name="rule" className="text-slate-400" />
-                Assumptions & Variables
+                Strategic Assumptions
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Daily Steps Target</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Daily Steps Target</label>
                   <input 
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#0f172a] dark:text-white focus:ring-1 focus:ring-[#17cf54] focus:border-[#17cf54] outline-none transition-shadow font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
                     value={roadmap.assumptions.steps}
                     onChange={(e) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, steps: e.target.value } })}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Sleep Goal</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sleep Hygiene</label>
                   <input 
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#0f172a] dark:text-white focus:ring-1 focus:ring-[#17cf54] focus:border-[#17cf54] outline-none transition-shadow font-semibold" 
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
                     value={roadmap.assumptions.sleep}
                     onChange={(e) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, sleep: e.target.value } })}
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Dietary Constraints</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Primary Constraints</label>
                   <textarea 
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#0f172a] dark:text-white focus:ring-1 focus:ring-[#17cf54] focus:border-[#17cf54] outline-none transition-shadow resize-none font-medium leading-relaxed" 
-                    rows={2}
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all resize-none font-medium leading-relaxed h-20" 
                     value={roadmap.assumptions.constraints}
                     onChange={(e) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, constraints: e.target.value } })}
                   />
