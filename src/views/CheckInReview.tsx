@@ -180,7 +180,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
           <p className="text-sm text-slate-500">{subtitle}</p>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-6">
+      <div className={`grid gap-x-8 gap-y-6 ${!isClient ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
         {children}
       </div>
     </div>

@@ -137,7 +137,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
           )}
 
           {!loading && !error && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 overflow-visible">
             <div className="p-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
@@ -215,7 +215,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
               </div>
             )}
 
-            <div className="overflow-x-auto">
+            <div className="overflow-visible">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
@@ -289,16 +289,16 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                         </div>
                         <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{client.progressLabel}</p>
                       </td>
-                      <td className="p-4 text-right relative">
+                      <td className="p-4 text-right relative overflow-visible">
                           <button
                             onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === client.id ? null : client.id); }}
-                            className="text-slate-400 hover:text-emerald-500 transition-colors"
+                            className="text-slate-400 hover:text-emerald-500 transition-colors p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
                           >
                             <MoreVertical className="w-5 h-5" />
                           </button>
                           {openMenuId === client.id && (
                             <div
-                              className="absolute right-4 top-full mt-1 w-48 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl z-30 overflow-hidden"
+                              className="absolute right-4 top-[85%] mt-1 w-52 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl z-50 overflow-hidden"
                               onClick={e => e.stopPropagation()}
                             >
                               <button
