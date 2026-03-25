@@ -114,38 +114,93 @@ interface NutritionWeeklyViewProps {
   client: any;
   onBack: () => void;
   onSelectDay: (dayId: string) => void;
-  onReassign?: () => void;
+  onReassign: () => void;
 }
 
 export default function NutritionWeeklyView({ client, onBack, onSelectDay, onReassign }: NutritionWeeklyViewProps) {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [planData, setPlanData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
+  const [dragOverDayId, setDragOverDayId] = useState<string | null>(null);
+  const [showPlanPicker, setShowPlanPicker] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchPlan = async () => {
+    const fetchPlanData = async () => {
       if (!client?.id) return;
-      setIsLoading(true);
       try {
+        setIsLoading(true);
         const data = await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`);
         if (data && data.data_json) {
-          setPlanData(data.data_json);
-        } else {
-          setPlanData(null); // No plan found or data_json is empty
+          setPlanData(data);
         }
-      } catch (err) {
-        console.error('Error fetching weekly plan:', err);
-        setPlanData(null); // Reset planData on error
+      } catch (error) {
+        console.error('Error fetching nutrition plan:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchPlan();
+    fetchPlanData();
   }, [client?.id]);
 
-  // 1. Extract dynamic plan data
-  const hasPlan = !!planData?.days;
-  const planDays = planData?.days || {};
+  const handleSave = async (updatedDataJson: any) => {
+    if (!client?.id) return;
+    setIsSaving(true);
+    try {
+      await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: planData?.name || `Plan de Nutrición - ${client.name}`,
+          data_json: updatedDataJson
+        })
+      });
+      setHasChanges(false);
+    } catch (e) {
+      console.error('Error saving nutrition plan:', e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, dayId: string) => {
+    setDraggedDayId(dayId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, dayId: string) => {
+    e.preventDefault();
+    if (draggedDayId === dayId) return;
+    setDragOverDayId(dayId);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetDayId: string) => {
+    e.preventDefault();
+    setDragOverDayId(null);
+    if (!draggedDayId || draggedDayId === targetDayId || !planData?.data_json?.days) return;
+
+    const newDays = { ...planData.data_json.days };
+    const sourceDayData = newDays[draggedDayId];
+    const targetDayData = newDays[targetDayId];
+
+    // Swap day data
+    if (sourceDayData) newDays[targetDayId] = sourceDayData;
+    else delete newDays[targetDayId];
+
+    if (targetDayData) newDays[draggedDayId] = targetDayData;
+    else delete newDays[draggedDayId];
+
+    const updatedDataJson = { ...planData.data_json, days: newDays };
+    setPlanData({ ...planData, data_json: updatedDataJson });
+    handleSave(updatedDataJson);
+    setDraggedDayId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedDayId(null);
+    setDragOverDayId(null);
+  };
 
   const daysConfig = [
     { id: 'monday', name: 'Lunes', nameEn: 'Monday' },
@@ -158,14 +213,14 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   ];
 
   const processedDays: DayPlan[] = daysConfig.map((day, dayIdx) => {
-    const dayData = planDays[day.id];
+    const dayData = planData?.data_json?.days?.[day.id];
     
-    if (!dayData) {
+    if (!dayData || !dayData.meals || dayData.meals.length === 0) {
       return {
         ...day,
         calories: 0, protein: 0, carbs: 0, fats: 0,
-        weekViewLabel: 'No Plan',
-        tag: 'Rest',
+        weekViewLabel: 'Descanso',
+        tag: 'Descanso',
         tagColor: 'bg-slate-50 text-slate-400 border-slate-100',
         bars: [20, 20, 20, 20, 20]
       };
@@ -176,23 +231,36 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
     
     meals.forEach((m: any) => {
       m.items.forEach((i: any) => {
-        totalCals += (i.calories || 0) * (i.quantity || 1);
-        totalP += (i.protein || 0) * (i.quantity || 1);
-        totalC += (i.carbs || 0) * (i.quantity || 1);
-        totalF += (i.fats || 0) * (i.quantity || 1);
+        const qty = i.quantity || 1;
+        totalCals += (i.calories || 0) * qty;
+        totalP += (i.protein || 0) * qty;
+        totalC += (i.carbs || 0) * qty;
+        totalF += (i.fats || 0) * qty;
       });
+      // Handle macro categories if present
+      if (m.categories) {
+        m.categories.forEach((cat: any) => {
+          if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) totalP += cat.amount || 0;
+          else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) totalC += cat.amount || 0;
+          else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) totalF += cat.amount || 0;
+        });
+      }
     });
+
+    // If macro categories were used, we need to recalculate total calories based on them if calories is 0
+    if (totalCals === 0 && (totalP > 0 || totalC > 0 || totalF > 0)) {
+      totalCals = (totalP * 4) + (totalC * 4) + (totalF * 9);
+    }
 
     const totalMacros = (totalP * 4) + (totalC * 4) + (totalF * 9) || 1;
     const pPct = Math.round((totalP * 4 / totalMacros) * 100);
     const cPct = Math.round((totalC * 4 / totalMacros) * 100);
     const fPct = Math.round((totalF * 9 / totalMacros) * 100);
 
-    // Generate bars based on meal distribution
     const bars = meals.map((m: any) => {
-      const mCals = m.items.reduce((a: number, i: any) => a + (i.calories * i.quantity), 0);
-      const h = Math.min(100, Math.max(20, (mCals / (totalCals / meals.length)) * 60));
-      return { h, p: m.name.includes('Lunch') || m.name.includes('Dinner') };
+      const mCals = m.items.reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0);
+      const h = Math.min(100, Math.max(20, (mCals / (totalCals / meals.length || 1)) * 60));
+      return { h, p: true };
     });
 
     return {
@@ -203,7 +271,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       protein: pPct,
       carbs: cPct,
       fats: fPct,
-      weekViewLabel: `${meals.length} meals`,
+      weekViewLabel: `${meals.length} comidas`,
       tag: dayIdx % 3 === 0 ? 'Entrenamiento' : 'Descanso',
       tagColor: dayIdx % 3 === 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100',
       bars
@@ -247,7 +315,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
               <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                {hasPlan ? 'Plan Activo' : 'Borrador / No Asignado'}
+                {planData ? 'Plan Activo' : 'Borrador / No Asignado'}
               </span>
             </div>
           </div>
@@ -262,10 +330,9 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
         </div>
       </div>
 
-      <div className="px-6 md:px-8 lg:px-10 pt-2 pb-20">
+      <div className="px-6 md:px-8 lg:px-10 pt-2 pb-20 overflow-y-auto">
         <div className="flex flex-col gap-4">
           
-          {/* View Mode Toggle Area */}
           <div className="bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm text-emerald-500">
@@ -273,25 +340,25 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-white">Plan Distribution</h3>
-                <p className="text-sm text-slate-500">Visualiza el balance semanal o mensual de tu cliente.</p>
+                <p className="text-sm text-slate-500">Arrastra para reorganizar los días o haz clic para editar cada uno.</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4">
-              {isLoading && (
+              {(isLoading || isSaving) && (
                 <div className="flex items-center gap-2 mr-4">
                   <div className="w-4 h-4 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <span className="text-xs font-medium text-slate-400">Loading plan...</span>
+                  <span className="text-xs font-medium text-slate-400">{isSaving ? 'Guardando...' : 'Loading...'}</span>
                 </div>
               )}
               {onReassign && (
                 <button 
-                  onClick={onReassign}
-                  className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-500 dark:hover:text-emerald-400 hover:border-emerald-500/50 transition-all font-bold text-xs"
-                >
-                  <span className="material-symbols-outlined text-[20px]">sync</span>
-                  REASSIGN PLAN
-                </button>
+            onClick={onReassign}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-900/20 dark:hover:text-rose-400 transition-all font-semibold text-sm"
+          >
+            <span className="material-symbols-outlined text-lg">rebase_edit</span>
+            Reasignar Plan
+          </button>
               )}
               
               <div className="flex bg-white dark:bg-slate-800 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 min-w-[240px]">
@@ -317,49 +384,69 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               <p className="text-sm font-medium">Cargando distribución semanal...</p>
             </div>
           ) : processedDays.map((day, dayIdx) => (
-            <button
+            <div 
               key={day.id}
-              onClick={() => onSelectDay(day.id)}
-              className="group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6 p-6"
+              className={`relative transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.01] -translate-y-1' : ''}`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, day.id)}
+              onDragOver={(e) => handleDragOver(e, day.id)}
+              onDragLeave={() => setDragOverDayId(null)}
+              onDrop={(e) => handleDrop(e, day.id)}
+              onDragEnd={handleDragEnd}
             >
-              <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
+              <button
+                onClick={() => onSelectDay(day.id)}
+                className={`group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
+                  dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' : 
+                  'border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50'
+                }`}
+              >
+                <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
+                  <span className="material-symbols-outlined text-[24px]">drag_indicator</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-orange-500 font-black text-2xl">
-                  <span className="material-symbols-outlined text-lg">local_fire_department</span>
-                  {day.calories.toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
-                </div>
-              </div>
 
-              <div className="flex-1 w-full space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className={`${day.tagColor.replace('bg-', 'bg-')} text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border`}>
-                    {dayIdx % 3 === 0 ? 'Entrenamiento' : 'Descanso'}
-                  </span>
-                  <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
-                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{day.protein}% P</span>
-                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20"></div>{day.carbs}% C</span>
-                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20"></div>{day.fats}% F</span>
+                <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
+                  </div>
+                  <div className={`flex items-center gap-1.5 font-black text-2xl ${day.calories === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
+                    <span className="material-symbols-outlined text-lg">{day.calories === 0 ? 'bedtime' : 'local_fire_department'}</span>
+                    {day.calories.toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
                   </div>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
-                  <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.protein}%` }}></div>
-                  <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.carbs}%` }}></div>
-                  <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.fats}%` }}></div>
-                </div>
-              </div>
 
-              <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex flex-col justify-center">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Meals Scheduled</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700">
-                    {day.weekViewLabel.split(' ')[0]}
+                <div className="flex-1 w-full space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className={`${day.tagColor} text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border`}>
+                      {day.tag}
+                    </span>
+                    <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
+                      <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{day.protein}% P</span>
+                      <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20"></div>{day.carbs}% C</span>
+                      <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20"></div>{day.fats}% F</span>
+                    </div>
                   </div>
-                  <span className="material-symbols-outlined text-emerald-500 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
+                    <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.protein}%` }}></div>
+                    <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.carbs}%` }}></div>
+                    <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.fats}%` }}></div>
+                  </div>
                 </div>
-              </div>
-            </button>
+
+                <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
+                  <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NUTRICIÓN</div>
+                    <div className="flex items-center gap-2">
+                       <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
+                        {day.weekViewLabel.split(' ')[0]}
+                      </div>
+                      <span className="text-xs font-bold text-slate-500 uppercase">{day.weekViewLabel.split(' ')[1] || 'Ingestas'}</span>
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
+                </div>
+              </button>
+            </div>
           ))}
         </div>
       </div>

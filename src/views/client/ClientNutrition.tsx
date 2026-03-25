@@ -86,30 +86,44 @@ export default function ClientNutrition() {
 
   const renderWeeklyView = () => (
     <div className="flex flex-col gap-4">
-      <div className="bg-emerald-500 p-6 rounded-3xl shadow-lg shadow-emerald-500/10 mb-2 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
-          <span className="material-symbols-outlined text-white text-8xl">calendar_view_week</span>
-        </div>
-        <div className="relative z-10">
-          <h3 className="text-white font-black text-2xl uppercase tracking-tight mb-2">Weekly Plan Distribution</h3>
-          <p className="text-emerald-50/80 text-sm max-w-md font-medium">Select a day below to view your detailed meal structure and scheduled foods.</p>
+      <div className="bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm text-emerald-500">
+            <span className="material-symbols-outlined text-2xl">calendar_view_week</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">Distribución Semanal</h3>
+            <p className="text-sm text-slate-500">Selecciona un día para ver tus comidas y macros específicos.</p>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {daysConfig.map((day, idx) => {
-          const dayData = planDays[day.id] || { meals: [] };
-          const dMeals = dayData.meals || [];
+          const dayData = planDays[day.id];
+          const dMeals = dayData?.meals || [];
           let dCals = 0, dP = 0, dC = 0, dF = 0;
           
           dMeals.forEach((m: any) => {
             (m.items || []).forEach((i: any) => {
-              dCals += (i.calories || 0) * (i.quantity || 1);
-              dP += (i.protein || 0) * (i.quantity || 1);
-              dC += (i.carbs || 0) * (i.quantity || 1);
-              dF += (i.fats || 0) * (i.quantity || 1);
+              const qty = i.quantity || 1;
+              dCals += (i.calories || 0) * qty;
+              dP += (i.protein || 0) * qty;
+              dC += (i.carbs || 0) * qty;
+              dF += (i.fats || 0) * qty;
             });
+            if (m.categories) {
+              m.categories.forEach((cat: any) => {
+                if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) dP += cat.amount || 0;
+                else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) dC += cat.amount || 0;
+                else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) dF += cat.amount || 0;
+              });
+            }
           });
+
+          if (dCals === 0 && (dP > 0 || dC > 0 || dF > 0)) {
+            dCals = (dP * 4) + (dC * 4) + (dF * 9);
+          }
 
           const totalMacros = (dP * 4) + (dC * 4) + (dF * 9) || 1;
           const pPct = Math.round((dP * 4 / totalMacros) * 100);
@@ -129,15 +143,15 @@ export default function ClientNutrition() {
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
                 </div>
-                <div className="flex items-center gap-1.5 text-orange-500 font-black text-2xl">
-                  <span className="material-symbols-outlined text-lg">local_fire_department</span>
+                <div className={`flex items-center gap-1.5 font-black text-2xl ${dCals === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
+                  <span className="material-symbols-outlined text-lg">{dCals === 0 ? 'bedtime' : 'local_fire_department'}</span>
                   {Math.round(dCals).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
                 </div>
               </div>
 
               <div className="flex-1 w-full space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className={`bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border border-emerald-100 dark:border-emerald-800/50`}>
+                  <span className="bg-slate-50 dark:bg-slate-800 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border border-slate-100 dark:border-slate-700">
                     {idx % 3 === 0 ? 'Entrenamiento' : 'Descanso'}
                   </span>
                   <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
@@ -148,19 +162,22 @@ export default function ClientNutrition() {
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
                   <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${pPct}%` }}></div>
-                   <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${cPct}%` }}></div>
+                  <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${cPct}%` }}></div>
                   <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${fPct}%` }}></div>
                 </div>
               </div>
 
-              <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex flex-col justify-center">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Meals Scheduled</div>
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700">
-                    {dMeals.length}
+              <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NUTRICIÓN</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
+                      {dMeals.length}
+                    </div>
+                    <span className="text-xs font-bold text-slate-500 uppercase">Ingestas</span>
                   </div>
-                  <span className="material-symbols-outlined text-emerald-500 group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </div>
+                <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
               </div>
             </button>
           );
