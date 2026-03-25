@@ -32,11 +32,18 @@ interface ClientListProps {
 }
 
 export default function ClientList({ onViewDetail, onAddClient }: ClientListProps) {
-  const { clients, isLoading: loading, error, deleteClient } = useClient();
+  const { clients, isLoading: loading, error, deleteClient, archiveClient } = useClient();
   
-  const [filter, setFilter] = useState<'All' | 'Active' | 'At Risk' | 'Pending'>('All');
+  const [filter, setFilter] = useState<'All' | 'Active' | 'At Risk' | 'Archived'>('All');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const filteredClients = clients.filter(client => {
+    if (filter === 'Active') return client.status === 'Active';
+    if (filter === 'Archived') return client.status === 'Archived';
+    if (filter === 'At Risk') return client.isAtRisk;
+    return true; // All
+  });
 
   // ─── Delete confirmation modal ─────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -81,7 +88,8 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
     }
   };
 
-  const getRiskIcon = (status: string) => {
+  const getRiskIcon = (status: string | undefined) => {
+    if (!status) return null;
     switch (status) {
       case 'Missing Data': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       case 'Rapid Drop': return <TrendingDown className="w-4 h-4 text-amber-500" />;
@@ -133,7 +141,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
             <div className="p-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-                  {['All Clients', 'Active', 'At Risk', 'Pending'].map((f) => (
+                  {['All Clients', 'Active', 'At Risk', 'Archived'].map((f) => (
                     <button
                       key={f}
                       onClick={() => setFilter(f.replace(' Clients', '') as any)}
@@ -144,7 +152,11 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                       }`}
                     >
                       {f}
-                      {f === 'At Risk' && <span className="ml-2 bg-amber-500 text-white text-[10px] rounded-full h-5 w-5 inline-flex items-center justify-center">5</span>}
+                      {f === 'At Risk' && clients.some(c => c.isAtRisk) && (
+                        <span className="ml-2 bg-amber-500 text-white text-[10px] rounded-full h-5 w-5 inline-flex items-center justify-center">
+                          {clients.filter(c => c.isAtRisk).length}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -225,13 +237,13 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-sm">
-                  {clients.map((client) => (
+                  {filteredClients.map((client) => (
                     <tr 
                       key={client.id} 
-                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors relative ${selectedClients.includes(client.id) ? 'bg-emerald-50/20 dark:bg-emerald-900/10' : ''}`}
+                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors relative ${selectedClients.includes(client.id) ? 'bg-emerald-50/20 dark:bg-emerald-900/10' : ''} ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}
                     >
                       <td className="p-4 text-center relative">
-                        {client.riskStatus && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>}
+                        {client.isAtRisk && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>}
                         <input 
                           type="checkbox" 
                           checked={selectedClients.includes(client.id.toString())}
@@ -249,15 +261,16 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                         </div>
                       </td>
                       <td className="p-4">
-                        {client.riskStatus ? (
+                        {client.isAtRisk ? (
                           <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-bold text-xs">
-                            {getRiskIcon(client.riskStatus)}
-                            <span>{client.riskStatus}</span>
+                            <AlertTriangle className="w-4 h-4" />
+                            <span>At Risk</span>
                             <HelpCircle className="w-3 h-3 text-slate-300 dark:text-slate-600 cursor-help" />
                           </div>
                         ) : (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                             client.status === 'Active' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
+                            client.status === 'Archived' ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 
                             client.status === 'Pending' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                           }`}>
                             {client.status}
@@ -310,12 +323,19 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                               >
                                 View Details
                               </button>
+                              <button
+                                onClick={() => { archiveClient(client.id.toString(), client.status === 'Archived' ? 'Active' : 'Archived'); setOpenMenuId(null); }}
+                                className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+                              >
+                                <Archive className="w-4 h-4 text-slate-400" />
+                                {client.status === 'Archived' ? 'Restore Client' : 'Archive Client'}
+                              </button>
                               <div className="h-px bg-slate-100 dark:bg-slate-800" />
                               <button
                                 onClick={() => openDeleteModal(client.id.toString(), client.name)}
                                 className="w-full text-left px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4 text-red-500" />
                                 Delete permanently
                               </button>
                             </div>

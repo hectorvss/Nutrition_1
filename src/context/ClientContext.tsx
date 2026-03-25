@@ -16,7 +16,8 @@ export interface ClientData {
   name: string;
   age: string | number;
   gender: string;
-  status: 'Active' | 'Pending' | 'Inactive' | 'Invited';
+  status: 'Active' | 'Pending' | 'Inactive' | 'Invited' | 'Archived';
+  isAtRisk?: boolean;
   riskStatus: string | null;
   plan: string;
   lastCheckIn: string;
@@ -50,6 +51,7 @@ interface ClientContextType {
   assignNutritionPlan: (clientId: string) => void;
   assignTrainingPlan: (clientId: string) => void;
   deleteClient: (clientId: string) => Promise<void>;
+  archiveClient: (clientId: string, status: 'Active' | 'Archived') => Promise<void>;
 }
 
 const ClientContext = createContext<ClientContextType | undefined>(undefined);
@@ -96,6 +98,21 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const archiveClient = async (clientId: string, status: 'Active' | 'Archived') => {
+    // Optimistic update
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, status } : c));
+    try {
+      await fetchWithAuth(`/manager/clients/${clientId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+    } catch (err: any) {
+      console.error('Error archiving client:', err);
+      // Rollback on error
+      await loadClients();
+    }
+  };
+
   const loadClients = useCallback(async () => {
     if (!user) {
       setClients([]);
@@ -116,30 +133,37 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
       const data = await fetchWithAuth('/manager/clients');
       
       const formatted = data.map((c: any) => {
-         return {
-            id: c.id,
-            email: c.email,
-            created_at: c.created_at,
-            name: c.name || c.email.split('@')[0], 
-            age: c.age || '--',
-            gender: c.gender || 'Unknown',
-            status: c.status || 'Active',
-            riskStatus: c.riskStatus || null,
-            plan: c.plan || 'No Plan',
-            lastCheckIn: c.lastCheckIn || 'Never',
-            nextAppointment: c.nextAppointment || 'Not Scheduled',
-            progress: c.progress || 0,
-            progressLabel: c.progressLabel || 'No Data',
-            avatar: c.avatar || `https://ui-avatars.com/api/?name=${c.email}&background=random`,
-            goal: c.goal || 'Not Set',
-            notes: c.notes || '',
-            weight: c.weight || null,
-            tempPassword: c.temp_password || undefined,
-            nutritionPlanAssigned: c.nutritionPlanAssigned || false,
-            trainingPlanAssigned: c.trainingPlanAssigned || false,
-            lastCheckInDate: c.lastCheckInDate || null,
-            isUnreviewed: c.isUnreviewed || false,
-            check_ins: c.check_ins || []
+          let dj = {};
+          if (c.check_ins?.[0]?.data_json) {
+            dj = c.check_ins[0].data_json;
+            if (typeof dj === 'string') {
+              try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
+            }
+          }
+          return {
+             id: c.id,
+             email: c.email,
+             created_at: c.created_at,
+             name: c.name || c.email.split('@')[0], 
+             age: c.age || '--',
+             gender: c.gender || 'Unknown',
+             status: c.status || 'Active',
+             isAtRisk: c.isAtRisk || false,
+             weight: (dj as any).weight || c.clients_profiles?.[0]?.weight || null,
+             goal: c.clients_profiles?.[0]?.goal || c.goal || 'Not Set',
+             notes: c.clients_profiles?.[0]?.notes || c.notes || '',
+             temp_password: c.clients_profiles?.[0]?.temp_password || c.tempPassword,
+             nutritionPlanAssigned: c.nutritionPlanAssigned || false,
+             trainingPlanAssigned: c.trainingPlanAssigned || false,
+             plan: c.plan_name || 'No Plan',
+             progress: c.progress || 0,
+             progressLabel: c.progressLabel || 'No Data',
+             avatar: c.avatar || `https://ui-avatars.com/api/?name=${c.email}&background=random`,
+             lastCheckIn: c.lastCheckIn || 'Never',
+             nextAppointment: c.nextAppointment || 'Not Scheduled',
+             lastCheckInDate: c.lastCheckInDate || null,
+             isUnreviewed: c.isUnreviewed || false,
+             check_ins: c.check_ins || []
           };
       });
       
@@ -158,7 +182,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
   }, [loadClients]);
 
   return (
-    <ClientContext.Provider value={{ clients, isLoading, error, reloadClients: loadClients, assignNutritionPlan, assignTrainingPlan, deleteClient }}>
+    <ClientContext.Provider value={{ clients, isLoading, error, reloadClients: loadClients, assignNutritionPlan, assignTrainingPlan, deleteClient, archiveClient }}>
       {children}
     </ClientContext.Provider>
   );
