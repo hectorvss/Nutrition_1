@@ -218,16 +218,8 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    <th className="p-4 w-12 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedClients.length === clients.length}
-                        onChange={toggleSelectAll}
-                        className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-emerald-500 focus:ring-emerald-500 w-4 h-4" 
-                      />
-                    </th>
-                    <th className="p-4 pl-2">Client Name</th>
+                  <tr className="text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+                    <th className="p-4 font-bold">Client</th>
                     <th className="p-4">Status</th>
                     <th className="p-4">Plan</th>
                     <th className="p-4">Last Check-in</th>
@@ -240,18 +232,10 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                   {filteredClients.map((client) => (
                     <tr 
                       key={client.id} 
-                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors relative ${selectedClients.includes(client.id) ? 'bg-emerald-50/20 dark:bg-emerald-900/10' : ''} ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}
+                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors relative ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}
                     >
-                      <td className="p-4 text-center relative">
+                      <td className="p-4 relative">
                         {client.isAtRisk && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>}
-                        <input 
-                          type="checkbox" 
-                          checked={selectedClients.includes(client.id.toString())}
-                          onChange={() => toggleSelectClient(client.id.toString())}
-                          className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-emerald-500 focus:ring-emerald-500 w-4 h-4" 
-                        />
-                      </td>
-                      <td className="p-4 pl-2">
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewDetail(client.id.toString())}>
                           <img src={client.avatar} alt="" className="w-10 h-10 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm" referrerPolicy="no-referrer" />
                           <div>
