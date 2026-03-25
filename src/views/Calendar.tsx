@@ -57,6 +57,69 @@ const getEventMins = (duration: string) => {
     return 60;
   }
 };
+const getEventMinsFromTime = (time: string) => {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + (m || 0);
+};
+
+const getOverlapData = (events: any[]) => {
+  // Sort by start mins
+  const sorted = [...events].sort((a, b) => {
+    return getEventMinsFromTime(a.time) - getEventMinsFromTime(b.time);
+  });
+
+  const clusters: any[][] = [];
+  let currentCluster: any[] = [];
+  let clusterEnd = 0;
+
+  sorted.forEach(event => {
+    const startMins = getEventMinsFromTime(event.time);
+    const durationMins = getEventMins(event.duration);
+    const endMins = startMins + durationMins;
+
+    if (startMins >= clusterEnd) {
+      if (currentCluster.length > 0) clusters.push(currentCluster);
+      currentCluster = [event];
+      clusterEnd = endMins;
+    } else {
+      currentCluster.push(event);
+      clusterEnd = Math.max(clusterEnd, endMins);
+    }
+  });
+  if (currentCluster.length > 0) clusters.push(currentCluster);
+
+  const eventStyles: Record<string, { width: number; left: number }> = {};
+
+  clusters.forEach(cluster => {
+    const columns: any[][] = [];
+    cluster.forEach(event => {
+      let placed = false;
+      const startMins = getEventMinsFromTime(event.time);
+      for (let i = 0; i < columns.length; i++) {
+        const lastInCol = columns[i][columns[i].length - 1];
+        const lastEnd = getEventMinsFromTime(lastInCol.time) + getEventMins(lastInCol.duration);
+        if (startMins >= lastEnd) {
+          columns[i].push(event);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) columns.push([event]);
+    });
+
+    const totalCols = columns.length;
+    columns.forEach((col, colIdx) => {
+      col.forEach(event => {
+        eventStyles[event.id] = {
+          width: 100 / totalCols,
+          left: (colIdx / totalCols) * 100
+        };
+      });
+    });
+  });
+
+  return eventStyles;
+};
 
 export default function CalendarView({ onNavigate, initialView, initialDate }: CalendarProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(initialView || 'Day');
@@ -287,8 +350,9 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
               {/* Weekly Events */}
               {weekDates.map((weekDay, dayIdx) => {
                 const dayEvents = getEventsForDate(weekDay.dateStr);
+                const overlapData = getOverlapData(dayEvents);
                 return dayEvents.map((event, idx) => {
-                  const info = getEventPresentationInfo(event.type);
+                  const info = getEventPresentationInfo(event.type as EventType);
                   const hourIdx = hours.indexOf(event.time.slice(0, 2) + ':00');
                   if (hourIdx === -1) return null;
                   
@@ -297,6 +361,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   
                   const durationMins = getEventMins(event.duration);
                   const height = (durationMins / 60) * 96;
+                  const style = overlapData[event.id] || { width: 100, left: 0 };
                   
                   return (
                     <div 
@@ -305,17 +370,16 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                         e.stopPropagation();
                         onNavigate('create-task', { taskId: event.id, returnTo: 'Week', currentDate: weekDay.dateStr });
                       }}
-                      className={`absolute p-2 border-l-4 rounded-r-lg shadow-sm z-10 overflow-hidden ${info.color} cursor-pointer hover:brightness-95 transition-all`}
+                      className={`absolute p-1 border-l-2 rounded-lg shadow-sm z-10 overflow-hidden ${info.color} cursor-pointer hover:brightness-95 transition-all flex flex-col`}
                       style={{ 
                         top: `${top}px`, 
-                        left: `${dayIdx * (100 / 7) + 0.2}%`, 
-                        width: `${100 / 7 - 0.4}%`,
+                        left: `${dayIdx * (100 / 7) + (style.left / 100) * (100 / 7)}%`, 
+                        width: `${(style.width / 100) * (100 / 7) - 0.2}%`,
                         height: `${height}px`
                       }}
                     >
-                      <p className="text-[11px] font-bold truncate">{event.title}</p>
-                      <p className="text-[10px] opacity-70 truncate">{event.client}</p>
-                      {event.duration && <p className="text-[9px] mt-1 font-bold opacity-50">{event.time} - {event.duration}</p>}
+                      <p className="text-[10px] font-bold truncate leading-tight">{event.title}</p>
+                      <p className="text-[9px] opacity-70 truncate">{event.client}</p>
                     </div>
                   );
                 });
@@ -354,26 +418,33 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
               </div>
 
               {/* Daily Events */}
-              {currentDayEvents.map((event) => {
-                const timeParts = event.time.split(':').map(Number);
-                const hourIdx = hours.indexOf(timeParts[0].toString().padStart(2, '0') + ':00');
-                if (hourIdx === -1) return null;
-                const minuteOff = (timeParts[1] || 0) * (128 / 60);
-                const top = hourIdx * 128 + minuteOff;
-                
-                const durationMins = getEventMins(event.duration);
-                const height = (durationMins / 60) * 128;
-                
-                const info = getEventPresentationInfo(event.type);
-                const EventIcon = info.icon;
+              {(() => {
+                const overlapData = getOverlapData(currentDayEvents);
+                return currentDayEvents.map((event) => {
+                  const timeParts = event.time.split(':').map(Number);
+                  const hourIdx = hours.indexOf(timeParts[0].toString().padStart(2, '0') + ':00');
+                  if (hourIdx === -1) return null;
+                  const minuteOff = (timeParts[1] || 0) * (128 / 60);
+                  const top = hourIdx * 128 + minuteOff;
+                  
+                  const durationMins = getEventMins(event.duration);
+                  const height = (durationMins / 60) * 128;
+                  const info = getEventPresentationInfo(event.type as EventType);
+                  const EventIcon = info.icon;
+                  const style = overlapData[event.id] || { width: 100, left: 0 };
 
-                return (
-                  <div 
-                    key={event.id}
-                    onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
-                    className={`absolute left-0 right-0 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
-                    style={{ top: `${top}px`, height: `${height}px` }}
-                  >
+                  return (
+                    <div 
+                      key={event.id}
+                      onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
+                      className={`absolute p-1 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-3 transition-all hover:shadow-md cursor-pointer ${info.color.split(' ')[0]}`}
+                      style={{ 
+                        top: `${top}px`, 
+                        height: `${height}px`,
+                        left: `${style.left}%`,
+                        width: `${style.width}%`
+                      }}
+                    >
                     <div className="shrink-0">
                       {event.avatar ? (
                         <img src={event.avatar} alt="" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
@@ -401,9 +472,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                     <button className="p-1 hover:bg-white/50 rounded-lg transition-colors">
                       <MoreVertical className="w-4 h-4 text-slate-400" />
                     </button>
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                });
+              })()}
 
               {/* Current Time Line */}
               <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${(now.getHours() * 128) + (now.getMinutes() * (128 / 60))}px` }}>
