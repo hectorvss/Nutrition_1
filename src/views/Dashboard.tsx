@@ -29,7 +29,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { clients } = useClient();
   const [activity, setActivity] = useState<any[]>([]);
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
-  const [showAllUpdates, setShowAllUpdates] = useState(false);
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -63,7 +62,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const todayDateStr = new Date().toISOString().split('T')[0];
   const scheduleItems = getEventsForDate(todayDateStr).sort((a, b) => a.time.localeCompare(b.time));
 
-  const displayedUpdates = showAllUpdates ? activity : activity.slice(0, 6);
 
   return (
     <div className="p-6 md:p-8 lg:p-10">
@@ -227,10 +225,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full min-h-[500px]">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-[520px]">
             <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">Latest Updates</h3>
-            <div className={`flex-1 ${showAllUpdates ? 'overflow-y-auto pr-2 custom-scrollbar' : 'overflow-hidden'} space-y-6 max-h-[420px]`}>
-              {displayedUpdates.map((update, idx) => {
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
+              {activity.map((update, idx) => {
                 const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'NEW_CLIENT' ? UserPlus : Check);
                 return (
                   <div 
@@ -255,10 +253,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               )}
             </div>
             <button 
-              onClick={() => setShowAllUpdates(!showAllUpdates)}
+              onClick={() => onNavigate('tasks')}
               className="w-full mt-6 py-2.5 text-sm font-bold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-[0.98] shrink-0"
             >
-              {showAllUpdates ? 'Show Less' : 'View All Activity'}
+              View Activity History
             </button>
           </div>
         </div>
