@@ -320,54 +320,43 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
             <button
               key={day.id}
               onClick={() => onSelectDay(day.id)}
-              className="group w-full text-left bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6 p-5"
+              className="group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-6 p-6"
             >
-              <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-700 pb-4 sm:pb-0 sm:pr-4">
+              <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">{day.name}</h3>
-                  <span className="text-xs text-slate-400 font-medium">/ {day.nameEn}</span>
+                  <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
                 </div>
-                <div className="flex items-center gap-1.5 text-orange-500 font-bold text-xl">
+                <div className="flex items-center gap-1.5 text-orange-500 font-black text-2xl">
                   <span className="material-symbols-outlined text-lg">local_fire_department</span>
-                  {day.calories.toLocaleString()} <span className="text-xs font-medium text-slate-400">kcal</span>
+                  {day.calories.toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
                 </div>
               </div>
 
-              <div className="flex-1 w-full space-y-3">
+              <div className="flex-1 w-full space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className={`${day.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide border`}>
+                  <span className={`${day.tagColor.replace('bg-', 'bg-')} text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border`}>
                     {dayIdx % 3 === 0 ? 'Entrenamiento' : 'Descanso'}
                   </span>
-                  <div className="flex gap-2 text-xs text-slate-500 font-medium">
-                    <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>{day.protein}% P</span>
-                    <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>{day.carbs}% C</span>
-                    <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>{day.fats}% F</span>
+                  <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
+                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{day.protein}% P</span>
+                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20"></div>{day.carbs}% C</span>
+                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20"></div>{day.fats}% F</span>
                   </div>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden flex">
-                  <div className="bg-blue-500 h-full transition-all" style={{ width: `${day.protein}%` }}></div>
-                  <div className="bg-green-500 h-full transition-all" style={{ width: `${day.carbs}%` }}></div>
-                  <div className="bg-yellow-500 h-full transition-all" style={{ width: `${day.fats}%` }}></div>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
+                  <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.protein}%` }}></div>
+                  <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.carbs}%` }}></div>
+                  <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.fats}%` }}></div>
                 </div>
               </div>
 
-              <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-700 pt-4 sm:pt-0">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Distribución</span>
-                  <span className="text-[10px] text-slate-400 font-medium">{day.weekViewLabel}</span>
-                </div>
-                <div className="flex gap-1 h-8 items-end justify-between">
-                  {day.bars.map((bar: any, bi) => {
-                    const height = typeof bar === 'number' ? bar : bar.h;
-                    const isPrimary = typeof bar === 'object' && bar.p;
-                    return (
-                      <div 
-                        key={bi} 
-                        className={`w-1.5 rounded-t-sm transition-all ${isPrimary ? 'bg-emerald-500/60' : 'bg-slate-300 dark:bg-slate-600'}`} 
-                        style={{ height: `${height}%` }}
-                      ></div>
-                    );
-                  })}
+              <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex flex-col justify-center">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Meals Scheduled</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700">
+                    {day.weekViewLabel.split(' ')[0]}
+                  </div>
+                  <span className="material-symbols-outlined text-emerald-500 group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </div>
               </div>
             </button>

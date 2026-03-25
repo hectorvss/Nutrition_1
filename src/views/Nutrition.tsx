@@ -49,9 +49,9 @@ export default function Nutrition() {
               setInitialPlanData(planData);
               setIsNewPlan(true);
               if (planData) {
-                setSelectedDay('monday'); // Default to monday for dynamic generation
+                setSelectedDay(null); // No specific day selected yet, show weekly summary
               }
-              setCurrentView('plan-detail');
+              setCurrentView('weekly-view');
             }}
           />
         );
@@ -74,7 +74,7 @@ export default function Nutrition() {
             onBack={() => setCurrentView('client-list')}
             onSelect={(isNew?: boolean) => {
               setIsNewPlan(!!isNew);
-              setCurrentView('plan-detail');
+              setCurrentView('weekly-view');
             }}
           />
         );
