@@ -238,14 +238,10 @@ router.get('/clients', async (req: any, res) => {
       .select(`
         id, 
         email, 
-        name,
-        gender,
-        age,
         created_at,
         status,
-        clients_profiles (weight, goal, notes, temp_password),
-        nutrition_plans!client_id (id, name),
-        training_programs!client_id (id, name),
+        profiles!user_id (full_name),
+        clients_profiles!user_id (weight, goal, notes, temp_password, gender, age),
         check_ins (id, date, reviewed_at, data_json),
         workout_logs!client_id (logged_at),
         tasks!client_id (*)
@@ -275,7 +271,7 @@ router.get('/clients', async (req: any, res) => {
         try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
       }
 
-      const planName = c.nutrition_plans?.[0]?.name || c.training_programs?.[0]?.name || 'No Plan';
+      const planName = 'Shared Programs';
 
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -293,10 +289,13 @@ router.get('/clients', async (req: any, res) => {
         created_at: c.created_at,
         status: c.status || 'Active',
         isAtRisk,
-        weight: dj.weight || c.clients_profiles?.[0]?.weight || null,
-        goal: c.clients_profiles?.[0]?.goal || null,
-        notes: c.clients_profiles?.[0]?.notes || null,
-        temp_password: c.clients_profiles?.[0]?.temp_password || null,
+        name: c.profiles?.full_name || c.profiles?.[0]?.full_name || c.email.split('@')[0],
+        gender: c.clients_profiles?.gender || c.clients_profiles?.[0]?.gender || 'Unknown',
+        age: c.clients_profiles?.age || c.clients_profiles?.[0]?.age || '--',
+        weight: dj.weight || c.clients_profiles?.weight || c.clients_profiles?.[0]?.weight || null,
+        goal: c.clients_profiles?.goal || c.clients_profiles?.[0]?.goal || null,
+        notes: c.clients_profiles?.notes || c.clients_profiles?.[0]?.notes || null,
+        temp_password: c.clients_profiles?.temp_password || c.clients_profiles?.[0]?.temp_password || null,
         nutritionPlanAssigned: !!(c.nutrition_plans && c.nutrition_plans.length > 0),
         trainingPlanAssigned: !!(c.training_programs && c.training_programs.length > 0),
         plan_name: planName,
