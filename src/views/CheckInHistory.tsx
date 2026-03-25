@@ -7,7 +7,9 @@ import {
   Flag,
   ChevronRight,
   History,
-  Archive
+  Archive,
+  Settings2,
+  ListChecks
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 
@@ -111,6 +113,44 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
             Filter
           </button>
         </div>
+
+        {/* New: Model Assignment UI (Only for Managers) */}
+        {!isClient && (
+          <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                  <ListChecks className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Modelo de Check-in Asignado</h3>
+                  <p className="text-xs text-slate-500 font-medium">Define qué preguntas deberá responder el cliente en su próximo reporte.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <select 
+                  className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 transition-all min-w-[200px]"
+                  onChange={(e) => {
+                    const modelId = e.target.value;
+                    // Persist assignment (Mock for now)
+                    localStorage.setItem(`client_${clientId}_model`, modelId);
+                    alert('Modelo asignado correctamente para este cliente.');
+                  }}
+                  defaultValue={localStorage.getItem(`client_${clientId}_model`) || 'standard-weekly'}
+                >
+                  <option value="standard-weekly">Estándar Semanal</option>
+                  <option value="fat-loss-focus">Pérdida de Grasa</option>
+                  {/* Dynamic models from localStorage would go here in a real scenario */}
+                </select>
+                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Activo
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         </>
       )}
 

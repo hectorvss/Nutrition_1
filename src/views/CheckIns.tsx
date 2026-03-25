@@ -3,7 +3,9 @@ import CheckInList from './CheckInList';
 import CheckInHistory from './CheckInHistory';
 import CheckInReview from './CheckInReview';
 
-export type CheckInViewMode = 'list' | 'history' | 'review';
+export type CheckInViewMode = 'list' | 'history' | 'review' | 'models';
+
+import CheckInModels from './CheckInModels';
 
 interface CheckInsProps {
   initialClientId?: string;
@@ -31,6 +33,10 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
     onViewChange?.(selectedClientId, checkInId);
   };
 
+  const handleViewModels = () => {
+    setViewMode('models');
+  };
+
   const handleBackToList = () => {
     setViewMode('list');
     setSelectedClientId(null);
@@ -49,6 +55,7 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
       {viewMode === 'list' && (
         <CheckInList
           onViewHistory={handleViewHistory}
+          onViewModels={handleViewModels}
         />
       )}
       {viewMode === 'history' && selectedClientId && (
@@ -63,6 +70,11 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
           clientId={selectedClientId}
           checkInId={selectedCheckInId}
           onBack={handleBackToHistory}
+        />
+      )}
+      {viewMode === 'models' && (
+        <CheckInModels
+          onBack={handleBackToList}
         />
       )}
     </div>
