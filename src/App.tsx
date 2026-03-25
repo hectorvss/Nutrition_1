@@ -50,6 +50,8 @@ export default function App() {
   const [selectedTaskDate, setSelectedTaskDate] = useState<string | null>(null);
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
+  const [calendarViewMode, setCalendarViewMode] = useState<'Day' | 'Week' | 'Month'>('Day');
+  const [calendarDate, setCalendarDate] = useState(new Date());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { clients: globalClients } = useClient();
   
@@ -107,11 +109,17 @@ export default function App() {
           setCurrentView(view as View);
         }} />;
       case 'calendar':
-        return <CalendarView onNavigate={(view, data) => {
-          if (data?.taskId) setSelectedTaskId(data.taskId);
-          if (data?.date) setSelectedTaskDate(data.date);
-          setCurrentView(view as View);
-        }} />;
+        return <CalendarView 
+          initialView={calendarViewMode}
+          initialDate={calendarDate}
+          onNavigate={(view, data) => {
+            if (data?.taskId) setSelectedTaskId(data.taskId);
+            if (data?.date) setSelectedTaskDate(data.date);
+            if (data?.returnTo) setCalendarViewMode(data.returnTo);
+            if (data?.currentDate) setCalendarDate(new Date(data.currentDate + 'T12:00:00'));
+            setCurrentView(view as View);
+          }} 
+        />;
       case 'create-task':
         return <CreateTask 
           editId={selectedTaskId || undefined} 
