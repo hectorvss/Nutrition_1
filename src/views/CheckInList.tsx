@@ -8,9 +8,10 @@ import { useClient } from '../context/ClientContext';
 
 interface CheckInListProps {
   onViewHistory: (clientId: string) => void;
+  onViewModels: () => void;
 }
 
-export default function CheckInList({ onViewHistory }: CheckInListProps) {
+export default function CheckInList({ onViewHistory, onViewModels }: CheckInListProps) {
   const { clients, isLoading } = useClient();
   const [filter, setFilter] = useState<'All' | 'Unreviewed' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,10 +54,21 @@ export default function CheckInList({ onViewHistory }: CheckInListProps) {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Client Check-ins</h1>
           <p className="text-sm text-slate-500 font-medium mt-1">Review weekly progress and adherence</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
-          <Download className="w-4 h-4" />
-          Export Report
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onViewModels}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
+          >
+            <div className="w-5 h-5 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[20px]">settings_accessibility</span>
+            </div>
+            Modelos de Check-in
+          </button>
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
+            <Download className="w-4 h-4" />
+            Export Report
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
