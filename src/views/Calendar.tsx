@@ -29,17 +29,29 @@ type ViewMode = 'Month' | 'Week' | 'Day';
 const getEventMins = (duration: string) => {
   if (!duration) return 60; // default 1h
   try {
+    const dur = duration.toLowerCase().trim();
     let totalMins = 0;
-    if (duration.includes('h')) {
-      const hPart = parseInt(duration.split('h')[0]);
-      totalMins += hPart * 60;
-      if (duration.includes('m')) {
-        const mPart = parseInt(duration.split('h')[1].split('m')[0].trim());
-        totalMins += mPart;
-      }
-    } else if (duration.includes('m')) {
-      totalMins += parseInt(duration.split('m')[0]);
+    
+    // Regular expression to extract hours and minutes
+    // Matches "1h 30m", "1.5h", "45m", "2 hours", etc.
+    const hMatch = dur.match(/(\d+(?:\.\d+)?)\s*h/);
+    const mMatch = dur.match(/(\d+)\s*m/);
+    
+    if (hMatch) {
+      totalMins += parseFloat(hMatch[1]) * 60;
     }
+    
+    if (mMatch) {
+      totalMins += parseInt(mMatch[1]);
+    }
+    
+    // If no matches, try to parse at least one number as hours
+    if (!hMatch && !mMatch) {
+      const fallbackMatch = dur.match(/(\d+)/);
+      if (fallbackMatch) return parseInt(fallbackMatch[1]) * 60;
+      return 60;
+    }
+    
     return totalMins;
   } catch (e) {
     return 60;
@@ -343,9 +355,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
 
               {/* Daily Events */}
               {currentDayEvents.map((event) => {
-                const hourIdx = hours.indexOf(event.time.slice(0, 2).padStart(2, '0') + ':00');
+                const timeParts = event.time.split(':').map(Number);
+                const hourIdx = hours.indexOf(timeParts[0].toString().padStart(2, '0') + ':00');
                 if (hourIdx === -1) return null;
-                const minuteOff = event.time.includes(':') ? parseInt(event.time.split(':')[1]) * (128 / 60) : 0;
+                const minuteOff = (timeParts[1] || 0) * (128 / 60);
                 const top = hourIdx * 128 + minuteOff;
                 
                 const durationMins = getEventMins(event.duration);
@@ -358,7 +371,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   <div 
                     key={event.id}
                     onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
-                    className={`absolute left-0 right-4 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
+                    className={`absolute left-0 right-0 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
                     style={{ top: `${top}px`, height: `${height}px` }}
                   >
                     <div className="shrink-0">
