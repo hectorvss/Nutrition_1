@@ -239,14 +239,17 @@ router.get('/clients', async (req: any, res) => {
         id, 
         email, 
         created_at,
+        status,
         clients_profiles (weight, goal, notes, temp_password),
         nutrition_plans!client_id (id, name),
         training_programs!client_id (id, name),
-        check_ins (id, date, reviewed_at, data_json)
+        check_ins (id, date, reviewed_at, data_json),
+        workout_logs!client_id (logged_at)
       `)
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
-      .order('date', { foreignTable: 'check_ins', ascending: false });
+      .order('date', { foreignTable: 'check_ins', ascending: false })
+      .order('logged_at', { foreignTable: 'workout_logs', ascending: false });
       
     if (error) throw error;
     
@@ -262,6 +265,7 @@ router.get('/clients', async (req: any, res) => {
 
     const formattedClients = clients.map((c: any) => {
       const latestCheckIn = c.check_ins?.[0] || null;
+      const latestWorkout = c.workout_logs?.[0] || null;
       let dj = latestCheckIn?.data_json || {};
       if (typeof dj === 'string') {
         try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
@@ -269,10 +273,22 @@ router.get('/clients', async (req: any, res) => {
 
       const planName = c.nutrition_plans?.[0]?.name || c.training_programs?.[0]?.name || 'No Plan';
 
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      const lastCheckInDate = latestCheckIn ? new Date(latestCheckIn.date) : null;
+      const lastWorkoutDate = latestWorkout ? new Date(latestWorkout.logged_at) : null;
+      
+      const isAtRisk = (lastCheckInDate && lastCheckInDate < weekAgo) || 
+                       (lastWorkoutDate && lastWorkoutDate < weekAgo) ||
+                       (!lastCheckInDate && !lastWorkoutDate); // Never checked in or logged
+
       return {
         id: c.id,
         email: c.email,
         created_at: c.created_at,
+        status: c.status || 'Active',
+        isAtRisk,
         weight: dj.weight || c.clients_profiles?.[0]?.weight || null,
         goal: c.clients_profiles?.[0]?.goal || null,
         notes: c.clients_profiles?.[0]?.notes || null,
@@ -290,6 +306,26 @@ router.get('/clients', async (req: any, res) => {
     res.json(formattedClients);
   } catch (error: any) {
     console.error('Error fetching clients:', error);
+    res.status(500).json({ error: error?.message || 'Server error' });
+  }
+});
+
+// Update client status (Archive/Active)
+router.patch('/clients/:id/status', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const { error } = await supabaseAdmin
+      .from('users')
+      .update({ status })
+      .eq('id', id)
+      .eq('manager_id', req.user.id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error updating client status:', error);
     res.status(500).json({ error: error?.message || 'Server error' });
   }
 });
