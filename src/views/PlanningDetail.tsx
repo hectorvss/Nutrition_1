@@ -53,7 +53,8 @@ import {
   Activity,
   PlayCircle as PlayIcon,
   ChevronRight as ChevronIcon,
-  PlusCircle
+  PlusCircle,
+  FileText
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
@@ -83,6 +84,9 @@ interface RoadmapBlock {
   loading?: string;
   scope?: string;
   recovery?: string;
+  // Analysis specific
+  successCriteria?: string;
+  redFlags?: string;
 }
 
 interface Goal {
@@ -233,8 +237,7 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedNutritionId, setSelectedNutritionId] = useState<string | null>(null);
-  const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     if (clientId) {
@@ -248,20 +251,16 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
       const roadmapData = data.data_json && data.data_json.nutrition ? data.data_json : getInitialData();
       setRoadmap(roadmapData);
       
-      // Default selection to current week blocks
+      // Default selection to current week nutrition block
       const currentWeek = roadmapData.currentWeek || 1;
       const currentNut = roadmapData.nutrition.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-      const currentTra = roadmapData.training.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-
-      setSelectedNutritionId(currentNut?.id || (roadmapData.nutrition[0]?.id || null));
-      setSelectedTrainingId(currentTra?.id || (roadmapData.training[0]?.id || null));
+      setSelectedBlockId(currentNut?.id || roadmapData.nutrition[0]?.id || roadmapData.training[0]?.id || null);
 
     } catch (error) {
       console.error('Error loading roadmap:', error);
       const initial = getInitialData();
       setRoadmap(initial);
-      setSelectedNutritionId(initial.nutrition[1].id); // n2 is deficit
-      setSelectedTrainingId(initial.training[0].id);
+      setSelectedBlockId(initial.nutrition[1].id); // n2 is deficit
     } finally {
       setLoading(false);
     }
@@ -312,12 +311,13 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
       ...roadmap,
       [type]: [...roadmap[type], newBlock]
     });
-    if (type === 'nutrition') setSelectedNutritionId(newId);
-    else setSelectedTrainingId(newId);
+    setSelectedBlockId(newId);
   };
 
-  const activeNutrition = useMemo(() => roadmap?.nutrition.find(b => b.id === selectedNutritionId), [roadmap, selectedNutritionId]);
-  const activeTraining = useMemo(() => roadmap?.training.find(b => b.id === selectedTrainingId), [roadmap, selectedTrainingId]);
+  const selectedBlock = useMemo(() => {
+    if (!roadmap) return null;
+    return [...roadmap.nutrition, ...roadmap.training].find(b => b.id === selectedBlockId);
+  }, [roadmap, selectedBlockId]);
 
   if (loading) return (
     <div className="p-10 flex items-center justify-center min-h-[400px]">
@@ -356,10 +356,17 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                 />
                 <div>
                   <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight leading-none mb-2">{client?.name}</h2>
-                  <div className="flex items-center gap-4 text-xs font-semibold text-slate-400 tracking-wider">
-                    <span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> High Motivation</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800"></span>
-                    <span>Client since Oct 2023</span>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-4 text-xs font-semibold text-slate-400 tracking-wider">
+                      <span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> High Motivation</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800"></span>
+                      <span>Client since Oct 2023</span>
+                    </div>
+                    {roadmap && (
+                      <p className="text-xs font-bold text-emerald-500/80 dark:text-emerald-400/80 uppercase tracking-widest mt-1">
+                        Active Phase: {roadmap.nutrition.find(b => roadmap.currentWeek >= b.startWeek && roadmap.currentWeek <= b.endWeek)?.title || 'Steady State'} | Week {roadmap.currentWeek} of {roadmap.totalWeeks}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -385,7 +392,8 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
           </div>
 
           {/* 2. Master Roadmap */}
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-[32px] p-10 shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none opacity-50" />
             <div className="flex justify-between items-center mb-10">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -410,8 +418,8 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                   className="absolute top-0 bottom-0 w-px bg-[#17cf54] z-20 pointer-events-none"
                   style={{ left: `${((roadmap.currentWeek - 0.5) / 12) * 100}%` }}
                 >
-                  <div className="absolute top-0 -translate-x-1/2 bg-[#17cf54] text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg shadow-emerald-500/20 tracking-tighter">TODAY</div>
-                  <div className="absolute top-0 bottom-0 w-px bg-[#17cf54]/20 -ml-[0.5px]"></div>
+                  <div className="absolute top-0 bottom-0 w-px bg-[#17cf54] z-20 pointer-events-none"></div>
+                  <div className="absolute top-0 bottom-0 w-8 -ml-4 bg-emerald-500/5 dark:bg-emerald-500/10 blur-xl pointer-events-none" />
                 </div>
 
                 {/* Lanes */}
@@ -425,12 +433,14 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                           key={block.id}
                           layoutId={block.id}
                           style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                          onClick={() => setSelectedNutritionId(block.id)}
-                          className={`group/block h-full border rounded-2xl flex items-center justify-center text-xs font-bold cursor-pointer transition-all relative ${block.color} ${selectedNutritionId === block.id ? 'ring-2 ring-[#17cf54] shadow-md z-10' : 'opacity-80 hover:opacity-100'}`}
+                          onClick={() => setSelectedBlockId(block.id)}
+                          className={`group/block h-full border rounded-2xl flex items-center justify-center text-xs font-bold cursor-pointer transition-all relative ${block.color} ${selectedBlockId === block.id ? 'ring-2 ring-[#17cf54] shadow-md z-10 scale-[1.02] bg-white dark:bg-slate-800' : 'opacity-80 hover:opacity-100'}`}
                         >
                           <GripVertical className="w-3 h-3 absolute left-2 opacity-0 group-hover/block:opacity-40 transition-opacity" />
                           {block.title}
-                          {selectedNutritionId === block.id && <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#17cf54] rotate-45" />}
+                          {roadmap.currentWeek >= block.startWeek && roadmap.currentWeek <= block.endWeek && (
+                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#17cf54] rotate-45 shadow-sm" />
+                          )}
                         </motion.div>
                       ))}
                       <button 
@@ -452,12 +462,14 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                           key={block.id}
                           layoutId={block.id}
                           style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                          onClick={() => setSelectedTrainingId(block.id)}
-                          className={`group/block h-full border rounded-2xl flex items-center justify-center text-xs font-bold cursor-pointer transition-all relative ${block.color} ${selectedTrainingId === block.id ? 'ring-2 ring-[#17cf54] shadow-md z-10' : 'opacity-80 hover:opacity-100'}`}
+                          onClick={() => setSelectedBlockId(block.id)}
+                          className={`group/block h-full border rounded-2xl flex items-center justify-center text-xs font-bold cursor-pointer transition-all relative ${block.color} ${selectedBlockId === block.id ? 'ring-2 ring-purple-500 shadow-md z-10 scale-[1.02] bg-white dark:bg-slate-800' : 'opacity-80 hover:opacity-100'}`}
                         >
                           <GripVertical className="w-3 h-3 absolute left-2 opacity-0 group-hover/block:opacity-40 transition-opacity" />
                           {block.title}
-                          {selectedTrainingId === block.id && <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#17cf54] rotate-45" />}
+                          {roadmap.currentWeek >= block.startWeek && roadmap.currentWeek <= block.endWeek && (
+                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-purple-500 rotate-45 shadow-sm" />
+                          )}
                         </motion.div>
                       ))}
                       <button 
@@ -474,170 +486,231 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
             </div>
           </div>
 
-          {/* 3. The Intelligence Board */}
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="bg-slate-50/50 dark:bg-slate-800/40 px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54]">
-                  <MindsetIcon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">The Intelligence Board</h3>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em] mt-1">Multi-Strategy Clinical Optimization</p>
-                </div>
-              </div>
-              <span className="px-4 py-1.5 rounded-full text-[10px] font-bold bg-[#17cf54]/10 text-[#17cf54] border border-[#17cf54]/20 uppercase tracking-widest">Live Strategy Mode</span>
-            </div>
-
-            <div className="p-8 space-y-12">
-              
-              {/* Nutrition Strategy Section */}
-              <section className="space-y-8">
-                <div className="flex items-center gap-3 text-amber-600">
-                  <NutritionIcon className="w-5 h-5" />
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">Nutrition Strategy: {activeNutrition?.title}</h4>
-                  <div className="flex-1 h-px bg-amber-100 dark:bg-amber-900/30"></div>
-                </div>
-
-                {activeNutrition ? (
-                  <div className="space-y-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Target Daily Intake</p>
-                        <InlineInput value={activeNutrition.kcal} onChange={(v: string) => updateBlockData(activeNutrition.id, { kcal: v })} suffix="KCAL" className="text-xl text-slate-900 dark:text-white justify-center" />
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Daily Macro Split</p>
-                        <InlineInput value={activeNutrition.macros} onChange={(v: string) => updateBlockData(activeNutrition.id, { macros: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
-                      </div>
-                      <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-amber-500/20 group/card">
-                        <p className="text-[10px] font-bold text-amber-600/60 uppercase tracking-widest mb-1 font-semibold italic">Target Deficit</p>
-                        <InlineInput value={activeNutrition.deficit} onChange={(v: string) => updateBlockData(activeNutrition.id, { deficit: v })} suffix="KCAL/DAY" className="text-xl text-amber-600 justify-center" />
-                      </div>
-                      <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-blue-500/20 group/card">
-                        <p className="text-[10px] font-bold text-blue-600/60 uppercase tracking-widest mb-1 font-semibold italic">Water Target</p>
-                        <InlineInput value={activeNutrition.water} onChange={(v: string) => updateBlockData(activeNutrition.id, { water: v })} suffix="LITERS" className="text-xl text-blue-500 justify-center" />
-                      </div>
+          {/* 3. Selected Block Detail Panel */}
+          <AnimatePresence mode="wait">
+            {selectedBlock ? (
+              <motion.div 
+                key={selectedBlock.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden"
+              >
+                {/* Panel Header */}
+                <div className={`px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${selectedBlock.type === 'nutrition' ? 'bg-emerald-50/30' : 'bg-purple-50/30'}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedBlock.type === 'nutrition' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-purple-500/10 text-purple-500'}`}>
+                      {selectedBlock.type === 'nutrition' ? <Utensils className="w-6 h-6" /> : <Dumbbell className="w-6 h-6" />}
                     </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                      <div className="space-y-8">
-                        <div>
-                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <ZapIcon className="w-4 h-4 text-amber-400" /> Metabolic Rationale
-                          </h5>
-                          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-                            <InlineTextarea value={activeNutrition.rationale} onChange={(v: string) => updateBlockData(activeNutrition.id, { rationale: v })} />
-                          </div>
-                        </div>
-                        <div>
-                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <HistoryIcon className="w-4 h-4 text-amber-400" /> Nutrient Timing Protocol
-                          </h5>
-                          <ListEditor items={activeNutrition.timing} onChange={(v: string[]) => updateBlockData(activeNutrition.id, { timing: v })} />
-                        </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{selectedBlock.title}</h3>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${roadmap.currentWeek >= selectedBlock.startWeek && roadmap.currentWeek <= selectedBlock.endWeek ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}>
+                          {roadmap.currentWeek >= selectedBlock.startWeek && roadmap.currentWeek <= selectedBlock.endWeek ? 'Current Phase' : 'Planned'}
+                        </span>
                       </div>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em] mt-1">Week {selectedBlock.startWeek} - {selectedBlock.endWeek} | {selectedBlock.type.toUpperCase()} STRATEGY</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" title="Edit Block"><Edit3 className="w-4 h-4" /></button>
+                    <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" title="Duplicate"><Sparkles className="w-4 h-4" /></button>
+                    <button className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all" title="Add Notes"><FileText className="w-4 h-4" /></button>
+                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-1"></div>
+                    <button className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-all">End Block</button>
+                  </div>
+                </div>
+
+                <div className="p-8 space-y-10">
+                  {/* KPI Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {selectedBlock.type === 'nutrition' ? (
+                      <>
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Target Daily Intake</p>
+                          <InlineInput value={selectedBlock.kcal} onChange={(v: string) => updateBlockData(selectedBlock.id, { kcal: v })} suffix="KCAL" className="text-xl text-slate-900 dark:text-white" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Daily Macro Split</p>
+                          <InlineInput value={selectedBlock.macros} onChange={(v: string) => updateBlockData(selectedBlock.id, { macros: v })} className="text-xl text-slate-900 dark:text-white" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">Target Deficit</p>
+                          <InlineInput value={selectedBlock.deficit} onChange={(v: string) => updateBlockData(selectedBlock.id, { deficit: v })} suffix="KCAL" className="text-xl text-amber-600" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-1">Water Target</p>
+                          <InlineInput value={selectedBlock.water} onChange={(v: string) => updateBlockData(selectedBlock.id, { water: v })} suffix="L" className="text-xl text-blue-600" />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Block Focus</p>
+                          <InlineInput value={selectedBlock.focus} onChange={(v: string) => updateBlockData(selectedBlock.id, { focus: v })} className="text-xl text-slate-900 dark:text-white" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sessions / Week</p>
+                          <InlineInput value={selectedBlock.sessions} onChange={(v: string) => updateBlockData(selectedBlock.id, { sessions: v })} className="text-xl text-slate-900 dark:text-white" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-1">Target Intensity</p>
+                          <InlineInput value={selectedBlock.intensity} onChange={(v: string) => updateBlockData(selectedBlock.id, { intensity: v })} className="text-xl text-purple-600" />
+                        </div>
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all group">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tempo Protocol</p>
+                          <InlineInput value={selectedBlock.tempo} onChange={(v: string) => updateBlockData(selectedBlock.id, { tempo: v })} className="text-xl text-slate-900 dark:text-white" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Detail Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div className="space-y-10">
                       <div>
                         <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                          <Sticker className="w-4 h-4 text-amber-400" /> Micronutrient Stack
+                          <ZapIcon className="w-4 h-4 text-emerald-500" /> {selectedBlock.type === 'nutrition' ? 'Metabolic Rationale' : 'Loading Strategy'}
                         </h5>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {activeNutrition.micros?.map((m: any, i: number) => (
-                            <div key={i} className="p-5 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group">
-                              <input 
-                                className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-transparent border-none p-0 focus:ring-0 w-full outline-none mb-1"
-                                value={m.label}
-                                onChange={(e) => {
-                                  const newMicros = [...(activeNutrition.micros || [])];
-                                  newMicros[i] = { ...newMicros[i], label: e.target.value };
-                                  updateBlockData(activeNutrition.id, { micros: newMicros });
-                                }}
-                              />
-                              <div className="relative">
+                        <div className="bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 group">
+                          <InlineTextarea value={selectedBlock.type === 'nutrition' ? selectedBlock.rationale : selectedBlock.loading} onChange={(v: string) => updateBlockData(selectedBlock.id, selectedBlock.type === 'nutrition' ? { rationale: v } : { loading: v })} />
+                        </div>
+                      </div>
+
+                      {selectedBlock.type === 'nutrition' ? (
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <HistoryIcon className="w-4 h-4 text-emerald-500" /> Nutrient Timing Protocol
+                          </h5>
+                          <ListEditor items={selectedBlock.timing} onChange={(v: string[]) => updateBlockData(selectedBlock.id, { timing: v })} />
+                        </div>
+                      ) : (
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-purple-500" /> Anatomical Scope
+                          </h5>
+                          <div className="bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 group">
+                            <InlineTextarea value={selectedBlock.scope} onChange={(v: string) => updateBlockData(selectedBlock.id, { scope: v })} />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-10">
+                      {selectedBlock.type === 'nutrition' ? (
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <Sticker className="w-4 h-4 text-emerald-500" /> Micronutrient Stack
+                          </h5>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {selectedBlock.micros?.map((m: any, i: number) => (
+                              <div key={i} className="p-4 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm group">
                                 <input 
-                                  className="text-sm font-semibold text-slate-900 dark:text-white bg-transparent border-none p-0 focus:ring-0 w-full outline-none"
-                                  value={m.value}
+                                  className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-transparent border-none p-0 focus:ring-0 w-full outline-none mb-1"
+                                  value={m.label}
                                   onChange={(e) => {
-                                    const newMicros = [...(activeNutrition.micros || [])];
-                                    newMicros[i] = { ...newMicros[i], value: e.target.value };
-                                    updateBlockData(activeNutrition.id, { micros: newMicros });
+                                    const newMicros = [...(selectedBlock.micros || [])];
+                                    newMicros[i] = { ...newMicros[i], label: e.target.value };
+                                    updateBlockData(selectedBlock.id, { micros: newMicros });
                                   }}
                                 />
-                                <div className="absolute -bottom-1 left-0 w-0 h-0.5 bg-[#17cf54] transition-all group-focus-within:w-full" />
+                                <InlineInput value={m.value} onChange={(v: string) => {
+                                  const newMicros = [...(selectedBlock.micros || [])];
+                                  newMicros[i] = { ...newMicros[i], value: v };
+                                  updateBlockData(selectedBlock.id, { micros: newMicros });
+                                }} className="text-sm font-semibold text-slate-900 dark:text-white" />
                               </div>
-                            </div>
-                          ))}
-                          <button 
-                            onClick={() => updateBlockData(activeNutrition.id, { micros: [...(activeNutrition.micros || []), { label: 'New', value: '...' }] })}
-                            className="md:col-span-2 p-4 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-50 transition-all"
-                          >
-                            + Add Supplement
-                          </button>
+                            ))}
+                            <button 
+                              onClick={() => updateBlockData(selectedBlock.id, { micros: [...(selectedBlock.micros || []), { label: 'New', value: '...' }] })}
+                              className="md:col-span-2 p-3 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] hover:bg-slate-50 transition-all"
+                            >
+                              + Add Supplement
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <Moon className="w-4 h-4 text-purple-500" /> Recovery Protocol
+                          </h5>
+                          <div className="bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 group">
+                            <InlineTextarea value={selectedBlock.recovery} onChange={(v: string) => updateBlockData(selectedBlock.id, { recovery: v })} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Analysis Block (Success Criteria & Red Flags) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="p-6 rounded-3xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100/50 dark:border-emerald-900/30">
+                          <h6 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" /> {selectedBlock.type === 'nutrition' ? 'Success Criteria' : 'Success Metrics'}
+                          </h6>
+                          <div className="space-y-4">
+                            <InlineTextarea value={selectedBlock.successCriteria || (selectedBlock.type === 'nutrition' ? '• Expected adherence: 90%+\n• Weight trend: -0.5kg/wk\n• Satiety: Moderate' : '• Strength: +2.5kg on compounds\n• Recovery: RPE within range\n• Fatigue: Managed deloads')} onChange={(v: string) => updateBlockData(selectedBlock.id, { successCriteria: v })} />
+                          </div>
+                        </div>
+                        <div className="p-6 rounded-3xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100/50 dark:border-rose-900/30">
+                          <h6 className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <WarningIcon className="w-4 h-4" /> Red Flags
+                          </h6>
+                          <div className="space-y-4">
+                            <InlineTextarea value={selectedBlock.redFlags || (selectedBlock.type === 'nutrition' ? '• Excessive hunger\n• Low adherence\n• Digestive issues' : '• Fatigue accumulation\n• Pain / discomfort\n• Recovery issues')} onChange={(v: string) => updateBlockData(selectedBlock.id, { redFlags: v })} />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest">Select a nutrition block in the roadmap</div>
-                )}
-              </section>
-
-              <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
-
-              {/* Training Strategy Section */}
-              <section className="space-y-8">
-                 <div className="flex items-center gap-3 text-purple-600">
-                  <TrainingIcon className="w-5 h-5" />
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">Training Strategy: {activeTraining?.title}</h4>
-                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30"></div>
                 </div>
+              </motion.div>
+            ) : (
+              <div className="bg-white dark:bg-slate-900 rounded-[32px] p-12 text-center border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center text-slate-300 mx-auto mb-4">
+                  <MapIcon className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Planning Board</h3>
+                <p className="text-slate-500 mt-2">Select a roadmap block to inspect and edit details below.</p>
+              </div>
+            )}
+          </AnimatePresence>
 
-                {activeTraining ? (
-                   <div className="space-y-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Block Focus</p>
-                        <InlineInput value={activeTraining.focus} onChange={(v: string) => updateBlockData(activeTraining.id, { focus: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Sessions / Week</p>
-                        <InlineInput value={activeTraining.sessions} onChange={(v: string) => updateBlockData(activeTraining.id, { sessions: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
-                      </div>
-                      <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-purple-500/20 group/card">
-                        <p className="text-[10px] font-bold text-purple-600/60 uppercase tracking-widest mb-1 font-semibold italic">Target Intensity</p>
-                        <InlineInput value={activeTraining.intensity} onChange={(v: string) => updateBlockData(activeTraining.id, { intensity: v })} className="text-xl text-purple-600 font-bold justify-center" />
-                      </div>
-                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Tempo Protocol</p>
-                        <InlineInput value={activeTraining.tempo} onChange={(v: string) => updateBlockData(activeTraining.id, { tempo: v })} className="text-xl text-slate-900 dark:text-white justify-center" />
-                      </div>
-                    </div>
+          {/* 4. Secondary Strategic Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-sm border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54]">
+                  <Brain className="w-5 h-5" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em]">Strategic Insights</h3>
+              </div>
+              <div className="space-y-6">
+                <p className="text-sm font-medium text-slate-500 leading-relaxed italic">
+                  {selectedBlock?.type === 'nutrition' 
+                    ? "Based on the selected nutrition profile, the client is projected to reach metabolic stability within 3 weeks. Adherence risk is low given the current morning protein preference." 
+                    : "Training volume is currently optimized for hypertrophy base. Monitor RPE closely during week 3 to ensure recovery protocol is sufficient."}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-blue-100">Transition Ready</span>
+                  <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-emerald-100">Low Risk</span>
+                </div>
+              </div>
+            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="p-6 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-                        <h5 className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                          <GrowthIcon className="w-5 h-5" /> Loading Strategy
-                        </h5>
-                        <InlineTextarea value={activeTraining.loading} onChange={(v: string) => updateBlockData(activeTraining.id, { loading: v })} />
-                      </div>
-                      <div className="p-6 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-                        <h5 className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                          <Activity className="w-5 h-5" /> Anatomical Scope
-                        </h5>
-                        <InlineTextarea value={activeTraining.scope} onChange={(v: string) => updateBlockData(activeTraining.id, { scope: v })} />
-                      </div>
-                      <div className="p-6 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
-                        <h5 className="text-[10px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                          <Moon className="w-5 h-5" /> Recovery Protocol
-                        </h5>
-                        <InlineTextarea value={activeTraining.recovery} onChange={(v: string) => updateBlockData(activeTraining.id, { recovery: v })} />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest">Select a training block in the roadmap</div>
-                )}
-              </section>
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-sm border border-slate-200 dark:border-slate-800">
+               <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                  <ZapIcon className="w-5 h-5" />
+                </div>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-[0.2em]">Transition Forecast</h3>
+              </div>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-4">Projected next phase adaptation:</p>
+              <div className="flex items-center gap-6">
+                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full w-[65%] bg-amber-500 rounded-full"></div>
+                </div>
+                <span className="text-xs font-black text-amber-600">65% Readiness</span>
+              </div>
             </div>
           </div>
 
