@@ -63,7 +63,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
   const [isLoading, setIsLoading] = useState(true);
   const [coachNotes, setCoachNotes] = useState('');
   const [nextWeekFocus, setNextWeekFocus] = useState('');
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishingState, setPublishingState] = useState<'idle' | 'publishing' | 'marking_reviewed'>('idle');
 
   useEffect(() => {
     const loadCheckIn = async () => {
@@ -90,7 +90,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
 
   const handlePublish = async () => {
     if (!coachNotes.trim()) return;
-    setIsPublishing(true);
+    setPublishingState('publishing');
     try {
       // 1. Update the check-in review in the DB
       await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}/review`, {
@@ -116,12 +116,12 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
     } catch (err) {
       console.error('Error publishing review:', err);
     } finally {
-      setIsPublishing(false);
+      setPublishingState('idle');
     }
   };
 
   const handleMarkAsReviewed = async () => {
-    setIsPublishing(true);
+    setPublishingState('marking_reviewed');
     try {
       // 1. Update the check-in as reviewed in the DB
       await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}/review`, {
@@ -139,7 +139,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
     } catch (err) {
       console.error('Error marking as reviewed:', err);
     } finally {
-      setIsPublishing(false);
+      setPublishingState('idle');
     }
   };
 
@@ -478,10 +478,10 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button 
                     onClick={handleMarkAsReviewed}
-                    disabled={isPublishing}
+                    disabled={publishingState !== 'idle'}
                     className="w-full py-4 rounded-2xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-[14px] font-bold transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 h-[56px]"
                   >
-                    {isPublishing ? (
+                    {publishingState === 'marking_reviewed' ? (
                       <div className="w-4 h-4 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
                     ) : (
                       <>
@@ -493,10 +493,10 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
 
                   <button 
                     onClick={handlePublish}
-                    disabled={isPublishing || !coachNotes.trim()}
+                    disabled={publishingState !== 'idle' || !coachNotes.trim()}
                     className="w-full py-4 rounded-2xl bg-slate-950 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-900 dark:hover:bg-slate-100 text-[14px] font-bold transition-all shadow-xl shadow-slate-900/20 dark:shadow-none flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group h-[56px]"
                   >
-                    {isPublishing ? (
+                    {publishingState === 'publishing' ? (
                       <div className="w-4 h-4 border-2 border-white/30 dark:border-slate-900/30 border-t-white dark:border-t-slate-900 rounded-full animate-spin"></div>
                     ) : (
                       <>
