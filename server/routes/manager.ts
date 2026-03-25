@@ -241,7 +241,7 @@ router.get('/clients', async (req: any, res) => {
         created_at,
         status,
         profiles!user_id (full_name),
-        clients_profiles!user_id (weight, goal, notes, temp_password, gender, age),
+        clients_profiles!user_id (weight, goal, notes, temp_password),
         check_ins (id, date, reviewed_at, data_json),
         workout_logs!client_id (logged_at),
         tasks!client_id (*)
