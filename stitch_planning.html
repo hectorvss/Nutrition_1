@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Planning Builder - Full Width Editor - V1</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#17cf54",
+                        "primary-hover": "#14b549",
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1e293b",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#334155",
+                        "text-main": "#0f172a",
+                        "text-secondary": "#64748b"
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.375rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem",
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-gray-100 min-h-screen flex overflow-hidden">
+<aside class="w-64 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex-col h-screen hidden md:flex sticky top-0 overflow-hidden z-20">
+<div class="p-5 border-b border-border-light dark:border-border-dark">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 border border-primary/30" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDBKQYJTI45IF5uqMXQb-F-d1VP1pPtmtI-8xtB5CePrhzRI16AD2ghC56VuFQaw04fLiyyifZfrcVKPCobU_ClEFwOd0krCn94Ip9KPnVYVHU9RG0JDkVdKPPIEz_Fl97m9pitNpiCsezZorGKQSoLedK3i7cDfgt1k9w7Q5khWQs7q1du5p75qbK2jz6P0YLvTggW7DSbfxq0ForwxFXpFyXT-r25iNriMyvvOEXfEcdzZM3YGm3FvE4Bz7XUEaE39BUpdJQw1fqb");'></div>
+<div class="flex flex-col overflow-hidden">
+<h1 class="text-text-main dark:text-white text-sm font-bold truncate">Dr. Smith</h1>
+<p class="text-text-secondary dark:text-slate-400 text-xs truncate">Fitness Coach Pro</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-3 py-4 flex flex-col gap-6 overflow-y-auto scrollbar-hide">
+<div>
+<h3 class="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Core</h3>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">check_circle</span>
+<span class="text-sm font-medium">Tasks</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">calendar_month</span>
+<span class="text-sm font-medium">Calendar</span>
+</a>
+</div>
+</div>
+<div>
+<h3 class="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Work</h3>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">groups</span>
+<span class="text-sm font-medium">Clients</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">fact_check</span>
+<span class="text-sm font-medium">Check-ins</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">chat</span>
+<span class="text-sm font-medium">Messages</span>
+</a>
+</div>
+</div>
+<div>
+<h3 class="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Programming</h3>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl bg-primary/10 text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] fill-1">map</span>
+<span class="text-sm font-semibold">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">restaurant_menu</span>
+<span class="text-sm font-medium">Nutrition</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">fitness_center</span>
+<span class="text-sm font-medium">Training</span>
+</a>
+</div>
+</div>
+<div>
+<h3 class="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Library</h3>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">exercise</span>
+<span class="text-sm font-medium">Exercises</span>
+</a>
+</div>
+</div>
+<div class="mb-4">
+<h3 class="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Insights</h3>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">monitoring</span>
+<span class="text-sm font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</div>
+</div>
+</nav>
+</aside>
+<main class="flex-1 flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark">
+<div class="md:hidden flex items-center justify-between p-4 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex-shrink-0">
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-8 w-8 border border-primary" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCM7fMx1P-bsXh9AosZoDRwasVK1Yif0_C7AELybRrp6j7dXvUBAQyu2-jDPoAH4dELklt5N9uEjo70-FGCJh18R9RLawTxJD9bBukhNedoykOGTyouarCa2k7lUMJodlCp0et85Wbr3ti31wkDWfp9HwlcrT0HMCGF1q0-cu2JarjDvml0-CaUAkP-r_N3_NLynHabQx1HZX4B_OU3rZRSUffB3xGc_B7uuFWOa5hs7_azd4EJghgE5AjU4XM4OYsHgoFpnzrkqmCJ");'></div>
+<span class="font-bold text-lg text-text-main dark:text-white">NutriDash</span>
+</div>
+<button class="p-2 text-slate-600 dark:text-slate-200">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+<div class="flex flex-1 flex-col h-full overflow-y-auto p-6 gap-6">
+<div class="w-full mx-auto flex flex-col gap-6 max-w-[1200px]">
+<!-- Header Section -->
+<div class="flex flex-col gap-4">
+<nav aria-label="Breadcrumb" class="flex text-sm text-text-secondary dark:text-slate-400">
+<ol class="inline-flex items-center space-x-1 md:space-x-3">
+<li class="inline-flex items-center">
+<a class="inline-flex items-center hover:text-primary transition-colors" href="#">
+                                Planning
+                            </a>
+</li>
+<li>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-[16px] mx-1">chevron_right</span>
+<span class="text-text-main dark:text-white font-medium">Sarah Jenkins</span>
+</div>
+</li>
+</ol>
+</nav>
+<div class="relative bg-surface-light dark:bg-surface-dark rounded-[16px] p-6 shadow-sm border border-amber-200 dark:border-amber-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 overflow-hidden">
+<div class="absolute top-0 right-0 bg-amber-400 text-amber-900 text-xs font-bold px-4 py-1 rounded-bl-lg shadow-sm z-10">
+                        EDITING DRAFT
+                    </div>
+<div class="flex items-center gap-4 relative z-10">
+<div class="w-16 h-16 rounded-full bg-cover bg-center shadow-sm" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDf0Q3uAjHC8p014ZEXi-XOqgXIRaqRf0R1dawNQFMSEqrtIhBl997C3o6iGILTMLcGdyoP1VfSeZrtgvvQQ-hVjchh-eGdHuWGvBVI19wQvtu4SMW4Qwy809bw1FKZjwadQQ6pkJb5CaIrmomnOXQiloCBpKeBZ00l53VC9TijpiLDgjqcQ_pAw7psb_m0b-dpBrXlwCrZvjZFOJ4BwSxnkeFTJ4H9_DddUPYVgWypgllSmAkHkI6pkuxMW3pn8MYu5aXBRPDKxWoH");'></div>
+<div>
+<h2 class="text-2xl font-bold text-text-main dark:text-white">Sarah Jenkins</h2>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-sm text-text-secondary">Female, 28 y.o.</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0 relative z-10">
+<div class="bg-primary text-white rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
+<span class="material-symbols-outlined fill-1">play_circle</span>
+<span class="font-bold text-sm">Program: LIVE</span>
+</div>
+<div class="flex gap-2 w-full sm:w-auto">
+<button class="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-sm transition-colors border border-border-light dark:border-border-dark">
+                                Discard
+                            </button>
+<button class="flex-1 sm:flex-none py-2 px-6 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-sm transition-colors shadow-sm">
+                                Save Draft
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Master Roadmap -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-[16px] p-6 shadow-sm border border-border-light dark:border-border-dark">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">map</span>
+                        Master Roadmap
+                    </h3>
+<div class="flex gap-3">
+<button class="flex items-center gap-1 text-sm font-semibold text-amber-600 dark:text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-colors bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Nutrition Phase
+                        </button>
+<button class="flex items-center gap-1 text-sm font-semibold text-purple-600 dark:text-purple-500 hover:text-purple-700 dark:hover:text-purple-400 transition-colors bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Training Block
+                        </button>
+</div>
+</div>
+<div class="relative w-full overflow-x-auto pb-4">
+<div class="min-w-[1000px]">
+<div class="flex justify-between px-2 mb-2 text-xs font-semibold text-slate-400">
+<span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>W5</span><span>W6</span><span>W7</span><span>W8</span><span>W9</span><span>W10</span><span>W11</span><span>W12</span>
+</div>
+<div class="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-border-light dark:border-border-dark mb-4">
+<h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Nutrition</h4>
+<div class="flex gap-1 h-12">
+<div class="w-1/3 bg-blue-100 dark:bg-blue-900/30 rounded-l-lg border border-blue-200 dark:border-blue-800 flex items-center justify-center relative group cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+<span class="text-sm font-semibold text-blue-700 dark:text-blue-400">Maintenance</span>
+<button class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md text-blue-700 dark:text-blue-300">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+<div class="w-1/3 bg-amber-100 dark:bg-amber-900/30 border-y border-amber-200 dark:border-amber-800 ring-2 ring-primary/50 flex items-center justify-center relative group cursor-pointer hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors">
+<span class="text-sm font-semibold text-amber-700 dark:text-amber-400">Deficit (-500)</span>
+<button class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md text-amber-700 dark:text-amber-300">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rotate-45 z-10"></div>
+</div>
+<div class="w-1/3 bg-green-100 dark:bg-green-900/30 rounded-r-lg border border-green-200 dark:border-green-800 flex items-center justify-center relative group cursor-pointer hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors">
+<span class="text-sm font-semibold text-green-700 dark:text-green-400">Maintenance</span>
+<button class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md text-green-700 dark:text-blue-300">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+</div>
+</div>
+<div class="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-border-light dark:border-border-dark">
+<h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Training</h4>
+<div class="flex gap-1 h-12">
+<div class="w-1/2 bg-purple-100 dark:bg-purple-900/30 rounded-l-lg border border-purple-200 dark:border-purple-800 flex items-center justify-center relative group cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors">
+<span class="text-sm font-semibold text-purple-700 dark:text-purple-400">Hypertrophy Base (4x)</span>
+<button class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md text-purple-700 dark:text-purple-300">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+<div class="w-1/2 bg-rose-100 dark:bg-rose-900/30 rounded-r-lg border border-rose-200 dark:border-rose-800 flex items-center justify-center relative group cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors">
+<span class="text-sm font-semibold text-rose-700 dark:text-rose-400">Strength Peak (3x)</span>
+<button class="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md text-rose-700 dark:text-rose-300">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- NEW: Goal Trajectory & Predictions Section -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-[16px] p-6 shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">analytics</span>
+                        Goal Trajectory &amp; Predictions
+                    </h3>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+<span class="text-xs font-semibold text-slate-500">Actual Progress</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full border-2 border-dashed border-primary"></span>
+<span class="text-xs font-semibold text-slate-500">Projected Outcome</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+<!-- Projection Summary Column -->
+<div class="flex flex-col gap-4">
+<div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
+<p class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Projected End Weight</p>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-blue-700 dark:text-blue-300">141.2</span>
+<span class="text-sm font-semibold text-blue-600">lbs</span>
+</div>
+<p class="text-[11px] text-blue-600/70 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">trending_down</span>
+                                Estimated -8.8 lbs from start
+                            </p>
+</div>
+<div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50">
+<p class="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1">Strength Capability</p>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-purple-700 dark:text-purple-300">+12%</span>
+</div>
+<p class="text-[11px] text-purple-600/70 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">bolt</span>
+                                Peak expected at Week 12
+                            </p>
+</div>
+</div>
+<!-- Main Trajectory Graph Column -->
+<div class="lg:col-span-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-5 border border-border-light dark:border-border-dark relative">
+<div class="absolute inset-0 pointer-events-none opacity-10">
+<div class="h-full w-full grid grid-cols-12 divide-x divide-slate-400">
+<div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+</div>
+</div>
+<div class="h-40 flex items-end justify-between relative mb-6">
+<!-- SVG for trajectories -->
+<svg class="absolute inset-0 h-full w-full" preserveaspectratio="none" viewbox="0 0 1200 160">
+<!-- Actual Data (Solid Blue) -->
+<path d="M 0,20 L 100,28 L 200,45 L 300,65" fill="none" stroke="#3b82f6" stroke-linecap="round" stroke-width="3"></path>
+<!-- Prediction Data (Dashed Green) -->
+<path d="M 300,65 L 400,85 L 500,105 L 600,125 L 700,120 L 800,115 L 900,125 L 1000,135 L 1100,145 L 1200,150" fill="none" stroke="#17cf54" stroke-dasharray="8 6" stroke-linecap="round" stroke-width="3"></path>
+<!-- Connection points -->
+<circle cx="300" cy="65" fill="white" r="5" stroke="#3b82f6" stroke-width="2"></circle>
+</svg>
+<!-- Labels and Annotations -->
+<div class="absolute left-1/4 top-1/4 -translate-x-1/2 -mt-8">
+<div class="bg-white dark:bg-slate-900 border border-border-light dark:border-border-dark px-2 py-1 rounded shadow-sm text-[10px] font-bold">
+                                    CURRENT: 148.5
+                                </div>
+</div>
+<div class="absolute right-0 bottom-0 mb-4 mr-2">
+<div class="bg-primary/10 border border-primary/30 text-primary px-3 py-1.5 rounded-lg shadow-sm text-[10px] font-bold">
+                                    TARGET PHASE END: 141.2
+                                </div>
+</div>
+</div>
+<!-- Timeline Sync with Roadmap -->
+<div class="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+<span>W1</span><span>W2</span><span>W3</span><span class="text-primary bg-primary/10 px-2 py-0.5 rounded-full">Week 4 (Now)</span><span>W5</span><span>W6</span><span>W7</span><span>W8</span><span>W9</span><span>W10</span><span>W11</span><span>W12</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Block Strategic Details -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-[16px] shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
+<div class="border-b border-border-light dark:border-border-dark bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined font-variation-fill">intelligence_board</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-text-main dark:text-white">Block Strategic Details</h3>
+<p class="text-xs text-text-secondary dark:text-slate-400">Nutrition Phase: Deficit (-500) • Weeks 5-8</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">ACTIVE PHASE</span>
+<button class="p-2 text-slate-400 hover:text-text-main transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+<div class="p-6 flex flex-col gap-10">
+<!-- Nutrition Strategy Section (Full Width) -->
+<div class="flex flex-col gap-6">
+<div class="flex items-center gap-2 text-amber-600 dark:text-amber-500 border-b border-border-light dark:border-border-dark pb-2">
+<span class="material-symbols-outlined text-[20px]">restaurant</span>
+<h4 class="font-bold text-sm uppercase tracking-wider">Nutrition Strategy</h4>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Daily Calories</p>
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold text-text-main dark:text-white">2,150</span>
+<span class="text-xs text-amber-600 font-medium">kcal</span>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Macro Split</p>
+<div class="flex items-center gap-1.5">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-text-main dark:text-white">40/30/30</span>
+<span class="text-[9px] text-slate-400">P / C / F</span>
+</div>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Meal Frequency</p>
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold text-text-main dark:text-white">4 Meals</span>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Hydration Target</p>
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold text-text-main dark:text-white">3.5 L</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div>
+<h5 class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">target</span> Primary Intent
+                                </h5>
+<p class="text-sm text-text-main dark:text-slate-300 bg-white dark:bg-slate-900/50 p-4 rounded-lg border border-border-light dark:border-border-dark leading-relaxed">Aggressive fat loss while preserving lean mass. Focus on high protein satiety and volume-dense foods to manage hunger. Strategic re-feeds on training days.</p>
+</div>
+<div>
+<h5 class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">assignment</span> Specific Focus
+                                </h5>
+<ul class="grid grid-cols-1 gap-2.5">
+<li class="flex items-center gap-3 text-sm text-text-secondary dark:text-slate-400 p-2 rounded-lg bg-slate-50/50 dark:bg-slate-800/30 border border-border-light/50 dark:border-border-dark/50">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                        Timing: 40g Protein pre/post workout
+                                    </li>
+<li class="flex items-center gap-3 text-sm text-text-secondary dark:text-slate-400 p-2 rounded-lg bg-slate-50/50 dark:bg-slate-800/30 border border-border-light/50 dark:border-border-dark/50">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                        Supplements: Electrolyte support, Omega-3s
+                                    </li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Training Strategy Section (Full Width) -->
+<div class="flex flex-col gap-6">
+<div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 border-b border-border-light dark:border-border-dark pb-2">
+<span class="material-symbols-outlined text-[20px]">fitness_center</span>
+<h4 class="font-bold text-sm uppercase tracking-wider">Training Strategy</h4>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Block Focus</p>
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold text-text-main dark:text-white">Hypertrophy</span>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Volume/Freq</p>
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold text-text-main dark:text-white">4 Sessions</span>
+<span class="text-xs text-purple-600 font-medium">/wk</span>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Avg Session Duration</p>
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold text-text-main dark:text-white">65 Min</span>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark">
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Deload Protocol</p>
+<div class="flex items-center gap-2">
+<span class="text-xl font-bold text-text-main dark:text-white">Active</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div>
+<h5 class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">trending_up</span> Intensity Targets
+                                </h5>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold border border-purple-100 dark:border-purple-800">RPE 7-9 (Technical)</span>
+<span class="px-3 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold border border-purple-100 dark:border-purple-800">Rest: 60-90s</span>
+<span class="px-3 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold border border-purple-100 dark:border-purple-800">Tempo: 3-0-1-0</span>
+</div>
+</div>
+<div>
+<h5 class="text-xs font-bold text-slate-500 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">emoji_events</span> Key Milestones
+                                </h5>
+<div class="space-y-2">
+<div class="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900/50 rounded-lg border border-border-light dark:border-border-dark">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-sm">check_circle</span>
+<span class="text-sm text-text-main dark:text-slate-300">Form validation for Squat/Deadlift</span>
+</div>
+<span class="text-[10px] font-bold text-primary">W2</span>
+</div>
+<div class="flex items-center justify-between p-2.5 bg-white dark:bg-slate-900/50 rounded-lg border border-border-light dark:border-border-dark">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-sm">schedule</span>
+<span class="text-sm text-text-main dark:text-slate-300">Mid-block de-load protocol</span>
+</div>
+<span class="text-[10px] font-bold text-slate-400">W4</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Goals & Targets -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-[16px] p-6 shadow-sm border border-border-light dark:border-border-dark">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">flag</span>
+                        Goals &amp; Targets
+                    </h3>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-border-light dark:border-border-dark relative group cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 transition-colors">
+<button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-blue-500">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<div class="flex justify-between items-center mb-2">
+<h4 class="text-sm font-semibold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-blue-500">accessibility</span>
+                                Physical
+                            </h4>
+<span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-md">60%</span>
+</div>
+<p class="text-xs text-text-secondary mb-3">Lose 10lbs fat, maintain muscle</p>
+<div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+<div class="bg-blue-500 h-1.5 rounded-full" style="width: 60%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-slate-400 mt-1">
+<span>150 lbs</span>
+<span>Target: 140 lbs</span>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-border-light dark:border-border-dark relative group cursor-pointer hover:border-amber-300 dark:hover:border-amber-700 transition-colors">
+<button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-amber-500">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<div class="flex justify-between items-center mb-2">
+<h4 class="text-sm font-semibold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-amber-500">restaurant_menu</span>
+                                Nutrition
+                            </h4>
+<span class="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">85%</span>
+</div>
+<p class="text-xs text-text-secondary mb-3">Adherence to deficit macros</p>
+<div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+<div class="bg-amber-500 h-1.5 rounded-full" style="width: 85%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-slate-400 mt-1">
+<span>Consistent</span>
+<span>Target: 90%+</span>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-border-light dark:border-border-dark relative group cursor-pointer hover:border-purple-300 dark:hover:border-purple-700 transition-colors">
+<button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-purple-500">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<div class="flex justify-between items-center mb-2">
+<h4 class="text-sm font-semibold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-purple-500">fitness_center</span>
+                                Training
+                            </h4>
+<span class="text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-md">100%</span>
+</div>
+<p class="text-xs text-text-secondary mb-3">Complete all Hypertrophy sessions</p>
+<div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+<div class="bg-purple-500 h-1.5 rounded-full" style="width: 100%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-slate-400 mt-1">
+<span>16/16 sessions</span>
+<span>Target: 100%</span>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-border-light dark:border-border-dark relative group cursor-pointer hover:border-rose-300 dark:hover:border-rose-700 transition-colors">
+<button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-rose-500">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<div class="flex justify-between items-center mb-2">
+<h4 class="text-sm font-semibold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-rose-500">psychology</span>
+                                Mindset
+                            </h4>
+<span class="text-xs font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">70%</span>
+</div>
+<p class="text-xs text-text-secondary mb-3">Improve sleep quality &amp; stress</p>
+<div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+<div class="bg-rose-500 h-1.5 rounded-full" style="width: 70%"></div>
+</div>
+<div class="flex justify-between text-[10px] text-slate-400 mt-1">
+<span>Avg 6.5h sleep</span>
+<span>Target: 7.5h+</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+<!-- Milestones -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-[16px] p-6 shadow-sm border border-border-light dark:border-border-dark">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-sm font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-[18px]">timeline</span>
+                            Key Roadmap Milestones
+                        </h3>
+<button class="text-sm font-medium text-primary hover:text-primary-hover transition-colors">
+                            + Add Milestone
+                        </button>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-border-light dark:border-border-dark">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-green-500"></div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white">Program Start</p>
+<p class="text-xs text-slate-500">Oct 01</p>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-white dark:bg-surface-dark rounded-xl border border-primary ring-1 ring-primary/20">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_0_2px_rgba(23,207,84,0.2)]"></div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white">Phase 2 Review</p>
+<p class="text-xs text-primary font-medium">Nov 15 (Next)</p>
+</div>
+</div>
+<button class="px-3 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">task</span>
+                                Convert to Task
+                            </button>
+</div>
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-border-light dark:border-border-dark">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white">Begin Strength Peak</p>
+<p class="text-xs text-slate-500">Dec 15</p>
+</div>
+</div>
+<button class="px-3 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">task</span>
+                                Convert to Task
+                            </button>
+</div>
+</div>
+</div>
+<!-- Assumptions -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-[16px] p-6 shadow-sm border border-border-light dark:border-border-dark">
+<h3 class="text-sm font-bold text-text-main dark:text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-[18px]">rule</span>
+                        Assumptions &amp; Variables
+                    </h3>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Daily Steps Target</label>
+<input class="w-full bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-shadow" type="text" value="10,000 - 12,000"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Sleep Goal</label>
+<input class="w-full bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-shadow" type="text" value="7.5 hours minimum"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Dietary Constraints</label>
+<textarea class="w-full bg-slate-50 dark:bg-slate-800/50 border border-border-light dark:border-border-dark rounded-lg px-3 py-2 text-sm text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-shadow resize-none" rows="2">Dairy-free, prefers higher protein distribution early in day.</textarea>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
