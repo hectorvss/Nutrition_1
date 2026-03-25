@@ -26,6 +26,26 @@ import { useCalendar, getEventPresentationInfo, EventType } from '../context/Cal
 
 type ViewMode = 'Month' | 'Week' | 'Day';
 
+const getEventMins = (duration: string) => {
+  if (!duration) return 60; // default 1h
+  try {
+    let totalMins = 0;
+    if (duration.includes('h')) {
+      const hPart = parseInt(duration.split('h')[0]);
+      totalMins += hPart * 60;
+      if (duration.includes('m')) {
+        const mPart = parseInt(duration.split('h')[1].split('m')[0].trim());
+        totalMins += mPart;
+      }
+    } else if (duration.includes('m')) {
+      totalMins += parseInt(duration.split('m')[0]);
+    }
+    return totalMins;
+  } catch (e) {
+    return 60;
+  }
+};
+
 export default function CalendarView({ onNavigate, initialView, initialDate }: CalendarProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(initialView || 'Day');
   const [currentDate, setCurrentDate] = useState(initialDate || new Date());
@@ -262,29 +282,9 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   
                   const minuteOffset = event.time.includes(':') ? parseInt(event.time.split(':')[1]) * (96 / 60) : 0;
                   const top = hourIdx * 96 + minuteOffset;
-                  const left = dayIdx * (100 / 7);
                   
-                  const getEventHeight = (duration: string, rowHeight: number) => {
-                    if (!duration) return rowHeight; // default 1h
-                    try {
-                      let totalMins = 0;
-                      if (duration.includes('h')) {
-                        const hPart = parseInt(duration.split('h')[0]);
-                        totalMins += hPart * 60;
-                        if (duration.includes('m')) {
-                          const mPart = parseInt(duration.split('h')[1].split('m')[0].trim());
-                          totalMins += mPart;
-                        }
-                      } else if (duration.includes('m')) {
-                        totalMins += parseInt(duration.split('m')[0]);
-                      }
-                      return (totalMins / 60) * rowHeight;
-                    } catch (e) {
-                      return rowHeight;
-                    }
-                  };
-                  
-                  const height = getEventHeight(event.duration, 96);
+                  const durationMins = getEventMins(event.duration);
+                  const height = (durationMins / 60) * 96;
                   
                   return (
                     <div 
@@ -329,11 +329,11 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
               ))}
             </div>
 
-            {/* Daily Grid */}
-            <div className="relative p-0 pt-4 px-6 mb-8">
+            {/* Daily Grid Area */}
+            <div className="relative p-0 mb-8 overflow-hidden">
               {/* Horizontal Lines */}
               {hours.map((_, i) => (
-                <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i + 1) * 128}px` }}></div>
+                <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i) * 128}px` }}></div>
               ))}
 
               {/* Lunch Break (13:00 - 14:00) */}
@@ -346,29 +346,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                 const hourIdx = hours.indexOf(event.time.slice(0, 2).padStart(2, '0') + ':00');
                 if (hourIdx === -1) return null;
                 const minuteOff = event.time.includes(':') ? parseInt(event.time.split(':')[1]) * (128 / 60) : 0;
-                const top = hourIdx * 128 + 16 + minuteOff;
+                const top = hourIdx * 128 + minuteOff;
                 
-                const getEventHeight = (duration: string, rowHeight: number) => {
-                  if (!duration) return rowHeight; // default 1h
-                  try {
-                    let totalMins = 0;
-                    if (duration.includes('h')) {
-                      const hPart = parseInt(duration.split('h')[0]);
-                      totalMins += hPart * 60;
-                      if (duration.includes('m')) {
-                        const mPart = parseInt(duration.split('h')[1].split('m')[0].trim());
-                        totalMins += mPart;
-                      }
-                    } else if (duration.includes('m')) {
-                      totalMins += parseInt(duration.split('m')[0]);
-                    }
-                    return (totalMins / 60) * rowHeight;
-                  } catch (e) {
-                    return rowHeight;
-                  }
-                };
-
-                const height = getEventHeight(event.duration, 128);
+                const durationMins = getEventMins(event.duration);
+                const height = (durationMins / 60) * 128;
                 
                 const info = getEventPresentationInfo(event.type);
                 const EventIcon = info.icon;
@@ -377,7 +358,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   <div 
                     key={event.id}
                     onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
-                    className={`absolute left-4 right-4 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
+                    className={`absolute left-0 right-4 p-4 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-4 transition-all hover:shadow-md cursor-pointer ${info.color}`}
                     style={{ top: `${top}px`, height: `${height}px` }}
                   >
                     <div className="shrink-0">
