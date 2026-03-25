@@ -9,13 +9,17 @@ import {
   Cake,
   FileText,
   Trash2,
-  Pencil
+  Pencil,
+  ClipboardCheck,
+  UserPlus,
+  Smartphone,
+  TrendingUp
 } from 'lucide-react';
 import { useAutomation, Automation } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
 
 const iconMap: Record<string, React.ElementType> = {
-  Hand, Repeat, AlertTriangle, PartyPopper, Cake, FileText
+  Hand, Repeat, AlertTriangle, PartyPopper, Cake, FileText, ClipboardCheck, UserPlus, Smartphone, TrendingUp
 };
 
 interface AutomationsListProps {
