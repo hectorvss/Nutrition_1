@@ -717,6 +717,39 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+
+        <div className="my-10 border-t border-slate-100 dark:border-slate-800/50"></div>
+
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-emerald-500">edit_note</span>
+            Latest Exercise Sensations
+          </h3>
+        </div>
+        <div className="space-y-4">
+          {(() => {
+            const allSensations = stats?.training?.sensations || [];
+            
+            // Filter by selected lift if it's not "Weekly Volume"
+            const filtered = selectedAnalysisSubject === 'Weekly Volume' 
+              ? allSensations 
+              : allSensations.filter((s: any) => s.exercise.toLowerCase().includes(selectedAnalysisSubject.toLowerCase()));
+            
+            if (filtered.length === 0) {
+              return <p className="text-center text-slate-400 text-sm py-4 italic">No specific sensations logged for this lift yet.</p>;
+            }
+
+            return filtered.map((item: any, idx: number) => (
+              <div key={idx} className="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{item.exercise}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{item.date}</span>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{item.note}"</p>
+              </div>
+            ));
+          })()}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -789,39 +822,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               )}
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mt-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span className="material-symbols-outlined text-emerald-500">edit_note</span>
-            Latest Exercise Sensations
-          </h3>
-        </div>
-        <div className="space-y-4">
-          {(() => {
-            const allSensations = stats?.training?.sensations || [];
-            
-            // Filter by selected lift if it's not "Weekly Volume"
-            const filtered = selectedAnalysisSubject === 'Weekly Volume' 
-              ? allSensations 
-              : allSensations.filter((s: any) => s.exercise.toLowerCase().includes(selectedAnalysisSubject.toLowerCase()));
-            
-            if (filtered.length === 0) {
-              return <p className="text-center text-slate-400 text-sm py-4 italic">No specific sensations logged for this lift yet.</p>;
-            }
-
-            return filtered.map((item: any, idx: number) => (
-              <div key={idx} className="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{item.exercise}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{item.date}</span>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{item.note}"</p>
-              </div>
-            ));
-          })()}
         </div>
       </div>
       </>
