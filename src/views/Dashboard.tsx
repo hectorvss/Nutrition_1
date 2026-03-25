@@ -227,7 +227,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-[520px]">
             <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">Latest Updates</h3>
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 py-2">
               {activity.map((update, idx) => {
                 const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'NEW_CLIENT' ? UserPlus : Check);
                 return (
@@ -236,14 +236,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     onClick={() => {
                         if (update.type === 'CHECK_IN') onNavigate('check-ins');
                     }}
-                    className={`flex gap-3 relative before:absolute before:left-[19px] before:top-8 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden ${update.type === 'CHECK_IN' ? 'cursor-pointer hover:bg-slate-50 p-1 -m-1 rounded-lg transition-colors' : ''}`}
+                    className={`flex gap-4 relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden ${update.type === 'CHECK_IN' ? 'cursor-pointer hover:bg-slate-50 p-2 -m-2 rounded-xl transition-colors' : ''}`}
                   >
-                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white`}>
+                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm`}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm text-slate-900 leading-tight"><span className="font-bold">{update.title}</span> {update.sub}</p>
-                      <p className="text-xs text-slate-400 mt-1">{update.time}</p>
+                    <div className="min-w-0 pt-0.5">
+                      <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{update.title}</span> {update.sub}</p>
+                      <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                        {update.time}
+                      </p>
                     </div>
                   </div>
                 );

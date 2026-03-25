@@ -37,7 +37,7 @@ const triggers: Trigger[] = [
     recommended: true
   },
   {
-    id: 'overdue-checkin',
+    id: 'checkin-overdue',
     name: 'Overdue Check-in',
     desc: 'Follow up when a client misses their scheduled check-in deadline.',
     icon: ClipboardCheck,
@@ -47,8 +47,8 @@ const triggers: Trigger[] = [
     category: 'Check-ins'
   },
   {
-    id: 'no-activity-3',
-    name: 'No Activity Alert (3 days)',
+    id: 'inactivity',
+    name: 'No Activity Alert',
     desc: "Re-engage clients who haven't logged any activity for 3 consecutive days.",
     icon: AlertTriangle,
     iconBg: 'bg-orange-100 dark:bg-orange-900/30',
@@ -77,7 +77,7 @@ const triggers: Trigger[] = [
     category: 'Logistics'
   },
   {
-    id: 'high-adherence',
+    id: 'adherence-high',
     name: 'Weekly Adherence High',
     desc: 'Congratulate clients who achieved >90% habit adherence this week.',
     icon: TrendingUp,

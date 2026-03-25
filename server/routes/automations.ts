@@ -182,10 +182,18 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         }
 
         // 6. Replace placeholders
+        const { data: managerProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', managerId)
+          .single();
+        const coachName = managerProfile?.full_name || 'your coach';
+
         let finalMessage = automation.message
           .replace(/{Client Name}/g, profile?.full_name || 'there')
           .replace(/{First Name}/g, (profile?.full_name || 'there').split(' ')[0])
-          .replace(/{Coach Name}/g, 'your coach')
+          .replace(/{Coach Name}/g, coachName)
+          .replace(/{Coach First Name}/g, coachName.split(' ')[0])
           .replace(/{Current Weight}/g, currentWeight.toString())
           .replace(/{Goal Weight}/g, goalWeight.toString())
           .replace(/{Adherence Rate}/g, `${adherence}%`)
@@ -240,62 +248,72 @@ router.get('/', verifyManager, async (req: any, res: any) => {
       const defaults = [
         {
           manager_id: managerId,
-          name: 'Welcome Message',
-          description: 'Sent to new clients',
-          trigger_id: 'new-client',
-          message: "Hi {Client Name}! Welcome to NutriDash. I'm excited to start working with you on your health goals. Please complete your onboarding profile so we can get started!",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'Hand', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
           name: 'Weekly Check-in Reminder',
-          description: 'Recurring weekly',
+          description: 'Automatically nudge clients to complete their check-in form every week.',
           trigger_id: 'weekly-checkin',
-          message: "Hey {Client Name}, it's time for your weekly check-in! Please fill out the form linked below. Staying consistent is key to reaching your goal! 💪",
+          message: "Hi {First Name}, it's check-in day! 📝 Please take a few minutes to update your progress in the app. Consistency is the key to our success!",
           delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'Repeat', iconBg: 'bg-purple-100', iconColor: 'text-purple-600' },
+          icon_info: { iconName: 'Repeat', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
           enabled: true
         },
         {
           manager_id: managerId,
-          name: 'Inactivity Alert',
-          description: 'Re-engagement campaign',
+          name: 'Overdue Check-in',
+          description: 'Follow up when a client misses their scheduled check-in deadline.',
+          trigger_id: 'checkin-overdue',
+          message: "Hi {First Name}, I noticed your check-in is a bit late. Is everything okay? Let me know if you need help with anything or if you've had a busy week! 🙏",
+          delivery_rules: { frequency: 'Every', frequencyValue: 1, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
+          icon_info: { iconName: 'ClipboardCheck', iconBg: 'bg-red-100', iconColor: 'text-red-600' },
+          enabled: true
+        },
+        {
+          manager_id: managerId,
+          name: 'No Activity Alert',
+          description: "Re-engage clients who haven't logged any activity for 3 consecutive days.",
           trigger_id: 'inactivity',
-          message: "Hi {Client Name}, we've missed you! Just wanted to check in and see how things are going. Remember, small steps forward still count — let's reconnect whenever you're ready!",
-          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
+          message: "Hey {First Name}, I haven't seen any activity in the app for a few days. Just wanted to check in and see if you're staying on track! Let me know if you need a boost. ⚡",
+          delivery_rules: { frequency: 'Every', frequencyValue: 3, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'AlertTriangle', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
           enabled: true
         },
         {
           manager_id: managerId,
-          name: 'Goal Milestone',
-          description: 'Celebration message',
-          trigger_id: 'milestone',
-          message: "Congratulations {Client Name}! 🎉 You've reached your weight goal. This is a huge achievement — let's talk about your next goal!",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'PartyPopper', iconBg: 'bg-green-100', iconColor: 'text-green-600' },
+          name: 'New Client Added',
+          description: 'Trigger immediately when you add a new client to send a welcome message.',
+          trigger_id: 'new-client',
+          message: "Welcome to the team, {First Name}! 🚀 I'm thrilled to have you here. I've just set up your profile — take a look around and let me know if you have any questions!",
+          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
+          icon_info: { iconName: 'UserPlus', iconBg: 'bg-purple-100', iconColor: 'text-purple-600' },
           enabled: true
         },
         {
           manager_id: managerId,
-          name: 'Birthday Wishes',
-          description: 'Personal touch',
+          name: 'App Setup Reminder',
+          description: "Nudge clients who haven't completed their initial app profile setup.",
+          trigger_id: 'app-setup',
+          message: "Hi {First Name}, just a quick reminder to finish setting up your profile and app preferences so we can hit the ground running! 📱",
+          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
+          icon_info: { iconName: 'Smartphone', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
+          enabled: true
+        },
+        {
+          manager_id: managerId,
+          name: 'Weekly Adherence High',
+          description: 'Congratulate clients who achieved >90% habit adherence this week.',
+          trigger_id: 'adherence-high',
+          message: "Amazing work this week, {First Name}! 🌟 Your adherence rate was {Adherence Rate}. You're absolutely crushing it. Keep that momentum going!",
+          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
+          icon_info: { iconName: 'TrendingUp', iconBg: 'bg-teal-100', iconColor: 'text-teal-600' },
+          enabled: true
+        },
+        {
+          manager_id: managerId,
+          name: 'Client Birthday',
+          description: "Send a personalized greeting on your client's special day.",
           trigger_id: 'birthday',
-          message: "Happy Birthday {Client Name}! 🎂 Wishing you a healthy and happy year ahead. You deserve to celebrate! — your coach",
+          message: "Happy Birthday, {First Name}! 🎂 Wishing you an incredible day filled with joy (and maybe a little treat). Enjoy your special day! — {Coach Name}",
           delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
           icon_info: { iconName: 'Cake', iconBg: 'bg-pink-100', iconColor: 'text-pink-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
-          name: 'Plan Renewal',
-          description: 'Retention',
-          trigger_id: 'plan-expiry',
-          message: "Hi {Client Name}, your nutrition plan is expiring in 7 days. Let's schedule a call to review your progress and plan your next phase. You've come so far — let's keep the momentum going!",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'FileText', iconBg: 'bg-teal-100', iconColor: 'text-teal-600' },
           enabled: true
         }
       ];
@@ -375,7 +393,7 @@ router.post('/cron', async (req: any, res) => {
       .from('automations')
       .select('*')
       .eq('enabled', true)
-      .in('trigger_id', ['weekly-checkin', 'birthday', 'inactivity', 'plan-expiry']);
+      .in('trigger_id', ['weekly-checkin', 'birthday', 'inactivity', 'checkin-overdue', 'app-setup', 'adherence-high']);
     
     if (!automations) return res.json({ processed: 0 });
 
@@ -385,8 +403,9 @@ router.post('/cron', async (req: any, res) => {
         .select(`
           id, 
           email, 
+          created_at,
           profiles (full_name, birthday),
-          clients_profiles (last_login),
+          clients_profiles (last_login, check_in_day, height, weight, goal),
           nutrition_plans (updated_at)
         `)
         .eq('manager_id', automation.manager_id)
@@ -396,40 +415,115 @@ router.post('/cron', async (req: any, res) => {
 
       for (const client of clients) {
         const clientProfile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles;
+        const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
         let shouldTrigger = false;
 
         if (automation.trigger_id === 'weekly-checkin') {
-          const { data: lastSent } = await supabaseAdmin
-            .from('automation_logs')
-            .select('sent_at')
-            .eq('automation_id', automation.id)
-            .eq('client_id', client.id)
-            .order('sent_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          if (!lastSent) {
-            shouldTrigger = true;
-          } else {
-            const lastSentDate = new Date(lastSent.sent_at);
-            const diffDays = (today.getTime() - lastSentDate.getTime()) / (1000 * 3600 * 24);
-            if (diffDays >= 7) shouldTrigger = true;
+          // Send if not sent in the last 7 days and it's the right day
+          const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
+          if (cProfile?.check_in_day === dayName) {
+            const { data: lastSent } = await supabaseAdmin
+              .from('automation_logs')
+              .select('sent_at')
+              .eq('automation_id', automation.id)
+              .eq('client_id', client.id)
+              .order('sent_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / (1000 * 3600 * 24) >= 6) {
+              shouldTrigger = true;
+            }
           }
         } 
+        else if (automation.trigger_id === 'checkin-overdue') {
+          // Check if today is day after check_in_day and no checkin today/yesterday
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayName = yesterday.toLocaleDateString('en-US', { weekday: 'long' });
+
+          if (cProfile?.check_in_day === yesterdayName) {
+            const { data: checkIn } = await supabaseAdmin
+              .from('check_ins')
+              .select('id')
+              .eq('client_id', client.id)
+              .gte('date', yesterday.toISOString().split('T')[0])
+              .maybeSingle();
+
+            if (!checkIn) {
+              const { data: lastSent } = await supabaseAdmin
+                .from('automation_logs')
+                .select('sent_at')
+                .eq('automation_id', automation.id)
+                .eq('client_id', client.id)
+                .order('sent_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / (1000 * 3600 * 24) >= 6) {
+                shouldTrigger = true;
+              }
+            }
+          }
+        }
         else if (automation.trigger_id === 'birthday') {
           if (clientProfile?.birthday) {
             const bday = new Date(clientProfile.birthday);
-            if (bday.getMonth() === today.getMonth() && bday.getDate() === today.getDate()) {
+            if (bday.getUTCMonth() === today.getUTCMonth() && bday.getUTCDate() === today.getUTCDate()) {
               shouldTrigger = true;
             }
           }
         }
         else if (automation.trigger_id === 'inactivity') {
-          const lastActivity = client.clients_profiles?.[0]?.last_login;
+          const lastActivity = cProfile?.last_login;
           if (lastActivity) {
             const lastDate = new Date(lastActivity);
             const diffDays = (today.getTime() - lastDate.getTime()) / (1000 * 3600 * 24);
-            if (diffDays >= 7) shouldTrigger = true;
+            if (diffDays >= 3) {
+              const { data: lastSent } = await supabaseAdmin
+                .from('automation_logs')
+                .select('sent_at')
+                .eq('automation_id', automation.id)
+                .eq('client_id', client.id)
+                .order('sent_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / (1000 * 3600 * 24) >= 3) {
+                shouldTrigger = true;
+              }
+            }
+          }
+        }
+        else if (automation.trigger_id === 'app-setup') {
+          // Check if joined > 2 days ago and profile incomplete (e.g. no height or goal)
+          const joinedAt = new Date(client.created_at);
+          const diffDays = (today.getTime() - joinedAt.getTime()) / (1000 * 3600 * 24);
+          if (diffDays >= 2 && (!cProfile?.height || !cProfile?.goal)) {
+            const { data: lastSent } = await supabaseAdmin
+              .from('automation_logs')
+              .select('sent_at')
+              .eq('automation_id', automation.id)
+              .eq('client_id', client.id)
+              .maybeSingle();
+            if (!lastSent) shouldTrigger = true;
+          }
+        }
+        else if (automation.trigger_id === 'adherence-high') {
+          // Check on Sundays for weekly adherence > 90%
+          if (today.getDay() === 0) { // Sunday
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const { data: habits } = await supabaseAdmin
+              .from('habit_logs')
+              .select('status')
+              .eq('client_id', client.id)
+              .gte('date', sevenDaysAgo.toISOString().split('T')[0]);
+            
+            const adherence = habits && habits.length > 0 
+              ? Math.round((habits.filter(h => h.status === 'completed').length / habits.length) * 100)
+              : 0;
+
+            if (adherence >= 90) shouldTrigger = true;
           }
         }
 
