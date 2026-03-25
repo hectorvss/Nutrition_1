@@ -1345,7 +1345,10 @@ function IntegrationsSettings() {
 function AppearanceSettings() {
   const { settings, updateTheme, isLoading } = useTheme();
   const { t } = useLanguage();
-  const [showCustom, setShowCustom] = useState(false);
+  const [showCustom, setShowCustom] = useState(() => {
+    const presets = [ '#10b981','#3b82f6','#0d9488','#8b5cf6','#f43f5e','#f59e0b','#64748b','#0f172a' ];
+    return !presets.includes(settings.theme_color);
+  });
   const [customColor, setCustomColor] = useState(settings.theme_color);
 
   // Debounced theme update for custom picker
@@ -1364,152 +1367,158 @@ function AppearanceSettings() {
     </div>
   );
 
+  const presets = [
+    { name: 'Soft Green', color: '#10b981' },
+    { name: 'Deep Blue', color: '#3b82f6' },
+    { name: 'Teal', color: '#0d9488' },
+    { name: 'Purple', color: '#8b5cf6' },
+    { name: 'Rose', color: '#f43f5e' },
+    { name: 'Amber', color: '#f59e0b' },
+    { name: 'Slate', color: '#64748b' },
+    { name: 'Dark', color: '#0f172a' },
+  ];
+
+  const isPresetSelected = presets.some(p => p.color === settings.theme_color);
+
   return (
     <div className="space-y-6">
-      <AnimatePresence mode="wait">
-        {!showCustom ? (
-          <motion.div
-            key="presets"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6"
-          >
-            <div className="mb-6">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-all duration-300">
+        <div className="p-6">
+          <div className="mb-6 flex items-start justify-between">
+            <div>
               <h2 className="text-lg font-bold text-slate-900">{t('theme_color')}</h2>
               <p className="text-sm text-slate-500 mt-1">Select a primary color theme for your workspace.</p>
             </div>
-            <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-9 gap-4 items-center">
-              {[
-                { name: 'Soft Green', color: '#10b981' },
-                { name: 'Deep Blue', color: '#3b82f6' },
-                { name: 'Teal', color: '#0d9488' },
-                { name: 'Purple', color: '#8b5cf6' },
-                { name: 'Rose', color: '#f43f5e' },
-                { name: 'Amber', color: '#f59e0b' },
-                { name: 'Slate', color: '#64748b' },
-                { name: 'Dark', color: '#0f172a' },
-              ].map((theme) => (
-                <button 
-                  key={theme.name} 
-                  onClick={() => {
-                    updateTheme({ theme_color: theme.color });
-                    setCustomColor(theme.color);
-                  }}
-                  className="group flex flex-col items-center gap-2"
-                >
-                  <div 
-                    className={`w-12 h-12 rounded-full transition-all border-4 ${
-                      settings.theme_color === theme.color 
-                        ? 'border-white ring-2 ring-emerald-500 shadow-lg scale-110' 
-                        : 'border-transparent hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: theme.color }}
-                  />
-                  <span className={`text-xs font-medium ${settings.theme_color === theme.color ? 'text-slate-900' : 'text-slate-500 group-hover:text-slate-900'}`}>
-                    {theme.name}
-                  </span>
-                </button>
-              ))}
-              <button 
-                onClick={() => setShowCustom(true)}
-                className="group flex flex-col items-center gap-2"
-              >
-                <div className={`w-12 h-12 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 transition-all ${[ '#10b981','#3b82f6','#0d9488','#8b5cf6','#f43f5e','#f59e0b','#64748b','#0f172a' ].includes(settings.theme_color) ? '' : 'ring-2 ring-emerald-500 border-white'}`}>
-                  <Palette className="w-5 h-5" />
-                </div>
-                <span className="text-xs text-slate-500 group-hover:text-emerald-500 transition-colors">Custom</span>
-              </button>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="custom"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6"
-          >
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">Custom Workspace Color</h2>
-                <p className="text-sm text-slate-500 mt-1">Choose your own brand color for the interface.</p>
-              </div>
+            {showCustom && (
               <button 
                 onClick={() => setShowCustom(false)}
-                className="text-sm font-bold text-slate-500 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all"
+                className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors"
               >
-                Back to Presets
+                Close Custom
               </button>
-            </div>
+            )}
+          </div>
 
-            <div className="flex flex-col md:flex-row items-center gap-8 py-4">
-              {/* Color Preview & Native Picker Wrapper */}
-              <div className="relative group">
-                <input 
-                  type="color"
-                  value={customColor}
-                  onChange={(e) => setCustomColor(e.target.value)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
+          <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-9 gap-4 items-center">
+            {presets.map((theme) => (
+              <button 
+                key={theme.name} 
+                onClick={() => {
+                  updateTheme({ theme_color: theme.color });
+                  setCustomColor(theme.color);
+                  setShowCustom(false);
+                }}
+                className="group flex flex-col items-center gap-2"
+              >
                 <div 
-                  className="w-32 h-32 rounded-3xl shadow-xl border-8 border-white group-hover:scale-105 transition-transform duration-300"
-                  style={{ backgroundColor: customColor }}
+                  className={`w-12 h-12 rounded-full transition-all border-4 ${
+                    settings.theme_color === theme.color 
+                      ? 'border-white ring-2 ring-emerald-500 shadow-md scale-110' 
+                      : 'border-transparent hover:scale-110'
+                  }`}
+                  style={{ backgroundColor: theme.color }}
                 />
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform cursor-pointer pointer-events-none">
-                  <Palette className="w-4 h-4" />
-                </div>
+                <span className={`text-xs font-medium ${settings.theme_color === theme.color ? 'text-slate-900' : 'text-slate-500 group-hover:text-slate-900'}`}>
+                  {theme.name}
+                </span>
+              </button>
+            ))}
+            <button 
+              onClick={() => setShowCustom(!showCustom)}
+              className="group flex flex-col items-center gap-2"
+            >
+              <div className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all ${!isPresetSelected || showCustom ? 'border-emerald-500 bg-emerald-50 text-emerald-600 ring-2 ring-emerald-500 ring-offset-2' : 'border-slate-300 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50'}`}>
+                <Palette className="w-5 h-5" />
               </div>
+              <span className={`text-xs transition-colors ${!isPresetSelected || showCustom ? 'text-emerald-600 font-bold' : 'text-slate-500 group-hover:text-emerald-500'}`}>Custom</span>
+            </button>
+          </div>
+        </div>
 
-              <div className="flex-1 w-full space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Hex Color Code</label>
-                  <div className="flex items-center gap-3">
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-slate-400 font-bold">#</span>
-                      <input 
-                        type="text"
-                        value={customColor.startsWith('#') ? customColor.substring(1) : customColor}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val.length <= 6 && /^[0-9A-Fa-f]*$/.test(val)) {
-                            setCustomColor(`#${val}`);
-                          }
-                        }}
-                        className="w-full pl-7 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold text-slate-900 uppercase transition-all"
-                        placeholder="000000"
-                      />
-                    </div>
+        <AnimatePresence>
+          {showCustom && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="border-t border-slate-100 bg-slate-50/50"
+            >
+              <div className="p-8">
+                <div className="flex flex-col md:flex-row items-center gap-10">
+                  {/* Color Preview & Native Picker Wrapper */}
+                  <div className="relative group shrink-0">
+                    <input 
+                      type="color"
+                      value={customColor}
+                      onChange={(e) => setCustomColor(e.target.value)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    />
                     <div 
-                      className="w-10 h-10 rounded-lg shadow-inner border border-slate-100"
+                      className="w-32 h-32 rounded-[2.5rem] shadow-2xl border-8 border-white group-hover:scale-105 transition-transform duration-300"
                       style={{ backgroundColor: customColor }}
                     />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Preview</p>
-                    <div className="mt-3 flex gap-2">
-                      <div className="w-6 h-6 rounded-full" style={{ backgroundColor: customColor }} />
-                      <div className="h-6 w-full rounded bg-white border border-slate-200" style={{ boxShadow: `inset 4px 0 0 ${customColor}` }} />
+                    <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform cursor-pointer pointer-events-none border-4 border-white">
+                      <Palette className="w-5 h-5" />
                     </div>
                   </div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Tone</p>
-                    <div className="mt-3 flex gap-2">
-                       {/* Subtle spectrum preview */}
-                       {[0.2, 0.4, 0.6, 0.8, 1].map(op => (
-                         <div key={op} className="w-full h-6 rounded" style={{ backgroundColor: customColor, opacity: op }} />
-                       ))}
+
+                  <div className="flex-1 w-full space-y-6">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-bold text-slate-700">Hex Color Code</label>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-200">Custom Brand</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="relative flex-1">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-slate-400 font-bold">#</span>
+                          <input 
+                            type="text"
+                            value={customColor.startsWith('#') ? customColor.substring(1).toUpperCase() : customColor.toUpperCase()}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val.length <= 6 && /^[0-9A-Fa-f]*$/.test(val)) {
+                                setCustomColor(`#${val}`);
+                              }
+                            }}
+                            className="w-full pl-8 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-mono font-bold text-slate-900 transition-all outline-none shadow-sm"
+                            placeholder="000000"
+                          />
+                        </div>
+                        <div 
+                          className="w-12 h-12 rounded-xl shadow-inner border border-white"
+                          style={{ backgroundColor: customColor }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Interface Preview</p>
+                        <div className="mt-4 flex flex-col gap-2">
+                          <div className="h-2 w-2/3 rounded bg-slate-100" />
+                          <div className="h-8 w-full rounded-lg bg-white border border-slate-100 flex items-center px-3" style={{ borderLeft: `4px solid ${customColor}` }}>
+                             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: customColor, opacity: 0.2 }} />
+                             <div className="ml-2 h-2 w-12 rounded bg-slate-100" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Dynamic Tones</p>
+                        <div className="mt-4 flex gap-1.5 h-10">
+                           {[0.1, 0.3, 0.5, 0.7, 0.9, 1].map(op => (
+                             <div key={op} className="flex-1 rounded-md" style={{ backgroundColor: customColor, opacity: op }} />
+                           ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex items-center justify-between">
         <div>
