@@ -74,8 +74,19 @@ const getEventMins = (duration: string | number) => {
   }
 };
 const getEventMinsFromTime = (time: string) => {
+  if (!time) return 540; // 09:00
   const [h, m] = time.split(':').map(Number);
   return h * 60 + (m || 0);
+};
+
+const getEventFullMins = (event: any) => {
+  if (event.time && event.endTime) {
+    const start = getEventMinsFromTime(event.time);
+    let end = getEventMinsFromTime(event.endTime);
+    if (end <= start) end += 1440; // Fix overnight or same-time
+    return Math.min(end - start, 1440);
+  }
+  return getEventMins(event.duration);
 };
 
 const getOverlapData = (events: any[]) => {
@@ -90,7 +101,7 @@ const getOverlapData = (events: any[]) => {
 
   sorted.forEach(event => {
     const startMins = getEventMinsFromTime(event.time);
-    const durationMins = getEventMins(event.duration);
+    const durationMins = getEventFullMins(event);
     const endMins = startMins + durationMins;
 
     if (startMins >= clusterEnd) {
@@ -113,7 +124,7 @@ const getOverlapData = (events: any[]) => {
       const startMins = getEventMinsFromTime(event.time);
       for (let i = 0; i < columns.length; i++) {
         const lastInCol = columns[i][columns[i].length - 1];
-        const lastEnd = getEventMinsFromTime(lastInCol.time) + getEventMins(lastInCol.duration);
+        const lastEnd = getEventMinsFromTime(lastInCol.time) + getEventFullMins(lastInCol);
         if (startMins >= lastEnd) {
           columns[i].push(event);
           placed = true;
@@ -375,7 +386,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   const minuteOffset = event.time.includes(':') ? parseInt(event.time.split(':')[1]) * (96 / 60) : 0;
                   const top = hourIdx * 96 + minuteOffset;
                   
-                  const durationMins = getEventMins(event.duration);
+                  const durationMins = getEventFullMins(event);
                   const maxPossibleHeight = (24 * 96) - top; // Clamp to midnight
                   const height = Math.min(Math.max((durationMins / 60) * 96, 40), maxPossibleHeight);
                   const style = overlapData[event.id] || { width: 100, left: 0 };
@@ -444,7 +455,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   const minuteOff = (timeParts[1] || 0) * (128 / 60);
                   const top = hourIdx * 128 + minuteOff;
                   
-                  const durationMins = getEventMins(event.duration);
+                  const durationMins = getEventFullMins(event);
                   const maxPossibleHeight = (24 * 128) - top; // Clamp to midnight
                   const height = Math.min(Math.max((durationMins / 60) * 128, 40), maxPossibleHeight);
                   const info = getEventPresentationInfo(event.type as EventType);

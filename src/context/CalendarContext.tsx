@@ -6,7 +6,8 @@ export type EventType = 'Video Call' | 'In-Person' | 'Training' | 'Nutrition' | 
 export interface CalendarEvent {
   id: string;
   time: string; // e.g. "09:00" or "14:30"
-  date: string; // YYYY-MM-DD format ideally, but we can store simpler for now or use full ISO dates
+  endTime?: string; // e.g. "10:30" 
+  date: string; // YYYY-MM-DD format ideally
   duration: string; // e.g. "30m", "1h", "1h 30m"
   title: string;
   type: EventType;
@@ -83,7 +84,8 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     const clientName = t.client || t.users?.name || t.users?.email || 'General';
     return {
       id: t.id,
-      time: t.time || t.start_time || '09:00',
+      time: t.time ? t.time.substring(0, 5) : '09:00',
+      endTime: t.end_time ? t.end_time.substring(0, 5) : null,
       date: t.date,
       duration: t.duration || '1h',
       title: t.title,
@@ -122,6 +124,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
           type: event.type,
           date: event.date,
           time: event.time,
+          end_time: event.endTime,
           duration: event.duration || '1h',
           client_id: event.clientId,
           status: 'pending'
@@ -156,6 +159,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
           type: updates.type,
           date: updates.date,
           time: updates.time,
+          end_time: updates.endTime,
           duration: updates.duration,
           client_id: updates.clientId,
           status: 'pending'
