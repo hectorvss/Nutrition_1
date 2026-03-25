@@ -360,7 +360,8 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   const top = hourIdx * 96 + minuteOffset;
                   
                   const durationMins = getEventMins(event.duration);
-                  const height = (durationMins / 60) * 96;
+                  const maxPossibleHeight = (24 * 96) - top; // Clamp to midnight
+                  const height = Math.min(Math.max((durationMins / 60) * 96, 40), maxPossibleHeight);
                   const style = overlapData[event.id] || { width: 100, left: 0 };
                   
                   return (
@@ -428,7 +429,8 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   const top = hourIdx * 128 + minuteOff;
                   
                   const durationMins = getEventMins(event.duration);
-                  const height = (durationMins / 60) * 128;
+                  const maxPossibleHeight = (24 * 128) - top; // Clamp to midnight
+                  const height = Math.min(Math.max((durationMins / 60) * 128, 40), maxPossibleHeight);
                   const info = getEventPresentationInfo(event.type as EventType);
                   const EventIcon = info.icon;
                   const style = overlapData[event.id] || { width: 100, left: 0 };
