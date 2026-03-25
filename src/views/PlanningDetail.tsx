@@ -1,36 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  BarChart3,
-  ChevronRight, 
-  Edit3, 
-  History,
-  CheckCircle,
-  TrendingUp,
-  Plus,
-  Trash2,
-  Calendar,
-  Zap,
-  GripVertical,
-  Map as MapIcon,
-  Utensils as NutritionIcon,
-  Dumbbell as TrainingIcon,
-  Activity,
-  Target,
-  Scale as ScaleIcon,
-  Brain as MindsetIcon,
-  Footprints,
-  Moon,
-  Droplets,
-  PlusCircle,
-  Sticker,
-  FileText,
-  AlertTriangle as WarningIcon,
-  Sparkles,
-  ArrowUpRight,
-  ChevronDown,
-  Info
-} from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 
@@ -43,23 +12,22 @@ interface RoadmapBlock {
   endWeek: number;
   type: 'nutrition' | 'training';
   color: string;
-  // Nutrition
+  // Nutrition fields
   kcal?: string;
   macros?: string;
   deficit?: string;
+  freq?: string;
   water?: string;
   rationale?: string;
   timing?: string[];
-  micros?: { label: string; value: string }[];
-  // Training
+  focusItems?: string[];
+  // Training fields
   focus?: string;
   sessions?: string;
-  intensity?: string;
-  tempo?: string;
-  loading?: string;
-  scope?: string;
-  recovery?: string;
-  // Analysis
+  duration?: string;
+  deload?: string;
+  intensityTargets?: string[];
+  // Shared
   successCriteria?: string;
   redFlags?: string;
 }
@@ -67,8 +35,8 @@ interface RoadmapBlock {
 interface Milestone {
   id: string;
   label: string;
-  week: number;
-  status: 'done' | 'pending';
+  week: string;
+  status: 'done' | 'next' | 'future';
 }
 
 interface Goal {
@@ -77,14 +45,12 @@ interface Goal {
   label: string;
   desc: string;
   value: number;
-  targetValue: string;
-  currentValue: string;
+  currentLabel: string;
+  targetLabel: string;
 }
 
 interface RoadmapData {
   status: string;
-  startDate: string;
-  endDate: string;
   currentWeek: number;
   totalWeeks: number;
   nutrition: RoadmapBlock[];
@@ -98,83 +64,68 @@ interface RoadmapData {
   };
 }
 
-// --- MOCK DATA GENERATOR ---
+// --- MOCK DATA FOR INITIALIZATION ---
 const getInitialData = (): RoadmapData => ({
   status: 'LIVE',
-  startDate: '2023-10-01',
-  endDate: '2024-01-15',
-  currentWeek: 5,
+  currentWeek: 4,
   totalWeeks: 12,
   nutrition: [
     { 
-      id: 'n1', title: 'Maintenance', startWeek: 1, endWeek: 4, type: 'nutrition', color: 'bg-[#f0fdf4] border-[#17cf54] text-[#166534]',
-      kcal: '2,650', macros: '30/40/30', deficit: '0', water: '3.0', 
-      rationale: 'Initial phase to establish metabolic baseline.',
-      timing: ['Pre: 40g Pro / 60g Carb', 'Post: 40g Pro / 80g Carb'],
+      id: 'n1', title: 'Maintenance', startWeek: 1, endWeek: 4, type: 'nutrition', 
+      color: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
+      kcal: '2,450', macros: '35/35/30', freq: '4 Meals', water: '3.0 L',
+      rationale: 'Establishing metabolic baseline and assessing initial response.'
     },
     { 
-      id: 'n2', title: 'Deficit (-500)', startWeek: 5, endWeek: 8, type: 'nutrition', color: 'bg-[#fffbeb] border-[#f59e0b] text-[#92400e]',
-      kcal: '2,150', macros: '40/30/30', deficit: '-500', water: '3.5',
-      rationale: 'Calculated -500kcal deficit targeting ~1lb/week fat loss.',
-      timing: ['Pre: 30g Pro / 40g Carb', 'Post: 40g Pro / 50g Carb'],
+      id: 'n2', title: 'Deficit (-500)', startWeek: 5, endWeek: 8, type: 'nutrition', 
+      color: 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
+      kcal: '2,150', macros: '40/30/30', freq: '4 Meals', water: '3.5 L',
+      deficit: '-500',
+      rationale: 'Aggressive fat loss while preserving lean mass. Focus on high protein satiety and volume-dense foods to manage hunger. Strategic re-feeds on training days.',
+      focusItems: ['Timing: 40g Protein pre/post workout', 'Supplements: Electrolyte support, Omega-3s']
+    },
+    { 
+      id: 'n3', title: 'Maintenance', startWeek: 9, endWeek: 12, type: 'nutrition', 
+      color: 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400',
+      kcal: '2,300', macros: '35/35/30', freq: '4 Meals', water: '3.2 L',
+      rationale: 'Reverse diet phase to solidify progress.'
     },
   ],
   training: [
     { 
-      id: 't1', title: 'Hypertrophy Base (4x)', startWeek: 1, endWeek: 6, type: 'training', color: 'bg-[#eef2ff] border-[#6366f1] text-[#3730a3]',
-      focus: 'Hypertrophy', sessions: '4 Lift Days', intensity: 'RPE 7-9', tempo: '3-0-1-0',
+      id: 't1', title: 'Hypertrophy Base (4x)', startWeek: 1, endWeek: 6, type: 'training', 
+      color: 'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
+      focus: 'Hypertrophy', sessions: '4 Sessions', duration: '65 Min', deload: 'Active',
+      intensityTargets: ['RPE 7-9 (Technical)', 'Rest: 60-90s', 'Tempo: 3-0-1-0']
     },
     { 
-      id: 't2', title: 'Strength Peak (3x)', startWeek: 7, endWeek: 12, type: 'training', color: 'bg-[#fff1f2] border-[#f43f5e] text-[#9f1239]',
-      focus: 'Strength', sessions: '3 Lift Days', intensity: 'RPE 8-10', tempo: '2-0-X-0',
+      id: 't2', title: 'Strength Peak (3x)', startWeek: 7, endWeek: 12, type: 'training', 
+      color: 'bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400',
+      focus: 'Strength', sessions: '3 Sessions', duration: '75 Min', deload: 'Passive',
+      intensityTargets: ['RPE 8-10', 'Rest: 120-180s', 'Tempo: 2-0-X-0']
     },
   ],
   goals: [
-    { id: 'g1', type: 'physical', label: 'Weight Target', desc: 'Reach 140 lbs', value: 60, targetValue: '140 lbs', currentValue: '150 lbs' },
-    { id: 'g2', type: 'nutrition', label: 'Adherence', desc: '90%+ Accuracy', value: 85, targetValue: '90%+', currentValue: 'Consistent' },
-    { id: 'g3', type: 'training', label: 'Frequency', desc: '4x/wk Sessions', value: 100, targetValue: '100%', currentValue: '16/16 sessions' },
+    { id: 'g1', type: 'physical', label: 'Physical', desc: 'Lose 10lbs fat, maintain muscle', value: 60, currentLabel: '150 lbs', targetLabel: 'Target: 140 lbs' },
+    { id: 'g2', type: 'nutrition', label: 'Nutrition', desc: 'Adherence to deficit macros', value: 85, currentLabel: 'Consistent', targetLabel: 'Target: 90%+' },
+    { id: 'g3', type: 'training', label: 'Training', desc: 'Complete all Hypertrophy sessions', value: 100, currentLabel: '16/16 sessions', targetLabel: 'Target: 100%' },
+    { id: 'g4', type: 'mindset', label: 'Mindset', desc: 'Improve sleep quality & stress', value: 70, currentLabel: 'Avg 6.5h sleep', targetLabel: 'Target: 7.5h+' },
   ],
   milestones: [
-    { id: 'm1', label: 'Functional Baseline Established', week: 2, status: 'done' },
-    { id: 'm2', label: 'Metabolic Flexibility Optimization', week: 6, status: 'pending' },
-    { id: 'm3', label: 'Peak Performance Cycle Start', week: 9, status: 'pending' },
+    { id: 'm1', label: 'Program Start', week: 'Oct 01', status: 'done' },
+    { id: 'm2', label: 'Phase 2 Review', week: 'Nov 15 (Next)', status: 'next' },
+    { id: 'm3', label: 'Begin Strength Peak', week: 'Dec 15', status: 'future' },
   ],
   assumptions: {
     steps: '10,000 - 12,000',
     sleep: '7.5 hours minimum',
-    constraints: 'Dairy-free'
+    constraints: 'Dairy-free, prefers higher protein distribution early in day.'
   }
 });
 
-// --- HELPER COMPONENTS ---
-
-const InlineInput = ({ value, onChange, className = "", prefix = null, suffix = null, placeholder = "..." }: any) => (
-  <div className={`group relative flex items-center ${className}`}>
-    {prefix && <span className="mr-1">{prefix}</span>}
-    <input 
-      className="bg-transparent border-none p-0 focus:ring-0 w-full font-bold outline-none selection:bg-emerald-100"
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-    />
-    {suffix && <span className="ml-1">{suffix}</span>}
-    <div className="absolute -bottom-0.5 left-0 w-0 h-0.5 bg-[#17cf54] transition-all group-focus-within:w-full" />
-  </div>
-);
-
-const SectionHeader = ({ icon: Icon, title, subtitle, action = null }: { icon: any, title: string, subtitle: string, action?: any }) => (
-  <div className="flex justify-between items-center mb-6">
-    <div className="flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm">
-        <Icon className="w-6 h-6" />
-      </div>
-      <div>
-        <h3 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h3>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{subtitle}</p>
-      </div>
-    </div>
-    {action}
-  </div>
+// --- HELPER: ICON COMPONENT ---
+const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
+  <span className={`material-symbols-outlined ${className}`} style={{ fontSize: 'inherit' }}>{name}</span>
 );
 
 export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (view: string) => void, clientId?: string }) {
@@ -194,13 +145,16 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
       const data = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`);
       const roadmapData = data.data_json && data.data_json.nutrition ? data.data_json : getInitialData();
       
-      // Ensure milestones exist
+      // Migration/Safety checks for new fields
       if (!roadmapData.milestones) roadmapData.milestones = getInitialData().milestones;
+      if (!roadmapData.assumptions) roadmapData.assumptions = getInitialData().assumptions;
       
       setRoadmap(roadmapData);
-      const currentWeek = roadmapData.currentWeek || 1;
+      
+      // Default selection to current phase
+      const currentWeek = roadmapData.currentWeek || 4;
       const currentNut = roadmapData.nutrition.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-      setSelectedBlockId(currentNut?.id || (roadmapData.nutrition && roadmapData.nutrition.length > 0 ? roadmapData.nutrition[0].id : null));
+      setSelectedBlockId(currentNut?.id || roadmapData.nutrition[0]?.id || null);
     } catch (error) {
       setRoadmap(getInitialData());
     } finally {
@@ -214,10 +168,12 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
         method: 'POST',
         body: JSON.stringify(roadmap)
       });
-    } catch (e) {}
+    } catch (e) {
+      console.error("Save failed:", e);
+    }
   };
 
-  const updateBlockData = (blockId: string, updates: Partial<RoadmapBlock>) => {
+  const updateBlock = (blockId: string, updates: Partial<RoadmapBlock>) => {
     if (!roadmap) return;
     const isNutrition = roadmap.nutrition.some(b => b.id === blockId);
     const key = isNutrition ? 'nutrition' : 'training';
@@ -235,388 +191,532 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   if (loading || !roadmap) return null;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f8fafc] font-sans selection:bg-[#17cf54]/20 no-scrollbar">
-      <div className="max-w-[1240px] mx-auto p-4 md:p-8 space-y-8 pb-20">
-        
-        {/* --- 1. HEADER --- */}
-        <header className="flex flex-col md:flex-row justify-between items-center bg-white p-6 rounded-[24px] shadow-sm border border-slate-100 gap-6">
-          <div className="flex items-center gap-6 w-full md:w-auto">
-            <div 
-              className="w-16 h-16 rounded-[20px] bg-slate-100 bg-cover bg-center border-2 border-slate-50 shadow-sm"
-              style={{ backgroundImage: `url(${client?.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'})` }}
-            />
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">{client?.name}</h1>
-                <span className="bg-amber-100 text-amber-700 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-200 shadow-sm">Editing Draft</span>
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#f8fafc] dark:bg-[#0f172a] font-['Manrope'] selection:bg-[#17cf54]/20">
+      
+      {/* --- SIDEBAR PLACEHOLDER (Managed by App.tsx) --- */}
+      {/* We only implement the main content area for this view */}
+
+      <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
+        <div className="w-full mx-auto flex flex-col gap-6 max-w-[1240px]">
+          
+          {/* --- 1. HEADER SECTION --- */}
+          <div className="flex flex-col gap-4">
+            <nav aria-label="Breadcrumb" className="flex text-sm text-[#64748b] dark:text-slate-400">
+              <ol className="inline-flex items-center space-x-1 md:space-x-3">
+                <li className="inline-flex items-center">
+                  <button onClick={() => onNavigate('planning')} className="inline-flex items-center hover:text-[#17cf54] transition-colors focus:outline-none">
+                    Planning
+                  </button>
+                </li>
+                <li>
+                  <div className="flex items-center">
+                    <Icon name="chevron_right" className="text-[16px] mx-1" />
+                    <span className="text-[#0f172a] dark:text-white font-medium">{client?.name}</span>
+                  </div>
+                </li>
+              </ol>
+            </nav>
+
+            <div className="relative bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-amber-200 dark:border-amber-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 overflow-hidden">
+              <div className="absolute top-0 right-0 bg-amber-400 text-amber-900 text-[10px] font-bold px-4 py-1 rounded-bl-lg shadow-sm z-10">
+                EDITING DRAFT
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Week: <span className="text-slate-900">{roadmap.currentWeek}</span></span>
-                <span className="w-1 h-1 rounded-full bg-slate-300 mx-1"></span>
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Goal: <span className="text-[#17cf54]">{client?.goal || 'Body Composition'}</span></span>
+              
+              <div className="flex items-center gap-4 relative z-10">
+                <div 
+                  className="w-16 h-16 rounded-full bg-cover bg-center shadow-sm border-2 border-slate-50" 
+                  style={{ backgroundImage: `url("${client?.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'}")` }}
+                />
+                <div>
+                  <h2 className="text-2xl font-bold text-[#0f172a] dark:text-white leading-tight">{client?.name}</h2>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-sm text-[#64748b]">{client?.gender}, {client?.age} y.o.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 relative z-10">
+                <div className="bg-[#17cf54] text-white rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
+                  <Icon name="play_circle" className="fill-1" />
+                  <span className="font-bold text-sm">Program: {roadmap.status}</span>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button className="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-semibold text-sm transition-colors border border-[#e2e8f0] dark:border-[#334155]">
+                    Discard
+                  </button>
+                  <button onClick={handleSave} className="flex-1 sm:flex-none py-2 px-6 rounded-xl bg-[#17cf54] hover:bg-[#14b549] text-white font-bold text-sm transition-colors shadow-sm active:scale-[0.98]">
+                    Save Draft
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            <button className="flex-1 md:flex-none px-6 py-3 rounded-2xl bg-slate-50 text-slate-400 font-bold text-xs uppercase tracking-widest border border-slate-200 transition-all hover:text-slate-600 hover:border-slate-300">
-               Program: <span className="text-[#17cf54]">Live</span>
-            </button>
-            <button onClick={handleSave} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-[#17cf54] text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#14b549] transition-all shadow-lg shadow-[#17cf54]/20 active:scale-95">
-              <CheckCircle className="w-4 h-4" /> Save Program
-            </button>
-          </div>
-        </header>
 
-        <main className="grid grid-cols-1 gap-8">
-          
           {/* --- 2. MASTER ROADMAP --- */}
-          <section className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100 overflow-hidden relative group">
-            <SectionHeader 
-              icon={MapIcon} 
-              title="Master Roadmap" 
-              subtitle="Program Strategy Timeline" 
-              action={
-                <div className="flex gap-2">
-                  <button className="px-4 py-2 rounded-xl bg-slate-50 text-slate-400 font-bold text-[10px] uppercase tracking-widest border border-slate-200 hover:text-[#17cf54] hover:bg-[#17cf54]/5 transition-all">Add Phase</button>
-                  <button className="p-2.5 text-slate-300 hover:text-slate-600 transition-colors"><Info className="w-5 h-5" /></button>
-                </div>
-              }
-            />
+          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white flex items-center gap-2">
+                <Icon name="map" className="text-[#17cf54]" />
+                Master Roadmap
+              </h3>
+              <div className="flex gap-3">
+                <button className="flex items-center gap-1 text-sm font-semibold text-amber-600 dark:text-amber-500 hover:text-amber-700 transition-colors bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg">
+                  <Icon name="add" className="text-[18px]" /> Nutrition Phase
+                </button>
+                <button className="flex items-center gap-1 text-sm font-semibold text-purple-600 dark:text-purple-500 hover:text-purple-700 transition-colors bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg">
+                  <Icon name="add" className="text-[18px]" /> Training Block
+                </button>
+              </div>
+            </div>
 
-            <div className="overflow-x-auto pb-8 relative no-scrollbar">
-              <div className="min-w-[1000px] space-y-6 relative px-4">
-                
-                {/* Timeline Header */}
-                <div className="flex justify-between text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">
-                  {Array.from({ length: roadmap.totalWeeks }).map((_, i) => (
-                    <span key={i} className={`w-1/12 text-center ${i + 1 === roadmap.currentWeek ? 'text-[#17cf54]' : ''}`}>W{i + 1}</span>
+            <div className="relative w-full overflow-x-auto pb-4 no-scrollbar">
+              <div className="min-w-[1000px]">
+                {/* Week Labels */}
+                <div className="flex justify-between px-2 mb-2 text-xs font-semibold text-slate-400">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <span key={i} className="w-1/12 text-center">W{i + 1}</span>
                   ))}
-                </div>
-
-                {/* Vertical Separators */}
-                <div className="absolute inset-x-4 top-8 bottom-0 flex justify-between pointer-events-none opacity-20">
-                  {Array.from({ length: roadmap.totalWeeks + 1 }).map((_, i) => (
-                    <div key={i} className="w-px h-full bg-slate-200"></div>
-                  ))}
-                </div>
-
-                {/* Today Line */}
-                <div className="absolute top-0 bottom-0 w-0.5 bg-[#17cf54]/30 z-[5] pointer-events-none" style={{ left: `${((roadmap.currentWeek - 1 + 0.5) / roadmap.totalWeeks) * 100}%` }}>
-                  <div className="absolute -top-1 left-1/2 -translateX-1/2 w-3 h-3 bg-[#17cf54] rounded-full border-2 border-white shadow-sm" />
                 </div>
 
                 {/* Nutrition Lane */}
-                <div className="flex items-center gap-6">
-                  <div className="w-20 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Nutrition</div>
-                  <div className="flex-1 flex gap-2 h-16 relative">
-                    {roadmap.nutrition.map(block => (
-                      <motion.div 
+                <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-[#e2e8f0] dark:border-[#334155] mb-4">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Nutrition</h4>
+                  <div className="flex gap-1 h-12 relative">
+                    {roadmap.nutrition.map((block) => (
+                      <div 
                         key={block.id}
-                        whileHover={{ y: -2 }}
-                        style={{ width: `${((block.endWeek - block.startWeek + 1) / roadmap.totalWeeks) * 100}%` }}
                         onClick={() => setSelectedBlockId(block.id)}
-                        className={`h-full border-[1.5px] rounded-[18px] flex flex-col items-center justify-center p-2 cursor-pointer transition-all shadow-sm ${block.color} ${selectedBlockId === block.id ? 'ring-4 ring-[#17cf54]/10 border-current shadow-lg scale-[1.02] z-10' : 'opacity-80 hover:opacity-100'}`}
+                        style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-[#17cf54]/50' : ''} ${block.color} ${block.startWeek === 1 ? 'rounded-l-lg' : ''} ${block.endWeek === 12 ? 'rounded-r-lg' : ''}`}
                       >
-                        <span className="text-[10px] font-black uppercase tracking-wider text-center line-clamp-1">{block.title}</span>
-                      </motion.div>
+                        <span className="text-sm font-semibold truncate px-2">{block.title}</span>
+                        {block.startWeek <= roadmap.currentWeek && block.endWeek >= roadmap.currentWeek && (
+                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#17cf54] rotate-45 z-10 shrink-0 shadow-sm" />
+                        )}
+                        <button className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md">
+                          <Icon name="edit" className="text-[16px]" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Training Lane */}
-                <div className="flex items-center gap-6">
-                  <div className="w-20 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Training</div>
-                  <div className="flex-1 flex gap-2 h-16 relative">
-                    {roadmap.training.map(block => (
-                      <motion.div 
+                <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-[#e2e8f0] dark:border-[#334155]">
+                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Training</h4>
+                  <div className="flex gap-1 h-12">
+                    {roadmap.training.map((block) => (
+                      <div 
                         key={block.id}
-                        whileHover={{ y: -2 }}
-                        style={{ width: `${((block.endWeek - block.startWeek + 1) / roadmap.totalWeeks) * 100}%` }}
                         onClick={() => setSelectedBlockId(block.id)}
-                        className={`h-full border-[1.5px] rounded-[18px] flex flex-col items-center justify-center p-2 cursor-pointer transition-all shadow-sm ${block.color} ${selectedBlockId === block.id ? 'ring-4 ring-blue-500/10 border-current shadow-lg scale-[1.02] z-10' : 'opacity-80 hover:opacity-100'}`}
+                        style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-[#17cf54]/50' : ''} ${block.color} ${block.startWeek === 1 ? 'rounded-l-lg' : ''} ${block.endWeek === 12 ? 'rounded-r-lg' : ''}`}
                       >
-                        <span className="text-[10px] font-black uppercase tracking-wider text-center line-clamp-1">{block.title}</span>
-                      </motion.div>
+                        <span className="text-sm font-semibold truncate px-2">{block.title}</span>
+                        <button className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md">
+                          <Icon name="edit" className="text-[16px]" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Legend Footer */}
-            <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-center gap-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-               <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-[#17cf54]"></span> ACTIVE PHASE</div>
-               <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-200"></span> FUTURE PLANNED</div>
-               <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-slate-400 opacity-20"></span> COMPLETED</div>
-            </div>
-          </section>
-
-          {/* --- 3. GOAL TRAJECTORY --- */}
-          <section className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
-            <SectionHeader icon={TrendingUp} title="Goal Trajectory & Predictions" subtitle="Forecasted vs. Actual Progress" />
-            
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              <div className="lg:col-span-3 h-[300px] relative mt-4">
-                <svg viewBox="0 0 800 200" className="w-full h-full">
-                  {/* Grid Lines */}
-                  {[0, 50, 100, 150].map(y => (
-                    <line key={y} x1="0" y1={y} x2="800" y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                  ))}
-                  
-                  {/* Projected Trajectory (Dashed) */}
-                  <path 
-                    d="M 0 150 Q 200 130 400 110 T 800 80" 
-                    fill="none" 
-                    stroke="#17cf54" 
-                    strokeWidth="2" 
-                    strokeDasharray="8 4" 
-                    className="opacity-40"
-                  />
-                  
-                  {/* Actual Progress (Solid) */}
-                  <motion.path 
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 2, ease: "easeOut" }}
-                    d="M 0 150 L 50 148 L 100 145 L 150 146 L 200 142 L 250 138" 
-                    fill="none" 
-                    stroke="#17cf54" 
-                    strokeWidth="4" 
-                    strokeLinecap="round"
-                    className="drop-shadow-sm"
-                  />
-                  
-                  {/* Highlight Points */}
-                  <circle cx="250" cy="138" r="6" fill="#17cf54" stroke="white" strokeWidth="3" />
-                  <motion.circle 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: [1, 1.5, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    cx="250" cy="138" r="10" fill="#17cf54" opacity="0.2" 
-                  />
-                </svg>
-                
-                {/* Labels */}
-                <div className="absolute top-0 left-0 text-[10px] font-black text-slate-400 uppercase">160 lbs</div>
-                <div className="absolute bottom-0 left-0 text-[10px] font-black text-slate-400 uppercase">Current W{roadmap.currentWeek}</div>
-                <div className="absolute bottom-0 right-0 text-[10px] font-black text-slate-400 uppercase">Target W12</div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 flex justify-between items-center group transition-all hover:bg-white hover:shadow-md">
-                   <div className="flex flex-col">
-                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Projected End Weight</span>
-                     <span className="text-xl font-black text-slate-900 tracking-tight">142.5 <span className="text-sm font-bold text-slate-400">lbs</span></span>
-                   </div>
-                   <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#17cf54] shadow-sm border border-slate-100"><ArrowUpRight className="w-5 h-5" /></div>
+          {/* --- 3. GOAL TRAJECTORY & PREDICTIONS --- */}
+          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155] overflow-hidden">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white flex items-center gap-2">
+                <Icon name="analytics" className="text-[#17cf54]" />
+                Goal Trajectory & Predictions
+              </h3>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span className="text-xs font-semibold text-slate-500">Actual Progress</span>
                 </div>
-                <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 flex justify-between items-center group transition-all hover:bg-white hover:shadow-md">
-                   <div className="flex flex-col">
-                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Strength Capability</span>
-                     <span className="text-xl font-black text-slate-900 tracking-tight">+14% <span className="text-sm font-bold text-slate-400">Increase</span></span>
-                   </div>
-                   <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-blue-500 shadow-sm border border-slate-100"><Zap className="w-5 h-5" /></div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-[#17cf54]"></span>
+                  <span className="text-xs font-semibold text-slate-500">Projected Outcome</span>
                 </div>
-                <button className="w-full py-4 rounded-[24px] bg-[#17cf54]/5 border border-[#17cf54]/20 text-[#17cf54] text-[11px] font-black uppercase tracking-widest hover:bg-[#17cf54]/10 transition-all">Generate New Prediction</button>
               </div>
             </div>
-          </section>
 
-          {/* --- 4. STRATEGIC DETAILS (Unified) --- */}
-          <section className="bg-white rounded-[40px] p-10 shadow-sm border border-slate-100 overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-10 flex gap-4">
-               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
-                  <Calendar className="w-3.5 h-3.5" /> Weeks {selectedBlock?.startWeek} - {selectedBlock?.endWeek}
-               </div>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
+                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Projected End Weight</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">141.2</span>
+                    <span className="text-sm font-semibold text-blue-600">lbs</span>
+                  </div>
+                  <p className="text-[11px] text-blue-600/70 mt-1 flex items-center gap-1">
+                    <Icon name="trending_down" className="text-[12px]" />
+                    Estimated -8.8 lbs from start
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50">
+                  <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1">Strength Capability</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">+12%</span>
+                  </div>
+                  <p className="text-[11px] text-purple-600/70 mt-1 flex items-center gap-1">
+                    <Icon name="bolt" className="text-[12px]" />
+                    Peak expected at Week 12
+                  </p>
+                </div>
+              </div>
+
+              <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-5 border border-[#e2e8f0] dark:border-[#334155] relative">
+                <div className="absolute inset-0 pointer-events-none opacity-5">
+                  <div className="h-full w-full grid grid-cols-12 divide-x divide-slate-400">
+                    <div/><div/><div/><div/><div/><div/><div/><div/><div/><div/><div/><div/>
+                  </div>
+                </div>
+                <div className="h-40 flex items-end justify-between relative mb-6">
+                  <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 160">
+                    <path d="M 0,20 L 100,28 L 200,45 L 300,65" fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="3" />
+                    <path d="M 300,65 L 400,85 L 500,105 L 600,125 L 700,120 L 800,115 L 900,125 L 1000,135 L 1100,145 L 1200,150" fill="none" stroke="#17cf54" strokeDasharray="8 6" strokeLinecap="round" strokeWidth="3" />
+                    <circle cx="300" cy="65" fill="white" r="5" stroke="#3b82f6" strokeWidth="2" />
+                  </svg>
+                  <div className="absolute left-1/4 top-1/4 -translate-x-1/2 -mt-10">
+                    <div className="bg-white dark:bg-slate-900 border border-[#e2e8f0] dark:border-[#334155] px-2 py-1 rounded shadow-sm text-[10px] font-bold">
+                      CURRENT: 148.5
+                    </div>
+                  </div>
+                  <div className="absolute right-0 bottom-0 mb-4 mr-2">
+                    <div className="bg-[#17cf54]/10 border border-[#17cf54]/30 text-[#17cf54] px-3 py-1.5 rounded-lg shadow-sm text-[10px] font-bold">
+                      TARGET PHASE END: 141.2
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                  <span>W1</span><span>W2</span><span>W3</span>
+                  <span className="text-[#17cf54] bg-[#17cf54]/10 px-2 py-0.5 rounded-full ring-1 ring-[#17cf54]/30">Week 4 (Now)</span>
+                  <span>W5</span><span>W6</span><span>W7</span><span>W8</span><span>W9</span><span>W10</span><span>W11</span><span>W12</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* --- 4. BLOCK STRATEGIC DETAILS --- */}
+          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] shadow-sm border border-[#e2e8f0] dark:border-[#334155] overflow-hidden">
+            <div className="border-b border-[#e2e8f0] dark:border-[#334155] bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54]">
+                  <Icon name="intelligence_board" className="font-variation-fill" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[#0f172a] dark:text-white">Block Strategic Details</h3>
+                  <p className="text-xs text-[#64748b] dark:text-slate-400">
+                    {selectedBlock?.type === 'nutrition' ? 'Nutrition Phase' : 'Training Block'}: {selectedBlock?.title} • Weeks {selectedBlock?.startWeek}-{selectedBlock?.endWeek}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-tight">ACTIVE PHASE</span>
+                <button className="p-2 text-slate-400 hover:text-[#0f172a] transition-colors"><Icon name="settings" /></button>
+              </div>
             </div>
 
-            <SectionHeader icon={Zap} title="Block Strategic Details" subtitle="Unified Execution Protocol" />
-
-            <AnimatePresence mode="wait">
-              {selectedBlock ? (
-                <motion.div 
-                  key={selectedBlock.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-12"
-                >
-                  {/* Nutrition Strategy Panel */}
-                  <div className="space-y-8">
-                    <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center"><NutritionIcon className="w-4 h-4" /></div>
-                       <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Nutrition Strategy</h4>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group transition-all hover:bg-white hover:border-[#17cf54]/30 hover:shadow-lg">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Daily Goal</p>
-                          <InlineInput value={selectedBlock.kcal} onChange={(v: string) => updateBlockData(selectedBlock.id, { kcal: v })} suffix="kcal" className="text-xl font-black text-slate-900 tracking-tight" />
-                       </div>
-                       <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group transition-all hover:bg-white hover:border-[#17cf54]/30 hover:shadow-lg">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">P / C / F Ratio</p>
-                          <InlineInput value={selectedBlock.macros} onChange={(v: string) => updateBlockData(selectedBlock.id, { macros: v })} className="text-xl font-black text-[#17cf54] tracking-tight" />
-                       </div>
-                    </div>
-
-                    <div className="bg-slate-50 rounded-[24px] p-6 border border-slate-100 space-y-4">
-                       <div className="flex items-center gap-2 mb-2">
-                          <Sparkles className="w-4 h-4 text-emerald-500" />
-                          <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Metabolic Rationale</span>
-                       </div>
-                       <textarea 
-                         className="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-medium text-slate-600 outline-none resize-none leading-relaxed"
-                         value={selectedBlock.rationale}
-                         onChange={(e) => updateBlockData(selectedBlock.id, { rationale: e.target.value })}
-                         placeholder="Explain the coaching rationale..."
-                         rows={4}
-                       />
-                    </div>
-                  </div>
-
-                  {/* Training Strategy Panel */}
-                  <div className="space-y-8">
-                    <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center"><TrainingIcon className="w-4 h-4" /></div>
-                       <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">Training Strategy</h4>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group transition-all hover:bg-white hover:border-blue-500/30 hover:shadow-lg">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Intensity Profile</p>
-                          <InlineInput value={selectedBlock.intensity} onChange={(v: string) => updateBlockData(selectedBlock.id, { intensity: v })} className="text-xl font-black text-slate-900 tracking-tight" />
-                       </div>
-                       <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group transition-all hover:bg-white hover:border-blue-500/30 hover:shadow-lg">
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Workload Frequency</p>
-                          <InlineInput value={selectedBlock.sessions} onChange={(v: string) => updateBlockData(selectedBlock.id, { sessions: v })} className="text-xl font-black text-blue-600 tracking-tight" />
-                       </div>
-                    </div>
-
-                    <div className="bg-slate-50 rounded-[24px] p-6 border border-slate-100 space-y-4">
-                       <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="w-4 h-4 text-blue-500" />
-                          <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Focus & Mechanics</span>
-                       </div>
-                       <textarea 
-                         className="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-medium text-slate-600 outline-none resize-none leading-relaxed"
-                         value={selectedBlock.focus}
-                         onChange={(e) => updateBlockData(selectedBlock.id, { focus: e.target.value })}
-                         placeholder="Describe training methodology..."
-                         rows={4}
-                       />
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="h-64 flex items-center justify-center bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200 mt-10">
-                   <p className="text-slate-400 text-sm font-bold">Select a timeline block above to view execution details</p>
-                </div>
-              )}
-            </AnimatePresence>
-          </section>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            
-            {/* --- 5. GOALS & TARGETS --- */}
-            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
-               <SectionHeader icon={Target} title="Program KPI Targets" subtitle="Adherence & Results Tracking" />
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                  {roadmap.goals.map(goal => (
-                    <div key={goal.id} className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group transition-all hover:bg-white hover:shadow-md">
-                       <div className="flex justify-between items-start mb-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm ${goal.type === 'physical' ? 'bg-emerald-50 text-[#17cf54]' : 'bg-blue-50 text-blue-500'}`}>
-                             {goal.type === 'physical' ? <ScaleIcon className="w-5 h-5" /> : <Activity className="w-5 h-5" />}
+            <div className="p-6">
+              <AnimatePresence mode="wait">
+                {selectedBlock ? (
+                  <motion.div 
+                    key={selectedBlock.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col gap-10"
+                  >
+                    {/* Nutrition Section */}
+                    <div className="flex flex-col gap-6">
+                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 border-b border-[#e2e8f0] dark:border-[#334155] pb-2">
+                        <Icon name="restaurant" className="text-[20px]" />
+                        <h4 className="font-bold text-xs uppercase tracking-wider">Nutrition Strategy</h4>
+                      </div>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Daily Calories</p>
+                          <div className="flex items-center gap-1.5 font-bold">
+                            <input 
+                              className="text-xl bg-transparent border-none p-0 focus:ring-0 w-24 outline-none text-[#0f172a] dark:text-white"
+                              value={selectedBlock.kcal}
+                              onChange={(e) => updateBlock(selectedBlock.id, { kcal: e.target.value })}
+                            />
+                            <span className="text-xs text-amber-600 font-medium">kcal</span>
                           </div>
-                          <span className="text-xs font-black text-slate-900">{goal.value}%</span>
-                       </div>
-                       <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-1">{goal.label}</h4>
-                       <p className="text-[9px] font-bold text-slate-400 uppercase mb-4">{goal.desc}</p>
-                       <div className="h-1.5 bg-white rounded-full overflow-hidden border border-slate-100 shadow-inner">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${goal.value}%` }}
-                            className={`h-full rounded-full ${goal.type === 'physical' ? 'bg-[#17cf54]' : 'bg-blue-500'}`}
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Macro Split</p>
+                          <div className="flex flex-col">
+                            <input 
+                              className="text-sm font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                              value={selectedBlock.macros}
+                              onChange={(e) => updateBlock(selectedBlock.id, { macros: e.target.value })}
+                            />
+                            <span className="text-[9px] text-slate-400 font-bold">P / C / F</span>
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Meal Frequency</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            value={selectedBlock.freq}
+                            onChange={(e) => updateBlock(selectedBlock.id, { freq: e.target.value })}
                           />
-                       </div>
-                    </div>
-                  ))}
-               </div>
-            </section>
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Hydration Target</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            value={selectedBlock.water}
+                            onChange={(e) => updateBlock(selectedBlock.id, { water: e.target.value })}
+                          />
+                        </div>
+                      </div>
 
-            {/* --- 6. MILESTONES --- */}
-            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
-              <SectionHeader icon={Flag} title="Key Roadmap Milestones" subtitle="Essential Program Benchmarks" />
-              <div className="space-y-4 mt-8">
-                {roadmap.milestones.map((m, i) => (
-                  <div key={m.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-[20px] border border-slate-100 group hover:bg-white hover:shadow-sm transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${m.status === 'done' ? 'bg-[#17cf54] text-white' : 'bg-white border border-slate-200 text-slate-200 group-hover:border-[#17cf54] group-hover:text-[#17cf54]'}`}>
-                        <CheckCircle className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-900 tracking-tight">{m.label}</p>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Expected Completion: <span className="text-[#17cf54]">Week {m.week}</span></p>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                            <Icon name="target" className="text-sm" /> Primary Intent
+                          </h5>
+                          <textarea 
+                            className="w-full text-sm text-[#0f172a] dark:text-slate-300 bg-white dark:bg-slate-900/50 p-4 rounded-lg border border-[#e2e8f0] dark:border-[#334155] leading-relaxed outline-none focus:ring-1 focus:ring-[#17cf54]/30 resize-none h-32"
+                            value={selectedBlock.rationale}
+                            onChange={(e) => updateBlock(selectedBlock.id, { rationale: e.target.value })}
+                            placeholder="Add strategic intent here..."
+                          />
+                        </div>
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                            <Icon name="assignment" className="text-sm" /> Specific Focus
+                          </h5>
+                          <ul className="grid grid-cols-1 gap-2.5">
+                            {(selectedBlock.focusItems || ['No specifics defined']).map((item, idx) => (
+                              <li key={idx} className="flex items-center gap-3 text-sm text-[#64748b] dark:text-slate-400 p-2.5 rounded-lg bg-slate-50/50 dark:bg-slate-800/30 border border-[#e2e8f0]/50 dark:border-[#334155]/50">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                <input 
+                                  className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none"
+                                  value={item}
+                                  onChange={(e) => {
+                                    const newItems = [...(selectedBlock.focusItems || [])];
+                                    newItems[idx] = e.target.value;
+                                    updateBlock(selectedBlock.id, { focusItems: newItems });
+                                  }}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     </div>
-                    <button className="opacity-0 group-hover:opacity-100 px-4 py-2 rounded-lg bg-white border border-slate-200 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-500 hover:border-blue-500 transition-all">Convert to Task</button>
+
+                    {/* Training Section */}
+                    <div className="flex flex-col gap-6">
+                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 border-b border-[#e2e8f0] dark:border-[#334155] pb-2">
+                        <Icon name="fitness_center" className="text-[20px]" />
+                        <h4 className="font-bold text-xs uppercase tracking-wider">Training Strategy</h4>
+                      </div>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Block Focus</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            value={selectedBlock.focus}
+                            onChange={(e) => updateBlock(selectedBlock.id, { focus: e.target.value })}
+                          />
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Volume/Freq</p>
+                          <div className="flex items-center gap-1 font-bold">
+                            <input 
+                              className="text-xl bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                              value={selectedBlock.sessions}
+                              onChange={(e) => updateBlock(selectedBlock.id, { sessions: e.target.value })}
+                            />
+                            <span className="text-xs text-purple-600 font-medium">/wk</span>
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Avg Duration</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            value={selectedBlock.duration}
+                            onChange={(e) => updateBlock(selectedBlock.id, { duration: e.target.value })}
+                          />
+                        </div>
+                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155]">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Deload Protocol</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-[#0f172a] dark:text-white"
+                            value={selectedBlock.deload}
+                            onChange={(e) => updateBlock(selectedBlock.id, { deload: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                            <Icon name="trending_up" className="text-sm" /> Intensity Targets
+                          </h5>
+                          <div className="flex flex-wrap gap-2">
+                            {(selectedBlock.intensityTargets || []).map((target, idx) => (
+                              <input 
+                                key={idx}
+                                className="px-3 py-2 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-xs font-semibold border border-purple-100 dark:border-purple-800 outline-none focus:ring-1 focus:ring-purple-400"
+                                value={target}
+                                onChange={(e) => {
+                                  const newTargets = [...(selectedBlock.intensityTargets || [])];
+                                  newTargets[idx] = e.target.value;
+                                  updateBlock(selectedBlock.id, { intensityTargets: newTargets });
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-wide">
+                            <Icon name="emoji_events" className="text-sm" /> Key Milestones
+                          </h5>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between p-2.5 bg-white dark:bg-[#1e293b]/50 rounded-lg border border-[#e2e8f0] dark:border-[#334155] shadow-sm">
+                              <div className="flex items-center gap-2">
+                                <Icon name="check_circle" className="text-slate-400 text-sm" />
+                                <span className="text-sm text-[#0f172a] dark:text-slate-300">Form validation for Squat/Deadlift</span>
+                              </div>
+                              <span className="text-[10px] font-bold text-[#17cf54]">W2</span>
+                            </div>
+                            <div className="flex items-center justify-between p-2.5 bg-white dark:bg-[#1e293b]/50 rounded-lg border border-[#e2e8f0] dark:border-[#334155] shadow-sm">
+                              <div className="flex items-center gap-2">
+                                <Icon name="schedule" className="text-slate-400 text-sm" />
+                                <span className="text-sm text-[#0f172a] dark:text-slate-300">Mid-block de-load protocol</span>
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-400">W4</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <div className="p-20 text-center text-slate-400 bg-slate-50/50 dark:bg-slate-800/20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                    Select a roadmap phase to see strategic details
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* --- 5. GOALS & TARGETS --- */}
+          <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-[#0f172a] dark:text-white flex items-center gap-2">
+                <Icon name="flag" className="text-[#17cf54]" />
+                Goals & Targets
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {roadmap.goals.map((goal) => (
+                <div key={goal.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-[#e2e8f0] dark:border-[#334155] relative group cursor-pointer hover:border-blue-300 transition-colors">
+                  <button className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-[#17cf54]"><Icon name="edit" className="text-[16px]" /></button>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-semibold text-[#0f172a] dark:text-white flex items-center gap-2">
+                      <Icon name={goal.type === 'physical' ? 'accessibility' : goal.type === 'nutrition' ? 'restaurant_menu' : goal.type === 'training' ? 'fitness_center' : 'psychology'} className={`text-sm ${goal.type === 'physical' ? 'text-blue-500' : goal.type === 'nutrition' ? 'text-amber-500' : goal.type === 'training' ? 'text-purple-500' : 'text-rose-500'}`} />
+                      {goal.label}
+                    </h4>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${goal.type === 'physical' ? 'bg-blue-100 text-blue-600' : goal.type === 'nutrition' ? 'bg-amber-100 text-amber-600' : goal.type === 'training' ? 'bg-purple-100 text-purple-600' : 'bg-rose-100 text-rose-600'}`}>{goal.value}%</span>
+                  </div>
+                  <p className="text-[11px] text-[#64748b] mb-3 line-clamp-1">{goal.desc}</p>
+                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 shadow-inner">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${goal.value}%` }}
+                      className={`h-full rounded-full ${goal.type === 'physical' ? 'bg-blue-500' : goal.type === 'nutrition' ? 'bg-amber-500' : goal.type === 'training' ? 'bg-purple-500' : 'bg-rose-500'}`}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                    <span>{goal.currentLabel}</span>
+                    <span>{goal.targetLabel}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+            
+            {/* --- 6. KEY ROADMAP MILESTONES --- */}
+            <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-[13px] font-bold text-[#0f172a] dark:text-white flex items-center gap-2 uppercase tracking-wide">
+                  <Icon name="timeline" className="text-slate-400" />
+                  Key Roadmap Milestones
+                </h3>
+                <button className="text-[12px] font-bold text-[#17cf54] hover:text-[#14b549] transition-colors uppercaseTracking-widest">+ Add Milestone</button>
+              </div>
+              <div className="space-y-3">
+                {roadmap.milestones.map((m) => (
+                  <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${m.status === 'next' ? 'bg-white dark:bg-[#1e293b] border-[#17cf54] ring-1 ring-[#17cf54]/20' : 'bg-slate-50 dark:bg-slate-800/50 border-[#e2e8f0] dark:border-[#334155]'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-2 h-2 rounded-full ${m.status === 'done' ? 'bg-green-500' : m.status === 'next' ? 'bg-[#17cf54] shadow-[0_0_0_2px_rgba(23,207,84,0.2)]' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                      <div>
+                        <p className="text-sm font-semibold text-[#0f172a] dark:text-white leading-none mb-1">{m.label}</p>
+                        <p className={`text-[10px] font-bold uppercase ${m.status === 'next' ? 'text-[#17cf54]' : 'text-slate-500'}`}>{m.week}</p>
+                      </div>
+                    </div>
+                    {m.status !== 'done' && (
+                      <button className="px-3 py-1.5 text-[10px] font-bold bg-white dark:bg-slate-700 hover:bg-slate-100 text-slate-700 dark:text-slate-200 rounded-lg border border-[#e2e8f0] dark:border-[#334155] transition-all flex items-center gap-1 uppercase tracking-tight">
+                        <Icon name="task" className="text-[14px]" /> Convert to Task
+                      </button>
+                    )}
                   </div>
                 ))}
-                <button className="w-full py-4 rounded-[20px] bg-slate-50 border-2 border-dashed border-slate-200 text-slate-300 text-[11px] font-black uppercase tracking-widest hover:border-[#17cf54] hover:text-[#17cf54] transition-all flex items-center justify-center gap-2">
-                   <PlusCircle className="w-4 h-4" /> Add Strategic Milestone
-                </button>
               </div>
-            </section>
+            </div>
+
+            {/* --- 7. ASSUMPTIONS & VARIABLES --- */}
+            <div className="bg-white dark:bg-[#1e293b] rounded-[16px] p-6 shadow-sm border border-[#e2e8f0] dark:border-[#334155]">
+              <h3 className="text-[13px] font-bold text-[#0f172a] dark:text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+                <Icon name="rule" className="text-slate-400" />
+                Assumptions & Variables
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Daily Steps Target</label>
+                  <input 
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#0f172a] dark:text-white focus:ring-1 focus:ring-[#17cf54] focus:border-[#17cf54] outline-none transition-shadow font-semibold" 
+                    type="text" 
+                    value={roadmap.assumptions.steps}
+                    onChange={(e) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, steps: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Sleep Goal</label>
+                  <input 
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#0f172a] dark:text-white focus:ring-1 focus:ring-[#17cf54] focus:border-[#17cf54] outline-none transition-shadow font-semibold" 
+                    type="text" 
+                    value={roadmap.assumptions.sleep}
+                    onChange={(e) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, sleep: e.target.value } })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Dietary Constraints</label>
+                  <textarea 
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-[#e2e8f0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#0f172a] dark:text-white focus:ring-1 focus:ring-[#17cf54] focus:border-[#17cf54] outline-none transition-shadow resize-none font-medium leading-relaxed" 
+                    rows={2}
+                    value={roadmap.assumptions.constraints}
+                    onChange={(e) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, constraints: e.target.value } })}
+                  />
+                </div>
+              </div>
+            </div>
 
           </div>
 
-          {/* --- 7. ASSUMPTIONS --- */}
-          <section className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100">
-             <SectionHeader icon={Zap} title="Strategic Assumptions" subtitle="Base Variables for Model Predictions" />
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                   <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-[#17cf54] shadow-sm"><Footprints className="w-4 h-4" /></div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Min Steps / Day</span>
-                   </div>
-                   <InlineInput value={roadmap.assumptions.steps} onChange={(v: string) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, steps: v } })} className="text-xl font-black text-slate-900" />
-                </div>
-                <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                   <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-blue-500 shadow-sm"><Moon className="w-4 h-4" /></div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sleep Hygiene</span>
-                   </div>
-                   <InlineInput value={roadmap.assumptions.sleep} onChange={(v: string) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, sleep: v } })} className="text-xl font-black text-slate-900" />
-                </div>
-                <div className="p-6 bg-slate-50 rounded-[24px] border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                   <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-amber-500 shadow-sm"><Droplets className="w-4 h-4" /></div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client Constraints</span>
-                   </div>
-                   <InlineInput value={roadmap.assumptions.constraints} onChange={(v: string) => setRoadmap({ ...roadmap, assumptions: { ...roadmap.assumptions, constraints: v } })} className="text-xl font-black text-slate-900" />
-                </div>
-             </div>
-          </section>
-
-        </main>
+        </div>
       </div>
     </div>
   );
 }
-
-// Add Flag to imports
-const Flag = (props: any) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-    <line x1="4" x2="4" y1="22" y2="15" />
-  </svg>
-)
