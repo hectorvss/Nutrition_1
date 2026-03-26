@@ -1,60 +1,35 @@
-
 import { createClient } from '@supabase/supabase-js';
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// Load env from server directory
+dotenv.config({ path: path.join(__dirname, '../server/.env') });
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseServiceKey) {
   console.error('Missing Supabase credentials');
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function checkResources() {
-  console.log('Checking for nutrition_master_plans table...');
-  const { error: tableError } = await supabase
-    .from('nutrition_master_plans')
-    .select('id')
+async function checkTable() {
+  console.log('Checking "roadmaps" table...');
+  const { data, error } = await supabase
+    .from('roadmaps')
+    .select('*')
     .limit(1);
 
-  if (tableError) {
-    if (tableError.code === '42P01') {
-      console.log('Table nutrition_master_plans does not exist.');
-    } else {
-      console.error('Error checking table:', tableError);
+  if (error) {
+    console.error('Table check failed:', error.message);
+    if (error.message.includes('relation "roadmaps" does not exist')) {
+      console.log('SUGGESTION: Run the migration 20260326_create_roadmaps.sql');
     }
   } else {
-    console.log('Table nutrition_master_plans exists.');
-  }
-
-  const foodNames = [
-    'Greek Yogurt 0%', 'Oats', 'Blueberries', 'Almond Butter',
-    'Skyr 0%', 'Apple', 'Almonds', 'Chicken Breast', 'White Rice cooked',
-    'Broccoli', 'Olive Oil', 'Whey Protein', 'Banana', 'Salmon',
-    'Potato boiled or baked', 'Zucchini'
-  ];
-
-  console.log('\nChecking for foods:');
-  for (const name of foodNames) {
-    const { data, error } = await supabase
-      .from('foods')
-      .select('id, name, protein, carbs, fats, calories')
-      .ilike('name', `%${name}%`);
-
-    if (error) {
-       console.error(`Error searching for ${name}:`, error);
-    } else if (data && data.length > 0) {
-      console.log(`Found ${data.length} matches for "${name}":`);
-      data.forEach(f => console.log(`  - [${f.id}] ${f.name} (P:${f.protein} C:${f.carbs} F:${f.fats} Kcal:${f.calories})`));
-    } else {
-      console.log(`No matches for "${name}"`);
-    }
+    console.log('Table "roadmaps" exists. Rows found:', data.length);
   }
 }
 
-checkResources();
+checkTable();

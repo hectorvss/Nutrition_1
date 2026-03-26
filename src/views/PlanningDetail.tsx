@@ -274,26 +274,42 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
     
     setSaveStatus('saving');
     try {
-      if (!roadmap) return;
+      if (!roadmap) {
+        throw new Error("No roadmap data to save");
+      }
       
+      // Ensure we have a complete structure
       const payload = {
         ...getInitialData(),
         ...roadmap,
-        status: roadmap.status || 'LIVE'
+        // Status should be preserved or defaulted to LIVE if we are in Detail view
+        status: roadmap.status || 'LIVE',
+        updated_at: new Date().toISOString(),
+        // Ensure arrays are never stripped
+        goals: roadmap.goals || [],
+        milestones: roadmap.milestones || [],
+        nutrition: roadmap.nutrition || [],
+        training: roadmap.training || []
       };
 
-      await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
+      console.log('DEBUG: Saving Roadmap Payload:', payload);
+
+      const response = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
         method: 'POST',
         body: JSON.stringify(payload)
       });
+
+      if (!response || response.error) {
+        throw new Error(response?.error || "Server failed to save roadmap");
+      }
       
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
       
       // reload context
       await reloadClients();
-    } catch (e) {
-      console.error("Save failed:", e);
+    } catch (e: any) {
+      console.error("CRITICAL: Save failed:", e);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 4000);
     }
