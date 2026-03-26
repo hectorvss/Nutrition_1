@@ -8,11 +8,11 @@ import { trainingPrograms } from '../constants/training';
 interface TrainingNoPlanProps {
   client: any;
   onBack: () => void;
-  onStartPlan: (dataJson?: any) => void;
+  onStartPlan: (preset?: any, initialPlanData?: any) => void;
 }
 const PRESETS = [
   {
-    id: 'p1',
+    id: 'strength_start',
     title: 'Fuerza Start',
     level: 'Beginner',
     levelColor: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900',
@@ -32,7 +32,7 @@ const PRESETS = [
     recommended: ['Not Set']
   },
   {
-    id: 'p2',
+    id: 'strength_regular',
     title: 'Fuerza Regular',
     level: 'Intermediate',
     levelColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',
@@ -52,7 +52,7 @@ const PRESETS = [
     recommended: ['Weight Loss']
   },
   {
-    id: 'p3',
+    id: 'strength_pro',
     title: 'Fuerza Pro',
     level: 'Advanced',
     levelColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900',
@@ -92,7 +92,7 @@ const PRESETS = [
     recommended: ['Weight Loss']
   },
   {
-    id: 'p5',
+    id: 'hypertrophy_volume',
     title: 'Hipertrofia',
     level: 'Volume',
     levelColor: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',
@@ -112,7 +112,7 @@ const PRESETS = [
     recommended: ['Muscle Gain']
   },
   {
-    id: 'p6',
+    id: 'mobility_recovery',
     title: 'Movilidad & Recuperación',
     level: 'Restorative',
     levelColor: 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-900',
@@ -226,7 +226,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
 
   // Define recommendations and selection state based on combined presets
   const recommendedPreset = allPresets.find(p => Array.isArray(p.recommended) && p.recommended.includes(clientGoal)) || 
-                           allPresets.find(p => p.id === 'p1') || 
+                           allPresets.find(p => p.id === 'strength_start') || 
                            allPresets[0];
   
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
@@ -256,16 +256,18 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
         };
       }
 
+      const finalPlanData = {
+        name: dataJson.name,
+        data_json: dataJson
+      };
+
       await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
         method: 'POST',
-        body: JSON.stringify({
-          name: dataJson.name,
-          data_json: dataJson
-        })
+        body: JSON.stringify(finalPlanData)
       });
 
       await reloadClients();
-      onStartPlan(dataJson);
+      onStartPlan(null, finalPlanData);
     } catch (err) {
       console.error('Error applying training program:', err);
     }

@@ -167,8 +167,8 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
     const loadProgram = async () => {
       // If we have initialPlanData (from a template selection), use it
       if (initialPlanData) {
-        setFullPlanData(initialPlanData);
-        const dataJson = initialPlanData;
+        const dataJson = initialPlanData.data_json || initialPlanData;
+        setFullPlanData(dataJson);
         
         if (dayId && dataJson.weeklySchedule) {
           const workoutId = dataJson.weeklySchedule[dayId];

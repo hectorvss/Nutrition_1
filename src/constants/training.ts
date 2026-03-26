@@ -25,7 +25,7 @@ export const clients: Client[] = [
 
 export const trainingPrograms: TrainingProgram[] = [
   {
-    id: 'p1',
+    id: 'strength_start',
     name: 'Fuerza Start',
     level: 'Beginner',
     focus: 'Full Body Strength',
@@ -35,7 +35,7 @@ export const trainingPrograms: TrainingProgram[] = [
     description: 'Foundation strength program focusing on compound lifts.'
   },
   {
-    id: 'p2',
+    id: 'strength_regular',
     name: 'Fuerza Regular',
     level: 'Intermediate',
     focus: 'Upper/Lower Split',
@@ -45,7 +45,7 @@ export const trainingPrograms: TrainingProgram[] = [
     description: 'Upper/Lower split designed for intermediate lifters.'
   },
   {
-    id: 'p3',
+    id: 'strength_pro',
     name: 'Fuerza Pro',
     level: 'Advanced',
     focus: 'PPL',
@@ -65,7 +65,7 @@ export const trainingPrograms: TrainingProgram[] = [
     description: 'Metabolic conditioning mixed with strength circuits.'
   },
   {
-    id: 'p5',
+    id: 'hypertrophy_volume',
     name: 'Hipertrofia',
     level: 'Volume',
     focus: 'Bodybuilding',
@@ -75,7 +75,7 @@ export const trainingPrograms: TrainingProgram[] = [
     description: 'Maximal hypertrophy focus with moderate intensity.'
   },
   {
-    id: 'p6',
+    id: 'mobility_recovery',
     name: 'Movilidad & Recuperación',
     level: 'Restorative',
     focus: 'Mobility',

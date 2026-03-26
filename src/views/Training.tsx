@@ -45,7 +45,7 @@ export default function Training() {
           <TrainingNoPlan 
             client={selectedClient} 
             onBack={() => setCurrentView('client-list')}
-            onStartPlan={(planData) => {
+            onStartPlan={(preset, planData) => {
               if (planData) {
                 setInitialPlanData(planData);
                 setCurrentView('weekly-view');

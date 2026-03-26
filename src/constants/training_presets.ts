@@ -33,7 +33,7 @@ export interface ProgramTemplate {
 }
 
 export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
-  'p1': { // Fuerza Start - 3 days Full Body
+  'strength_start': { // Fuerza Start - 3 days Full Body
     workouts: [
       {
         id: 'p1-w1',
@@ -70,7 +70,7 @@ export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
     ],
     defaultSchedule: { 'monday': 'p1-w1', 'wednesday': 'p1-w2', 'friday': 'p1-w1' }
   },
-  'p2': { // Fuerza Regular - 4 days Upper/Lower
+  'strength_regular': { // Fuerza Regular - 4 days Upper/Lower
     workouts: [
       {
         id: 'p2-w1',
@@ -99,7 +99,7 @@ export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
     ],
     defaultSchedule: { 'monday': 'p2-w1', 'tuesday': 'p2-w2', 'thursday': 'p2-w1', 'friday': 'p2-w2' }
   },
-  'p3': { // Fuerza Pro - 5 days PPL
+  'strength_pro': { // Fuerza Pro - 5 days PPL
     workouts: [
       { 
         id: 'p3-w1', name: 'Torso (Push) - Chest/Shoulders', 
@@ -140,7 +140,7 @@ export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
     ],
     defaultSchedule: { 'monday': 'p4-w1', 'tuesday': 'p4-w2', 'thursday': 'p4-w1', 'friday': 'p4-w2' }
   },
-  'p5': { // Hipertrofia - 5 days Split
+  'hypertrophy_volume': { // Hipertrofia - 5 days Split
     workouts: [
       { id: 'p5-w1', name: 'Pecho & Tríceps', blocks: [{ id: 1, name: 'Chest', subtitle: 'Growth', icon: 'fitness_center', iconBg: 'bg-blue-50 text-blue-600', exercises: [{ id: 'p5-1-1', exerciseId: '2', name: 'Bench Press', type: 'Compound', weight: '60kg', sets: '4', reps: '12', rir: '1', rest: '75s' }] }] },
       { id: 'p5-w2', name: 'Espalda & Bíceps', blocks: [{ id: 1, name: 'Back', subtitle: 'Width', icon: 'fitness_center', iconBg: 'bg-indigo-50 text-indigo-600', exercises: [{ id: 'p5-2-1', exerciseId: '6', name: 'Pull Ups', type: 'Compound', weight: 'BW', sets: '4', reps: '10', rir: '1', rest: '75s' }] }] },
@@ -150,7 +150,7 @@ export const PROGRAM_TEMPLATES: Record<string, ProgramTemplate> = {
     ],
     defaultSchedule: { 'monday': 'p5-w1', 'tuesday': 'p5-w2', 'wednesday': 'p5-w3', 'thursday': 'p5-w4', 'friday': 'p5-w5' }
   },
-  'p6': { // Movilidad
+  'mobility_recovery': { // Movilidad
     workouts: [
       { id: 'p6-w1', name: 'Full Body Mobility', blocks: [{ id: 1, name: 'Mobility', subtitle: 'Flow', icon: 'self_improvement', iconBg: 'bg-teal-50 text-teal-600', exercises: [{ id: 'p6-1-1', exerciseId: 'w1', name: 'Cat Cow', type: 'Bodyweight', weight: '-', sets: '3', reps: '12', rir: '-', rest: '0s' }] }] }
     ],
