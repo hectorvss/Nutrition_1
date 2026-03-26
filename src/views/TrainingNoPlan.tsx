@@ -169,15 +169,13 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const clientGoal = client?.goal || 'Not Set';
   
+
   // Fetch templates from backend on mount
   React.useEffect(() => {
     const fetchTemplates = async () => {
       try {
         setIsLoadingTemplates(true);
-        const response = await fetch('/api/manager/training-templates', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
-        });
-        const data = await response.json();
+        const data = await fetchWithAuth('/manager/training-templates');
         setTemplates(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching templates in NoPlan:', err);
