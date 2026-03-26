@@ -214,7 +214,14 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   ];
 
   const processedDays: DayPlan[] = daysConfig.map((day, dayIdx) => {
-    const dayData = planData?.data_json?.days?.[day.id];
+    // Priority 1: Day-specific meals
+    // Priority 2: Root-level meals (common for templates)
+    let dayData = planData?.data_json?.days?.[day.id];
+    
+    // Fallback to top-level meals if day-specific meals are missing
+    if (!dayData && planData?.data_json?.meals) {
+      dayData = { meals: planData.data_json.meals };
+    }
     
     if (!dayData || !dayData.meals || dayData.meals.length === 0) {
       return {
@@ -232,7 +239,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
     
     meals.forEach((m: any) => {
       m.items.forEach((i: any) => {
-        const qty = i.quantity || 1;
+        const qty = i.multiplier || i.quantity || 1;
         totalCals += (i.calories || 0) * qty;
         totalP += (i.protein || 0) * qty;
         totalC += (i.carbs || 0) * qty;

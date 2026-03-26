@@ -134,6 +134,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         const icons: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
         const loadedMeals = targetMeals.map((m: any) => ({
           ...m,
+          items: m.items.map((i: any) => ({
+            ...i,
+            quantity: i.multiplier || i.quantity || 1
+          })),
           icon: icons[m.iconName] || Sunrise
         }));
         setMeals(loadedMeals);
@@ -160,6 +164,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           const icons: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
           const loadedMeals = targetMeals.map((m: any) => ({
             ...m,
+            items: m.items.map((i: any) => ({
+              ...i,
+              quantity: i.multiplier || i.quantity || 1
+            })),
             icon: icons[m.iconName] || Sunrise
           }));
           setMeals(loadedMeals);
