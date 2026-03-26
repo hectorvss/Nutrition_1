@@ -270,9 +270,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   const handleSave = async () => {
     try {
       if (!roadmap) return;
+      
+      const payload = {
+        ...getInitialData(),
+        ...roadmap,
+        status: roadmap.status || 'LIVE'
+      };
+
       await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
         method: 'POST',
-        body: JSON.stringify(roadmap)
+        body: JSON.stringify(payload)
       });
     } catch (e) {
       console.error("Save failed:", e);

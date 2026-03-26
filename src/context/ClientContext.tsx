@@ -118,7 +118,15 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
         method: 'POST',
         body: JSON.stringify({ 
           name: 'Draft Roadmap', 
-          data_json: { ...updateData, status: 'DRAFT', nutrition: [], training: [], goals: [], milestones: [] } 
+          data_json: { 
+            ...updateData, 
+            status: 'DRAFT', 
+            nutrition: [], 
+            training: [], 
+            goals: [], 
+            milestones: [],
+            assumptions: { steps: '', sleep: '', constraints: '' }
+          } 
         })
       });
 
