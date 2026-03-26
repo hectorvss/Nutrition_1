@@ -192,9 +192,9 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 py-10">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-8">
         <div className="w-full mx-auto flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <header className="flex items-center justify-between p-6 sm:p-8 border-b border-slate-200 bg-white sticky top-0 z-10">
+          <header className="flex items-center justify-between p-6 md:px-8 border-b border-slate-200 bg-white sticky top-0 z-10">
             <div>
               <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Event' : 'Create New Event'}</h1>
               <p className="text-sm text-slate-500">{editId ? 'Modify event details or delete it' : 'Add a new event or appointment to the schedule'}</p>
@@ -230,15 +230,15 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
             </div>
           </header>
 
-          <div className="p-6 md:p-8 bg-slate-50/50">
+          <div className="p-4 md:p-10 bg-slate-50/50">
             <form className="w-full space-y-8" onSubmit={handleSave}>
           {/* General Details */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-            <div className="md:col-span-4">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+            <div className="md:col-span-2">
               <h3 className="text-sm font-bold text-slate-900 mb-1">General Details</h3>
               <p className="text-xs text-slate-500 leading-relaxed">Basic information about the task. Be specific for client clarity.</p>
             </div>
-            <div className="md:col-span-8 space-y-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="md:col-span-10 space-y-5 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Task Title</label>
                 <input 
@@ -266,12 +266,12 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           <hr className="border-slate-200" />
 
           {/* Activity Category */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-            <div className="md:col-span-4">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+            <div className="md:col-span-2">
               <h3 className="text-sm font-bold text-slate-900 mb-1">Activity Category</h3>
               <p className="text-xs text-slate-500 leading-relaxed">Select the type of activity to categorize this task correctly.</p>
             </div>
-            <div className="md:col-span-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 {[
                   { id: 'Training', icon: Dumbbell, activeClass: 'peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 hover:border-emerald-200', iconClass: 'peer-checked:text-emerald-600 group-hover:text-emerald-500' },
@@ -301,12 +301,12 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           <hr className="border-slate-200" />
 
           {/* Assignment */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-            <div className="md:col-span-4">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+            <div className="md:col-span-2">
               <h3 className="text-sm font-bold text-slate-900 mb-1">Assignment</h3>
               <p className="text-xs text-slate-500 leading-relaxed">Assign this task to a specific client, or leave blank for a general task.</p>
             </div>
-            <div className="md:col-span-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
               <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Assign To</label>
               <div className="relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -358,12 +358,12 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           <hr className="border-slate-200" />
 
           {/* Schedule */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-            <div className="md:col-span-4">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
+            <div className="md:col-span-2">
               <h3 className="text-sm font-bold text-slate-900 mb-1">Schedule & Frequency</h3>
               <p className="text-xs text-slate-500 leading-relaxed">Set when this task needs to be completed.</p>
             </div>
-            <div className="md:col-span-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Date</label>
@@ -417,12 +417,12 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           <hr className="border-slate-200" />
 
           {/* Priority */}
-          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 pb-8">
-            <div className="md:col-span-4">
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12 pb-8">
+            <div className="md:col-span-2">
               <h3 className="text-sm font-bold text-slate-900 mb-1">Priority</h3>
               <p className="text-xs text-slate-500 leading-relaxed">Indicate the urgency level of this task.</p>
             </div>
-            <div className="md:col-span-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+            <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
               {[
                 { level: 'Low', activeClass: 'peer-checked:bg-slate-100 peer-checked:border-slate-400 text-slate-600' },
                 { level: 'Medium', activeClass: 'peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 text-slate-600' },
