@@ -2991,6 +2991,41 @@ router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
   }
 });
 
+// Nutrition Templates Routes
+router.get('/nutrition-templates', async (req: any, res: any) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('nutrition_templates')
+      .select('id, key, name, description, target_calories, data_json');
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching nutrition templates:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/nutrition-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('nutrition_templates')
+      .select('*')
+      .or(`id.eq.${id},key.eq.${id}`)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Template not found' });
+    
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching template detail:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
+
 
 

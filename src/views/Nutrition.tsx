@@ -72,8 +72,25 @@ export default function Nutrition() {
           <NutritionPlanTemplates
             client={selectedClient}
             onBack={() => setCurrentView('client-list')}
-            onSelect={(isNew?: boolean) => {
+            onSelect={async (isNew?: boolean, templateId?: string | number) => {
               setIsNewPlan(!!isNew);
+              setInitialPlanData(null); // Reset
+
+              if (!isNew && templateId && typeof templateId === 'string' && templateId !== 'custom') {
+                try {
+                  // Fetch the template from the backend
+                  const response = await fetch(`/api/manager/nutrition-templates/${templateId}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                  });
+                  const data = await response.json();
+                  if (data && data.data_json) {
+                    setInitialPlanData({ data_json: data.data_json });
+                  }
+                } catch (err) {
+                  console.error('Failed to load template:', err);
+                }
+              }
+              
               setCurrentView('weekly-view');
             }}
           />
