@@ -32,9 +32,10 @@ interface TrainingWeeklyViewProps {
   onBack: () => void;
   onSelectDay: (dayId: string) => void;
   onReassign?: () => void;
+  initialPlanData?: any;
 }
 
-export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReassign }: TrainingWeeklyViewProps) {
+export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReassign, initialPlanData }: TrainingWeeklyViewProps) {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [planData, setPlanData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +46,17 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
 
   useEffect(() => {
     const fetchPlanData = async () => {
+      // If we have initialPlanData (from a template selection), use it
+      if (initialPlanData) {
+        // Ensure it has the structure expected by the component (containing data_json)
+        if (initialPlanData.data_json) {
+          setPlanData(initialPlanData);
+        } else {
+          setPlanData({ data_json: initialPlanData, name: initialPlanData.name || 'Programa' });
+        }
+        return;
+      }
+
       if (!client?.id) return;
       try {
         setIsLoading(true);
@@ -59,7 +71,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       }
     };
     fetchPlanData();
-  }, [client?.id]);
+  }, [client?.id, initialPlanData]);
 
   const handleUpdateDay = (dayId: string, workoutId: string | null) => {
     if (!planData || !planData.data_json) return;

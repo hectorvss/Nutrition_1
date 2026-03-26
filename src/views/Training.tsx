@@ -15,6 +15,7 @@ export default function Training() {
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
+  const [initialPlanData, setInitialPlanData] = useState<any>(null);
 
   const handleNavigate = (view: TrainingView, clientId?: string | any) => {
     if (clientId) {
@@ -44,11 +45,12 @@ export default function Training() {
           <TrainingNoPlan 
             client={selectedClient} 
             onBack={() => setCurrentView('client-list')}
-            onStartPlan={(preset) => {
-              if (preset) {
-                // If a preset was applied, we might want to go to weekly-view or editor
+            onStartPlan={(planData) => {
+              if (planData) {
+                setInitialPlanData(planData);
                 setCurrentView('weekly-view');
               } else {
+                setInitialPlanData(null);
                 setCurrentView('workout-editor');
               }
             }}
@@ -59,6 +61,7 @@ export default function Training() {
         return (
           <TrainingWeeklyView 
             client={selectedClient}
+            initialPlanData={initialPlanData}
             onBack={() => setCurrentView('client-list')}
             onReassign={() => setCurrentView('no-plan')}
             onSelectDay={(dayId) => {
@@ -83,6 +86,7 @@ export default function Training() {
                   })
                 });
                 setSelectedClient({ ...selectedClient, trainingPlanAssigned: true });
+                setInitialPlanData(null);
                 setCurrentView('weekly-view');
               } catch (error) {
                 console.error('Error assigning program:', error);
@@ -97,11 +101,13 @@ export default function Training() {
           <WorkoutEditor 
             clientId={selectedClient?.id}
             dayId={selectedDayId}
+            initialPlanData={initialPlanData}
             onEditActivity={(id, name) => {
               if (name) setSelectedActivityName(name);
               setCurrentView('activity-editor');
             }}
             onBack={() => {
+              setInitialPlanData(null);
               if (selectedClient?.trainingPlanAssigned) {
                 setCurrentView('weekly-view');
               } else {

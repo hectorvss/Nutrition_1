@@ -3025,6 +3025,40 @@ router.get('/nutrition-templates/:id', async (req: any, res: any) => {
   }
 });
 
+// Training Templates Routes
+router.get('/training-templates', async (req: any, res: any) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('training_templates')
+      .select('id, key, name, description, level, type, weekly_frequency, data_json');
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching training templates:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/training-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('training_templates')
+      .select('*')
+      .or(`id.eq.${id},key.eq.${id}`)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Template not found' });
+    
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching training template detail:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
 
 
