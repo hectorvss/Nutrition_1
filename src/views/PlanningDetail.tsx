@@ -213,7 +213,7 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 );
 
 export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
-  const { clients } = useClient();
+  const { clients, reloadClients } = useClient();
   const client = clients.find(c => c.id === clientId);
 
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
@@ -267,7 +267,12 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
     }
   };
 
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
   const handleSave = async () => {
+    if (saveStatus === 'saving') return;
+    
+    setSaveStatus('saving');
     try {
       if (!roadmap) return;
       
@@ -281,8 +286,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
         method: 'POST',
         body: JSON.stringify(payload)
       });
+      
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+      
+      // reload context
+      await reloadClients();
     } catch (e) {
       console.error("Save failed:", e);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 4000);
     }
   };
 
@@ -479,8 +492,25 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <button className="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-sm transition-colors border border-slate-200 dark:border-slate-700">
                     Discard
                   </button>
-                  <button onClick={handleSave} className="flex-1 sm:flex-none py-2 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-md active:scale-95">
-                    Save Draft
+                  <button 
+                    onClick={handleSave} 
+                    disabled={saveStatus === 'saving'}
+                    className={`flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 min-w-[120px] ${
+                      saveStatus === 'saved' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
+                      saveStatus === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
+                      'bg-emerald-500 hover:bg-emerald-600 text-white'
+                    }`}
+                  >
+                    {saveStatus === 'saving' && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                    {saveStatus === 'saved' && <Icon name="check_circle" className="text-white" />}
+                    {saveStatus === 'error' && <Icon name="error" className="text-white" />}
+                    
+                    <span>
+                      {saveStatus === 'saving' ? 'Saving...' : 
+                       saveStatus === 'saved' ? 'Saved!' : 
+                       saveStatus === 'error' ? 'Error!' : 
+                       'Save Draft'}
+                    </span>
                   </button>
                 </div>
               </div>
