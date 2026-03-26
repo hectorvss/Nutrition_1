@@ -12,7 +12,7 @@ interface NutritionNoPlanProps {
 
 const PRESETS = [
   {
-    id: 'fat-loss-basic',
+    id: 'fat_loss_basic',
     calories: 1500,
     title: 'Fat Loss Basic',
     subtitle: 'Conservative cut',
@@ -28,7 +28,7 @@ const PRESETS = [
     recommendedFor: ['Weight Loss', 'Fat Loss']
   },
   {
-    id: 'active-maintain',
+    id: 'active_maintain',
     calories: 1800,
     title: 'Active Maintain',
     subtitle: 'Recommended for current goal',
@@ -44,7 +44,7 @@ const PRESETS = [
     recommendedFor: ['Maintenance', 'Not Set']
   },
   {
-    id: 'moderate-gain',
+    id: 'moderate_gain',
     calories: 2000,
     title: 'Moderate Gain',
     subtitle: 'Lean bulk approach',
@@ -60,7 +60,7 @@ const PRESETS = [
     recommendedFor: ['Muscle Gain']
   },
   {
-    id: 'active-build',
+    id: 'active_build',
     calories: 2200,
     title: 'Active Build',
     subtitle: 'Standard muscle gain',
@@ -76,7 +76,7 @@ const PRESETS = [
     recommendedFor: ['Muscle Gain']
   },
   {
-    id: 'athlete-perform',
+    id: 'athlete_perform',
     calories: 2500,
     title: 'Athlete Perform',
     subtitle: 'Sport performance',
@@ -92,7 +92,7 @@ const PRESETS = [
     recommendedFor: ['Performance']
   },
   {
-    id: 'mass-builder',
+    id: 'mass_builder',
     calories: 2800,
     title: 'Mass Builder',
     subtitle: 'Significant surplus',
@@ -108,7 +108,7 @@ const PRESETS = [
     recommendedFor: ['Muscle Gain']
   },
   {
-    id: 'power-lifting',
+    id: 'power_lifting',
     calories: 3100,
     title: 'Power Lifting',
     subtitle: 'Strength focus',
@@ -124,7 +124,7 @@ const PRESETS = [
     recommendedFor: ['Strength']
   },
   {
-    id: 'extreme-bulk',
+    id: 'extreme_bulk',
     calories: 3300,
     title: 'Extreme Bulk',
     subtitle: 'Maximum surplus',
@@ -144,8 +144,29 @@ const PRESETS = [
 export default function NutritionNoPlan({ client, onBack, onStartPlan }: NutritionNoPlanProps) {
   const { assignNutritionPlan, reloadClients } = useClient();
   const { foods } = useFoodContext();
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const clientGoal = client?.goal || 'Not Set';
   
+  // Fetch templates from backend on mount
+  React.useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        setIsLoadingTemplates(true);
+        const response = await fetch('/api/manager/nutrition-templates', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+        });
+        const data = await response.json();
+        setTemplates(data || []);
+      } catch (err) {
+        console.error('Error fetching templates in NoPlan:', err);
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
   // Find recommended preset based on planning metadata if available, otherwise fallback to goal
   const nutritionMapping: Record<number, string> = {
     1: 'fat-loss-basic',
@@ -158,10 +179,39 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     8: 'extreme-bulk'
   };
 
+  // Combine hardcoded PRESETS with DB templates, prioritizing DB templates if keys match
+  const allPresets = [...PRESETS];
+  templates.forEach(t => {
+    const existingIdx = allPresets.findIndex(p => p.id === t.key);
+    const mapped = {
+      id: t.key,
+      calories: t.target_calories,
+      title: t.name,
+      subtitle: t.description || 'Template from database',
+      tag: t.data_json?.tag || 'SaaS Plan',
+      tagColor: t.data_json?.tagColor || 'bg-emerald-50 text-emerald-600',
+      protein: t.data_json?.macros?.p || 30,
+      carbs: t.data_json?.macros?.c || 40,
+      fats: t.data_json?.macros?.f || 30,
+      weekViewLabel: t.data_json?.weekViewLabel || 'Template',
+      structure: t.data_json?.structure || 'Custom',
+      macroId: t.data_json?.macroId || 'Custom',
+      bars: t.data_json?.bars || [80, 80, 80, 80, 80, 80, 80],
+      recommendedFor: t.data_json?.recommendedFor || [],
+      isDbTemplate: true,
+      data_json: t.data_json
+    };
+    if (existingIdx >= 0) {
+      allPresets[existingIdx] = mapped;
+    } else {
+      allPresets.push(mapped);
+    }
+  });
+
   const plannedRecommendedId = client?.recommendedNutritionId ? nutritionMapping[client.recommendedNutritionId] : null;
-  const recommendedPreset = PRESETS.find(p => p.id === plannedRecommendedId) || 
-                       PRESETS.find(p => p.recommendedFor.includes(clientGoal)) || 
-                       PRESETS[1];
+  const recommendedPreset = allPresets.find(p => p.id === plannedRecommendedId) || 
+                       allPresets.find(p => p.recommendedFor.includes(clientGoal)) || 
+                       allPresets[1];
   
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
   
@@ -170,7 +220,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   const [dailyStructure, setDailyStructure] = useState<string>(recommendedPreset.structure);
   const [macroSplitId, setMacroSplitId] = useState<string>(recommendedPreset.macroId);
 
-  const selectedPreset = PRESETS.find(p => p.id === selectedId) || recommendedPreset;
+  const selectedPreset = (allPresets as any[]).find(p => p.id === selectedId) || recommendedPreset;
 
   // Update settings when a preset is selected
   const handleSelectPreset = (preset: any) => {
@@ -419,31 +469,36 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   };
 
   const handleConfirm = async () => {
-    const generatedData = generatePlanData();
+    let finalPlanData: any;
+    
+    if ((selectedPreset as any).isDbTemplate && (selectedPreset as any).data_json) {
+      finalPlanData = {
+        name: `Plan - ${client.name} (${(selectedPreset as any).title})`,
+        data_json: (selectedPreset as any).data_json
+      };
+    } else {
+      const generatedData = generatePlanData();
+      finalPlanData = {
+        name: `Plan Dinámico - ${client.name}`,
+        data_json: generatedData
+      };
+    }
     
     // Persist immediately to backend
     try {
       await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {
         method: 'POST',
-        body: JSON.stringify({
-          name: `Plan Dinámico - ${client.name}`,
-          data_json: generatedData
-        })
+        body: JSON.stringify(finalPlanData)
       });
       
       // Update global context state
       await reloadClients();
       
-      const initialPlanData = {
-        name: `Plan Dinámico - ${client.name}`,
-        data_json: generatedData
-      };
-      
       // Navigate to detail view
-      onStartPlan(null, initialPlanData);
+      onStartPlan(null, finalPlanData);
     } catch (err) {
-      console.error('Error saving generated plan:', err);
-      alert('Error al guardar el plan generado');
+      console.error('Error saving plan:', err);
+      alert('Error al guardar el plan');
     }
   };
 
@@ -544,7 +599,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
               </button>
 
               {/* Template Cards */}
-              {PRESETS.map((preset) => {
+              {allPresets.map((preset) => {
                 const isSelected = selectedId === preset.id;
                 const isRecommended = recommendedPreset.id === preset.id;
                 
