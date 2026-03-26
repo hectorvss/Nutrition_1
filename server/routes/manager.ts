@@ -244,7 +244,10 @@ router.get('/clients', async (req: any, res) => {
         clients_profiles!user_id (weight, goal, notes, temp_password),
         check_ins (id, date, reviewed_at, data_json),
         workout_logs!client_id (logged_at),
-        tasks!client_id (*)
+        tasks!client_id (*),
+        roadmaps!client_id (*),
+        nutrition_plans!client_id (id),
+        training_programs!client_id (id)
       `)
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
@@ -2869,7 +2872,11 @@ router.get('/clients/:clientId/roadmap', async (req: any, res) => {
 router.post('/clients/:clientId/roadmap', async (req: any, res) => {
   const { clientId } = req.params;
   const managerId = req.user.id;
-  const { nutrition, training, status } = req.body;
+  const { nutrition, training, status, data_json } = req.body;
+
+  // Build the final data_json. If it comes from the body as a full object, use it.
+  // Otherwise, default to the legacy { nutrition, training } structure.
+  const final_data_json = data_json || { nutrition, training };
 
   try {
     // Upsert the roadmap
@@ -2884,8 +2891,8 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
       const { data, error } = await supabaseAdmin
         .from('roadmaps')
         .update({ 
-          data_json: { nutrition, training },
-          status: status || 'Draft',
+          data_json: final_data_json,
+          status: status || final_data_json?.status || 'Draft',
           updated_at: new Date().toISOString()
         })
         .eq('id', existing.id)
@@ -2899,8 +2906,8 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
         .insert({ 
           client_id: clientId,
           manager_id: managerId,
-          data_json: { nutrition, training },
-          status: status || 'Draft'
+          data_json: final_data_json,
+          status: status || final_data_json?.status || 'Draft'
         })
         .select()
         .single();

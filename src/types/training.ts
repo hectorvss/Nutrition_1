@@ -28,6 +28,8 @@ export interface WorkoutBlock {
   exercises: Exercise[];
 }
 
+export type TrainingCategory = 'Strength' | 'Mobility' | 'Warm-up' | 'Cardio' | 'Rehab';
+
 export interface TrainingProgram {
   id: string;
   name: string;
