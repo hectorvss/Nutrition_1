@@ -115,11 +115,12 @@ interface NutritionWeeklyViewProps {
   onBack: () => void;
   onSelectDay: (dayId: string) => void;
   onReassign: () => void;
+  initialPlanData?: any;
 }
 
-export default function NutritionWeeklyView({ client, onBack, onSelectDay, onReassign }: NutritionWeeklyViewProps) {
+export default function NutritionWeeklyView({ client, onBack, onSelectDay, onReassign, initialPlanData }: NutritionWeeklyViewProps) {
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
-  const [planData, setPlanData] = useState<any>(null);
+  const [planData, setPlanData] = useState<any>(initialPlanData || null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -129,7 +130,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
 
   useEffect(() => {
     const fetchPlanData = async () => {
-      if (!client?.id) return;
+      if (!client?.id || initialPlanData) return;
       try {
         setIsLoading(true);
         const data = await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`);
@@ -143,7 +144,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       }
     };
     fetchPlanData();
-  }, [client?.id]);
+  }, [client?.id, initialPlanData]);
 
   const handleSave = async (updatedDataJson: any) => {
     if (!client?.id) return;
