@@ -193,8 +193,8 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
              goal: c.clients_profiles?.[0]?.goal || c.goal || 'Not Set',
              notes: c.clients_profiles?.[0]?.notes || c.notes || '',
              temp_password: c.clients_profiles?.[0]?.temp_password || c.tempPassword,
-             nutritionPlanAssigned: c.nutritionPlanAssigned || false,
-             trainingPlanAssigned: c.trainingPlanAssigned || false,
+             nutritionPlanAssigned: (c.nutrition_plans && c.nutrition_plans.length > 0) || c.nutritionPlanAssigned || false,
+             trainingPlanAssigned: (c.training_programs && c.training_programs.length > 0) || c.trainingPlanAssigned || false,
              plan: c.plan_name || 'No Plan',
              progress: c.progress || 0,
              progressLabel: c.progressLabel || 'No Data',
@@ -206,21 +206,31 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
              check_ins: c.check_ins || [],
              
              // Extract roadmap data if available
-             ...(c.roadmaps?.[0]?.data_json ? {
-               planningAssigned: c.roadmaps[0].data_json.planningAssigned || false,
-               planningTemplateId: c.roadmaps[0].data_json.planningTemplateId || null,
-               recommendedNutritionId: c.roadmaps[0].data_json.recommendedNutritionId || null,
-               recommendedTrainingId: c.roadmaps[0].data_json.recommendedTrainingId || null,
-               planFamilyKey: c.roadmaps[0].data_json.planFamilyKey || null,
-               planFamilyLabel: c.roadmaps[0].data_json.planFamilyLabel || null
-             } : {
-               planningAssigned: false,
-               planningTemplateId: null,
-               recommendedNutritionId: null,
-               recommendedTrainingId: null,
-               planFamilyKey: null,
-               planFamilyLabel: null
-             })
+             ...(() => {
+                const roadmap = c.roadmaps?.[0];
+                if (!roadmap) return {
+                  planningAssigned: false,
+                  planningTemplateId: null,
+                  recommendedNutritionId: null,
+                  recommendedTrainingId: null,
+                  planFamilyKey: null,
+                  planFamilyLabel: null
+                };
+
+                let dj = roadmap.data_json || {};
+                if (typeof dj === 'string') {
+                  try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
+                }
+
+                return {
+                  planningAssigned: dj.planningAssigned || false,
+                  planningTemplateId: dj.planningTemplateId || null,
+                  recommendedNutritionId: dj.recommendedNutritionId || null,
+                  recommendedTrainingId: dj.recommendedTrainingId || null,
+                  planFamilyKey: dj.planFamilyKey || null,
+                  planFamilyLabel: dj.planFamilyLabel || null
+                };
+             })()
            };
       });
       
