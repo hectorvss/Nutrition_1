@@ -7,12 +7,15 @@ import { useClient } from '../context/ClientContext';
 
 interface RoadmapBlock {
   id: string;
+  type: 'nutrition' | 'training';
   title: string;
   startWeek: number;
   endWeek: number;
-  type: 'nutrition' | 'training';
-  color: string;
-  // Nutrition fields
+  duration: number;
+  colorToken?: string;
+  isSelected?: boolean;
+  order: number;
+  // Nutrition specific
   kcal?: string;
   macros?: string;
   deficit?: string;
@@ -21,10 +24,9 @@ interface RoadmapBlock {
   rationale?: string;
   timing?: string[];
   focusItems?: string[];
-  // Training fields
+  // Training specific
   focus?: string;
   sessions?: string;
-  duration?: string;
   deload?: string;
   intensityTargets?: string[];
   // Shared
@@ -72,13 +74,15 @@ const getInitialData = (): RoadmapData => ({
   nutrition: [
     { 
       id: 'n1', title: 'Maintenance', startWeek: 1, endWeek: 4, type: 'nutrition', 
-      color: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
+      duration: 4, order: 1,
+      colorToken: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
       kcal: '2,450', macros: '35/35/30', freq: '4 Meals', water: '3.0 L',
       rationale: 'Establishing metabolic baseline and assessing initial response.'
     },
     { 
       id: 'n2', title: 'Deficit (-500)', startWeek: 5, endWeek: 8, type: 'nutrition', 
-      color: 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
+      duration: 4, order: 2,
+      colorToken: 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
       kcal: '2,150', macros: '40/30/30', freq: '4 Meals', water: '3.5 L',
       deficit: '-500',
       rationale: 'Aggressive fat loss while preserving lean mass. Focus on high protein satiety and volume-dense foods to manage hunger. Strategic re-feeds on training days.',
@@ -86,7 +90,8 @@ const getInitialData = (): RoadmapData => ({
     },
     { 
       id: 'n3', title: 'Maintenance', startWeek: 9, endWeek: 12, type: 'nutrition', 
-      color: 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400',
+      duration: 4, order: 3,
+      colorToken: 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400',
       kcal: '2,300', macros: '35/35/30', freq: '4 Meals', water: '3.2 L',
       rationale: 'Reverse diet phase to solidify progress.'
     },
@@ -94,14 +99,16 @@ const getInitialData = (): RoadmapData => ({
   training: [
     { 
       id: 't1', title: 'Hypertrophy Base (4x)', startWeek: 1, endWeek: 6, type: 'training', 
-      color: 'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
-      focus: 'Hypertrophy', sessions: '4 Sessions', duration: '65 Min', deload: 'Active',
+      duration: 6, order: 1,
+      colorToken: 'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
+      focus: 'Hypertrophy', sessions: '4 Sessions', deload: 'Active',
       intensityTargets: ['RPE 7-9 (Technical)', 'Rest: 60-90s', 'Tempo: 3-0-1-0']
     },
     { 
       id: 't2', title: 'Strength Peak (3x)', startWeek: 7, endWeek: 12, type: 'training', 
-      color: 'bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400',
-      focus: 'Strength', sessions: '3 Sessions', duration: '75 Min', deload: 'Passive',
+      duration: 6, order: 2,
+      colorToken: 'bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400',
+      focus: 'Strength', sessions: '3 Sessions', deload: 'Passive',
       intensityTargets: ['RPE 8-10', 'Rest: 120-180s', 'Tempo: 2-0-X-0']
     },
   ],
@@ -135,6 +142,9 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [draftBlockValues, setDraftBlockValues] = useState<Partial<RoadmapBlock> | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
   useEffect(() => {
     if (clientId) loadRoadmap();
@@ -174,6 +184,118 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
     }
   };
 
+  const findFirstGap = (blocks: RoadmapBlock[]): number | null => {
+    const occupied = new Set<number>();
+    blocks.forEach(b => {
+      for (let i = b.startWeek; i <= b.endWeek; i++) occupied.add(i);
+    });
+    for (let w = 1; w <= 12; w++) {
+      if (!occupied.has(w)) return w;
+    }
+    return null;
+  };
+
+  const addBlock = (type: 'nutrition' | 'training') => {
+    if (!roadmap) return;
+    const blocks = type === 'nutrition' ? roadmap.nutrition : roadmap.training;
+    
+    const startWeek = findFirstGap(blocks);
+    
+    if (startWeek === null) {
+      // Feedback: No space
+      alert("No available gap found in the roadmap (W1-W12).");
+      return;
+    }
+
+    const newBlock: RoadmapBlock = {
+      id: `${type[0]}${Date.now()}`,
+      title: type === 'nutrition' ? 'New Nutrition Phase' : 'New Training Block',
+      startWeek,
+      endWeek: startWeek,
+      duration: 1,
+      type,
+      order: blocks.length + 1,
+      colorToken: type === 'nutrition' 
+        ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400'
+        : 'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
+    };
+
+    const newBlocks = [...blocks, newBlock].sort((a, b) => a.startWeek - b.startWeek);
+    setRoadmap({
+      ...roadmap,
+      [type]: newBlocks
+    });
+    setSelectedBlockId(newBlock.id);
+    setEditingBlockId(newBlock.id);
+    setDraftBlockValues(newBlock);
+  };
+
+  const deleteBlock = (blockId: string) => {
+    if (!roadmap) return;
+    const isNutrition = roadmap.nutrition.some(b => b.id === blockId);
+    const key = isNutrition ? 'nutrition' : 'training';
+    const blocks = roadmap[key];
+    const index = blocks.findIndex(b => b.id === blockId);
+    const newBlocks = blocks.filter(b => b.id !== blockId);
+
+    setRoadmap({
+      ...roadmap,
+      [key]: newBlocks
+    });
+
+    if (selectedBlockId === blockId) {
+      if (newBlocks.length > 0) {
+        // Select next neighbor if exists, else previous
+        const nextNeighbor = newBlocks[index] || newBlocks[newBlocks.length - 1];
+        setSelectedBlockId(nextNeighbor.id);
+      } else {
+        setSelectedBlockId(null);
+      }
+    }
+    setEditingBlockId(null);
+    setDraftBlockValues(null);
+  };
+
+  const updateBlockWithValidation = (blockId: string, updates: Partial<RoadmapBlock>) => {
+    if (!roadmap) return false;
+    const isNutrition = roadmap.nutrition.some(b => b.id === blockId);
+    const key = isNutrition ? 'nutrition' : 'training';
+    const blocks = roadmap[key];
+    const currentBlock = blocks.find(b => b.id === blockId)!;
+    
+    // Merge updates for validation
+    const proposed = { ...currentBlock, ...updates };
+    
+    // Basic Range Validation
+    if (proposed.startWeek < 1 || proposed.endWeek > 12 || proposed.startWeek > proposed.endWeek) {
+      setEditError(`Invalid range: W${proposed.startWeek} - W${proposed.endWeek}`);
+      return false;
+    }
+
+    // Overlap Validation
+    const hasOverlap = blocks.some(b => {
+      if (b.id === blockId) return false;
+      return (proposed.startWeek <= b.endWeek && proposed.endWeek >= b.startWeek);
+    });
+
+    if (hasOverlap) {
+      setEditError("Conflict detected: This range overlaps with another block.");
+      return false;
+    }
+
+    // Success: Recalculate duration and update
+    setEditError(null);
+    setRoadmap({
+      ...roadmap,
+      [key]: blocks.map(b => b.id === blockId ? { 
+        ...proposed, 
+        duration: proposed.endWeek - proposed.startWeek + 1 
+      } : b).sort((a, b) => a.startWeek - b.startWeek)
+    });
+    return true;
+  };
+
+  // Legacy updateBlock for simple fields (kcal, rationale, etc.) - no validation needed
   const updateBlock = (blockId: string, updates: Partial<RoadmapBlock>) => {
     if (!roadmap) return;
     const isNutrition = roadmap.nutrition.some(b => b.id === blockId);
@@ -269,10 +391,16 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                 Master Roadmap
               </h3>
               <div className="flex gap-3">
-                <button className="group flex items-center gap-1 text-sm font-bold text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 px-3 py-1.5 rounded-xl transition-all">
+                <button 
+                  onClick={() => addBlock('nutrition')}
+                  className="group flex items-center gap-1 text-sm font-bold text-amber-600 dark:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 px-3 py-1.5 rounded-xl transition-all"
+                >
                   <Icon name="add" className="text-[18px]" /> Nutrition Phase
                 </button>
-                <button className="group flex items-center gap-1 text-sm font-bold text-purple-600 dark:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 px-3 py-1.5 rounded-xl transition-all">
+                <button 
+                  onClick={() => addBlock('training')}
+                  className="group flex items-center gap-1 text-sm font-bold text-purple-600 dark:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/10 px-3 py-1.5 rounded-xl transition-all"
+                >
                   <Icon name="add" className="text-[18px]" /> Training Block
                 </button>
               </div>
@@ -296,13 +424,21 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                         key={block.id}
                         onClick={() => setSelectedBlockId(block.id)}
                         style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.color} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.colorToken} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
                       >
                         <span className="text-sm font-bold truncate px-2">{block.title}</span>
                         {block.startWeek <= roadmap.currentWeek && block.endWeek >= roadmap.currentWeek && (
                           <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-emerald-500 rotate-45 z-10 shrink-0 shadow-sm" />
                         )}
-                        <button className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingBlockId(block.id);
+                            setDraftBlockValues({ ...block });
+                            setEditError(null);
+                          }}
+                          className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md"
+                        >
                           <Icon name="edit" className="text-[16px]" />
                         </button>
                       </div>
@@ -319,10 +455,18 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
                         key={block.id}
                         onClick={() => setSelectedBlockId(block.id)}
                         style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.color} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.colorToken} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
                       >
                         <span className="text-sm font-bold truncate px-2">{block.title}</span>
-                        <button className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingBlockId(block.id);
+                            setDraftBlockValues({ ...block });
+                            setEditError(null);
+                          }}
+                          className="absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-white/50 dark:bg-black/20 rounded-md"
+                        >
                           <Icon name="edit" className="text-[16px]" />
                         </button>
                       </div>
@@ -747,6 +891,150 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
         </div>
       </div>
+
+      {/* --- EDIT BLOCK MODAL --- */}
+      <AnimatePresence>
+        {editingBlockId && draftBlockValues && (() => {
+          return (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+              onClick={() => { setEditingBlockId(null); setDraftBlockValues(null); }}
+            >
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+              >
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                  <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Icon name="edit" className="text-emerald-500" />
+                    Edit {draftBlockValues.type === 'nutrition' ? 'Nutrition' : 'Training'} Block
+                  </h3>
+                  <button onClick={() => { setEditingBlockId(null); setDraftBlockValues(null); }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400">
+                    <Icon name="close" />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  {editError && (
+                    <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 text-xs font-bold border border-rose-100 dark:border-rose-800/50 flex items-center gap-2">
+                      <Icon name="error" className="text-sm" />
+                      {editError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Block Title</label>
+                    <input 
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                      value={draftBlockValues.title || ''}
+                      onChange={(e) => setDraftBlockValues({ ...draftBlockValues, title: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Start Week</label>
+                      <select 
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        value={draftBlockValues.startWeek}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          const duration = (draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1);
+                          setDraftBlockValues({ 
+                            ...draftBlockValues, 
+                            startWeek: val, 
+                            endWeek: Math.min(val + duration, 12) 
+                          });
+                        }}
+                      >
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <option key={i + 1} value={i + 1}>Week {i + 1}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Duration</label>
+                      <select 
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        value={(draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1) + 1}
+                        onChange={(e) => {
+                          const dur = parseInt(e.target.value);
+                          setDraftBlockValues({ 
+                            ...draftBlockValues, 
+                            endWeek: Math.min((draftBlockValues.startWeek || 1) + dur - 1, 12) 
+                          });
+                        }}
+                      >
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <option key={i + 1} value={i + 1}>{i + 1} Weeks</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">End Week</label>
+                      <select 
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
+                        value={draftBlockValues.endWeek}
+                        onChange={(e) => setDraftBlockValues({ ...draftBlockValues, endWeek: parseInt(e.target.value) })}
+                      >
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <option key={i + 1} disabled={i + 1 < (draftBlockValues.startWeek || 1)} value={i + 1}>Week {i + 1}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Block Color</label>
+                    <div className="flex gap-2">
+                      {[
+                        'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
+                        'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
+                        'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400',
+                        'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
+                        'bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400',
+                        'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                      ].map((c) => (
+                        <button 
+                          key={c}
+                          onClick={() => setDraftBlockValues({ ...draftBlockValues, colorToken: c })}
+                          className={`w-8 h-8 rounded-full border-2 ${c.split(' ')[0]} ${draftBlockValues.colorToken === c ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button 
+                      onClick={() => deleteBlock(editingBlockId)}
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-rose-50 dark:bg-rose-900/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/20 font-bold text-xs transition-colors border border-rose-100 dark:border-rose-800/50 flex items-center justify-center gap-2"
+                    >
+                      <Icon name="delete" className="text-[18px]" /> Delete Block
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (updateBlockWithValidation(editingBlockId, draftBlockValues)) {
+                          setEditingBlockId(null);
+                          setDraftBlockValues(null);
+                        }
+                      }}
+                      className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-all shadow-md active:scale-95"
+                    >
+                      Confirm Changes
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 }

@@ -26,73 +26,78 @@ import { useCalendar, getEventPresentationInfo, EventType } from '../context/Cal
 
 type ViewMode = 'Month' | 'Week' | 'Day';
 
-const getEventMins = (duration: string | number) => {
-  if (!duration) return 60; // default 1h
+const parseTimeToMinutes = (time: string | null | undefined): number | null => {
+  if (!time || typeof time !== 'string') return null;
+  try {
+    const parts = time.split(':').map(val => parseInt(val, 10));
+    if (parts.length < 1 || isNaN(parts[0])) return null;
+    const mins = parts[0] * 60 + (parts[1] || 0);
+    return isNaN(mins) ? null : Math.min(Math.max(0, mins), 1439);
+  } catch (e) {
+    return null;
+  }
+};
+
+const parseDurationToMinutes = (duration: string | number | null | undefined): number => {
+  if (duration === null || duration === undefined) return 60;
+  
   try {
     const dur = duration.toString().toLowerCase().trim().replace(',', '.');
     
-    // 1. Handle HH:MM format (e.g. "01:30" or "1:30")
+    // 1. HH:MM format
     if (dur.includes(':')) {
-      const parts = dur.split(':').map(Number);
+      const parts = dur.split(':').map(val => parseInt(val, 10));
       if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
         return Math.min((parts[0] * 60) + parts[1], 1440);
       }
     }
 
-    let totalMins = 0;
-    
-    // 2. Extract hours and minutes from strings like "1h 30m" or "2 hours"
+    // 2. Units (h, m)
     const hMatch = dur.match(/(\d+(?:\.\d+)?)\s*h/);
     const mMatch = dur.match(/(\d+)\s*m/);
     
+    let totalMins = 0;
     let matched = false;
     if (hMatch) {
       totalMins += parseFloat(hMatch[1]) * 60;
       matched = true;
     }
-    
     if (mMatch) {
-      totalMins += parseInt(mMatch[1]);
+      totalMins += parseInt(mMatch[1], 10);
       matched = true;
     }
-    
     if (matched) return Math.min(totalMins, 1440);
 
-    // 3. Fallback for pure numbers (e.g. "90" or "2")
-    const fallbackMatch = dur.match(/^(\d+(?:\.\d+)?)$/);
-    if (fallbackMatch) {
-      const val = parseFloat(fallbackMatch[1]);
-      // If val >= 15, assume it means minutes (e.g. 15, 30, 90). 
-      // If val < 15, assume it means hours (e.g. 1, 1.5, 2).
-      if (val >= 15) return Math.min(val, 1440);
-      return Math.min(val * 60, 1440);
+    // 3. Fallback numbers
+    const num = parseFloat(dur);
+    if (!isNaN(num)) {
+      // If num >= 15, assume minutes. If < 15, assume hours.
+      return num >= 15 ? Math.min(num, 1440) : Math.min(num * 60, 1440);
     }
-    
-    return 60;
-  } catch (e) {
-    return 60;
-  }
-};
-const getEventMinsFromTime = (time: string) => {
-  if (!time) return 540; // 09:00
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + (m || 0);
+  } catch (e) {}
+
+  return 60;
 };
 
-const getEventFullMins = (event: any) => {
-  if (event.time && event.endTime) {
-    const start = getEventMinsFromTime(event.time);
-    let end = getEventMinsFromTime(event.endTime);
-    if (end <= start) end += 1440; // Fix overnight or same-time
-    return Math.min(end - start, 1440);
+const getEventFullDurationMinutes = (event: any): number => {
+  const start = parseTimeToMinutes(event.time);
+  const end = parseTimeToMinutes(event.endTime);
+  
+  if (start !== null && end !== null) {
+    let diff = end - start;
+    if (diff <= 0) diff += 1440; // Overnight or same time
+    return Math.min(diff, 1440);
   }
-  return getEventMins(event.duration);
+  
+  return parseDurationToMinutes(event.duration);
 };
 
 const getOverlapData = (events: any[]) => {
   // Sort by start mins
   const sorted = [...events].sort((a, b) => {
-    return getEventMinsFromTime(a.time) - getEventMinsFromTime(b.time);
+    const startA = parseTimeToMinutes(a.time) ?? 540;
+    const startB = parseTimeToMinutes(b.time) ?? 540;
+    return startA - startB;
   });
 
   const clusters: any[][] = [];
@@ -100,8 +105,8 @@ const getOverlapData = (events: any[]) => {
   let clusterEnd = 0;
 
   sorted.forEach(event => {
-    const startMins = getEventMinsFromTime(event.time);
-    const durationMins = getEventFullMins(event);
+    const startMins = parseTimeToMinutes(event.time) ?? 540;
+    const durationMins = getEventFullDurationMinutes(event);
     const endMins = startMins + durationMins;
 
     if (startMins >= clusterEnd) {
@@ -121,10 +126,11 @@ const getOverlapData = (events: any[]) => {
     const columns: any[][] = [];
     cluster.forEach(event => {
       let placed = false;
-      const startMins = getEventMinsFromTime(event.time);
+      const startMins = parseTimeToMinutes(event.time) ?? 540;
       for (let i = 0; i < columns.length; i++) {
         const lastInCol = columns[i][columns[i].length - 1];
-        const lastEnd = getEventMinsFromTime(lastInCol.time) + getEventFullMins(lastInCol);
+        const lastStart = parseTimeToMinutes(lastInCol.time) ?? 540;
+        const lastEnd = lastStart + getEventFullDurationMinutes(lastInCol);
         if (startMins >= lastEnd) {
           columns[i].push(event);
           placed = true;
@@ -137,10 +143,12 @@ const getOverlapData = (events: any[]) => {
     const totalCols = columns.length;
     columns.forEach((col, colIdx) => {
       col.forEach(event => {
-        eventStyles[event.id] = {
-          width: 100 / totalCols,
-          left: (colIdx / totalCols) * 100
-        };
+        if (event.id) {
+          eventStyles[event.id] = {
+            width: 100 / totalCols,
+            left: (colIdx / totalCols) * 100
+          };
+        }
       });
     });
   });
@@ -380,15 +388,16 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                 const overlapData = getOverlapData(dayEvents);
                 return dayEvents.map((event, idx) => {
                   const info = getEventPresentationInfo(event.type as EventType);
-                  const hourIdx = hours.indexOf(event.time.slice(0, 2) + ':00');
-                  if (hourIdx === -1) return null;
+                  const startMins = parseTimeToMinutes(event.time);
+                  if (startMins === null) return null;
                   
-                  const minuteOffset = event.time.includes(':') ? parseInt(event.time.split(':')[1]) * (96 / 60) : 0;
-                  const top = hourIdx * 96 + minuteOffset;
+                  const top = (startMins / 60) * 96;
+                  const durationMins = getEventFullDurationMinutes(event);
+                  const maxPossibleHeight = (24 * 96) - top;
+                  const height = Math.min(Math.max((durationMins / 60) * 96, 32), maxPossibleHeight);
                   
-                  const durationMins = getEventFullMins(event);
-                  const maxPossibleHeight = (24 * 96) - top; // Clamp to midnight
-                  const height = Math.min(Math.max((durationMins / 60) * 96, 40), maxPossibleHeight);
+                  if (isNaN(top) || isNaN(height)) return null;
+
                   const style = overlapData[event.id] || { width: 100, left: 0 };
                   
                   return (
@@ -449,15 +458,16 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
               {(() => {
                 const overlapData = getOverlapData(currentDayEvents);
                 return currentDayEvents.map((event) => {
-                  const timeParts = event.time.split(':').map(Number);
-                  const hourIdx = hours.indexOf(timeParts[0].toString().padStart(2, '0') + ':00');
-                  if (hourIdx === -1) return null;
-                  const minuteOff = (timeParts[1] || 0) * (128 / 60);
-                  const top = hourIdx * 128 + minuteOff;
+                  const startMins = parseTimeToMinutes(event.time);
+                  if (startMins === null) return null;
                   
-                  const durationMins = getEventFullMins(event);
-                  const maxPossibleHeight = (24 * 128) - top; // Clamp to midnight
-                  const height = Math.min(Math.max((durationMins / 60) * 128, 40), maxPossibleHeight);
+                  const top = (startMins / 60) * 128;
+                  const durationMins = getEventFullDurationMinutes(event);
+                  const maxPossibleHeight = (24 * 128) - top;
+                  const height = Math.min(Math.max((durationMins / 60) * 128, 48), maxPossibleHeight);
+                  
+                  if (isNaN(top) || isNaN(height)) return null;
+
                   const info = getEventPresentationInfo(event.type as EventType);
                   const EventIcon = info.icon;
                   const style = overlapData[event.id] || { width: 100, left: 0 };
