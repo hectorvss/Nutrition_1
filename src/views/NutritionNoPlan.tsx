@@ -157,9 +157,10 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
           headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
         });
         const data = await response.json();
-        setTemplates(data || []);
+        setTemplates(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching templates in NoPlan:', err);
+        setTemplates([]);
       } finally {
         setIsLoadingTemplates(false);
       }
@@ -169,44 +170,46 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
 
   // Find recommended preset based on planning metadata if available, otherwise fallback to goal
   const nutritionMapping: Record<number, string> = {
-    1: 'fat-loss-basic',
-    2: 'active-maintain',
-    3: 'moderate-gain',
-    4: 'active-build',
-    5: 'athlete-perform',
-    6: 'mass-builder',
-    7: 'power-lifting',
-    8: 'extreme-bulk'
+    1: 'fat_loss_basic',
+    2: 'active_maintain',
+    3: 'moderate_gain',
+    4: 'active_build',
+    5: 'athlete_perform',
+    6: 'mass_builder',
+    7: 'power_lifting',
+    8: 'extreme_bulk'
   };
 
   // Combine hardcoded PRESETS with DB templates, prioritizing DB templates if keys match
   const allPresets = [...PRESETS];
-  templates.forEach(t => {
-    const existingIdx = allPresets.findIndex(p => p.id === t.key);
-    const mapped = {
-      id: t.key,
-      calories: t.target_calories,
-      title: t.name,
-      subtitle: t.description || 'Template from database',
-      tag: t.data_json?.tag || 'SaaS Plan',
-      tagColor: t.data_json?.tagColor || 'bg-emerald-50 text-emerald-600',
-      protein: t.data_json?.macros?.p || 30,
-      carbs: t.data_json?.macros?.c || 40,
-      fats: t.data_json?.macros?.f || 30,
-      weekViewLabel: t.data_json?.weekViewLabel || 'Template',
-      structure: t.data_json?.structure || 'Custom',
-      macroId: t.data_json?.macroId || 'Custom',
-      bars: t.data_json?.bars || [80, 80, 80, 80, 80, 80, 80],
-      recommendedFor: t.data_json?.recommendedFor || [],
-      isDbTemplate: true,
-      data_json: t.data_json
-    };
-    if (existingIdx >= 0) {
-      allPresets[existingIdx] = mapped;
-    } else {
-      allPresets.push(mapped);
-    }
-  });
+  if (Array.isArray(templates)) {
+    templates.forEach(t => {
+      const existingIdx = allPresets.findIndex(p => p.id === t.key);
+      const mapped = {
+        id: t.key,
+        calories: t.target_calories,
+        title: t.name,
+        subtitle: t.description || 'Template from database',
+        tag: t.data_json?.tag || 'SaaS Plan',
+        tagColor: t.data_json?.tagColor || 'bg-emerald-50 text-emerald-600',
+        protein: t.data_json?.macros?.p || 30,
+        carbs: t.data_json?.macros?.c || 40,
+        fats: t.data_json?.macros?.f || 30,
+        weekViewLabel: t.data_json?.weekViewLabel || 'Template',
+        structure: t.data_json?.structure || 'Custom',
+        macroId: t.data_json?.macroId || 'Custom',
+        bars: Array.isArray(t.data_json?.bars) ? t.data_json.bars : [80, 80, 80, 80, 80, 80, 80],
+        recommendedFor: Array.isArray(t.data_json?.recommendedFor) ? t.data_json.recommendedFor : [],
+        isDbTemplate: true,
+        data_json: t.data_json
+      };
+      if (existingIdx >= 0) {
+        allPresets[existingIdx] = mapped;
+      } else {
+        allPresets.push(mapped);
+      }
+    });
+  }
 
   const plannedRecommendedId = client?.recommendedNutritionId ? nutritionMapping[client.recommendedNutritionId] : null;
   const recommendedPreset = allPresets.find(p => p.id === plannedRecommendedId) || 
