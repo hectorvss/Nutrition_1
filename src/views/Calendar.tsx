@@ -502,13 +502,13 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h4 className="font-bold text-slate-900 truncate">{event.title}</h4>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{event.duration || `${layout.durationMins}m`}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{event.duration}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <EventIcon className="w-3.5 h-3.5" />
                         <span>{event.type}</span>
                         <span>•</span>
-                        <span>{event.time} - {event.endTime || 'No end'}</span>
+                        <span>{event.duration}</span>
                       </div>
                       {event.desc && (
                         <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">{event.desc}</p>
