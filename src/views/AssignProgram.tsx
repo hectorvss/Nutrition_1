@@ -132,6 +132,12 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                             {program.focus.includes('Running') ? 'directions_run' : 
                              program.focus.includes('Mobility') ? 'self_improvement' : 'fitness_center'}
                           </span>
+                          
+                          {client?.recommendedTrainingId === program.id && (
+                            <div className="absolute top-0 right-0 left-0 bg-blue-500 text-white py-0.5 px-1 text-[8px] font-black uppercase text-center tracking-tighter">
+                              Recommended
+                            </div>
+                          )}
                         </div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{program.focus.split(' ')[0]}</span>
                       </div>

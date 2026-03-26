@@ -146,8 +146,22 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   const { foods } = useFoodContext();
   const clientGoal = client?.goal || 'Not Set';
   
-  // Find recommended preset
-  const recommendedPreset = PRESETS.find(p => p.recommendedFor.includes(clientGoal)) || PRESETS[1];
+  // Find recommended preset based on planning metadata if available, otherwise fallback to goal
+  const nutritionMapping: Record<number, string> = {
+    1: 'fat-loss-basic',
+    2: 'active-maintain',
+    3: 'moderate-gain',
+    4: 'active-build',
+    5: 'athlete-perform',
+    6: 'mass-builder',
+    7: 'power-lifting',
+    8: 'extreme-bulk'
+  };
+
+  const plannedRecommendedId = client?.recommendedNutritionId ? nutritionMapping[client.recommendedNutritionId] : null;
+  const recommendedPreset = PRESETS.find(p => p.id === plannedRecommendedId) || 
+                       PRESETS.find(p => p.recommendedFor.includes(clientGoal)) || 
+                       PRESETS[1];
   
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
   
@@ -556,7 +570,14 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                         {preset.calories.toLocaleString()}
                       </div>
                       <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">{preset.title}</h3>
-                      <p className="text-xs text-slate-500 mt-1">{isRecommended ? 'Recommended for current goal' : preset.subtitle}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {isRecommended ? (
+                          <span className="text-blue-500 font-bold flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">star</span>
+                            Recommended for current planning
+                          </span>
+                        ) : preset.subtitle}
+                      </p>
                     </div>
 
                     <div className="flex-1 w-full space-y-3">
