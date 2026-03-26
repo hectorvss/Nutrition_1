@@ -213,6 +213,13 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                 )}
+
+                {client?.recommendedNutritionId === template.id && (
+                  <div className="absolute top-3 right-3 sm:right-auto sm:left-3 flex items-center gap-1.5 px-2 py-1 bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-blue-500/20 z-10 animate-bounce-subtle">
+                    <Flame className="w-3 h-3 fill-current" />
+                    Recommended
+                  </div>
+                )}
                 
                 {/* Calories & Info */}
                 <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-4">

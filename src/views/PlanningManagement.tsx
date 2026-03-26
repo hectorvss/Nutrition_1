@@ -4,17 +4,17 @@ import { useClient } from '../context/ClientContext';
 const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: string) => void }> = ({ onNavigate }) => {
   const { clients: globalClients } = useClient();
   
-  const clients = globalClients.map((client, idx) => {
-    // For demo purposes: first 2 clients have plans, others are "no plan"
-    const hasActivePlan = idx < 2;
+  const clients = globalClients.map((client) => {
+    const hasActivePlan = client.planningAssigned;
     return {
       id: client.id,
       name: client.name,
       avatar: client.avatar,
       status: hasActivePlan ? 'ACTIVE' : 'NO_PLAN',
-      roadmapStatus: hasActivePlan ? 'ROADMAP ACTIVE' : 'NO STRATEGIC PLAN',
-      online: idx === 0 || idx === 1,
+      roadmapStatus: hasActivePlan ? 'PLAN ASSIGNED' : 'NO STRATEGIC PLAN',
+      online: client.status === 'Active',
       roadmapProgress: hasActivePlan ? 'Live' : 'Needs Setup',
+      planFamilyLabel: client.planFamilyLabel
     };
   });
 
@@ -91,7 +91,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500 font-medium">
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">map</span>
-                            <span>Roadmap: Hypertrophy & Fat Loss Cycle</span>
+                            <span>Roadmap: {client.planFamilyLabel || 'Not Defined'}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">calendar_today</span>
