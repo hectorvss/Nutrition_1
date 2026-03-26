@@ -2886,13 +2886,15 @@ router.get('/clients/:clientId/roadmap', async (req: any, res) => {
 router.post('/clients/:clientId/roadmap', async (req: any, res) => {
   const { clientId } = req.params;
   const managerId = req.user.id;
-  const { data_json, status } = req.body;
-  const rawData = data_json || req.body;
+  const body = req.body;
+
+  // Extract core fields and ensure data_json is clean
+  const data_json = body.data_json || body;
+  const status = body.status || data_json.status || 'Draft';
 
   // Derived Recommendations (Simple Algorithm)
-  // This allows Nutrition/Training to see what Planning recommends
   const deriveRecommendations = (data: any) => {
-    const goal = data.primaryGoal || data.goalType || 'Fat Loss';
+    const goal = data.primaryGoal || data.goalType || (data.goals?.[0]?.label === 'Fat Loss' ? 'Fat Loss' : 'Fat Loss');
     const mapping: Record<string, any> = {
       'Fat Loss': { nutrition: 'fat-loss-std', training: 'fat-loss-base' },
       'Muscle Gain': { nutrition: 'muscle-gain-std', training: 'hypertrophy-base' },
@@ -2904,46 +2906,28 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
   };
 
   const final_data_json = {
-    ...rawData,
-    recommendations: deriveRecommendations(rawData),
+    ...data_json,
+    recommendations: deriveRecommendations(data_json),
     updated_at: new Date().toISOString()
   };
 
   try {
-    // Upsert the roadmap
-    const { data: existing } = await supabaseAdmin
+    // Perform atomic upsert on client_id
+    const { data: result, error } = await supabaseAdmin
       .from('roadmaps')
-      .select('id')
-      .eq('client_id', clientId)
-      .maybeSingle();
+      .upsert({ 
+        client_id: clientId,
+        manager_id: managerId,
+        data_json: final_data_json,
+        status: status,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'client_id' })
+      .select()
+      .single();
 
-    let result;
-    if (existing) {
-      const { data, error } = await supabaseAdmin
-        .from('roadmaps')
-        .update({ 
-          data_json: final_data_json,
-          status: status || final_data_json?.status || 'Draft',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existing.id)
-        .select()
-        .single();
-      if (error) throw error;
-      result = data;
-    } else {
-      const { data, error } = await supabaseAdmin
-        .from('roadmaps')
-        .insert({ 
-          client_id: clientId,
-          manager_id: managerId,
-          data_json: final_data_json,
-          status: status || final_data_json?.status || 'Draft'
-        })
-        .select()
-        .single();
-      if (error) throw error;
-      result = data;
+    if (error) {
+      console.error('Supabase Upsert Error:', error);
+      throw error;
     }
 
     res.json(result);
