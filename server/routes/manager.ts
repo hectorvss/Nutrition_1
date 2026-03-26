@@ -241,13 +241,10 @@ router.get('/clients', async (req: any, res) => {
         created_at,
         status,
         profiles!user_id (full_name),
-        clients_profiles!user_id (weight, goal, notes, temp_password),
+        clients_profiles!user_id (weight, goal, notes, temp_password, age, gender),
         check_ins (id, date, reviewed_at, data_json),
         workout_logs!client_id (logged_at),
-        tasks!client_id (*),
-        roadmaps!client_id (*),
-        nutrition_plans!client_id (id),
-        training_programs!client_id (id)
+        tasks!client_id (*)
       `)
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
@@ -255,6 +252,23 @@ router.get('/clients', async (req: any, res) => {
       .order('logged_at', { foreignTable: 'workout_logs', ascending: false });
       
     if (error) throw error;
+    if (!clients || clients.length === 0) return res.json([]);
+
+    // Fetch related plans separately since direct joins may lack foreign key mapping in cache
+    const clientIds = clients.map(c => c.id);
+
+    const [roadmapsRes, nutritionRes, trainingRes] = await Promise.all([
+      supabaseAdmin.from('roadmaps').select('*').in('client_id', clientIds),
+      supabaseAdmin.from('nutrition_plans').select('id, client_id').in('client_id', clientIds),
+      supabaseAdmin.from('training_programs').select('id, client_id').in('client_id', clientIds)
+    ]);
+
+    // Attach related data to client objects
+    (clients as any[]).forEach(c => {
+      c.roadmaps = (roadmapsRes.data || []).filter(r => r.client_id === c.id);
+      c.nutrition_plans = (nutritionRes.data || []).filter(n => n.client_id === c.id);
+      c.training_programs = (trainingRes.data || []).filter(t => t.client_id === c.id);
+    });
     
     // Helper to map adherence string to percentage
     const mapAdherence = (str: string): number => {
