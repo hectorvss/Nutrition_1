@@ -26,77 +26,75 @@ import { useCalendar, getEventPresentationInfo, EventType } from '../context/Cal
 
 type ViewMode = 'Month' | 'Week' | 'Day';
 
-const parseTimeToMinutes = (time: string | null | undefined): number | null => {
+// --- New Deterministic Rendering Engine ---
+const ROW_HEIGHT_DAY = 128;
+const ROW_HEIGHT_WEEK = 96;
+
+const timeToMinutes = (time: string | null | undefined): number | null => {
   if (!time || typeof time !== 'string') return null;
-  try {
-    const parts = time.split(':').map(val => parseInt(val, 10));
-    if (parts.length < 1 || isNaN(parts[0])) return null;
-    const mins = parts[0] * 60 + (parts[1] || 0);
-    return isNaN(mins) ? null : Math.min(Math.max(0, mins), 1439);
-  } catch (e) {
-    return null;
-  }
+  const match = time.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const mins = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+  return isNaN(mins) ? null : Math.min(Math.max(0, mins), 1439);
 };
 
-const parseDurationToMinutes = (duration: string | number | null | undefined): number => {
-  if (duration === null || duration === undefined) return 60;
+const durationToMinutes = (duration: string | number | null | undefined): number => {
+  if (!duration) return 60;
+  const str = duration.toString().toLowerCase();
   
-  try {
-    const dur = duration.toString().toLowerCase().trim().replace(',', '.');
-    
-    // 1. HH:MM format
-    if (dur.includes(':')) {
-      const parts = dur.split(':').map(val => parseInt(val, 10));
-      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        return Math.min((parts[0] * 60) + parts[1], 1440);
-      }
-    }
-
-    // 2. Units (h, m)
-    const hMatch = dur.match(/(\d+(?:\.\d+)?)\s*h/);
-    const mMatch = dur.match(/(\d+)\s*m/);
-    
-    let totalMins = 0;
-    let matched = false;
-    if (hMatch) {
-      totalMins += parseFloat(hMatch[1]) * 60;
-      matched = true;
-    }
-    if (mMatch) {
-      totalMins += parseInt(mMatch[1], 10);
-      matched = true;
-    }
-    if (matched) return Math.min(totalMins, 1440);
-
-    // 3. Fallback numbers
-    const num = parseFloat(dur);
-    if (!isNaN(num)) {
-      // If num >= 15, assume minutes. If < 15, assume hours.
-      return num >= 15 ? Math.min(num, 1440) : Math.min(num * 60, 1440);
-    }
-  } catch (e) {}
+  // 1. Try minutes-only (e.g. "45m" or "45")
+  const mMatch = str.match(/^(\d+)(?:\s*m)?$/);
+  if (mMatch) return Math.min(parseInt(mMatch[1], 10), 1440);
+  
+  // 2. Try hours-only (e.g. "2h" or "2")
+  const hMatch = str.match(/^(\d+(?:\.\d+)?)\s*h?$/);
+  if (hMatch) return Math.min(parseFloat(hMatch[1]) * 60, 1440);
+  
+  // 3. Try combined (e.g. "1h 30m")
+  const combinedH = str.match(/(\d+(?:\.\d+)?)\s*h/);
+  const combinedM = str.match(/(\d+)\s*m/);
+  let total = 0;
+  if (combinedH) total += parseFloat(combinedH[1]) * 60;
+  if (combinedM) total += parseInt(combinedM[1], 10);
+  if (total > 0) return Math.min(total, 1440);
 
   return 60;
 };
 
-const getEventFullDurationMinutes = (event: any): number => {
-  const start = parseTimeToMinutes(event.time);
-  const end = parseTimeToMinutes(event.endTime);
+/**
+ * Calculates deterministic layout for an event.
+ * Ensures strict synchronization with the grid row height.
+ */
+const getEventLayout = (event: any, rowHeight: number) => {
+  const pixelsPerMinute = rowHeight / 60;
+  const startMin = timeToMinutes(event.time);
   
-  if (start !== null && end !== null) {
-    let diff = end - start;
-    if (diff <= 0) diff += 1440; // Overnight or same time
-    return Math.min(diff, 1440);
+  if (startMin === null) return null;
+
+  let durationMins = 60;
+  const endMin = timeToMinutes(event.endTime);
+  
+  if (endMin !== null) {
+    durationMins = endMin - startMin;
+    if (durationMins <= 0) durationMins += 1440; // Overnight
+  } else {
+    durationMins = durationToMinutes(event.duration);
   }
-  
-  return parseDurationToMinutes(event.duration);
+
+  const top = startMin * pixelsPerMinute;
+  const maxHeight = (24 * 60 * pixelsPerMinute) - top;
+  const height = Math.min(Math.max(durationMins * pixelsPerMinute, 32), maxHeight);
+
+  if (isNaN(top) || isNaN(height)) return null;
+
+  return { top, height };
 };
 
 const getOverlapData = (events: any[]) => {
   // Sort by start mins
   const sorted = [...events].sort((a, b) => {
-    const startA = parseTimeToMinutes(a.time) ?? 540;
-    const startB = parseTimeToMinutes(b.time) ?? 540;
+    const startA = timeToMinutes(a.time) ?? 540;
+    const startB = timeToMinutes(b.time) ?? 540;
     return startA - startB;
   });
 
@@ -105,9 +103,9 @@ const getOverlapData = (events: any[]) => {
   let clusterEnd = 0;
 
   sorted.forEach(event => {
-    const startMins = parseTimeToMinutes(event.time) ?? 540;
-    const durationMins = getEventFullDurationMinutes(event);
-    const endMins = startMins + durationMins;
+    const startMins = timeToMinutes(event.time) ?? 540;
+    const endMins = startMins + durationToMinutes(event.duration); // Simplified for clustering logic
+    // Note: getOverlapData only needs approximate clustering, individual rendering is precise.
 
     if (startMins >= clusterEnd) {
       if (currentCluster.length > 0) clusters.push(currentCluster);
@@ -126,12 +124,22 @@ const getOverlapData = (events: any[]) => {
     const columns: any[][] = [];
     cluster.forEach(event => {
       let placed = false;
-      const startMins = parseTimeToMinutes(event.time) ?? 540;
+      const startMins = timeToMinutes(event.time) ?? 540;
       for (let i = 0; i < columns.length; i++) {
         const lastInCol = columns[i][columns[i].length - 1];
-        const lastStart = parseTimeToMinutes(lastInCol.time) ?? 540;
-        const lastEnd = lastStart + getEventFullDurationMinutes(lastInCol);
-        if (startMins >= lastEnd) {
+        const lastStart = timeToMinutes(lastInCol.time) ?? 540;
+        
+        // Reuse logic for end time
+        let dur = 60;
+        const lastEndMin = timeToMinutes(lastInCol.endTime);
+        if (lastEndMin !== null) {
+          dur = lastEndMin - lastStart;
+          if (dur <= 0) dur += 1440;
+        } else {
+          dur = durationToMinutes(lastInCol.duration);
+        }
+
+        if (startMins >= lastStart + dur) {
           columns[i].push(event);
           placed = true;
           break;
@@ -387,17 +395,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                 const dayEvents = getEventsForDate(weekDay.dateStr);
                 const overlapData = getOverlapData(dayEvents);
                 return dayEvents.map((event, idx) => {
+                  const layout = getEventLayout(event, ROW_HEIGHT_WEEK);
+                  if (!layout) return null;
+                  
                   const info = getEventPresentationInfo(event.type as EventType);
-                  const startMins = parseTimeToMinutes(event.time);
-                  if (startMins === null) return null;
-                  
-                  const top = (startMins / 60) * 96;
-                  const durationMins = getEventFullDurationMinutes(event);
-                  const maxPossibleHeight = (24 * 96) - top;
-                  const height = Math.min(Math.max((durationMins / 60) * 96, 32), maxPossibleHeight);
-                  
-                  if (isNaN(top) || isNaN(height)) return null;
-
                   const style = overlapData[event.id] || { width: 100, left: 0 };
                   
                   return (
@@ -409,10 +410,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                       }}
                       className={`absolute p-1 border-l-2 rounded-lg shadow-sm z-10 overflow-hidden ${info.color} cursor-pointer hover:brightness-95 transition-all flex flex-col`}
                       style={{ 
-                        top: `${top}px`, 
+                        top: `${layout.top}px`, 
+                        height: `${layout.height}px`,
                         left: `${dayIdx * (100 / 7) + (style.left / 100) * (100 / 7)}%`, 
-                        width: `${(style.width / 100) * (100 / 7) - 0.2}%`,
-                        height: `${height}px`
+                        width: `${(style.width / 100) * (100 / 7) - 0.2}%`
                       }}
                     >
                       <p className="text-[10px] font-bold truncate leading-tight">{event.title}</p>
@@ -458,15 +459,8 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
               {(() => {
                 const overlapData = getOverlapData(currentDayEvents);
                 return currentDayEvents.map((event) => {
-                  const startMins = parseTimeToMinutes(event.time);
-                  if (startMins === null) return null;
-                  
-                  const top = (startMins / 60) * 128;
-                  const durationMins = getEventFullDurationMinutes(event);
-                  const maxPossibleHeight = (24 * 128) - top;
-                  const height = Math.min(Math.max((durationMins / 60) * 128, 48), maxPossibleHeight);
-                  
-                  if (isNaN(top) || isNaN(height)) return null;
+                  const layout = getEventLayout(event, ROW_HEIGHT_DAY);
+                  if (!layout) return null;
 
                   const info = getEventPresentationInfo(event.type as EventType);
                   const EventIcon = info.icon;
@@ -478,8 +472,8 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                       onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
                       className={`absolute p-1 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-3 transition-all hover:shadow-md cursor-pointer ${info.color}`}
                       style={{ 
-                        top: `${top}px`, 
-                        height: `${height}px`,
+                        top: `${layout.top}px`, 
+                        height: `${layout.height}px`,
                         left: `${style.left}%`,
                         width: `${style.width}%`
                       }}
