@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { fetchWithAuth } from '../api';
 import { useAuth } from './AuthContext';
+import { getRecommendationsByPlanningId } from '../constants/planMappings';
 
 export interface ClientProfile {
   weight?: number;
@@ -33,9 +34,17 @@ export interface ClientData {
   notes: string;
   weight: number | null;
 
-  // Plan assignment state (localStorage-backed)
+  // Plan assignment state (localStorage-backed or API based)
   nutritionPlanAssigned: boolean;
   trainingPlanAssigned: boolean;
+  
+  // Strategic Synchronization Layer
+  planningAssigned: boolean;
+  planningTemplateId?: string | null;
+  recommendedNutritionId?: number | null;
+  recommendedTrainingId?: string | null;
+  planFamilyKey?: string | null;
+  planFamilyLabel?: string | null;
 
   tempPassword?: string;
   lastCheckInDate?: string;
@@ -50,6 +59,7 @@ interface ClientContextType {
   reloadClients: () => Promise<void>;
   assignNutritionPlan: (clientId: string) => void;
   assignTrainingPlan: (clientId: string) => void;
+  assignPlanningDraft: (clientId: string, templateId: string, settings: any) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   archiveClient: (clientId: string, status: 'Active' | 'Archived') => Promise<void>;
 }
@@ -85,6 +95,36 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
        setClients(prev => prev.map(c => c.id === clientId ? { ...c, trainingPlanAssigned: true } : c));
     } catch (err) {
       console.error('Error assigning training plan:', err);
+    }
+  };
+
+  const assignPlanningDraft = async (clientId: string, templateId: string, settings: any) => {
+    try {
+      const recommendations = getRecommendationsByPlanningId(templateId);
+      
+      const updateData = {
+        planningAssigned: true,
+        planningTemplateId: templateId,
+        recommendedNutritionId: recommendations?.nutritionTemplateId,
+        recommendedTrainingId: recommendations?.trainingTemplateId,
+        planFamilyKey: recommendations?.familyKey,
+        planFamilyLabel: recommendations?.familyLabel,
+        settings
+      };
+
+      // In a real app, this would be a specific endpoint. 
+      // For now, persist as part of the client profile/meta in data_json of the roadmap
+      await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
+        method: 'POST',
+        body: JSON.stringify({ 
+          name: 'Draft Roadmap', 
+          data_json: { ...updateData, status: 'DRAFT', nutrition: [], training: [] } 
+        })
+      });
+
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updateData } : c));
+    } catch (err) {
+      console.error('Error assigning planning draft:', err);
     }
   };
 
@@ -163,8 +203,25 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
              nextAppointment: c.nextAppointment || 'Not Scheduled',
              lastCheckInDate: c.lastCheckInDate || null,
              isUnreviewed: c.isUnreviewed || false,
-             check_ins: c.check_ins || []
-          };
+             check_ins: c.check_ins || [],
+             
+             // Extract roadmap data if available
+             ...(c.roadmaps?.[0]?.data_json ? {
+               planningAssigned: c.roadmaps[0].data_json.planningAssigned || false,
+               planningTemplateId: c.roadmaps[0].data_json.planningTemplateId || null,
+               recommendedNutritionId: c.roadmaps[0].data_json.recommendedNutritionId || null,
+               recommendedTrainingId: c.roadmaps[0].data_json.recommendedTrainingId || null,
+               planFamilyKey: c.roadmaps[0].data_json.planFamilyKey || null,
+               planFamilyLabel: c.roadmaps[0].data_json.planFamilyLabel || null
+             } : {
+               planningAssigned: false,
+               planningTemplateId: null,
+               recommendedNutritionId: null,
+               recommendedTrainingId: null,
+               planFamilyKey: null,
+               planFamilyLabel: null
+             })
+           };
       });
       
       console.log('DEBUG: ClientContext loaded IDs:', formatted.map((c: any) => c.id));
@@ -182,7 +239,17 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
   }, [loadClients]);
 
   return (
-    <ClientContext.Provider value={{ clients, isLoading, error, reloadClients: loadClients, assignNutritionPlan, assignTrainingPlan, deleteClient, archiveClient }}>
+    <ClientContext.Provider value={{ 
+      clients, 
+      isLoading, 
+      error, 
+      reloadClients: loadClients, 
+      assignNutritionPlan, 
+      assignTrainingPlan, 
+      assignPlanningDraft,
+      deleteClient, 
+      archiveClient 
+    }}>
       {children}
     </ClientContext.Provider>
   );

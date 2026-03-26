@@ -76,10 +76,13 @@ const getEventLayout = (event: any, rowHeight: number) => {
   
   if (endMin !== null) {
     durationMins = endMin - startMin;
-    if (durationMins <= 0) durationMins += 1440; // Overnight
+    // Removed automatic overnight (+1440) logic for Day/Week views.
+    // If endMin <= startMin, it's considered an invalid same-day event.
   } else {
     durationMins = durationToMinutes(event.duration);
   }
+
+  if (durationMins <= 0) return null; // Do not render invalid/negative duration events
 
   const top = Math.max(0, startMin * pixelsPerMinute);
   const maxPossibleHeight = (24 * 60 * pixelsPerMinute) - top;

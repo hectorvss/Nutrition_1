@@ -129,9 +129,10 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
         const totalMins1 = h1 * 60 + m1;
         let totalMins2 = h2 * 60 + m2;
         
-        // Handle next-day end times if needed, or stick to same day
+        // Removed automatic +1440 logic to prevent accidental "17h" durations.
+        // If the user sets end < start, we treat it as an invalid range for same-day.
         if (totalMins2 <= totalMins1) {
-          totalMins2 += 24 * 60; 
+          return '1h'; // Default fallback or signal for same-day
         }
         
         const diff = totalMins2 - totalMins1;
