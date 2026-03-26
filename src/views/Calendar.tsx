@@ -15,6 +15,7 @@ import {
   MoreVertical,
   User
 } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface CalendarProps {
   onNavigate: (view: string, data?: any) => void;
@@ -322,16 +323,19 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                       {dayEvents.slice(0, 3).map((ev, eIdx) => {
                         const info = getEventPresentationInfo(ev.type);
                         return (
-                          <div 
-                            key={eIdx} 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNavigate('create-task', { taskId: ev.id, returnTo: 'Month', currentDate: dayObj.dateStr });
-                            }}
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded truncate bg-opacity-30 border ${info.color.split(' ')[0]} border-${info.color.split(' ')[0].split('-')[1]}-200 text-${info.color.split(' ')[0].split('-')[1]}-700 cursor-pointer hover:brightness-95`}
-                          >
-                            {ev.time} {ev.title}
-                          </div>
+                        <motion.div 
+                          key={eIdx} 
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.95, backgroundColor: 'rgba(52, 211, 153, 0.2)' }}
+                          transition={{ duration: 0.1 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onNavigate('create-task', { taskId: ev.id, returnTo: 'Month', currentDate: dayObj.dateStr });
+                          }}
+                          className={`text-[10px] font-bold px-2 py-1 rounded truncate bg-opacity-30 border ${info.color.split(' ')[0]} border-${info.color.split(' ')[0].split('-')[1]}-200 text-${info.color.split(' ')[0].split('-')[1]}-700 cursor-pointer shadow-sm hover:z-10`}
+                        >
+                          {ev.time} {ev.title}
+                        </motion.div>
                         );
                       })}
                       {dayEvents.length > 3 && (
@@ -537,7 +541,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
   return (
     <div className="flex flex-col h-full overflow-hidden bg-slate-50">
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="p-6 sm:p-8 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0 z-10">
+        <header className="px-6 md:px-8 lg:px-10 py-8 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0 z-10">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
               {viewMode === 'Day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
@@ -583,7 +587,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto px-6 sm:px-8 pb-8">
+        <div className="flex-1 overflow-auto px-6 md:px-8 lg:px-10 pb-10">
           {viewMode === 'Month' && renderMonthView()}
           {viewMode === 'Week' && renderWeekView()}
           {viewMode === 'Day' && renderDayView()}
