@@ -20,96 +20,39 @@ interface NutritionPlanTemplatesProps {
 }
 
 export default function NutritionPlanTemplates({ client, onBack, onSelect }: NutritionPlanTemplatesProps) {
-  const templates = [
-    {
-      id: 'fat_loss_basic',
-      name: 'Fat Loss Basic',
-      calories: 1500,
-      desc: 'Conservative cut',
-      type: 'Balanced',
-      typeColor: 'bg-blue-50 text-blue-600',
-      macros: { p: 32, c: 38, f: 30 },
-      weekView: [60, 80, 70, 60, 90, 50, 40],
-      stats: '3 meals'
-    },
-    {
-      id: 'active_maintain',
-      name: 'Active Maintain',
-      calories: 1800,
-      desc: 'Maintenance approach',
-      type: 'High Carb',
-      typeColor: 'bg-purple-50 text-purple-600',
-      macros: { p: 25, c: 50, f: 25 },
-      weekView: [70, 70, 70, 80, 80, 60, 60],
-      stats: '3 meals'
-    },
-    {
-      id: 'moderate_gain',
-      name: 'Moderate Gain',
-      calories: 2000,
-      desc: 'Lean bulk approach',
-      type: 'High Protein',
-      typeColor: 'bg-red-50 text-red-600',
-      macros: { p: 40, c: 35, f: 25 },
-      weekView: [80, 80, 80, 80, 80, 80, 80],
-      stats: '3 meals'
-    },
-    {
-      id: 'active_build',
-      name: 'Active Build',
-      calories: 2200,
-      desc: 'Standard muscle gain',
-      type: 'Standard',
-      typeColor: 'bg-green-50 text-green-600',
-      macros: { p: 30, c: 40, f: 30 },
-      weekView: [90, 90, 90, 90, 90, 90, 70],
-      stats: '3 meals'
-    },
-    {
-      id: 'athlete_perform',
-      name: 'Athlete Perform',
-      calories: 2500,
-      desc: 'Sport performance',
-      type: 'High Energy',
-      typeColor: 'bg-yellow-50 text-yellow-600',
-      macros: { p: 25, c: 48, f: 27 },
-      weekView: [100, 100, 100, 100, 100, 100, 60],
-      stats: '3 meals'
-    },
-    {
-      id: 'mass_builder',
-      name: 'Mass Builder',
-      calories: 2800,
-      desc: 'Significant surplus',
-      type: 'High Carb',
-      typeColor: 'bg-purple-50 text-purple-600',
-      macros: { p: 25, c: 55, f: 20 },
-      weekView: [100, 100, 100, 100, 100, 100, 100],
-      stats: '3 meals'
-    },
-    {
-      id: 'power_lifting',
-      name: 'Power Lifting',
-      calories: 3100,
-      desc: 'Strength focus',
-      type: 'Balanced+',
-      typeColor: 'bg-blue-50 text-blue-600',
-      macros: { p: 30, c: 40, f: 30 },
-      weekView: [100, 100, 100, 100, 100, 100, 100],
-      stats: '3 meals'
-    },
-    {
-      id: 'extreme_bulk',
-      name: 'Extreme Bulk',
-      calories: 3300,
-      desc: 'Maximum surplus',
-      type: 'Max Carb',
-      typeColor: 'bg-red-50 text-red-600',
-      macros: { p: 20, c: 60, f: 20 },
-      weekView: [100, 100, 100, 100, 100, 100, 100],
-      stats: '6 meals'
-    }
-  ];
+  const [templates, setTemplates] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch('/api/manager/nutrition-templates', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+        });
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          // Map backend fields to frontend UI expectations
+          const formatted = data.map(t => ({
+            id: t.key || t.id,
+            name: t.name,
+            calories: t.target_calories || 0,
+            desc: t.description || '',
+            type: t.name.includes('Bulk') || t.name.includes('Gain') ? 'High Carb' : 'Balanced', // heuristic
+            typeColor: t.name.includes('Bulk') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600',
+            macros: t.data_json?.macros || { p: 30, c: 40, f: 30 },
+            weekView: [80, 80, 80, 80, 80, 80, 80], // placeholder for list icon
+            stats: `${t.data_json?.meals?.length || 3} meals`
+          }));
+          setTemplates(formatted);
+        }
+      } catch (err) {
+        console.error('Failed to fetch templates:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTemplates();
+  }, []);
 
   const selectedTemplateId = client?.recommendedNutritionId;
 
@@ -133,90 +76,99 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
-            <button 
-              onClick={() => onSelect(true)}
-              className="group w-full flex items-center justify-between p-5 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all cursor-pointer"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                  <Plus className="w-6 h-6 text-emerald-500" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-bold text-lg text-slate-700">Create New Plan</h3>
-                  <p className="text-sm text-slate-500">Start from scratch with custom macros</p>
-                </div>
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                <p className="text-sm font-medium">Loading templates...</p>
               </div>
-              <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
-            </button>
-
-            {templates.map((template) => (
-              <div 
-                key={template.id}
-                onClick={() => onSelect(false, template.id)}
-                className={`group w-full bg-white rounded-2xl border p-5 shadow-sm hover:shadow-lg transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 ${
-                  selectedTemplateId === template.id ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'
-                }`}
-              >
-                {selectedTemplateId === template.id && (
-                  <div className="absolute top-3 right-3 text-emerald-500">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                )}
-
-                {client?.recommendedNutritionId === template.id && (
-                  <div className="absolute top-3 right-3 sm:right-auto sm:left-3 flex items-center gap-1.5 px-2 py-1 bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-blue-500/20 z-10 animate-bounce-subtle">
-                    <Flame className="w-3 h-3 fill-current" />
-                    Recommended
-                  </div>
-                )}
-                
-                {/* Calories & Info */}
-                <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-4">
-                  <div className="flex items-center gap-1.5 justify-center sm:justify-start text-orange-500 font-bold text-xl mb-1">
-                    <Flame className="w-5 h-5" />
-                    {template.calories.toLocaleString()}
-                  </div>
-                  <h3 className="font-bold text-lg text-slate-900 leading-tight">{template.name}</h3>
-                  <p className="text-xs text-slate-500 mt-1">{template.desc}</p>
-                </div>
-
-                {/* Macros Bar */}
-                <div className="flex-1 w-full space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className={`${template.typeColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide`}>
-                      {template.type}
-                    </span>
-                    <div className="flex gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                      <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>{template.macros.p}% P</span>
-                      <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>{template.macros.c}% C</span>
-                      <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>{template.macros.f}% F</span>
+            ) : (
+              <>
+                <button 
+                  onClick={() => onSelect(true)}
+                  className="group w-full flex items-center justify-between p-5 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                      <Plus className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-bold text-lg text-slate-700">Create New Plan</h3>
+                      <p className="text-sm text-slate-500">Start from scratch with custom macros</p>
                     </div>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
-                    <div className="bg-blue-500 h-full" style={{ width: `${template.macros.p}%` }}></div>
-                    <div className="bg-emerald-500 h-full" style={{ width: `${template.macros.c}%` }}></div>
-                    <div className="bg-amber-500 h-full" style={{ width: `${template.macros.f}%` }}></div>
-                  </div>
-                </div>
+                  <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                </button>
 
-                {/* Week View Chart */}
-                <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Week View</span>
-                    <span className="text-[10px] font-bold text-slate-500">{template.stats}</span>
+                {templates.map((template) => (
+                  <div 
+                    key={template.id}
+                    onClick={() => onSelect(false, template.id)}
+                    className={`group w-full bg-white rounded-2xl border p-5 shadow-sm hover:shadow-lg transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 ${
+                      selectedTemplateId === template.id ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'
+                    }`}
+                  >
+                    {selectedTemplateId === template.id && (
+                      <div className="absolute top-3 right-3 text-emerald-500">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                    )}
+
+                    {client?.recommendedNutritionId === template.id && (
+                      <div className="absolute top-3 right-3 sm:right-auto sm:left-3 flex items-center gap-1.5 px-2 py-1 bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-blue-500/20 z-10 animate-bounce-subtle">
+                        <Flame className="w-3 h-3 fill-current" />
+                        Recommended
+                      </div>
+                    )}
+                    
+                    {/* Calories & Info */}
+                    <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-4">
+                      <div className="flex items-center gap-1.5 justify-center sm:justify-start text-orange-500 font-bold text-xl mb-1">
+                        <Flame className="w-5 h-5" />
+                        {template.calories.toLocaleString()}
+                      </div>
+                      <h3 className="font-bold text-lg text-slate-900 leading-tight">{template.name}</h3>
+                      <p className="text-xs text-slate-500 mt-1">{template.desc}</p>
+                    </div>
+
+                    {/* Macros Bar */}
+                    <div className="flex-1 w-full space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`${template.typeColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide`}>
+                          {template.type}
+                        </span>
+                        <div className="flex gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>{template.macros.p}% P</span>
+                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>{template.macros.c}% C</span>
+                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>{template.macros.f}% F</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
+                        <div className="bg-blue-500 h-full" style={{ width: `${template.macros.p}%` }}></div>
+                        <div className="bg-emerald-500 h-full" style={{ width: `${template.macros.c}%` }}></div>
+                        <div className="bg-amber-500 h-full" style={{ width: `${template.macros.f}%` }}></div>
+                      </div>
+                    </div>
+
+                    {/* Week View Chart */}
+                    <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Week View</span>
+                        <span className="text-[10px] font-bold text-slate-500">{template.stats}</span>
+                      </div>
+                      <div className="flex gap-1 h-8 items-end justify-between">
+                        {template.weekView.map((h: number, i: number) => (
+                          <div 
+                            key={i} 
+                            className={`w-1.5 rounded-t-sm transition-all ${i >= 5 ? 'bg-emerald-500/60' : 'bg-slate-200'}`} 
+                            style={{ height: `${h}%` }}
+                          ></div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-1 h-8 items-end justify-between">
-                    {template.weekView.map((h, i) => (
-                      <div 
-                        key={i} 
-                        className={`w-1.5 rounded-t-sm transition-all ${i >= 5 ? 'bg-emerald-500/60' : 'bg-slate-200'}`} 
-                        style={{ height: `${h}%` }}
-                      ></div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
+                ))}
+              </>
+            )}
           </div>
         </div>
 
