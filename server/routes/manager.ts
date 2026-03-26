@@ -2886,11 +2886,11 @@ router.get('/clients/:clientId/roadmap', async (req: any, res) => {
 router.post('/clients/:clientId/roadmap', async (req: any, res) => {
   const { clientId } = req.params;
   const managerId = req.user.id;
-  const { nutrition, training, status, data_json } = req.body;
-
-  // Build the final data_json. If it comes from the body as a full object, use it.
-  // Otherwise, default to the legacy { nutrition, training } structure.
-  const final_data_json = data_json || { nutrition, training };
+  const { data_json, status } = req.body;
+  // Build the final data_json.
+  // If req.body contains data_json explicitly, use that.
+  // Otherwise, if it has nutrition or training, treat req.body as the source of truth for the whole roadmap.
+  const final_data_json = data_json || req.body;
 
   try {
     // Upsert the roadmap
