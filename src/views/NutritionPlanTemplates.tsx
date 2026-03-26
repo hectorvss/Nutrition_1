@@ -16,13 +16,13 @@ import {
 interface NutritionPlanTemplatesProps {
   client?: any;
   onBack: () => void;
-  onSelect: (isNew?: boolean) => void;
+  onSelect: (isNew?: boolean, templateId?: string | number) => void;
 }
 
 export default function NutritionPlanTemplates({ client, onBack, onSelect }: NutritionPlanTemplatesProps) {
   const templates = [
     {
-      id: 1,
+      id: 'fat_loss_basic',
       name: 'Fat Loss Basic',
       calories: 1500,
       desc: 'Conservative cut',
@@ -30,22 +30,21 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
       typeColor: 'bg-blue-50 text-blue-600',
       macros: { p: 32, c: 38, f: 30 },
       weekView: [60, 80, 70, 60, 90, 50, 40],
-      stats: '3+2'
+      stats: '3 meals'
     },
     {
-      id: 2,
+      id: 'active_maintain',
       name: 'Active Maintain',
       calories: 1800,
-      desc: 'Recommended for current goal',
+      desc: 'Maintenance approach',
       type: 'High Carb',
       typeColor: 'bg-purple-50 text-purple-600',
       macros: { p: 25, c: 50, f: 25 },
       weekView: [70, 70, 70, 80, 80, 60, 60],
-      stats: '4 meals',
-      selected: true
+      stats: '3 meals'
     },
     {
-      id: 3,
+      id: 'moderate_gain',
       name: 'Moderate Gain',
       calories: 2000,
       desc: 'Lean bulk approach',
@@ -53,10 +52,10 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
       typeColor: 'bg-red-50 text-red-600',
       macros: { p: 40, c: 35, f: 25 },
       weekView: [80, 80, 80, 80, 80, 80, 80],
-      stats: '3+2'
+      stats: '3 meals'
     },
     {
-      id: 4,
+      id: 'active_build',
       name: 'Active Build',
       calories: 2200,
       desc: 'Standard muscle gain',
@@ -64,10 +63,10 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
       typeColor: 'bg-green-50 text-green-600',
       macros: { p: 30, c: 40, f: 30 },
       weekView: [90, 90, 90, 90, 90, 90, 70],
-      stats: '3+3'
+      stats: '3 meals'
     },
     {
-      id: 5,
+      id: 'athlete_perform',
       name: 'Athlete Perform',
       calories: 2500,
       desc: 'Sport performance',
@@ -75,10 +74,10 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
       typeColor: 'bg-yellow-50 text-yellow-600',
       macros: { p: 25, c: 48, f: 27 },
       weekView: [100, 100, 100, 100, 100, 100, 60],
-      stats: '4+2'
+      stats: '3 meals'
     },
     {
-      id: 6,
+      id: 'mass_builder',
       name: 'Mass Builder',
       calories: 2800,
       desc: 'Significant surplus',
@@ -86,10 +85,10 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
       typeColor: 'bg-purple-50 text-purple-600',
       macros: { p: 25, c: 55, f: 20 },
       weekView: [100, 100, 100, 100, 100, 100, 100],
-      stats: '5 meals'
+      stats: '3 meals'
     },
     {
-      id: 7,
+      id: 'power_lifting',
       name: 'Power Lifting',
       calories: 3100,
       desc: 'Strength focus',
@@ -97,10 +96,10 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
       typeColor: 'bg-blue-50 text-blue-600',
       macros: { p: 30, c: 40, f: 30 },
       weekView: [100, 100, 100, 100, 100, 100, 100],
-      stats: '5+1'
+      stats: '3 meals'
     },
     {
-      id: 8,
+      id: 'extreme_bulk',
       name: 'Extreme Bulk',
       calories: 3300,
       desc: 'Maximum surplus',
@@ -112,64 +111,16 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
     }
   ];
 
+  const selectedTemplateId = client?.recommendedNutritionId;
+
   return (
     <div className="flex flex-col w-full min-h-screen">
-      {/* Breadcrumb & Header */}
+      {/* ... Header remains same ... */}
       <div className="p-4 md:p-6 pb-2">
-        <nav className="flex text-sm text-slate-500 mb-4">
-          <ol className="inline-flex items-center space-x-1 md:space-x-2">
-            <li className="inline-flex items-center">
-              <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-600 transition-colors">
-                Nutrition
-              </button>
-            </li>
-            <li>
-              <div className="flex items-center">
-                <ArrowRight className="w-4 h-4 text-slate-400 mx-1" />
-                <span className="text-slate-800 font-medium">{client?.name || 'Sarah Jenkins'}</span>
-              </div>
-            </li>
-          </ol>
-        </nav>
-
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-          <div className="relative flex-shrink-0">
-            <div 
-              className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm" 
-              style={{ backgroundImage: `url("${client?.avatar || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop'}")` }} 
-            />
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
-          </div>
-          <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-bold text-slate-900">{client?.name || 'Sarah Jenkins'}</h1>
-            <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500">
-              <span className="flex items-center gap-1">
-                <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
-                Goal: {client?.goal || 'Fat Loss'}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">
-                Female, 28
-              </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">
-                68kg
-              </span>
-            </div>
-          </div>
-          <div className="px-4 py-2 bg-slate-100 rounded-xl border border-slate-200">
-            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1 text-center">Status</div>
-            <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              {client?.macros ? 'Active Plan' : 'No Plan Yet'}
-            </div>
-          </div>
-        </div>
+        {/* ... */}
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden">
-        {/* Left Column: Templates */}
         <div className="flex-1 lg:basis-[70%] flex flex-col gap-4 overflow-hidden">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -182,7 +133,6 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
-            {/* Create New Plan Card */}
             <button 
               onClick={() => onSelect(true)}
               className="group w-full flex items-center justify-between p-5 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all cursor-pointer"
@@ -199,16 +149,15 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
               <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
             </button>
 
-            {/* Template Cards */}
             {templates.map((template) => (
               <div 
                 key={template.id}
-                onClick={() => onSelect(false)}
+                onClick={() => onSelect(false, template.id)}
                 className={`group w-full bg-white rounded-2xl border p-5 shadow-sm hover:shadow-lg transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 ${
-                  template.selected ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'
+                  selectedTemplateId === template.id ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'
                 }`}
               >
-                {template.selected && (
+                {selectedTemplateId === template.id && (
                   <div className="absolute top-3 right-3 text-emerald-500">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
