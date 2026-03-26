@@ -212,7 +212,7 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
   <span className={`material-symbols-outlined ${className}`} style={{ fontSize: 'inherit' }}>{name}</span>
 );
 
-export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (view: string) => void, clientId?: string }) {
+export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
   const { clients } = useClient();
   const client = clients.find(c => c.id === clientId);
 
@@ -244,7 +244,8 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   const loadRoadmap = async () => {
     try {
       const data = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`);
-      const roadmapData = data.data_json && data.data_json.nutrition ? data.data_json : getInitialData();
+      // Use initialRoadmap if provided as a draft, otherwise fall back to API data or standard initial data
+      const roadmapData = initialRoadmap || (data.data_json && data.data_json.nutrition ? data.data_json : getInitialData());
       
       // Safety/Migration checks
       if (!roadmapData.milestones) roadmapData.milestones = getInitialData().milestones;

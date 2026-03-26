@@ -16,6 +16,7 @@ import CalendarView from './views/Calendar';
 import CreateTask from './views/CreateTask';
 import PlanningManagement from './views/PlanningManagement';
 import PlanningDetail from './views/PlanningDetail';
+import PlanningTemplateSelector from './views/PlanningTemplateSelector';
 import TaskIntelligence from './views/TaskIntelligence';
 import Clients from './views/Clients';
 import CheckIns from './views/CheckIns';
@@ -40,7 +41,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
 import LandingPage from './views/LandingPage';
 
-type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
+type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
@@ -53,6 +54,7 @@ export default function App() {
   const [calendarViewMode, setCalendarViewMode] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [draftPlanning, setDraftPlanning] = useState<any>(null);
   const { clients: globalClients } = useClient();
   
   const { user, isLoading } = useAuth();
@@ -137,8 +139,72 @@ export default function App() {
           if (cid) setSelectedClientId(cid);
           setCurrentView(view as View);
         }} />;
+      case 'planning-template-selector':
+        return (
+          <PlanningTemplateSelector 
+            client={globalClients.find(c => c.id === selectedClientId)}
+            onBack={() => setCurrentView('planning')}
+            onSelect={(templateId, settings) => {
+              // Generate initial roadmap structure based on template
+              const generatedDraft = {
+                status: 'DRAFT',
+                currentWeek: 1,
+                totalWeeks: settings.duration,
+                nutrition: [
+                  { 
+                    id: 'n1', title: 'Phase 1: ' + settings.nutritionApproach, startWeek: 1, endWeek: 4, type: 'nutrition', 
+                    duration: 4, order: 1,
+                    colorToken: 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400',
+                    kcal: '2000', macros: '40/30/30', freq: '4 Meals', water: '3.0 L',
+                    stratData: { 
+                      summary: 'Initial phase adapted from ' + templateId,
+                      primaryObjective: settings.primaryGoal,
+                      secondaryObjectives: [], kpis: [], successCriteria: [], coachNotes: '', risksAndConstraints: [],
+                      kcal: '2000', macros: '40/30/30', freq: '4 Meals', water: '3.0 L'
+                    }
+                  }
+                ],
+                training: [
+                  { 
+                    id: 't1', title: 'Phase 1: Foundation', startWeek: 1, endWeek: 4, type: 'training', 
+                    duration: 4, order: 1,
+                    colorToken: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
+                    focus: 'Hypertrophy', sessions: settings.trainingFreq, deload: 'Active',
+                    stratData: { 
+                      summary: 'Foundation building.',
+                      primaryObjective: 'Hypertrophy',
+                      secondaryObjectives: [], kpis: [], successCriteria: [], coachNotes: '', risksAndConstraints: [],
+                      trainingFocus: 'Hypertrophy', sessions: settings.trainingFreq, deload: 'Active',
+                      intensityTargets: ['RPE 7-8']
+                    }
+                  }
+                ],
+                goals: [],
+                milestones: [
+                  { id: 'm1', label: 'Program Start', week: 'Week 1', status: 'next' }
+                ],
+                assumptions: {
+                  steps: '10,000',
+                  sleep: '8h',
+                  constraints: 'None'
+                }
+              };
+              setDraftPlanning(generatedDraft);
+              setCurrentView('planning-detail');
+            }}
+          />
+        );
       case 'planning-detail':
-        return <PlanningDetail onNavigate={(view) => setCurrentView(view as View)} clientId={selectedClientId || undefined} />;
+        return (
+          <PlanningDetail 
+            onNavigate={(view) => {
+              setDraftPlanning(null); // Clear draft when leaving
+              setCurrentView(view as View);
+            }} 
+            clientId={selectedClientId || undefined} 
+            initialRoadmap={draftPlanning}
+          />
+        );
       case 'clients':
         return <Clients />;
       case 'check-ins':

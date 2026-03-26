@@ -5,13 +5,16 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
   const { clients: globalClients } = useClient();
   
   const clients = globalClients.map((client, idx) => {
+    // For demo purposes: first 2 clients have plans, others are "no plan"
+    const hasActivePlan = idx < 2;
     return {
       id: client.id,
       name: client.name,
       avatar: client.avatar,
-      status: 'PLANNING',
+      status: hasActivePlan ? 'ACTIVE' : 'NO_PLAN',
+      roadmapStatus: hasActivePlan ? 'ROADMAP ACTIVE' : 'NO STRATEGIC PLAN',
       online: idx === 0 || idx === 1,
-      roadmapProgress: 'Draft Stage',
+      roadmapProgress: hasActivePlan ? 'Live' : 'Needs Setup',
     };
   });
 
@@ -58,8 +61,8 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                 <div 
                   key={client.id} 
                   onClick={() => {
-                    // This will eventually go to the deep planning view
-                    onNavigate('planning-detail', client.id);
+                    const view = client.status === 'ACTIVE' ? 'planning-detail' : 'planning-template-selector';
+                    onNavigate(view, client.id);
                   }}
                   className="group p-6 hover:bg-slate-50/80 transition-all cursor-pointer"
                 >
@@ -77,8 +80,12 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3 mb-1.5">
                           <h3 className="font-bold text-lg text-slate-900">{client.name}</h3>
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border bg-emerald-50 text-emerald-600 border-emerald-100">
-                            ROADMAP ACTIVE
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
+                            client.status === 'ACTIVE' 
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                              : 'bg-amber-50 text-amber-600 border-amber-100'
+                          }`}>
+                            {client.roadmapStatus}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500 font-medium">
@@ -103,12 +110,19 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          onNavigate('planning-detail', client.id);
+                          const view = client.status === 'ACTIVE' ? 'planning-detail' : 'planning-template-selector';
+                          onNavigate(view, client.id);
                         }}
-                        className="px-6 py-2.5 rounded-xl transition-all text-sm font-bold flex items-center gap-2 whitespace-nowrap border bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100"
+                        className={`px-6 py-2.5 rounded-xl transition-all text-sm font-bold flex items-center gap-2 whitespace-nowrap border ${
+                          client.status === 'ACTIVE'
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
+                            : 'bg-slate-900 text-white border-slate-900 hover:bg-black'
+                        }`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">route</span>
-                        Edit Roadmap
+                        <span className="material-symbols-outlined text-[18px]">
+                          {client.status === 'ACTIVE' ? 'route' : 'add'}
+                        </span>
+                        {client.status === 'ACTIVE' ? 'Edit Roadmap' : 'Setup Roadmap'}
                       </button>
                     </div>
                   </div>
