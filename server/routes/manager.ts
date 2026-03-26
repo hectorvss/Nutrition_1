@@ -2887,10 +2887,27 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
   const { clientId } = req.params;
   const managerId = req.user.id;
   const { data_json, status } = req.body;
-  // Build the final data_json.
-  // If req.body contains data_json explicitly, use that.
-  // Otherwise, if it has nutrition or training, treat req.body as the source of truth for the whole roadmap.
-  const final_data_json = data_json || req.body;
+  const rawData = data_json || req.body;
+
+  // Derived Recommendations (Simple Algorithm)
+  // This allows Nutrition/Training to see what Planning recommends
+  const deriveRecommendations = (data: any) => {
+    const goal = data.primaryGoal || data.goalType || 'Fat Loss';
+    const mapping: Record<string, any> = {
+      'Fat Loss': { nutrition: 'fat-loss-std', training: 'fat-loss-base' },
+      'Muscle Gain': { nutrition: 'muscle-gain-std', training: 'hypertrophy-base' },
+      'Body Recomposition': { nutrition: 'recomp-std', training: 'recomp-base' },
+      'Performance': { nutrition: 'perf-std', training: 'perf-base' },
+      'Metabolic Reset': { nutrition: 'reset-std', training: 'reset-base' }
+    };
+    return mapping[goal] || mapping['Fat Loss'];
+  };
+
+  const final_data_json = {
+    ...rawData,
+    recommendations: deriveRecommendations(rawData),
+    updated_at: new Date().toISOString()
+  };
 
   try {
     // Upsert the roadmap

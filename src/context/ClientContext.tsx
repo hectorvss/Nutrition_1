@@ -231,12 +231,12 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
                 }
 
                 return {
-                  planningAssigned: dj.planningAssigned || false,
-                  planningTemplateId: dj.planningTemplateId || null,
-                  recommendedNutritionId: dj.recommendedNutritionId || null,
-                  recommendedTrainingId: dj.recommendedTrainingId || null,
-                  planFamilyKey: dj.planFamilyKey || null,
-                  planFamilyLabel: dj.planFamilyLabel || null
+                  planningAssigned: true,
+                  planningTemplateId: dj.planningTemplateId || dj.templateId || null,
+                  recommendedNutritionId: dj.recommendations?.nutrition || dj.recommendedNutritionId || null,
+                  recommendedTrainingId: dj.recommendations?.training || dj.recommendedTrainingId || null,
+                  planFamilyKey: dj.planFamilyKey || dj.goalType || null,
+                  planFamilyLabel: dj.planFamilyLabel || dj.goalType || null
                 };
              })()
            };
