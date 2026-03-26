@@ -77,12 +77,17 @@ const getEventLayout = (event: any, rowHeight: number) => {
   if (endMin !== null) {
     durationMins = endMin - startMin;
     // Removed automatic overnight (+1440) logic for Day/Week views.
-    // If endMin <= startMin, it's considered an invalid same-day event.
+    // If endMin <= startMin, we treat it as same-day default/fallback below.
   } else {
     durationMins = durationToMinutes(event.duration);
   }
 
-  if (durationMins <= 0) return null; // Do not render invalid/negative duration events
+  // Final fallbacks to keep the card visible
+  if (durationMins <= 0) {
+    // If math was 0 (e.g. 09:00 - 09:00), try current duration text
+    const fallback = durationToMinutes(event.duration);
+    durationMins = (fallback > 0) ? fallback : 60; // 60 min absolute default
+  }
 
   const top = Math.max(0, startMin * pixelsPerMinute);
   const maxPossibleHeight = (24 * 60 * pixelsPerMinute) - top;
