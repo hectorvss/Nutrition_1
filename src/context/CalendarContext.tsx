@@ -85,9 +85,9 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     return {
       id: t.id,
       time: t.time ? t.time.substring(0, 5) : '09:00',
-      endTime: t.end_time ? t.end_time.substring(0, 5) : null,
+      endTime: (t.end_time || t.endTime) ? (t.end_time || t.endTime).substring(0, 5) : null,
       date: t.date,
-      duration: t.duration || '1h',
+      duration: t.duration || t.duration_mins || '1h',
       title: t.title,
       type: t.type,
       desc: t.description || t.desc || '',

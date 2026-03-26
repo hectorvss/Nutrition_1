@@ -152,7 +152,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       type: typeMap[category] || category,
       date,
       time: startTime,
-      end_time: endTime, // Adding end_time as well just in case
+      endTime: endTime, // Correct property name for Context
       duration: calculateDuration(),
       clientId: selectedClientId,
       client: client?.name || 'General Task',
