@@ -231,7 +231,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           </header>
 
           <div className="p-6 md:p-8 bg-slate-50/50">
-            <form className="max-w-4xl mx-auto space-y-8" onSubmit={handleSave}>
+            <form className="w-full space-y-8" onSubmit={handleSave}>
           {/* General Details */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
             <div className="md:col-span-4">
