@@ -55,7 +55,7 @@ export default function App() {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [draftPlanning, setDraftPlanning] = useState<any>(null);
-  const { clients: globalClients } = useClient();
+  const { clients: globalClients, assignPlanningDraft } = useClient();
   
   const { user, isLoading } = useAuth();
   const { profile } = useProfile();
@@ -144,8 +144,13 @@ export default function App() {
           <PlanningTemplateSelector 
             client={globalClients.find(c => c.id === selectedClientId)}
             onBack={() => setCurrentView('planning')}
-            onSelect={(templateId, settings) => {
-              // Generate initial roadmap structure based on template
+            onSelect={async (templateId, settings) => {
+              // 1. Assign via context (Persistence & Logic)
+              if (selectedClientId) {
+                await assignPlanningDraft(selectedClientId, templateId, settings);
+              }
+
+              // 2. Generate initial roadmap structure for routing
               const generatedDraft = {
                 status: 'DRAFT',
                 currentWeek: 1,
