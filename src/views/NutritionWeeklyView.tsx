@@ -129,8 +129,13 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   const [showPlanPicker, setShowPlanPicker] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialPlanData) {
+      setPlanData(initialPlanData);
+      return;
+    }
+
     const fetchPlanData = async () => {
-      if (!client?.id || initialPlanData) return;
+      if (!client?.id) return;
       try {
         setIsLoading(true);
         const data = await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`);

@@ -77,7 +77,7 @@ export default function Nutrition() {
               setIsNewPlan(!!isNew);
               setInitialPlanData(null); // Reset
 
-              if (!isNew && templateId && typeof templateId === 'string' && templateId !== 'custom') {
+              if (!isNew && templateId && (typeof templateId === 'string' || typeof templateId === 'number') && templateId !== 'custom') {
                 try {
                   // Fetch the template from the backend
                   const response = await fetch(`/api/manager/nutrition-templates/${templateId}`, {
