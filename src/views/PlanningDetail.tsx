@@ -5,6 +5,28 @@ import { useClient } from '../context/ClientContext';
 
 // --- TYPES ---
 
+interface BlockStrategicDetails {
+  summary: string;
+  primaryObjective: string;
+  secondaryObjectives: string[];
+  trainingVolume?: string;
+  trainingIntensity?: string;
+  cardio?: string;
+  kpis: string[];
+  successCriteria: string[];
+  coachNotes: string;
+  risksAndConstraints: string[];
+  // Extended fields for specific strategies
+  kcal?: string;
+  macros?: string;
+  freq?: string;
+  water?: string;
+  trainingFocus?: string;
+  sessions?: string;
+  deload?: string;
+  intensityTargets?: string[];
+}
+
 interface RoadmapBlock {
   id: string;
   type: 'nutrition' | 'training';
@@ -15,7 +37,8 @@ interface RoadmapBlock {
   colorToken?: string;
   isSelected?: boolean;
   order: number;
-  // Nutrition specific
+  stratData: BlockStrategicDetails;
+  // Legacy/Direct access fields (keeping for compatibility with existing UI logic if possible, but transitioning to stratData)
   kcal?: string;
   macros?: string;
   deficit?: string;
@@ -24,14 +47,10 @@ interface RoadmapBlock {
   rationale?: string;
   timing?: string[];
   focusItems?: string[];
-  // Training specific
   focus?: string;
   sessions?: string;
   deload?: string;
   intensityTargets?: string[];
-  // Shared
-  successCriteria?: string;
-  redFlags?: string;
 }
 
 interface Milestone {
@@ -77,7 +96,17 @@ const getInitialData = (): RoadmapData => ({
       duration: 4, order: 1,
       colorToken: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
       kcal: '2,450', macros: '35/35/30', freq: '4 Meals', water: '3.0 L',
-      rationale: 'Establishing metabolic baseline and assessing initial response.'
+      rationale: 'Establishing metabolic baseline and assessing initial response.',
+      stratData: {
+        summary: 'Maintenance phase to establish a metabolic baseline.',
+        primaryObjective: 'Metabolic Stabilization',
+        secondaryObjectives: ['Gut Health Assessment', 'Sleep Optimization'],
+        kpis: ['Weight Stability (+/- 0.5kg)', 'Energy Levels 8/10'],
+        successCriteria: ['Consistent digestion', 'Recovery improved'],
+        coachNotes: 'Client sensitive to high fats, keep within 30%.',
+        risksAndConstraints: ['Weekend travel in Week 3'],
+        kcal: '2,450', macros: '35/35/30', freq: '4 Meals', water: '3.0 L'
+      }
     },
     { 
       id: 'n2', title: 'Deficit (-500)', startWeek: 5, endWeek: 8, type: 'nutrition', 
@@ -85,15 +114,35 @@ const getInitialData = (): RoadmapData => ({
       colorToken: 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
       kcal: '2,150', macros: '40/30/30', freq: '4 Meals', water: '3.5 L',
       deficit: '-500',
-      rationale: 'Aggressive fat loss while preserving lean mass. Focus on high protein satiety and volume-dense foods to manage hunger. Strategic re-feeds on training days.',
-      focusItems: ['Timing: 40g Protein pre/post workout', 'Supplements: Electrolyte support, Omega-3s']
+      rationale: 'Aggressive fat loss while preserving lean mass.',
+      focusItems: ['Timing: 40g Protein pre/post workout', 'Supplements: Electrolyte support'],
+      stratData: {
+        summary: 'Aggressive fat loss phase with high protein focus.',
+        primaryObjective: 'Fat Loss (-0.5% BW/week)',
+        secondaryObjectives: ['Preserve Lean Mass', 'Maintain Training Intensity'],
+        kpis: ['Waist Circumference', 'Bio-feedback scores'],
+        successCriteria: ['Visible muscle definition', 'Hunger managed'],
+        coachNotes: 'Increase fiber if hunger spikes in W7.',
+        risksAndConstraints: ['Stress at work may impact adherence'],
+        kcal: '2,150', macros: '40/30/30', freq: '4 Meals', water: '3.5 L'
+      }
     },
     { 
       id: 'n3', title: 'Maintenance', startWeek: 9, endWeek: 12, type: 'nutrition', 
       duration: 4, order: 3,
       colorToken: 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400',
       kcal: '2,300', macros: '35/35/30', freq: '4 Meals', water: '3.2 L',
-      rationale: 'Reverse diet phase to solidify progress.'
+      rationale: 'Reverse diet phase to solidify progress.',
+      stratData: {
+        summary: 'Reverse dieting and progress solidification.',
+        primaryObjective: 'Metabolic Adaptation',
+        secondaryObjectives: ['Long-term habit formation'],
+        kpis: ['Strength Maintenance'],
+        successCriteria: ['Progress kept', 'Calories increased'],
+        coachNotes: 'Add carbs slowly (+20g/week).',
+        risksAndConstraints: [],
+        kcal: '2,300', macros: '35/35/30', freq: '4 Meals', water: '3.2 L'
+      }
     },
   ],
   training: [
@@ -102,14 +151,42 @@ const getInitialData = (): RoadmapData => ({
       duration: 6, order: 1,
       colorToken: 'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
       focus: 'Hypertrophy', sessions: '4 Sessions', deload: 'Active',
-      intensityTargets: ['RPE 7-9 (Technical)', 'Rest: 60-90s', 'Tempo: 3-0-1-0']
+      intensityTargets: ['RPE 7-9 (Technical)', 'Rest: 60-90s'],
+      stratData: {
+        summary: 'Building physical foundation and technical mastery.',
+        primaryObjective: 'Hypertrophy & Work Capacity',
+        secondaryObjectives: ['Improved Squat Depth', 'Core Stability'],
+        trainingVolume: 'Moderate (12-15 sets/muscle)',
+        trainingIntensity: 'RPE 7-8',
+        cardio: 'LISS 30min 2x/week',
+        kpis: ['Total Volume Load', 'Rest intervals'],
+        successCriteria: ['Form consistency', 'No joint pain'],
+        coachNotes: 'Focus on mind-muscle connection.',
+        risksAndConstraints: ['Avoid excessive failure sets early on'],
+        trainingFocus: 'Hypertrophy', sessions: '4 Sessions', deload: 'Active',
+        intensityTargets: ['RPE 7-9 (Technical)', 'Rest: 60-90s']
+      }
     },
     { 
       id: 't2', title: 'Strength Peak (3x)', startWeek: 7, endWeek: 12, type: 'training', 
       duration: 6, order: 2,
       colorToken: 'bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400',
       focus: 'Strength', sessions: '3 Sessions', deload: 'Passive',
-      intensityTargets: ['RPE 8-10', 'Rest: 120-180s', 'Tempo: 2-0-X-0']
+      intensityTargets: ['RPE 8-10', 'Rest: 120-180s'],
+      stratData: {
+        summary: 'Peaking for maximum strength on compound lifts.',
+        primaryObjective: 'Absolute Strength Increase',
+        secondaryObjectives: ['Neurological adaptation'],
+        trainingVolume: 'Low (6-10 sets/muscle)',
+        trainingIntensity: 'RPE 9-10',
+        cardio: 'LISS 20min 1x/week',
+        kpis: ['1RM Projected', 'Bar Speed'],
+        successCriteria: ['PRs achieved', 'Peak recovered'],
+        coachNotes: 'Prioritize sleep and recovery between sessions.',
+        risksAndConstraints: ['CNS fatigue risk'],
+        trainingFocus: 'Strength', sessions: '3 Sessions', deload: 'Passive',
+        intensityTargets: ['RPE 8-10', 'Rest: 120-180s']
+      }
     },
   ],
   goals: [
@@ -144,7 +221,21 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [draftBlockValues, setDraftBlockValues] = useState<Partial<RoadmapBlock> | null>(null);
+  const [draftStratData, setDraftStratData] = useState<BlockStrategicDetails | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+
+  const selectedBlock = useMemo(() => {
+    if (!roadmap || !selectedBlockId) return null;
+    return [...roadmap.nutrition, ...roadmap.training].find(b => b.id === selectedBlockId) || null;
+  }, [roadmap, selectedBlockId]);
+
+  useEffect(() => {
+    if (selectedBlock) {
+      setDraftStratData(JSON.parse(JSON.stringify(selectedBlock.stratData)));
+    } else {
+      setDraftStratData(null);
+    }
+  }, [selectedBlockId]);
 
   useEffect(() => {
     if (clientId) loadRoadmap();
@@ -218,6 +309,17 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
       colorToken: type === 'nutrition' 
         ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400'
         : 'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
+      stratData: {
+        summary: '',
+        primaryObjective: '',
+        secondaryObjectives: [],
+        kpis: [],
+        successCriteria: [],
+        coachNotes: '',
+        risksAndConstraints: [],
+        kcal: '0', macros: '0/0/0', freq: '-', water: '0',
+        trainingFocus: '-', sessions: '-', deload: '-', intensityTargets: []
+      }
     };
 
     const newBlocks = [...blocks, newBlock].sort((a, b) => a.startWeek - b.startWeek);
@@ -300,27 +402,18 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
     if (!roadmap) return;
     const isNutrition = roadmap.nutrition.some(b => b.id === blockId);
     const key = isNutrition ? 'nutrition' : 'training';
+    
+    // Auto-sync rationale if summary is updated (and vice versa for compatibility)
+    let syncUpdates = { ...updates };
+    if (updates.stratData?.summary !== undefined && isNutrition) {
+      syncUpdates.rationale = updates.stratData.summary;
+    }
+
     setRoadmap({
       ...roadmap,
-      [key]: roadmap[key].map(b => b.id === blockId ? { ...b, ...updates } : b)
+      [key]: roadmap[key].map(b => b.id === blockId ? { ...b, ...syncUpdates } : b)
     });
   };
-
-  const { selectedNutrition, selectedTraining } = useMemo(() => {
-    if (!roadmap) return { selectedNutrition: null, selectedTraining: null };
-    
-    const selected = [...roadmap.nutrition, ...roadmap.training].find(b => b.id === selectedBlockId);
-    
-    // Find active overlapping blocks for full display
-    const currentWeek = roadmap.currentWeek || 4;
-    const activeNut = roadmap.nutrition.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-    const activeTrain = roadmap.training.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-
-    return {
-      selectedNutrition: selected?.type === 'nutrition' ? selected : activeNut,
-      selectedTraining: selected?.type === 'training' ? selected : activeTrain
-    };
-  }, [roadmap, selectedBlockId]);
 
   if (loading || !roadmap) return null;
 
@@ -499,210 +592,337 @@ export default function PlanningDetail({ onNavigate, clientId }: { onNavigate: (
 
             <div className="p-6">
               <AnimatePresence mode="wait">
-                {selectedNutrition || selectedTraining ? (
+                {selectedBlock ? (
                   <motion.div 
-                    key={selectedNutrition?.id || selectedTraining?.id}
+                    key={selectedBlock.id}
                     initial={{ opacity: 0, scale: 0.99 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col gap-10"
                   >
+                    {/* Header with Title & Save */}
+                    <div className="flex items-center justify-between -mb-6">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Active Phase Selection</span>
+                        <h4 className="text-xl font-bold text-slate-900 dark:text-white">{selectedBlock.title}</h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         <button 
+                          onClick={() => setDraftStratData(JSON.parse(JSON.stringify(selectedBlock.stratData)))}
+                          className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors"
+                        >
+                          Reset
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (!draftStratData) return;
+                            const updates: Partial<RoadmapBlock> = { 
+                              stratData: draftStratData,
+                              title: selectedBlock.title // Keep sync if needed
+                            };
+                            
+                            // Deep sync specific fields for legacy compatibility
+                            if (selectedBlock.type === 'nutrition') {
+                              updates.rationale = draftStratData.summary;
+                              updates.kcal = draftStratData.kcal;
+                              updates.macros = draftStratData.macros;
+                              updates.freq = draftStratData.freq;
+                              updates.water = draftStratData.water;
+                            } else {
+                              updates.focus = draftStratData.trainingFocus;
+                              updates.sessions = draftStratData.sessions;
+                              updates.deload = draftStratData.deload;
+                              updates.intensityTargets = draftStratData.intensityTargets;
+                            }
+                            
+                            updateBlock(selectedBlock.id, updates);
+                          }}
+                          className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+                        >
+                          <Icon name="save" className="text-[16px]" />
+                          Save Details
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Nutrition Section */}
+                    {selectedBlock.type === 'nutrition' && (
                     <div className="flex flex-col gap-6">
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
                           <Icon name="restaurant" className="text-[20px]" />
                           <h4 className="font-bold text-xs uppercase tracking-widest">Nutrition Strategy</h4>
                         </div>
-                        {selectedNutrition && (
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedNutrition.title} (W{selectedNutrition.startWeek}-{selectedNutrition.endWeek})</span>
-                        )}
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">(W{selectedBlock.startWeek}-{selectedBlock.endWeek})</span>
                       </div>
                       
-                      {selectedNutrition ? (
-                        <>
-                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Daily Calories</p>
-                              <div className="flex items-center gap-1.5 font-bold">
-                                <input 
-                                  className="text-xl bg-transparent border-none p-0 focus:ring-0 w-full outline-none text-slate-900 dark:text-white"
-                                  value={selectedNutrition.kcal}
-                                  onChange={(e) => updateBlock(selectedNutrition.id, { kcal: e.target.value })}
-                                />
-                                <span className="text-xs text-amber-600 font-medium shrink-0">kcal</span>
-                              </div>
-                            </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Macro Split</p>
-                              <div className="flex flex-col">
-                                <input 
-                                  className="text-sm font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
-                                  value={selectedNutrition.macros}
-                                  onChange={(e) => updateBlock(selectedNutrition.id, { macros: e.target.value })}
-                                />
-                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">P / C / F</span>
-                              </div>
-                            </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Meal Freq</p>
-                              <input 
-                                className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
-                                value={selectedNutrition.freq}
-                                onChange={(e) => updateBlock(selectedNutrition.id, { freq: e.target.value })}
-                              />
-                            </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Hydration</p>
-                              <input 
-                                className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
-                                value={selectedNutrition.water}
-                                onChange={(e) => updateBlock(selectedNutrition.id, { water: e.target.value })}
-                              />
-                            </div>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Daily Calories</p>
+                          <div className="flex items-center gap-1.5 font-bold">
+                            <input 
+                              className="text-xl bg-transparent border-none p-0 focus:ring-0 w-full outline-none text-slate-900 dark:text-white"
+                              value={draftStratData?.kcal || ''}
+                              onChange={(e) => setDraftStratData(prev => prev ? { ...prev, kcal: e.target.value } : null)}
+                            />
+                            <span className="text-xs text-amber-600 font-medium shrink-0">kcal</span>
                           </div>
-
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div>
-                              <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
-                                <Icon name="target" className="text-sm" /> Primary Intent
-                              </h5>
-                              <textarea 
-                                className="w-full text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 resize-none h-32 transition-all"
-                                value={selectedNutrition.rationale}
-                                onChange={(e) => updateBlock(selectedNutrition.id, { rationale: e.target.value })}
-                                placeholder="Add strategic intent here..."
-                              />
-                            </div>
-                            <div>
-                              <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
-                                <Icon name="assignment" className="text-sm" /> Specific Focus
-                              </h5>
-                              <ul className="grid grid-cols-1 gap-2.5">
-                                {(selectedNutrition.focusItems || ['No specifics defined']).map((item, idx) => (
-                                  <li key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-                                    <input 
-                                      className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-medium"
-                                      value={item}
-                                      onChange={(e) => {
-                                        const newItems = [...(selectedNutrition.focusItems || [])];
-                                        newItems[idx] = e.target.value;
-                                        updateBlock(selectedNutrition.id, { focusItems: newItems });
-                                      }}
-                                    />
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="p-10 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-                          <p className="text-[10px] font-bold uppercase tracking-widest">No active nutrition phase</p>
                         </div>
-                      )}
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Macro Split</p>
+                          <div className="flex flex-col">
+                            <input 
+                              className="text-sm font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
+                              value={draftStratData?.macros || ''}
+                              onChange={(e) => setDraftStratData(prev => prev ? { ...prev, macros: e.target.value } : null)}
+                            />
+                            <span className="text-[9px] text-slate-400 font-bold uppercase tracking-tight">P / C / F</span>
+                          </div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Meal Freq</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
+                            value={draftStratData?.freq || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, freq: e.target.value } : null)}
+                          />
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Hydration</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
+                            value={draftStratData?.water || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, water: e.target.value } : null)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                            <Icon name="target" className="text-sm" /> Primary Objective
+                          </h5>
+                          <textarea 
+                            className="w-full text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 resize-none h-32 transition-all"
+                            value={draftStratData?.primaryObjective || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, primaryObjective: e.target.value } : null)}
+                            placeholder="Add primary objective here..."
+                          />
+                        </div>
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                            <Icon name="assignment" className="text-sm" /> Secondary Objectives
+                          </h5>
+                          <div className="space-y-2">
+                            {(draftStratData?.secondaryObjectives || []).map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                <input 
+                                  className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-medium"
+                                  value={item}
+                                  onChange={(e) => {
+                                    const newItems = [...(draftStratData?.secondaryObjectives || [])];
+                                    newItems[idx] = e.target.value;
+                                    setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: newItems } : null);
+                                  }}
+                                />
+                              </div>
+                            ))}
+                            <button 
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...prev.secondaryObjectives, 'New Objective'] } : null)}
+                              className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
+                            >
+                              + Add Objective
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                    )}
 
                     {/* Training Section */}
+                    {selectedBlock.type === 'training' && (
                     <div className="flex flex-col gap-6">
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
                         <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
                           <Icon name="fitness_center" className="text-[20px]" />
                           <h4 className="font-bold text-xs uppercase tracking-widest">Training Strategy</h4>
                         </div>
-                        {selectedTraining && (
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedTraining.title} (W{selectedTraining.startWeek}-{selectedTraining.endWeek})</span>
-                        )}
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">(W{selectedBlock.startWeek}-{selectedBlock.endWeek})</span>
                       </div>
 
-                      {selectedTraining ? (
-                        <>
-                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Block Focus</p>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Block Focus</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
+                            value={draftStratData?.trainingFocus || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, trainingFocus: e.target.value } : null)}
+                          />
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Volume (Sets)</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white w-full"
+                            value={draftStratData?.trainingVolume || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, trainingVolume: e.target.value } : null)}
+                          />
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Intensity</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
+                            value={draftStratData?.trainingIntensity || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, trainingIntensity: e.target.value } : null)}
+                          />
+                        </div>
+                        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cardio</p>
+                          <input 
+                            className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
+                            value={draftStratData?.cardio || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, cardio: e.target.value } : null)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                            <Icon name="trending_up" className="text-sm" /> Intensity Targets
+                          </h5>
+                          <div className="flex flex-wrap gap-2">
+                            {(draftStratData?.intensityTargets || []).map((target, idx) => (
                               <input 
-                                className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
-                                value={selectedTraining.focus}
-                                onChange={(e) => updateBlock(selectedTraining.id, { focus: e.target.value })}
+                                key={idx}
+                                className="px-3 py-2 bg-purple-50 dark:bg-purple-900/10 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-bold border border-purple-100 dark:border-purple-800 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                                value={target}
+                                onChange={(e) => {
+                                  if (!draftStratData) return;
+                                  const newTargets = [...(draftStratData.intensityTargets || [])];
+                                  newTargets[idx] = e.target.value;
+                                  setDraftStratData({ ...draftStratData, intensityTargets: newTargets });
+                                }}
                               />
-                            </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Volume/Freq</p>
-                              <div className="flex items-center gap-1 font-bold">
+                            ))}
+                            <button 
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, intensityTargets: [...(prev.intensityTargets || []), 'New Target'] } : null)}
+                              className="text-[9px] font-bold text-purple-500 uppercase tracking-widest mt-1 hover:underline"
+                            >
+                              + Add Target
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                            <Icon name="assignment_late" className="text-sm" /> Risks & Constraints
+                          </h5>
+                          <div className="space-y-2">
+                             {(draftStratData?.risksAndConstraints || []).map((risk, idx) => (
+                              <div key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 p-3 rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
                                 <input 
-                                  className="text-xl bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white w-full"
-                                  value={selectedTraining.sessions}
-                                  onChange={(e) => updateBlock(selectedTraining.id, { sessions: e.target.value })}
+                                  className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-medium"
+                                  value={risk}
+                                  onChange={(e) => {
+                                    const newRisks = [...(draftStratData?.risksAndConstraints || [])];
+                                    newRisks[idx] = e.target.value;
+                                    setDraftStratData(prev => prev ? { ...prev, risksAndConstraints: newRisks } : null);
+                                  }}
                                 />
                               </div>
-                            </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Avg Session</p>
-                              <input 
-                                className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
-                                value={selectedTraining.duration}
-                                onChange={(e) => updateBlock(selectedTraining.id, { duration: e.target.value })}
-                              />
-                            </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Deload</p>
-                              <input 
-                                className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
-                                value={selectedTraining.deload}
-                                onChange={(e) => updateBlock(selectedTraining.id, { deload: e.target.value })}
-                              />
-                            </div>
+                            ))}
+                            <button 
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, risksAndConstraints: [...prev.risksAndConstraints, 'New Risk'] } : null)}
+                              className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-1 hover:underline"
+                            >
+                              + Add Risk
+                            </button>
                           </div>
-
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div>
-                              <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
-                                <Icon name="trending_up" className="text-sm" /> Intensity Targets
-                              </h5>
-                              <div className="flex flex-wrap gap-2">
-                                {(selectedTraining.intensityTargets || []).map((target, idx) => (
-                                  <input 
-                                    key={idx}
-                                    className="px-3 py-2 bg-purple-50 dark:bg-purple-900/10 text-purple-700 dark:text-purple-300 rounded-xl text-xs font-bold border border-purple-100 dark:border-purple-800 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
-                                    value={target}
-                                    onChange={(e) => {
-                                      const newTargets = [...(selectedTraining.intensityTargets || [])];
-                                      newTargets[idx] = e.target.value;
-                                      updateBlock(selectedTraining.id, { intensityTargets: newTargets });
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            <div>
-                              <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
-                                <Icon name="emoji_events" className="text-sm" /> Key Milestones
-                              </h5>
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Icon name="check_circle" className="text-slate-400 text-sm" />
-                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Phase validation complete</span>
-                                  </div>
-                                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">W2</span>
-                                </div>
-                                <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                                  <div className="flex items-center gap-2">
-                                    <Icon name="schedule" className="text-slate-400 text-sm" />
-                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Mid-block check-in</span>
-                                  </div>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">W4</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="p-10 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-                          <p className="text-[10px] font-bold uppercase tracking-widest">No active training phase</p>
                         </div>
-                      )}
+                      </div>
                     </div>
+                    )}
+
+                    {/* Shared Strategy Section */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6 border-t border-slate-100 dark:border-slate-700">
+                      <div>
+                        <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                          <Icon name="psychology" className="text-sm text-blue-500" /> Strategic Summary
+                        </h5>
+                        <textarea 
+                          className="w-full text-sm text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-xl border border-slate-200 dark:border-slate-700 leading-relaxed outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 resize-none h-24 transition-all"
+                          value={draftStratData?.summary || ''}
+                          onChange={(e) => setDraftStratData(prev => prev ? { ...prev, summary: e.target.value } : null)}
+                        />
+                      </div>
+                      <div>
+                        <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                          <Icon name="check_circle" className="text-sm text-amber-500" /> Success Criteria
+                        </h5>
+                        <div className="space-y-2">
+                          {(draftStratData?.successCriteria || []).map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 p-3 rounded-xl bg-orange-50/50 dark:bg-orange-900/10 border border-orange-100/50 dark:border-orange-900/20 shadow-sm">
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0"></span>
+                              <input 
+                                className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-medium"
+                                value={item}
+                                onChange={(e) => {
+                                  const newItems = [...(draftStratData?.successCriteria || [])];
+                                  newItems[idx] = e.target.value;
+                                  setDraftStratData(prev => prev ? { ...prev, successCriteria: newItems } : null);
+                                }}
+                              />
+                            </div>
+                          ))}
+                          <button 
+                            onClick={() => setDraftStratData(prev => prev ? { ...prev, successCriteria: [...prev.successCriteria, 'New Criteria'] } : null)}
+                            className="text-[9px] font-bold text-orange-500 uppercase tracking-widest mt-1 hover:underline"
+                          >
+                            + Add Criteria
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                          <Icon name="format_list_bulleted" className="text-sm text-emerald-500" /> Key Performance Indicators (KPIs)
+                        </h5>
+                        <div className="space-y-2">
+                          {(draftStratData?.kpis || []).map((kpi, idx) => (
+                            <div key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm">
+                              <span className="text-[10px] font-bold text-slate-400">0{idx+1}</span>
+                              <input 
+                                className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-medium"
+                                value={kpi}
+                                onChange={(e) => {
+                                  const newKpis = [...(draftStratData?.kpis || [])];
+                                  newKpis[idx] = e.target.value;
+                                  setDraftStratData(prev => prev ? { ...prev, kpis: newKpis } : null);
+                                }}
+                              />
+                            </div>
+                          ))}
+                          <button 
+                            onClick={() => setDraftStratData(prev => prev ? { ...prev, kpis: [...prev.kpis, 'New KPI'] } : null)}
+                            className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
+                          >
+                            + Add KPI
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-amber-50/30 dark:bg-amber-900/5 border border-amber-100 dark:border-amber-900/20">
+                      <h5 className="text-[10px] font-bold text-amber-600 dark:text-amber-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                        <Icon name="edit_note" className="text-sm" /> Coach Notes (Confidential)
+                      </h5>
+                      <textarea 
+                        className="w-full text-sm text-slate-700 dark:text-slate-300 bg-transparent border-none p-0 focus:ring-0 outline-none resize-none h-20"
+                        value={draftStratData?.coachNotes || ''}
+                        onChange={(e) => setDraftStratData(prev => prev ? { ...prev, coachNotes: e.target.value } : null)}
+                        placeholder="Add private notes for yourself regarding this phase..."
+                      />
+                    </div>
+
                   </motion.div>
                 ) : (
                   <div className="p-20 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
