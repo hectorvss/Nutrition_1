@@ -191,45 +191,47 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-50 relative overflow-hidden">
-      <header className="flex items-center justify-between p-6 sm:p-8 lg:px-10 border-b border-slate-200 bg-white sticky top-0 z-10">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Event' : 'Create New Event'}</h1>
-          <p className="text-sm text-slate-500">{editId ? 'Modify event details or delete it' : 'Add a new event or appointment to the schedule'}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {editId && (
-            <button 
-              type="button"
-              onClick={handleDelete}
-              disabled={isDeleting || loading}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-200 flex items-center gap-2"
-            >
-              <Trash2 className="w-[18px] h-[18px]" />
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </button>
-          )}
-          <button 
-            type="button"
-            onClick={() => onNavigate('calendar')}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
-          >
-            Cancel
-          </button>
-          <button 
-            type="button"
-            onClick={handleSave}
-            disabled={loading || isDeleting}
-            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
-          >
-            {loading ? <div className="w-[18px] h-[18px] border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-[18px] h-[18px]" />}
-            {editId ? 'Update Event' : 'Save Event'}
-          </button>
-        </div>
-      </header>
+    <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 py-10">
+        <div className="w-full mx-auto flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+          <header className="flex items-center justify-between p-6 sm:p-8 border-b border-slate-200 bg-white sticky top-0 z-10">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Event' : 'Create New Event'}</h1>
+              <p className="text-sm text-slate-500">{editId ? 'Modify event details or delete it' : 'Add a new event or appointment to the schedule'}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {editId && (
+                <button 
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting || loading}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-200 flex items-center gap-2"
+                >
+                  <Trash2 className="w-[18px] h-[18px]" />
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              )}
+              <button 
+                type="button"
+                onClick={() => onNavigate('calendar')}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={handleSave}
+                disabled={loading || isDeleting}
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {loading ? <div className="w-[18px] h-[18px] border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-[18px] h-[18px]" />}
+                {editId ? 'Update Event' : 'Save Event'}
+              </button>
+            </div>
+          </header>
 
-      <div className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10">
-        <form className="max-w-4xl mx-auto space-y-8" onSubmit={handleSave}>
+          <div className="p-6 md:p-8 bg-slate-50/50">
+            <form className="max-w-4xl mx-auto space-y-8" onSubmit={handleSave}>
           {/* General Details */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
             <div className="md:col-span-4">
@@ -450,6 +452,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           </div>
 
         </form>
+          </div>
+        </div>
       </div>
     </div>
   );
