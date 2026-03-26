@@ -81,13 +81,17 @@ const getEventLayout = (event: any, rowHeight: number) => {
     durationMins = durationToMinutes(event.duration);
   }
 
-  const top = startMin * pixelsPerMinute;
-  const maxHeight = (24 * 60 * pixelsPerMinute) - top;
-  const height = Math.min(Math.max(durationMins * pixelsPerMinute, 32), maxHeight);
+  const top = Math.max(0, startMin * pixelsPerMinute);
+  const maxPossibleHeight = (24 * 60 * pixelsPerMinute) - top;
+  
+  // Strict height calculation
+  let h = durationMins * pixelsPerMinute;
+  if (isNaN(h) || h < 32) h = 48; // Minimum height
+  const height = Math.min(h, maxPossibleHeight);
 
   if (isNaN(top) || isNaN(height)) return null;
 
-  return { top, height };
+  return { top, height, durationMins, startMin };
 };
 
 const getOverlapData = (events: any[]) => {
@@ -444,10 +448,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
             </div>
 
             {/* Daily Grid Area */}
-            <div className="relative p-0 mb-8 overflow-hidden">
+            <div className="relative p-0 mb-8 overflow-hidden" style={{ height: '3072px' }}>
               {/* Horizontal Lines */}
               {hours.map((_, i) => (
-                <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i) * 128}px` }}></div>
+                <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i) * 128}px`, height: '1px' }}></div>
               ))}
 
               {/* Lunch Break (13:00 - 14:00) */}
@@ -490,13 +494,13 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <h4 className="font-bold text-slate-900 truncate">{event.title}</h4>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{event.duration}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{event.duration || `${layout.durationMins}m`}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <EventIcon className="w-3.5 h-3.5" />
                         <span>{event.type}</span>
                         <span>•</span>
-                        <span>{event.duration}</span>
+                        <span>{event.time} - {event.endTime || 'No end'}</span>
                       </div>
                       {event.desc && (
                         <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">{event.desc}</p>
