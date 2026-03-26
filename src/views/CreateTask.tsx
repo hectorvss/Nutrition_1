@@ -64,33 +64,26 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
         setCategory(mappedType);
         setDate(task.date || '');
         setStartTime(task.time || '09:00');
-        // Restore End Time from Duration precisely
-        if (task.duration) {
+        
+        // Prioritize actual endTime from context over re-calculating from duration
+        if (task.endTime) {
+          setEndTime(task.endTime);
+        } else if (task.duration) {
           try {
             const timeParts = (task.time || '09:00').split(':').map(Number);
             let totalMins = (timeParts[0] || 0) * 60 + (timeParts[1] || 0);
             
             const dur = task.duration.toLowerCase();
-            if (dur.includes('h')) {
-              const hPart = parseInt(dur.split('h')[0]);
-              totalMins += hPart * 60;
-              if (dur.includes('m')) {
-                const mMatches = dur.match(/h\s*(\d+)\s*m/);
-                if (mMatches) {
-                  totalMins += parseInt(mMatches[1]);
-                } else if (dur.split('h')[1].trim().includes('m')) {
-                  totalMins += parseInt(dur.split('h')[1].split('m')[0].trim());
-                }
-              }
-            } else if (dur.includes('m')) {
-              totalMins += parseInt(dur.split('m')[0]);
-            }
+            const hMatch = dur.match(/(\d+)h/);
+            const mMatch = dur.match(/(\d+)m/);
+            
+            if (hMatch) totalMins += parseInt(hMatch[1], 10) * 60;
+            if (mMatch) totalMins += parseInt(mMatch[1], 10);
             
             const h2 = Math.floor((totalMins / 60) % 24);
             const m2 = totalMins % 60;
             setEndTime(`${h2.toString().padStart(2, '0')}:${m2.toString().padStart(2, '0')}`);
           } catch(e) {
-            console.error('Failed to parse duration for end time', e);
             setEndTime('10:00');
           }
         }
