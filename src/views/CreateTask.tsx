@@ -191,8 +191,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm my-6 sm:my-8 mb-16 relative">
-      <header className="flex items-center justify-between p-6 border-b border-slate-200 bg-white sticky top-0 z-10 rounded-t-2xl">
+    <div className="w-full h-full flex flex-col bg-slate-50 relative overflow-hidden">
+      <header className="flex items-center justify-between p-6 sm:p-8 lg:px-10 border-b border-slate-200 bg-white sticky top-0 z-10">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Event' : 'Create New Event'}</h1>
           <p className="text-sm text-slate-500">{editId ? 'Modify event details or delete it' : 'Add a new event or appointment to the schedule'}</p>
@@ -228,7 +228,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
         </div>
       </header>
 
-      <div className="p-6 md:p-8 bg-slate-50/50 rounded-b-2xl">
+      <div className="flex-1 overflow-y-auto p-6 md:p-8 lg:p-10">
         <form className="max-w-4xl mx-auto space-y-8" onSubmit={handleSave}>
           {/* General Details */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
