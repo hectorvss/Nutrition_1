@@ -315,6 +315,8 @@ router.get('/clients', async (req: any, res) => {
         temp_password: c.clients_profiles?.temp_password || c.clients_profiles?.[0]?.temp_password || null,
         nutritionPlanAssigned: !!(c.nutrition_plans && c.nutrition_plans.length > 0),
         trainingPlanAssigned: !!(c.training_programs && c.training_programs.length > 0),
+        planningAssigned: !!(c.roadmaps && c.roadmaps.length > 0),
+        roadmaps: c.roadmaps || [],
         plan_name: planName,
         progress: mapAdherence(dj.nutritionAdherence),
         lastCheckInDate: latestCheckIn?.date || null,

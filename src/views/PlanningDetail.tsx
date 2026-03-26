@@ -244,17 +244,25 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   const loadRoadmap = async () => {
     try {
       const data = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`);
-      // Use initialRoadmap if provided as a draft, otherwise fall back to API data or standard initial data
-      const roadmapData = initialRoadmap || (data.data_json && data.data_json.nutrition ? { ...getInitialData(), ...data.data_json } : getInitialData());
       
-      // Safety/Migration checks
-      if (!roadmapData.milestones) roadmapData.milestones = getInitialData().milestones;
-      if (!roadmapData.assumptions) roadmapData.assumptions = getInitialData().assumptions;
-      if (!roadmapData.goals) roadmapData.goals = getInitialData().goals;
-      if (!roadmapData.nutrition) roadmapData.nutrition = [];
-      if (!roadmapData.training) roadmapData.training = [];
+      // The backend returns a record with a 'data_json' column
+      let remoteRoadmap = null;
+      if (data && data.data_json) {
+        remoteRoadmap = typeof data.data_json === 'string' ? JSON.parse(data.data_json) : data.data_json;
+      }
+
+      // Use initialRoadmap (draft) if provided, otherwise remote data, otherwise default
+      const roadmapData = initialRoadmap || remoteRoadmap || getInitialData();
       
-      setRoadmap(roadmapData);
+      // Ensure we merge with structural defaults to prevent TypeErrors
+      const finalRoadmap = {
+        ...getInitialData(),
+        ...roadmapData,
+        // Preserve status from the record level if available
+        status: data?.status || roadmapData.status || 'Draft'
+      };
+      
+      setRoadmap(finalRoadmap);
       
       // Default selection to current phase
       const currentWeek = roadmapData.currentWeek || 4;
