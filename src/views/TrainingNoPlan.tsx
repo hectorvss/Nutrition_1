@@ -165,29 +165,98 @@ const WEEKDAYS = [
 
 export default function TrainingNoPlan({ client, onBack, onStartPlan }: TrainingNoPlanProps) {
   const { assignTrainingPlan, reloadClients } = useClient();
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const clientGoal = client?.goal || 'Not Set';
   
-  // Find recommended preset
-  const recommendedPreset = PRESETS.find(p => p.recommended.includes(clientGoal)) || PRESETS[0];
+  // Fetch templates from backend on mount
+  React.useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        setIsLoadingTemplates(true);
+        const response = await fetch('/api/manager/training-templates', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+        });
+        const data = await response.json();
+        setTemplates(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error fetching templates in NoPlan:', err);
+        setTemplates([]);
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    };
+    fetchTemplates();
+  }, []);
+
+  // Combine hardcoded PRESETS with DB templates
+  const allPresets = [...PRESETS];
+  if (Array.isArray(templates)) {
+    templates.forEach(t => {
+      const existingIdx = allPresets.findIndex(p => p.id === t.key);
+      const mapped = {
+        id: t.key,
+        title: t.name,
+        level: t.level || 'Intermediate',
+        levelColor: t.level === 'Beginner' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900' :
+                    t.level === 'Advanced' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900' :
+                    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',
+        type: t.type || 'Full Body',
+        desc: t.description || 'Template from database',
+        intensity: { label: 'Moderate', pct: 60, color: 'bg-amber-400' },
+        volume: { label: 'Moderate', pct: 60, color: 'bg-blue-400' },
+        tags: [
+          { icon: 'calendar_today', text: `${t.weekly_frequency || 3}x / week` },
+          { icon: 'timer', text: `${t.data_json?.duration || 60} min` },
+          { icon: 'fitness_center', text: t.type || 'Strength' }
+        ],
+        scheduleLabel: `${t.weekly_frequency || 3} days active`,
+        schedule: t.data_json?.schedule || ['M', null, 'W', null, 'F', null, null],
+        freqValue: `${t.weekly_frequency || 3}x`,
+        focusValue: t.data_json?.focus || 'Full Body Strength',
+        recommended: t.data_json?.recommended || [],
+        isDbTemplate: true,
+        data_json: t.data_json
+      };
+      if (existingIdx >= 0) {
+        allPresets[existingIdx] = mapped;
+      } else {
+        allPresets.push(mapped);
+      }
+    });
+  }
+
+  // Define recommendations and selection state based on combined presets
+  const recommendedPreset = allPresets.find(p => Array.isArray(p.recommended) && p.recommended.includes(clientGoal)) || 
+                           allPresets.find(p => p.id === 'p1') || 
+                           allPresets[0];
+  
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
-  const selectedPreset = PRESETS.find(p => p.id === selectedId) || recommendedPreset;
+  const selectedPreset = allPresets.find(p => p.id === selectedId) || recommendedPreset;
 
   const handleConfirm = async () => {
     try {
-      const template = PROGRAM_TEMPLATES[selectedId];
-      const selectedProgram = trainingPrograms.find(p => p.id === selectedId) || trainingPrograms[0];
+      const selectedProgram = allPresets.find(p => p.id === selectedId) || recommendedPreset;
+      let dataJson: any;
 
-      const dataJson = {
-        name: selectedProgram.name,
-        level: selectedProgram.level,
-        focus: selectedProgram.focus,
-        frequency: selectedProgram.frequency,
-        duration: selectedProgram.duration,
-        schedule: selectedProgram.schedule,
-        description: selectedProgram.description,
-        workouts: template?.workouts || [],
-        weeklySchedule: template?.defaultSchedule || {}
-      };
+      if ((selectedProgram as any).isDbTemplate) {
+        dataJson = (selectedProgram as any).data_json;
+      } else {
+        const template = PROGRAM_TEMPLATES[selectedId];
+        const prog = trainingPrograms.find(p => p.id === selectedId) || trainingPrograms[0];
+
+        dataJson = {
+          name: prog.name,
+          level: prog.level,
+          focus: prog.focus,
+          frequency: prog.frequency,
+          duration: prog.duration,
+          schedule: prog.schedule,
+          description: prog.description,
+          workouts: template?.workouts || [],
+          weeklySchedule: template?.defaultSchedule || {}
+        };
+      }
 
       await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
         method: 'POST',
@@ -276,7 +345,12 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
               </button>
 
               {/* Template Cards */}
-              {PRESETS.map((preset) => {
+              {isLoadingTemplates ? (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
+                  <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                  <p className="text-sm font-medium">Loading templates...</p>
+                </div>
+              ) : allPresets.map((preset) => {
                 const isSelected = selectedId === preset.id;
 
                 return (

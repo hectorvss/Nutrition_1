@@ -9,6 +9,7 @@ interface WorkoutEditorProps {
   clientId?: string | null;
   dayId?: string | null;
   mode?: 'default' | 'blank';
+  initialPlanData?: any;
 }
 
 interface PlannedExercise {
@@ -145,7 +146,7 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, cli
   );
 };
 
-export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId, mode = 'default' }: WorkoutEditorProps) {
+export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId, mode = 'default', initialPlanData }: WorkoutEditorProps) {
   const { clients } = useClient();
   const { exercises } = useExerciseContext();
   const client = clients.find(c => c.id === clientId as any) || {
@@ -164,6 +165,28 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   // Load existing program on mount
   React.useEffect(() => {
     const loadProgram = async () => {
+      // If we have initialPlanData (from a template selection), use it
+      if (initialPlanData) {
+        setFullPlanData(initialPlanData);
+        const dataJson = initialPlanData;
+        
+        if (dayId && dataJson.weeklySchedule) {
+          const workoutId = dataJson.weeklySchedule[dayId];
+          const workouts = dataJson.workouts || [];
+          const workout = workouts.find((w: any) => w.id === workoutId);
+          if (workout && workout.blocks) {
+            setBlocks(workout.blocks);
+          } else {
+            setBlocks([]);
+          }
+        } else if (dataJson.blocks) {
+          setBlocks(dataJson.blocks);
+        } else {
+          setBlocks([]);
+        }
+        return;
+      }
+
       if (!clientId) return;
       setIsLoading(true);
       try {
