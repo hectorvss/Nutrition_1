@@ -1,27 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Save, 
-  X, 
   Plus, 
-  ChevronRight, 
   GripVertical, 
-  Trash2, 
-  Layout,
+  PlusCircle,
   LayoutGrid,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Settings,
-  Info,
-  Type,
-  Hash,
   Copy,
-  PlusCircle
+  Trash2
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
-import CheckInStepRenderer from '../components/checkin/CheckInStepRenderer';
-import { Reorder, AnimatePresence } from 'framer-motion';
+import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
+import { Reorder, AnimatePresence, motion } from 'framer-motion';
 
 interface CheckInTemplateEditorProps {
   templateId: string;
@@ -81,10 +74,10 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     }
   };
 
-  const updateStep = (index: number, updatedStep: CheckInStep) => {
+  const updateStep = (index: number, updates: Partial<CheckInStep>) => {
     if (!template) return;
     const newSchema = [...template.templateSchema];
-    newSchema[index] = updatedStep;
+    newSchema[index] = { ...newSchema[index], ...updates };
     setTemplate({ ...template, templateSchema: newSchema });
   };
 
@@ -102,29 +95,67 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
   };
 
   const removeStep = (index: number) => {
-    if (!template) return;
-    if (!confirm('Are you sure you want to delete this step?')) return;
+    if (!template || !confirm('Are you sure you want to delete this step?')) return;
     const newSchema = template.templateSchema.filter((_, i) => i !== index);
     setTemplate({ ...template, templateSchema: newSchema });
     setSelectedStepIndex(Math.max(0, index - 1));
   };
 
-  const duplicateStep = (index: number) => {
+  const updateQuestion = (stepIdx: number, qIdx: number, updates: Partial<CheckInQuestion>) => {
     if (!template) return;
-    const stepToCopy = template.templateSchema[index];
-    const newStep: CheckInStep = {
-      ...stepToCopy,
-      id: `step_${Date.now()}_copy`,
-    };
     const newSchema = [...template.templateSchema];
-    newSchema.splice(index + 1, 0, newStep);
+    const newQs = [...(newSchema[stepIdx].questions || [])];
+    newQs[qIdx] = { ...newQs[qIdx], ...updates };
+    newSchema[stepIdx] = { ...newSchema[stepIdx], questions: newQs };
     setTemplate({ ...template, templateSchema: newSchema });
-    setSelectedStepIndex(index + 1);
   };
 
-  const handleReorder = (newOrder: CheckInStep[]) => {
+  const addQuestion = (stepIdx: number) => {
+    if (!template) return;
+    const newQ: CheckInQuestion = {
+      id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      title: 'New Question',
+      type: 'single_choice',
+      required: true,
+      options: ['Option 1', 'Option 2']
+    };
+    const newSchema = [...template.templateSchema];
+    newSchema[stepIdx] = { 
+      ...newSchema[stepIdx], 
+      questions: [...(newSchema[stepIdx].questions || []), newQ] 
+    };
+    setTemplate({ ...template, templateSchema: newSchema });
+  };
+
+  const removeQuestion = (stepIdx: number, qIdx: number) => {
+    if (!template) return;
+    const newSchema = [...template.templateSchema];
+    const newQs = (newSchema[stepIdx].questions || []).filter((_, i) => i !== qIdx);
+    newSchema[stepIdx] = { ...newSchema[stepIdx], questions: newQs };
+    setTemplate({ ...template, templateSchema: newSchema });
+  };
+
+  const duplicateQuestion = (stepIdx: number, qIdx: number) => {
+    if (!template) return;
+    const newSchema = [...template.templateSchema];
+    const qToCopy = newSchema[stepIdx].questions![qIdx];
+    const newQ = { ...qToCopy, id: `q_${Date.now()}_copy` };
+    const newQs = [...(newSchema[stepIdx].questions || [])];
+    newQs.splice(qIdx + 1, 0, newQ);
+    newSchema[stepIdx] = { ...newSchema[stepIdx], questions: newQs };
+    setTemplate({ ...template, templateSchema: newSchema });
+  };
+
+  const handleReorderSteps = (newOrder: CheckInStep[]) => {
     if (!template) return;
     setTemplate({ ...template, templateSchema: newOrder });
+  };
+
+  const handleReorderQuestions = (newOrder: CheckInQuestion[]) => {
+    if (!template) return;
+    const newSchema = [...template.templateSchema];
+    newSchema[selectedStepIndex] = { ...newSchema[selectedStepIndex], questions: newOrder };
+    setTemplate({ ...template, templateSchema: newSchema });
   };
 
   if (isLoading) {
@@ -149,7 +180,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      {/* Native Page Header */}
+      {/* Header */}
       <div className="px-8 py-5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-6">
           <button onClick={onClose} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all group border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -164,17 +195,11 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
             />
             <div className="flex items-center gap-2 mt-0.5">
                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protocol Template Editor</p>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protocol UI Builder</p>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex flex-col items-end mr-2">
-             <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                {success ? 'All Changes Saved' : 'Live Editing Mode'}
-             </div>
-             <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">Database Connected</p>
-          </div>
           <button 
             onClick={handleSave} 
             disabled={isSaving}
@@ -187,273 +212,131 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT: Steps Flow (Sidebar) */}
-        <div className="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-          <div className="p-5 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Sequence Flow</h3>
-            <button onClick={addStep} className="p-1.5 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors">
-              <Plus className="w-4 h-4" />
-            </button>
+        {/* LEFT SIDEBAR: Floating Card */}
+        <div className="w-80 flex flex-col m-6 mr-0">
+          <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Step Sequence</h3>
+              <button onClick={addStep} className="p-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors">
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <Reorder.Group axis="y" values={template.templateSchema} onReorder={handleReorderSteps} className="space-y-3">
+                <AnimatePresence initial={false}>
+                  {template.templateSchema.map((step, idx) => (
+                    <Reorder.Item 
+                      key={step.id} 
+                      value={step}
+                      onClick={() => setSelectedStepIndex(idx)}
+                      className={`group flex items-center gap-3 p-4 rounded-3xl cursor-pointer transition-all border-2
+                        ${selectedStepIndex === idx 
+                          ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-lg' 
+                          : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
+                    >
+                      <div className={`p-1 ${selectedStepIndex === idx ? 'text-slate-400' : 'text-slate-300'} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                         <GripVertical className="w-4 h-4" />
+                      </div>
+                      <span className="flex-1 text-[13px] font-bold truncate tracking-tight">{step.title}</span>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black
+                        ${selectedStepIndex === idx ? 'bg-white/20 text-white dark:bg-slate-900/10 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                        {idx + 1}
+                      </div>
+                    </Reorder.Item>
+                  ))}
+                </AnimatePresence>
+              </Reorder.Group>
+            </div>
+
+            <div className="p-4 bg-slate-50/50 dark:bg-slate-800/50">
+               <button 
+                 onClick={addStep}
+                 className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all text-xs font-bold flex items-center justify-center gap-2"
+               >
+                 <PlusCircle className="w-4 h-4" />
+                 Add New Step
+               </button>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            <Reorder.Group axis="y" values={template.templateSchema} onReorder={handleReorder} className="space-y-2">
-              <AnimatePresence initial={false}>
-                {template.templateSchema.map((step, idx) => (
-                  <Reorder.Item 
-                    key={step.id} 
-                    value={step}
-                    onClick={() => setSelectedStepIndex(idx)}
-                    className={`group flex items-center gap-3 p-3.5 rounded-2xl cursor-pointer transition-all border-2
-                      ${selectedStepIndex === idx 
-                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-900 dark:text-emerald-400 shadow-sm' 
-                        : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
+        </div>
+
+        {/* CENTER: Inline Builder Canvas */}
+        <div className="flex-1 overflow-y-auto p-12 flex flex-col items-center">
+          <div className="w-full max-w-4xl space-y-12 pb-32">
+            
+            {/* Active Step Header */}
+            {selectedStep && (
+              <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-800 shadow-sm space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <input 
+                      type="text" 
+                      value={selectedStep.title}
+                      onChange={(e) => updateStep(selectedStepIndex, { title: e.target.value })}
+                      placeholder="Step Title (e.g., Physical Progress)"
+                      className="w-full bg-transparent border-none p-0 text-3xl font-black tracking-tight text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-200"
+                    />
+                    <textarea 
+                      value={selectedStep.subtitle || ''}
+                      onChange={(e) => updateStep(selectedStepIndex, { subtitle: e.target.value })}
+                      placeholder="Give your clients some context or instructions for this category..."
+                      className="w-full bg-transparent border-none p-0 text-lg font-medium text-slate-400 focus:ring-0 resize-none h-14 placeholder:text-slate-200"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => removeStep(selectedStepIndex)}
+                    className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all shrink-0"
                   >
-                    <div className="p-1 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <GripVertical className="w-4 h-4 cursor-grab active:cursor-grabbing" />
+                    <Trash2 className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Sub-cards: Questions List */}
+                <div className="space-y-6 pt-10 border-t border-slate-50 dark:border-slate-800/50">
+                  <div className="flex items-center justify-between px-2">
+                    <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Step Questions ({selectedStep.questions?.length || 0})</h4>
+                    <span className="text-[10px] font-bold text-slate-300 uppercase underline decoration-dotted underline-offset-4 cursor-help">Draggable Inline Cards</span>
+                  </div>
+
+                  <Reorder.Group axis="y" values={selectedStep.questions || []} onReorder={handleReorderQuestions} className="space-y-6">
+                    <AnimatePresence initial={false}>
+                      {(selectedStep.questions || []).map((q, qIdx) => (
+                        <Reorder.Item key={q.id} value={q} className="relative">
+                          <CheckInQuestionEditorCard 
+                            question={q}
+                            onUpdate={(updates) => updateQuestion(selectedStepIndex, qIdx, updates)}
+                            onDelete={() => removeQuestion(selectedStepIndex, qIdx)}
+                            onDuplicate={() => duplicateQuestion(selectedStepIndex, qIdx)}
+                          />
+                        </Reorder.Item>
+                      ))}
+                    </AnimatePresence>
+                  </Reorder.Group>
+
+                  {/* Add Question Inline Block */}
+                  <button 
+                    onClick={() => addQuestion(selectedStepIndex)}
+                    className="w-full py-8 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/5 transition-all flex flex-col items-center justify-center gap-2 group/add"
+                  >
+                    <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center group-hover/add:bg-emerald-100 dark:group-hover/add:bg-emerald-900/20 transition-all">
+                       <Plus className="w-6 h-6 group-hover/add:scale-120 transition-transform" />
                     </div>
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black shrink-0
-                      ${selectedStepIndex === idx ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                      {idx + 1}
-                    </div>
-                    <span className="flex-1 text-xs font-bold truncate tracking-tight">{step.title}</span>
-                  </Reorder.Item>
-                ))}
-              </AnimatePresence>
-            </Reorder.Group>
-          </div>
-          <div className="p-4 border-t border-slate-50 dark:border-slate-800">
-             <button 
-               onClick={addStep}
-               className="w-full py-3 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-xl text-slate-400 hover:border-emerald-200 hover:text-emerald-500 transition-all text-[11px] font-bold flex items-center justify-center gap-2"
-             >
-               <Plus className="w-3.5 h-3.5" />
-               New Step Card
-             </button>
-          </div>
-        </div>
-
-        {/* CENTER: Canvas / Preview Area */}
-        <div className="flex-1 bg-slate-50 dark:bg-slate-950 overflow-y-auto p-12 flex justify-center scroll-smooth">
-          <div className="w-full max-w-3xl space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-             <div className="flex flex-col items-center mb-8">
-                <div className="px-4 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] shadow-sm mb-4">
-                   Preview Mode: Step {selectedStepIndex + 1} of {template.templateSchema.length}
+                    <span className="text-sm font-black uppercase tracking-widest">Add Question Sub-card</span>
+                  </button>
                 </div>
-             </div>
+              </div>
+            )}
 
-             {selectedStep ? (
-               <div className="transform scale-[1.02] origin-top transition-transform">
-                 <CheckInStepRenderer 
-                   step={selectedStep} 
-                   answers={{}} 
-                   onUpdateAnswer={() => {}} 
-                   onToggleArrayItem={() => {}} 
-                   onUploadFile={async () => {}}
-                 />
-                 
-                 <div className="mt-12 flex items-center justify-between px-4">
-                    <div className="flex items-center gap-4 text-slate-400 text-[11px] font-bold uppercase tracking-widest">
-                       <button onClick={() => removeStep(selectedStepIndex)} className="flex items-center gap-2 text-red-400 hover:text-red-500 transition-colors">
-                          <Trash2 className="w-4 h-4" /> Delete Step
-                       </button>
-                       <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800" />
-                       <button onClick={() => duplicateStep(selectedStepIndex)} className="flex items-center gap-2 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
-                          <Copy className="w-4 h-4" /> Duplicate
-                       </button>
-                    </div>
-                    <div className="flex items-center gap-3">
-                       <button 
-                         disabled={selectedStepIndex === 0}
-                         onClick={() => setSelectedStepIndex(selectedStepIndex - 1)}
-                         className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-600 disabled:opacity-20 transition-all shadow-sm"
-                       >
-                          <span className="material-symbols-outlined transform rotate-180">arrow_forward</span>
-                       </button>
-                       <button 
-                         onClick={() => setSelectedStepIndex(Math.min(template.templateSchema.length - 1, selectedStepIndex + 1))}
-                         className="px-8 py-3.5 rounded-2xl bg-emerald-500 text-white font-bold flex items-center gap-2 transition-all hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 active:scale-95"
-                       >
-                          Continue <ChevronRight className="w-5 h-5" />
-                       </button>
-                    </div>
-                 </div>
-               </div>
-             ) : (
-                <div className="text-center py-24 bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-slate-800 shadow-sm">
-                   <LayoutGrid className="w-16 h-16 text-slate-200 mx-auto mb-6" />
-                   <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Editor Canvas Ready</h3>
-                   <p className="text-slate-400 text-sm max-w-sm mx-auto mb-8">Select or create a step from the flow list on the left to start architecting your check-in.</p>
-                   <button onClick={addStep} className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold shadow-xl shadow-slate-900/10 hover:scale-105 transition-all">
-                      Create First Step
-                   </button>
-                </div>
-             )}
-          </div>
-        </div>
-
-        {/* RIGHT: Step Settings (Sidebar) */}
-        <div className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-sm">
-          <div className="p-5 border-b border-slate-50 dark:border-slate-800 flex items-center gap-3">
-            <Layout className="w-4 h-4 text-emerald-500" />
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Step Configuration</h3>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            {selectedStep ? (
-              <>
-                {/* Step Title */}
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Display Title</label>
-                  <input 
-                    type="text" 
-                    value={selectedStep.title}
-                    onChange={(e) => updateStep(selectedStepIndex, { ...selectedStep, title: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
-                  />
-                </div>
-
-                {/* Step Subtitle */}
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Subtitle / Context</label>
-                  <textarea 
-                    value={selectedStep.subtitle || ''}
-                    onChange={(e) => updateStep(selectedStepIndex, { ...selectedStep, subtitle: e.target.value })}
-                    placeholder="Short description for the client..."
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-3.5 text-sm font-medium text-slate-600 dark:text-slate-300 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all resize-none min-h-[100px]"
-                  />
-                </div>
-
-                {/* Questions Block */}
-                <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800/50">
-                   <div className="flex items-center justify-between">
-                      <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Card Questions</h4>
-                      <button 
-                        onClick={() => {
-                          const newQ: CheckInQuestion = { id: `q_${Date.now()}`, title: 'New Question', type: 'single_choice', required: true, options: ['Option 1', 'Option 2'] };
-                          updateStep(selectedStepIndex, { ...selectedStep, questions: [...(selectedStep.questions || []), newQ] });
-                        }}
-                        className="p-1 px-2.5 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-tight hover:bg-emerald-100 transition-all"
-                      >
-                        Add Question
-                      </button>
-                   </div>
-                   
-                   <div className="space-y-4">
-                     {(selectedStep.questions || []).map((q, qIdx) => (
-                       <div key={q.id} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 space-y-4 group/q">
-                         <div className="flex items-center justify-between mb-1">
-                            <span className="text-[9px] font-black text-slate-300 uppercase">Question #{qIdx + 1}</span>
-                            <button 
-                              onClick={() => {
-                                const newQs = selectedStep.questions!.filter((_, i) => i !== qIdx);
-                                updateStep(selectedStepIndex, { ...selectedStep, questions: newQs });
-                              }}
-                              className="p-1 text-slate-300 hover:text-red-500 transition-colors"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                         </div>
-                         
-                         <div className="space-y-2">
-                           <input 
-                              type="text" 
-                              value={q.title}
-                              onChange={(e) => {
-                                const newQs = [...selectedStep.questions!];
-                                newQs[qIdx] = { ...q, title: e.target.value };
-                                updateStep(selectedStepIndex, { ...selectedStep, questions: newQs });
-                              }}
-                              placeholder="Title"
-                              className="w-full bg-white dark:bg-slate-900 border-none rounded-lg px-3 py-2 text-xs font-bold text-slate-900 dark:text-white shadow-sm"
-                           />
-                         </div>
-
-                         <div className="grid grid-cols-2 gap-2">
-                            {[
-                              { id: 'single_choice', label: 'Single', icon: <CheckCircle2 className="w-3 h-3" /> },
-                              { id: 'multi_select', label: 'Multi', icon: <LayoutGrid className="w-3 h-3" /> },
-                              { id: 'number', label: 'Number', icon: <Hash className="w-3 h-3" /> },
-                              { id: 'text', label: 'Text', icon: <Type className="w-3 h-3" /> },
-                              { id: 'info_card', label: 'Info', icon: <Info className="w-3 h-3" /> },
-                              { id: 'measurement_group', label: 'Meas.', icon: <Layout className="w-3 h-3" /> },
-                              { id: 'photo_group', label: 'Photos', icon: <PlusCircle className="w-3 h-3" /> }
-                            ].map(type => (
-                              <button 
-                                key={type.id}
-                                onClick={() => {
-                                  const newQs = [...selectedStep.questions!];
-                                  newQs[qIdx] = { ...q, type: type.id as any };
-                                  updateStep(selectedStepIndex, { ...selectedStep, questions: newQs });
-                                }}
-                                className={`px-2 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 border transition-all ${
-                                  q.type === type.id 
-                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-500/20' 
-                                    : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-100 dark:border-slate-800'
-                                }`}
-                              >
-                                 {type.label}
-                              </button>
-                            ))}
-                         </div>
-
-                         {/* Number/Text Extras */}
-                         {(q.type === 'number' || q.type === 'text') && (
-                           <div className="grid grid-cols-2 gap-3">
-                             <div className="space-y-2">
-                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Unit</p>
-                               <input 
-                                 type="text" 
-                                 value={q.unit || ''}
-                                 onChange={(e) => {
-                                   const newQs = [...selectedStep.questions!];
-                                   newQs[qIdx] = { ...q, unit: e.target.value };
-                                   updateStep(selectedStepIndex, { ...selectedStep, questions: newQs });
-                                 }}
-                                 placeholder="kg, cm..."
-                                 className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-[11px] font-bold shadow-sm"
-                               />
-                             </div>
-                             <div className="space-y-2">
-                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Placeholder</p>
-                               <input 
-                                 type="text" 
-                                 value={q.placeholder || ''}
-                                 onChange={(e) => {
-                                   const newQs = [...selectedStep.questions!];
-                                   newQs[qIdx] = { ...q, placeholder: e.target.value };
-                                   updateStep(selectedStepIndex, { ...selectedStep, questions: newQs });
-                                 }}
-                                 placeholder="Enter..."
-                                 className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-[11px] font-bold shadow-sm"
-                               />
-                             </div>
-                           </div>
-                         )}
-
-                         {/* Options Editor */}
-                         {(q.type === 'single_choice' || q.type === 'multi_select') && (
-                           <div className="space-y-2">
-                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-1">Options (CSV)</p>
-                             <textarea 
-                               value={q.options?.join(', ')}
-                               onChange={(e) => {
-                                 const newQs = [...selectedStep.questions!];
-                                 newQs[qIdx] = { ...q, options: e.target.value.split(',').map(s => s.trim()).filter(s => s !== '') };
-                                 updateStep(selectedStepIndex, { ...selectedStep, questions: newQs });
-                               }}
-                               className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-3 text-[11px] font-medium min-h-[80px] shadow-sm resize-none"
-                             />
-                           </div>
-                         )}
-                       </div>
-                     ))}
-                   </div>
-                </div>
-              </>
-            ) : (
-               <div className="text-center py-20 opacity-50">
-                  <Settings className="w-10 h-10 text-slate-200 mx-auto mb-4" />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No Selection</p>
+            {!selectedStep && (
+               <div className="py-40 text-center space-y-6">
+                  <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center mx-auto shadow-sm border border-slate-100">
+                     <LayoutGrid className="w-10 h-10 text-slate-200" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Empty Flow</h3>
+                    <p className="text-slate-400 text-sm max-w-xs mx-auto mt-2 font-medium">Create a step from the left panel to begin building your check-in structure.</p>
+                  </div>
                </div>
             )}
           </div>
