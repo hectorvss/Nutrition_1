@@ -61,7 +61,8 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
         method: 'PATCH',
         body: JSON.stringify({
           name: template.name,
-          template_schema: template.templateSchema
+          template_schema: template.templateSchema,
+          is_active: true
         })
       });
       if (onSave) onSave(template);
@@ -222,24 +223,28 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
               </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
               <Reorder.Group axis="y" values={template.templateSchema} onReorder={handleReorderSteps} className="space-y-3">
                 <AnimatePresence initial={false}>
                   {template.templateSchema.map((step, idx) => (
                     <Reorder.Item 
                       key={step.id} 
                       value={step}
-                      onClick={() => setSelectedStepIndex(idx)}
                       className={`group flex items-center gap-3 p-4 rounded-3xl cursor-pointer transition-all border-2
                         ${selectedStepIndex === idx 
                           ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-lg' 
                           : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
                     >
-                      <div className={`p-1 ${selectedStepIndex === idx ? 'text-slate-400' : 'text-slate-300'} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                      <div 
+                        className={`p-1 ${selectedStepIndex === idx ? 'text-slate-400' : 'text-slate-300'} opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                          <GripVertical className="w-4 h-4" />
                       </div>
-                      <span className="flex-1 text-[13px] font-bold truncate tracking-tight">{step.title}</span>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black
+                      <div className="flex-1 min-w-0" onClick={() => setSelectedStepIndex(idx)}>
+                        <span className="block text-[13px] font-bold truncate tracking-tight">{step.title}</span>
+                      </div>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0
                         ${selectedStepIndex === idx ? 'bg-white/20 text-white dark:bg-slate-900/10 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
                         {idx + 1}
                       </div>
@@ -262,12 +267,12 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
         </div>
 
         {/* CENTER: Inline Builder Canvas */}
-        <div className="flex-1 overflow-y-auto p-12 flex flex-col items-center">
-          <div className="w-full max-w-4xl space-y-12 pb-32">
+        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center">
+          <div className="w-full max-w-6xl space-y-12 pb-32">
             
             {/* Active Step Header */}
             {selectedStep && (
-              <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-800 shadow-sm space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-2">
                     <input 
@@ -293,7 +298,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                 </div>
 
                 {/* Sub-cards: Questions List */}
-                <div className="space-y-6 pt-10 border-t border-slate-50 dark:border-slate-800/50">
+                <div className="space-y-6 pt-6 border-t border-slate-50 dark:border-slate-800/50">
                   <div className="flex items-center justify-between px-2">
                     <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Step Questions ({selectedStep.questions?.length || 0})</h4>
                     <span className="text-[10px] font-bold text-slate-300 uppercase underline decoration-dotted underline-offset-4 cursor-help">Draggable Inline Cards</span>
