@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import CheckInList from './CheckInList';
 import CheckInHistory from './CheckInHistory';
 import CheckInReview from './CheckInReview';
+import CheckInTemplates from './CheckInTemplates';
+import CheckInTemplateEditor from './CheckInTemplateEditor';
 
-export type CheckInViewMode = 'list' | 'history' | 'review';
+export type CheckInViewMode = 'list' | 'history' | 'review' | 'templates' | 'editor';
 
 interface CheckInsProps {
   initialClientId?: string;
@@ -18,6 +20,7 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
   );
   const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(initialCheckInId || null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 
   const handleViewHistory = (clientId: string) => {
     setSelectedClientId(clientId);
@@ -29,6 +32,15 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
     setSelectedCheckInId(checkInId);
     setViewMode('review');
     onViewChange?.(selectedClientId, checkInId);
+  };
+
+  const handleViewTemplates = () => {
+    setViewMode('templates');
+  };
+
+  const handleEditTemplate = (templateId: string) => {
+    setEditingTemplateId(templateId);
+    setViewMode('editor');
   };
 
   const handleBackToList = () => {
@@ -49,6 +61,7 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
       {viewMode === 'list' && (
         <CheckInList
           onViewHistory={handleViewHistory}
+          onManageTemplates={handleViewTemplates}
         />
       )}
       {viewMode === 'history' && selectedClientId && (
@@ -64,6 +77,24 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
           checkInId={selectedCheckInId}
           onBack={handleBackToHistory}
         />
+      )}
+      {viewMode === 'templates' && (
+        <div className="p-6 md:p-8">
+          <button onClick={handleBackToList} className="mb-4 text-emerald-600 font-bold flex items-center gap-2">
+            <span className="material-symbols-outlined">arrow_back</span>
+            Back to Check-ins
+          </button>
+          <CheckInTemplates onEdit={handleEditTemplate} />
+        </div>
+      )}
+
+      {viewMode === 'editor' && editingTemplateId && (
+        <div className="flex-1 flex flex-col h-full bg-slate-50">
+          <CheckInTemplateEditor 
+            templateId={editingTemplateId} 
+            onClose={() => setViewMode('templates')} 
+          />
+        </div>
       )}
     </div>
   );

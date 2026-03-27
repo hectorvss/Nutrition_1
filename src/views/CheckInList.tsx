@@ -1,19 +1,83 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchWithAuth } from '../api';
 import {
   Search,
   Download,
-  ChevronRight
+  ChevronRight,
+  ClipboardList
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 
 interface CheckInListProps {
   onViewHistory: (clientId: string) => void;
+  onManageTemplates: () => void;
 }
 
-export default function CheckInList({ onViewHistory }: CheckInListProps) {
-  const { clients, isLoading } = useClient();
+export default function CheckInList({ onViewHistory, onManageTemplates }: CheckInListProps) {
+  const { clients, isLoading: isClientsLoading } = useClient();
   const [filter, setFilter] = useState<'All' | 'Unreviewed' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  useEffect(() => {
+    async function loadAssignments() {
+      setIsAssignmentsLoading(true);
+      try {
+        const data = await fetchWithAuth('/manager/checkin-assignments');
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => {
+          map[a.client_id] = a.template.name;
+        });
+        setAssignments(map);
+      } catch (err) {
+        console.error('Error loading assignments:', err);
+      } finally {
+        setIsAssignmentsLoading(false);
+      }
+    }
+    loadAssignments();
+  }, []);
+
+  const handleOpenAssign = async (e: React.MouseEvent, client: any) => {
+    e.stopPropagation();
+    setSelectedClient(client);
+    setIsModalOpen(true);
+    try {
+      const templates = await fetchWithAuth('/manager/checkin-templates');
+      setAvailableTemplates(templates);
+    } catch (err) {
+      console.error('Error loading templates:', err);
+    }
+  };
+
+  const handleAssign = async (templateId: string) => {
+    if (!selectedClient) return;
+    setIsAssigning(true);
+    try {
+      await fetchWithAuth('/manager/assign-template', {
+        method: 'POST',
+        body: JSON.stringify({
+          client_id: selectedClient.id,
+          template_id: templateId
+        })
+      });
+      const template = availableTemplates.find(t => t.id === templateId);
+      setAssignments(prev => ({ ...prev, [selectedClient.id]: template?.name || 'Assigned' }));
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Error assigning template');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const isLoading = isClientsLoading || isAssignmentsLoading;
 
   const categories = [
     { id: 'All', label: 'All Clients', count: clients.length },
@@ -53,10 +117,19 @@ export default function CheckInList({ onViewHistory }: CheckInListProps) {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Client Check-ins</h1>
           <p className="text-sm text-slate-500 font-medium mt-1">Review weekly progress and adherence</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
-          <Download className="w-4 h-4" />
-          Export Report
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onManageTemplates}
+            className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-700 bg-white rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
+          >
+            <ClipboardList className="w-4 h-4" />
+            Check-in Templates
+          </button>
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
+            <Download className="w-4 h-4" />
+            Export Report
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -141,6 +214,13 @@ export default function CheckInList({ onViewHistory }: CheckInListProps) {
                           No check-ins
                         </span>
                       )}
+                      <button 
+                        onClick={(e) => handleOpenAssign(e, client)}
+                        className="ml-auto px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-100 flex items-center gap-1.5 shadow-sm"
+                      >
+                         <span className="material-symbols-outlined text-[14px]">assignment_add</span>
+                         {assignments[client.id] || 'Assign Template'}
+                      </button>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -182,6 +262,58 @@ export default function CheckInList({ onViewHistory }: CheckInListProps) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Template Selector Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Assign Check-in</h3>
+                <p className="text-xs text-slate-500 font-medium tracking-tight">Select a template for {selectedClient?.name}</p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                <span className="material-symbols-outlined text-slate-400">close</span>
+              </button>
+            </div>
+            <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
+              {availableTemplates.length === 0 ? (
+                <div className="text-center py-12">
+                  <ClipboardList className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                  <p className="text-sm text-slate-400 font-medium">No templates available.</p>
+                  <button onClick={() => { setIsModalOpen(false); onManageTemplates(); }} className="mt-4 text-emerald-500 text-xs font-bold uppercase tracking-widest hover:underline">Go to Library</button>
+                </div>
+              ) : (
+                availableTemplates.map(t => (
+                  <button 
+                    key={t.id}
+                    onClick={() => handleAssign(t.id)}
+                    disabled={isAssigning}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left group
+                      ${assignments[selectedClient?.id] === t.name 
+                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/30 ring-1 ring-emerald-500/20' 
+                        : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-emerald-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                  >
+                    <div>
+                      <p className={`text-sm font-bold ${assignments[selectedClient?.id] === t.name ? 'text-emerald-900 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+                        {t.name}
+                      </p>
+                      {t.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Recommended</span>}
+                    </div>
+                    {isAssigning && selectedClient?.id === selectedClient?.id ? (
+                       <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    ) : assignments[selectedClient?.id] === t.name ? (
+                      <span className="material-symbols-outlined text-emerald-500">check_circle</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-slate-300 group-hover:text-emerald-300 transition-colors">radio_button_unchecked</span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
