@@ -29,7 +29,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     async function loadAssignments() {
       setIsAssignmentsLoading(true);
       try {
-        const data = await fetchWithAuth('/manager/checkin-assignments');
+        const data = await fetchWithAuth('/check-ins/manager/checkin-assignments');
         const map: Record<string, string> = {};
         data.forEach((a: any) => {
           map[a.client_id] = a.template.name;
@@ -49,7 +49,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     setSelectedClient(client);
     setIsModalOpen(true);
     try {
-      const templates = await fetchWithAuth('/manager/checkin-templates');
+      const templates = await fetchWithAuth('/check-ins/manager/checkin-templates');
       setAvailableTemplates(templates);
     } catch (err) {
       console.error('Error loading templates:', err);
@@ -60,7 +60,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     if (!selectedClient) return;
     setIsAssigning(true);
     try {
-      await fetchWithAuth('/manager/assign-template', {
+      await fetchWithAuth('/check-ins/manager/assign-template', {
         method: 'POST',
         body: JSON.stringify({
           client_id: selectedClient.id,

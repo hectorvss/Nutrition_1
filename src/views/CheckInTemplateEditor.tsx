@@ -37,7 +37,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     async function loadTemplate() {
       setIsLoading(true);
       try {
-        const data = await fetchWithAuth(`/manager/checkin-templates`);
+        const data = await fetchWithAuth(`/check-ins/manager/checkin-templates`);
         const found = data.find((t: any) => t.id === templateId);
         if (found) {
           // Normalize snake_case from API to camelCase for UI
@@ -61,7 +61,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     if (!template) return;
     setIsSaving(true);
     try {
-      await fetchWithAuth(`/manager/checkin-templates/${templateId}`, {
+      await fetchWithAuth(`/check-ins/manager/checkin-templates/${templateId}`, {
         method: 'PATCH',
         body: JSON.stringify({
           name: template.name,
