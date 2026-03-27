@@ -292,7 +292,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
       {/* Main Form Area */}
       <div className="relative z-10 flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
-         <div className="max-w-3xl mx-auto space-y-10 animate-in slide-in-from-bottom-8 duration-700">
+         <div className="w-full space-y-10 animate-in slide-in-from-bottom-8 duration-700">
             <CheckInStepRenderer 
                step={stepData}
                answers={answers}
@@ -307,29 +307,16 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
                 {validationError}
               </div>
             )}
-
-            {/* Step-specific Media handling if it's a photo group */}
-            {stepData.type === 'photo_group' && (
-              <div className="hidden">
-                {/* 
-                   Hidden file inputs for the renderer to trigger.
-                   In a real implementation, we'd pass the file handler to the renderer.
-                */}
-              </div>
-            )}
          </div>
-      </div>
 
-      {/* Footer Controls */}
-      <div className="relative z-10 p-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-         <div className="flex-1 max-w-3xl mx-auto flex items-center justify-between">
-            <p className="text-xs font-medium text-slate-400">Automated synchronization enabled</p>
+         {/* Floating Action Button */}
+         <div className="fixed bottom-10 right-10 z-50">
             <button 
               onClick={handleNext} 
-              className="bg-slate-900 dark:bg-emerald-500 text-white dark:text-white px-10 py-4 rounded-2xl font-bold flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl"
+              className="bg-slate-900 dark:bg-[#17cf54] text-white px-10 py-5 rounded-2xl font-bold flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-emerald-500/20"
             >
-               {currentStep === totalSteps ? 'Finalize' : 'Continue'}
-               <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+               <span className="text-lg">{currentStep === totalSteps ? 'Finalize' : 'Continue'}</span>
+               <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
             </button>
          </div>
       </div>
