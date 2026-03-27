@@ -8,38 +8,38 @@ interface CheckInDetailViewProps {
 export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailViewProps) {
   const dj = checkIn.data_json || {};
 
-  const Section = ({ title, subtitle, icon, children }: any) => (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6">
-      <div className="flex items-center gap-4 mb-2">
-        <div className="w-12 h-12 rounded-2xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center">
+  const Section = ({ title, subtitle, icon, children, gridCols = "grid-cols-1" }: any) => (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/10 text-emerald-500 flex items-center justify-center">
           <span className="material-symbols-outlined text-2xl">{icon}</span>
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
-          <p className="text-sm text-slate-500">{subtitle}</p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{title}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-6">
+      <div className={`grid ${gridCols} gap-6`}>
         {children}
       </div>
     </div>
   );
 
   const InfoField = ({ label, value, fullWidth = false }: any) => (
-    <div className="w-full">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
-      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+    <div className={fullWidth ? "col-span-full" : ""}>
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-2">{label}</p>
+      <div className="min-h-[48px] px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 flex items-center">
+        <div className="text-sm font-bold text-slate-700 dark:text-slate-200">
           {Array.isArray(value) ? (
-            <div className="flex flex-wrap gap-2 mt-1">
+            <div className="flex flex-wrap gap-2">
               {value.map((v: string) => (
-                <span key={v} className="px-3 py-1 bg-[#17cf54]/10 text-[#17cf54] rounded-lg text-[11px] font-bold uppercase">{v}</span>
+                <span key={v} className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold uppercase tracking-wider">{v}</span>
               ))}
             </div>
           ) : (
-            value || '—'
+            value || <span className="text-slate-300 dark:text-slate-600">—</span>
           )}
-        </p>
+        </div>
       </div>
     </div>
   );
@@ -48,17 +48,19 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
     <div className="flex-1 flex flex-col min-h-screen bg-[#f6f8f6] dark:bg-[#112116] p-6">
       <div className="w-full space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between">
           <button 
             onClick={onBack}
-            className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="flex items-center gap-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all group"
           >
-            <span className="material-symbols-outlined">arrow_back</span>
+            <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
             <span className="font-bold text-sm">Back to History</span>
           </button>
-          <div className="px-4 py-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Submitted On</p>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">{new Date(checkIn.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+          <div className="px-5 py-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center">
+            <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.2em] mb-1">Submitted On</p>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              {new Date(checkIn.created_at || checkIn.date).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+            </p>
           </div>
         </div>
         {/* Section 1: Overview */}
@@ -73,14 +75,18 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
         </Section>
 
         {/* Section 2: Body & Progress */}
-        <Section title="Body & Progress" subtitle="Physical updates and measurements." icon="straighten">
-          <InfoField label="Current Weight" value={dj.weight ? `${dj.weight} kg` : null} />
+        <Section title="Body & Progress" subtitle="Physical updates and measurements." icon="straighten" gridCols="grid-cols-1 md:grid-cols-3">
+          <div className="col-span-1 md:col-span-2">
+            <InfoField label="Current Weight" value={dj.weight ? `${dj.weight} kg` : null} />
+          </div>
           <InfoField label="Average Weight" value={dj.avgWeight ? `${dj.avgWeight} kg` : null} />
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 col-span-1 md:col-span-2">
+          
+          <div className="col-span-full grid grid-cols-2 md:grid-cols-3 gap-4">
             <InfoField label="Waist" value={dj.waist ? `${dj.waist}cm` : null} />
             <InfoField label="Hips" value={dj.hips ? `${dj.hips}cm` : null} />
             <InfoField label="Chest" value={dj.chest ? `${dj.chest}cm` : null} />
           </div>
+          
           <InfoField label="Visible Changes" value={dj.visibleChanges} />
           <InfoField label="Body Perception" value={dj.bodyPerception} />
           <InfoField label="Satisfaction" value={dj.satisfaction} />
@@ -88,8 +94,8 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
           <InfoField label="Biggest Change" value={dj.biggestChangeArea} />
 
           {/* Progress Photos */}
-          <div className="col-span-1 md:col-span-2 mt-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center">Progress Photos</p>
+          <div className="col-span-full pt-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Progress Photos</p>
             <div className="grid grid-cols-3 gap-4">
               {[
                 { id: 'photoFront', label: 'Front' },
