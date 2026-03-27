@@ -237,19 +237,17 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                     <Reorder.Item 
                       key={step.id} 
                       value={step}
-                      className={`group flex items-center gap-3 p-4 rounded-3xl cursor-pointer transition-all border-2
+                      className={`group flex items-center gap-1 p-4 rounded-3xl cursor-pointer transition-all border-2
                         ${selectedStepIndex === idx 
                           ? 'shadow-lg border-transparent' 
                           : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
                       style={selectedStepIndex === idx ? { backgroundColor: settings.theme_color, color: 'white' } : {}}
+                      onClick={() => setSelectedStepIndex(idx)}
                     >
-                      <div 
-                        className={`p-1 ${selectedStepIndex === idx ? 'text-white/40' : 'text-slate-300'} opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      <div className={`p-1 ${selectedStepIndex === idx ? 'text-white/40' : 'text-slate-300'} transition-opacity cursor-grab active:cursor-grabbing`}>
                          <GripVertical className="w-4 h-4" />
                       </div>
-                      <div className="flex-1 min-w-0" onClick={() => setSelectedStepIndex(idx)}>
+                      <div className="flex-1 min-w-0">
                         <span className="block text-[13px] font-semibold truncate tracking-tight">{step.title}</span>
                       </div>
                       <div 
@@ -331,12 +329,16 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                   {/* Add Question Inline Block */}
                   <button 
                     onClick={() => addQuestion(selectedStepIndex)}
-                    className="w-full py-8 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/5 transition-all flex flex-col items-center justify-center gap-2 group/add"
+                    style={{ borderColor: `${settings.theme_color}30` }}
+                    className="w-full py-8 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/5 transition-all flex flex-col items-center justify-center gap-2 group/add"
                   >
-                    <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center group-hover/add:bg-emerald-100 dark:group-hover/add:bg-emerald-900/20 transition-all">
-                       <Plus className="w-6 h-6 group-hover/add:scale-120 transition-transform" />
+                    <div 
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-slate-50 dark:bg-slate-800 group-hover/add:scale-110"
+                      style={{ color: settings.theme_color }}
+                    >
+                       <Plus className="w-6 h-6" />
                     </div>
-                    <span className="text-sm font-semibold uppercase tracking-widest">Add Question Sub-card</span>
+                    <span className="text-sm font-semibold uppercase tracking-widest" style={{ color: `${settings.theme_color}80` }}>Add Question Sub-card</span>
                   </button>
                 </div>
               </div>
