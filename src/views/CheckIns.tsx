@@ -89,12 +89,10 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
       )}
 
       {viewMode === 'editor' && editingTemplateId && (
-        <div className="flex-1 flex flex-col h-full bg-slate-50">
-          <CheckInTemplateEditor 
-            templateId={editingTemplateId} 
-            onClose={() => setViewMode('templates')} 
-          />
-        </div>
+        <CheckInTemplateEditor 
+          templateId={editingTemplateId} 
+          onClose={() => setViewMode('templates')} 
+        />
       )}
     </div>
   );
