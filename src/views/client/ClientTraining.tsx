@@ -561,6 +561,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                         onUpdateSet={updateSet}
                         onAddSet={addSet}
                         onUpdateNotes={(notes) => updateExerciseLog(key, 'notes', notes)}
+                        explanation={ex.explanation}
                       />
                     );
                   })}
@@ -601,9 +602,10 @@ interface DetailedExerciseRowProps {
   onUpdateSet: (key: string, setIdx: number, field: 'reps' | 'weight' | 'rir', value: string) => void;
   onAddSet: (key: string) => void;
   onUpdateNotes: (notes: string) => void;
+  explanation?: string;
 }
 
-const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes }) => {
+const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes, explanation }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -650,6 +652,17 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
 
       {isExpanded && (
         <div className="px-4 pb-5 pt-2 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-100 dark:border-slate-800/50">
+          {explanation && (
+            <div className="mb-6 mx-2 p-4 bg-emerald-50/30 dark:bg-emerald-500/5 rounded-2xl border border-emerald-500/10 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-[18px] text-[#17cf54]">description</span>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Coach's Notes</span>
+              </div>
+              <p className="text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                {explanation}
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-4 flex items-center justify-end md:justify-start">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-2">
