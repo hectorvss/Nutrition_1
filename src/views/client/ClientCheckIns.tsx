@@ -10,6 +10,7 @@ export default function ClientCheckIns() {
   const [selectedCheckIn, setSelectedCheckIn] = useState<any>(null);
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTemplate, setActiveTemplate] = useState<any>(null);
 
   const loadCheckIns = async () => {
     try {
@@ -23,8 +24,18 @@ export default function ClientCheckIns() {
     }
   };
 
+  const loadActiveTemplate = async () => {
+    try {
+      const data = await fetchWithAuth('/check-ins/client/active-template');
+      setActiveTemplate(data);
+    } catch (err) {
+      console.error('Error loading active template:', err);
+    }
+  };
+
   useEffect(() => {
     loadCheckIns();
+    loadActiveTemplate();
   }, []);
 
   if (isLoading) {
@@ -93,7 +104,7 @@ export default function ClientCheckIns() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm mb-6">
           <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 relative">
             <button className="relative px-6 py-2 rounded-lg text-sm font-semibold transition-all z-10 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm">
-              Check-in View
+              {activeTemplate?.title || 'Check-in View'}
             </button>
           </div>
           <div className="flex items-center gap-2 pr-2">
