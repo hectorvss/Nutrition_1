@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
+import { useTheme } from '../context/ThemeContext';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 
@@ -23,6 +24,7 @@ interface CheckInTemplateEditorProps {
 }
 
 export default function CheckInTemplateEditor({ templateId, onClose, onSave }: CheckInTemplateEditorProps) {
+  const { settings } = useTheme();
   const [template, setTemplate] = useState<CheckInTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -195,7 +197,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
               className="bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white p-0 focus:ring-0 min-w-[200px]"
             />
             <div className="flex items-center gap-2 mt-0.5">
-               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: settings.theme_color }} />
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protocol UI Builder</p>
             </div>
           </div>
@@ -204,9 +206,10 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
           <button 
             onClick={handleSave} 
             disabled={isSaving}
-            className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl shadow-slate-900/10 disabled:opacity-50"
+            style={{ backgroundColor: settings.theme_color }}
+            className="text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl shadow-slate-900/10 disabled:opacity-50"
           >
-            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (success ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <Save className="w-5 h-5" />)}
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (success ? <CheckCircle2 className="w-5 h-5 text-white/80" /> : <Save className="w-5 h-5" />)}
             {isSaving ? 'Saving...' : 'Save Template'}
           </button>
         </div>
@@ -217,8 +220,12 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
         <div className="w-80 flex flex-col m-6 mr-0">
           <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Step Sequence</h3>
-              <button onClick={addStep} className="p-2 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-colors">
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Step Sequence</h3>
+              <button 
+                onClick={addStep} 
+                style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
+                className="p-2 rounded-xl hover:scale-105 transition-all"
+              >
                 <Plus className="w-4 h-4" />
               </button>
             </div>
@@ -232,20 +239,23 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                       value={step}
                       className={`group flex items-center gap-3 p-4 rounded-3xl cursor-pointer transition-all border-2
                         ${selectedStepIndex === idx 
-                          ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-lg' 
+                          ? 'shadow-lg border-transparent' 
                           : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
+                      style={selectedStepIndex === idx ? { backgroundColor: settings.theme_color, color: 'white' } : {}}
                     >
                       <div 
-                        className={`p-1 ${selectedStepIndex === idx ? 'text-slate-400' : 'text-slate-300'} opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing`}
+                        className={`p-1 ${selectedStepIndex === idx ? 'text-white/40' : 'text-slate-300'} opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing`}
                         onClick={(e) => e.stopPropagation()}
                       >
                          <GripVertical className="w-4 h-4" />
                       </div>
                       <div className="flex-1 min-w-0" onClick={() => setSelectedStepIndex(idx)}>
-                        <span className="block text-[13px] font-bold truncate tracking-tight">{step.title}</span>
+                        <span className="block text-[13px] font-semibold truncate tracking-tight">{step.title}</span>
                       </div>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0
-                        ${selectedStepIndex === idx ? 'bg-white/20 text-white dark:bg-slate-900/10 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                      <div 
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
+                          ${selectedStepIndex === idx ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
+                      >
                         {idx + 1}
                       </div>
                     </Reorder.Item>
@@ -257,7 +267,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
             <div className="p-4 bg-slate-50/50 dark:bg-slate-800/50">
                <button 
                  onClick={addStep}
-                 className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all text-xs font-bold flex items-center justify-center gap-2"
+                 className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all text-xs font-semibold flex items-center justify-center gap-2"
                >
                  <PlusCircle className="w-4 h-4" />
                  Add New Step
@@ -280,7 +290,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                       value={selectedStep.title}
                       onChange={(e) => updateStep(selectedStepIndex, { title: e.target.value })}
                       placeholder="Step Title (e.g., Physical Progress)"
-                      className="w-full bg-transparent border-none p-0 text-3xl font-black tracking-tight text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-200"
+                      className="w-full bg-transparent border-none p-0 text-3xl font-bold tracking-tight text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-200"
                     />
                     <textarea 
                       value={selectedStep.subtitle || ''}
@@ -297,11 +307,10 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                   </button>
                 </div>
 
-                {/* Sub-cards: Questions List */}
                 <div className="space-y-6 pt-6 border-t border-slate-50 dark:border-slate-800/50">
                   <div className="flex items-center justify-between px-2">
-                    <h4 className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Step Questions ({selectedStep.questions?.length || 0})</h4>
-                    <span className="text-[10px] font-bold text-slate-300 uppercase underline decoration-dotted underline-offset-4 cursor-help">Draggable Inline Cards</span>
+                    <h4 className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">Step Questions ({selectedStep.questions?.length || 0})</h4>
+                    <span className="text-[10px] font-semibold text-slate-300 uppercase underline decoration-dotted underline-offset-4 cursor-help">Draggable Inline Cards</span>
                   </div>
 
                   <Reorder.Group axis="y" values={selectedStep.questions || []} onReorder={handleReorderQuestions} className="space-y-6">
@@ -327,7 +336,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                     <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center group-hover/add:bg-emerald-100 dark:group-hover/add:bg-emerald-900/20 transition-all">
                        <Plus className="w-6 h-6 group-hover/add:scale-120 transition-transform" />
                     </div>
-                    <span className="text-sm font-black uppercase tracking-widest">Add Question Sub-card</span>
+                    <span className="text-sm font-semibold uppercase tracking-widest">Add Question Sub-card</span>
                   </button>
                 </div>
               </div>
@@ -339,7 +348,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                      <LayoutGrid className="w-10 h-10 text-slate-200" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Empty Flow</h3>
+                    <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Empty Flow</h3>
                     <p className="text-slate-400 text-sm max-w-xs mx-auto mt-2 font-medium">Create a step from the left panel to begin building your check-in structure.</p>
                   </div>
                </div>
