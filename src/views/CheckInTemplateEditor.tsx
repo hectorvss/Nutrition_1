@@ -16,61 +16,12 @@ import { fetchWithAuth } from '../api';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
-import { Reorder, AnimatePresence, motion, useDragControls } from 'framer-motion';
+import { Reorder, AnimatePresence, motion } from 'framer-motion';
 
 interface CheckInTemplateEditorProps {
   templateId: string;
   onClose: () => void;
   onSave?: (template: CheckInTemplate) => void;
-}
-
-interface SidebarItemProps {
-  step: CheckInStep;
-  idx: number;
-  isSelected: boolean;
-  onSelect: () => void;
-  themeColor: string;
-}
-
-function SidebarItem({ step, idx, isSelected, onSelect, themeColor }: SidebarItemProps) {
-  const controls = useDragControls();
-
-  return (
-    <Reorder.Item 
-      value={step}
-      dragListener={false}
-      dragControls={controls}
-      // Non-aggressive, snappy transitions for small items
-      transition={{ type: "tween", duration: 0.15 }}
-      whileDrag={{ 
-        scale: 1.02, 
-        zIndex: 50,
-        boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
-      }}
-      className={`group flex items-center gap-1 p-3.5 rounded-2xl cursor-pointer transition-all border-2
-        ${isSelected 
-          ? 'shadow-lg border-transparent' 
-          : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
-      style={isSelected ? { backgroundColor: themeColor, color: 'white' } : {}}
-      onClick={onSelect}
-    >
-      <div 
-        className={`p-1.5 ${isSelected ? 'text-white/40' : 'text-slate-300'} transition-opacity cursor-grab active:cursor-grabbing hover:text-slate-500`}
-        onPointerDown={(e) => controls.start(e)}
-      >
-         <GripVertical className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <span className="block text-xs font-bold truncate tracking-tight">{step.title}</span>
-      </div>
-      <div 
-        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
-          ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
-      >
-        {idx + 1}
-      </div>
-    </Reorder.Item>
-  );
 }
 
 export default function CheckInTemplateEditor({ templateId, onClose, onSave }: CheckInTemplateEditorProps) {
@@ -249,7 +200,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
               type="text" 
               value={template.name}
               onChange={(e) => setTemplate({ ...template, name: e.target.value })}
-              className="bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white p-0 focus:ring-0 min-w-[200px]"
+              className="bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white p-0 focus:ring-0 outline-none focus:outline-none focus:border-none min-w-[200px]"
             />
             <div className="flex items-center gap-2 mt-0.5">
                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: settings.theme_color }} />
@@ -289,14 +240,32 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
               <Reorder.Group axis="y" values={template.templateSchema} onReorder={handleReorderSteps} className="space-y-2">
                 <AnimatePresence initial={false}>
                   {template.templateSchema.map((step, idx) => (
-                    <SidebarItem 
-                      key={step.id}
-                      step={step}
-                      idx={idx}
-                      isSelected={selectedStepIndex === idx}
-                      onSelect={() => setSelectedStepIndex(idx)}
-                      themeColor={settings.theme_color}
-                    />
+                    <Reorder.Item 
+                      key={step.id} 
+                      value={step}
+                      // EXACT mechanism as the central canvas "mother card"
+                      transition={{ type: "tween", duration: 0.15 }}
+                      whileDrag={{ scale: 1.02, zIndex: 10, boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}
+                      className={`group flex items-center gap-1 p-3.5 rounded-2xl cursor-pointer transition-all border-2
+                        ${selectedStepIndex === idx 
+                          ? 'shadow-lg border-transparent' 
+                          : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
+                      style={selectedStepIndex === idx ? { backgroundColor: settings.theme_color, color: 'white' } : {}}
+                      onClick={() => setSelectedStepIndex(idx)}
+                    >
+                      <div className={`p-1.5 ${selectedStepIndex === idx ? 'text-white/40' : 'text-slate-300'} transition-opacity`}>
+                         <GripVertical className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-xs font-bold truncate tracking-tight">{step.title}</span>
+                      </div>
+                      <div 
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
+                          ${selectedStepIndex === idx ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
+                      >
+                        {idx + 1}
+                      </div>
+                    </Reorder.Item>
                   ))}
                 </AnimatePresence>
               </Reorder.Group>
@@ -328,13 +297,13 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                         value={selectedStep.title}
                         onChange={(e) => updateStep(selectedStepIndex, { title: e.target.value })}
                         placeholder="Step Title"
-                        className="w-full bg-transparent border-none p-0 text-3xl font-bold tracking-tight text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-200"
+                        className="w-full bg-transparent border-none p-0 text-3xl font-bold tracking-tight text-slate-900 dark:text-white focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200"
                       />
                       <textarea 
                         value={selectedStep.subtitle || ''}
                         onChange={(e) => updateStep(selectedStepIndex, { subtitle: e.target.value })}
                         placeholder="Instructions for this category..."
-                        className="w-full bg-transparent border-none p-0 text-lg font-medium text-slate-400 focus:ring-0 resize-none h-14 placeholder:text-slate-200"
+                        className="w-full bg-transparent border-none p-0 text-lg font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none resize-none h-14 placeholder:text-slate-200 shadow-none border-transparent ring-0"
                       />
                     </div>
                     <button 
@@ -374,7 +343,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                   </div>
                 </div>
 
-                {/* Navigation Button OUTSIDE and BELOW the card */}
+                {/* Navigation Button */}
                 {selectedStepIndex < template.templateSchema.length - 1 && (
                   <div className="flex justify-end pt-4">
                     <button 

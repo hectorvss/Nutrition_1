@@ -81,14 +81,14 @@ export default function CheckInQuestionEditorCard({
               value={question.title}
               onChange={(e) => onUpdate({ title: e.target.value })}
               placeholder="Question Title..."
-              className="w-full bg-transparent border-none p-0 text-xl font-bold text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-200 tracking-tight"
+              className="w-full bg-transparent border-none p-0 text-xl font-bold text-slate-900 dark:text-white focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200 tracking-tight"
             />
             <input 
               type="text" 
               value={question.subtitle || ''}
               onChange={(e) => onUpdate({ subtitle: e.target.value })}
               placeholder="Add an optional instruction or description..."
-              className="w-full bg-transparent border-none p-0 text-sm font-medium text-slate-400 focus:ring-0 placeholder:text-slate-200"
+              className="w-full bg-transparent border-none p-0 text-sm font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200"
             />
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function CheckInQuestionEditorCard({
                       onChange={(e) => handleUpdateOption(idx, e.target.value)}
                       onBlur={() => setEditingOptionIdx(null)}
                       onKeyDown={(e) => e.key === 'Enter' && setEditingOptionIdx(null)}
-                      className="bg-transparent border-none p-0 text-sm font-bold text-slate-700 focus:ring-0 w-max min-w-[60px]"
+                      className="bg-transparent border-none p-0 text-sm font-bold text-slate-700 focus:ring-0 outline-none focus:outline-none focus:border-none w-max min-w-[60px]"
                     />
                   ) : (
                     <span 
@@ -178,7 +178,7 @@ export default function CheckInQuestionEditorCard({
                   onChange={(e) => onUpdate({ unit: e.target.value })}
                   placeholder="Unit"
                   style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
-                  className="border-none rounded-lg px-2 py-1 text-[10px] font-bold uppercase text-center focus:ring-0 min-w-[40px]"
+                  className="border-none rounded-lg px-2 py-1 text-[10px] font-bold uppercase text-center focus:ring-0 outline-none focus:outline-none focus:border-none min-w-[40px]"
                 />
               </div>
             </div>
