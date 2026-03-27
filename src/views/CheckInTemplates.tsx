@@ -34,7 +34,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
   const loadTemplates = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchWithAuth('/manager/checkin-templates');
+      const data = await fetchWithAuth('/check-ins/manager/checkin-templates');
       // Normalize templates from API
       const normalized = data.map((t: any) => ({
         ...t,
@@ -60,7 +60,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
         template_schema: DEFAULT_CHECKIN_TEMPLATE.templateSchema,
         is_default: templates.length === 0
       };
-      await fetchWithAuth('/manager/checkin-templates', {
+      await fetchWithAuth('/check-ins/manager/checkin-templates', {
         method: 'POST',
         body: JSON.stringify(newTemplate)
       });
@@ -72,7 +72,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
 
   const handleDuplicate = async (id: string) => {
     try {
-      await fetchWithAuth(`/manager/checkin-templates/${id}/duplicate`, {
+      await fetchWithAuth(`/check-ins/manager/checkin-templates/${id}/duplicate`, {
         method: 'POST'
       });
       loadTemplates();
@@ -83,7 +83,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
 
   const handleSetDefault = async (id: string) => {
     try {
-      await fetchWithAuth(`/manager/checkin-templates/${id}`, {
+      await fetchWithAuth(`/check-ins/manager/checkin-templates/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ is_default: true })
       });
@@ -96,7 +96,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
   const handleRename = async (id: string) => {
     if (!newName.trim()) return;
     try {
-      await fetchWithAuth(`/manager/checkin-templates/${id}`, {
+      await fetchWithAuth(`/check-ins/manager/checkin-templates/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ name: newName.trim() })
       });
@@ -110,7 +110,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      await fetchWithAuth(`/manager/checkin-templates/${id}`, {
+      await fetchWithAuth(`/check-ins/manager/checkin-templates/${id}`, {
         method: 'PATCH',
         body: JSON.stringify({ is_active: !currentStatus })
       });
@@ -125,7 +125,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
 It will be archived if it has active submissions.`;
     if (!confirm(message)) return;
     try {
-      await fetchWithAuth(`/manager/checkin-templates/${id}`, {
+      await fetchWithAuth(`/check-ins/manager/checkin-templates/${id}`, {
         method: 'DELETE'
       });
       loadTemplates();

@@ -56,7 +56,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
     async function loadTemplate() {
       setIsLoading(true);
       try {
-        const data = await fetchWithAuth('/client/active-template');
+        const data = await fetchWithAuth('/check-ins/client/active-template');
         setTemplate(data || DEFAULT_CHECKIN_TEMPLATE);
       } catch (err) {
         console.error('Error fetching template:', err);
@@ -145,7 +145,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   const handleFinish = async () => {
     setIsSubmitting(true);
     try {
-      await fetchWithAuth('/client/submissions', {
+      await fetchWithAuth('/check-ins/client/submissions', {
         method: 'POST',
         body: JSON.stringify({
           template_id: template?.id,
