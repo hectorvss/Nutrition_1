@@ -142,18 +142,18 @@ VALUES (
                 "id": "workout_a",
                 "name": "Full Body A – Push Focus",
                 "blocks": [
-                    { "id": "b1", "name": "Warm-up", "exercises": [{ "id": "ex_jj", "exerciseName": "Jumping Jacks", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
-                    { "id": "b2", "name": "Torso (Push)", "exercises": [{ "id": "ex_dbp", "exerciseName": "Dumbbell Bench Press", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
-                    { "id": "b3", "name": "Legs", "exercises": [{ "id": "ex_bbs", "exerciseName": "Barbell Back Squat", "sets": "3", "reps": "10", "rir": "2", "rest": "120s" }] }
+                    { "id": "b1", "name": "Warm-up", "exercises": [{ "id": "ex_jj", "name": "Jumping Jacks", "type": "Compound", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
+                    { "id": "b2", "name": "Torso (Push)", "exercises": [{ "id": "ex_dbp", "name": "Dumbbell Bench Press", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
+                    { "id": "b3", "name": "Legs", "exercises": [{ "id": "ex_bbs", "name": "Barbell Back Squat", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "120s" }] }
                 ]
             },
             {
                 "id": "workout_b",
                 "name": "Full Body B – Pull Focus",
                 "blocks": [
-                    { "id": "b4", "name": "Warm-up", "exercises": [{ "id": "ex_jr", "exerciseName": "Jump Rope", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
-                    { "id": "b5", "name": "Torso (Pull)", "exercises": [{ "id": "ex_lp", "exerciseName": "Lat Pulldown", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
-                    { "id": "b6", "name": "Legs", "exercises": [{ "id": "ex_lpr", "exerciseName": "Leg Press", "sets": "3", "reps": "12", "rir": "2", "rest": "120s" }] }
+                    { "id": "b4", "name": "Warm-up", "exercises": [{ "id": "ex_jr", "name": "Jump Rope", "type": "Compound", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
+                    { "id": "b5", "name": "Torso (Pull)", "exercises": [{ "id": "ex_lp", "name": "Lat Pulldown", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
+                    { "id": "b6", "name": "Legs", "exercises": [{ "id": "ex_lpr", "name": "Leg Press", "type": "Compound", "sets": "3", "reps": "12", "rir": "2", "rest": "120s" }] }
                 ]
             }
         ],
@@ -183,15 +183,15 @@ VALUES (
                 "id": "upper_a",
                 "name": "Upper A",
                 "blocks": [
-                    { "id": "ua1", "name": "Warm-up", "exercises": [{ "id": "ex_jr2", "exerciseName": "Jump Rope", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
+                    { "id": "ua1", "name": "Warm-up", "exercises": [{ "id": "ex_jr2", "name": "Jump Rope", "type": "Compound", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
                     { "id": "ua2", "name": "Chest & Shoulders", "exercises": [
-                        { "id": "ex_dbp2", "exerciseName": "Dumbbell Bench Press", "sets": "4", "reps": "8", "rir": "2", "rest": "90s" },
-                        { "id": "ex_dsp", "exerciseName": "Dumbbell Shoulder Press", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }
+                        { "id": "ex_dbp2", "name": "Dumbbell Bench Press", "type": "Compound", "sets": "4", "reps": "8", "rir": "2", "rest": "90s" },
+                        { "id": "ex_dsp", "name": "Dumbbell Shoulder Press", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }
                     ]},
-                    { "id": "ua3", "name": "Back", "exercises": [{ "id": "ex_scr", "exerciseName": "Seated Cable Row", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" }] },
+                    { "id": "ua3", "name": "Back", "exercises": [{ "id": "ex_scr", "name": "Seated Cable Row", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" }] },
                     { "id": "ua4", "name": "Arms", "exercises": [
-                        { "id": "ex_dc", "exerciseName": "Dumbbell Curl", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
-                        { "id": "ex_tp", "exerciseName": "Triceps Pushdown", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
+                        { "id": "ex_dc", "name": "Dumbbell Curl", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
+                        { "id": "ex_tp", "name": "Triceps Pushdown", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
                     ]}
                 ]
             },
@@ -199,29 +199,29 @@ VALUES (
                 "id": "lower_a",
                 "name": "Lower A",
                 "blocks": [
-                    { "id": "la1", "name": "Warm-up", "exercises": [{ "id": "ex_bws", "exerciseName": "Bodyweight Squat", "sets": "2", "reps": "15", "rir": "3", "rest": "30s" }] },
+                    { "id": "la1", "name": "Warm-up", "exercises": [{ "id": "ex_bws", "name": "Bodyweight Squat", "type": "Compound", "sets": "2", "reps": "15", "rir": "3", "rest": "30s" }] },
                     { "id": "la2", "name": "Quads", "exercises": [
-                        { "id": "ex_bbs2", "exerciseName": "Barbell Back Squat", "sets": "4", "reps": "8", "rir": "2", "rest": "120s" },
-                        { "id": "ex_le", "exerciseName": "Leg Extension", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
+                        { "id": "ex_bbs2", "name": "Barbell Back Squat", "type": "Compound", "sets": "4", "reps": "8", "rir": "2", "rest": "120s" },
+                        { "id": "ex_le", "name": "Leg Extension", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
                     ]},
-                    { "id": "la3", "name": "Hamstrings & Glutes", "exercises": [{ "id": "ex_rdl", "exerciseName": "Romanian Deadlift", "sets": "3", "reps": "10", "rir": "2", "rest": "120s" }] },
-                    { "id": "la4", "name": "Calves", "exercises": [{ "id": "ex_scr2", "exerciseName": "Standing Calf Raise", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] }
+                    { "id": "la3", "name": "Hamstrings & Glutes", "exercises": [{ "id": "ex_rdl", "name": "Romanian Deadlift", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "120s" }] },
+                    { "id": "la4", "name": "Calves", "exercises": [{ "id": "ex_scr2", "name": "Standing Calf Raise", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] }
                 ]
             },
             {
                 "id": "upper_b",
                 "name": "Upper B",
                 "blocks": [
-                    { "id": "ub1", "name": "Warm-up", "exercises": [{ "id": "ex_jr3", "exerciseName": "Jump Rope", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
+                    { "id": "ub1", "name": "Warm-up", "exercises": [{ "id": "ex_jr3", "name": "Jump Rope", "type": "Compound", "sets": "2", "reps": "30s", "rir": "0", "rest": "30s" }] },
                     { "id": "ub2", "name": "Back", "exercises": [
-                        { "id": "ex_lp2", "exerciseName": "Lat Pulldown", "sets": "4", "reps": "8", "rir": "2", "rest": "90s" },
-                        { "id": "ex_csr", "exerciseName": "Chest Supported Row", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }
+                        { "id": "ex_lp2", "name": "Lat Pulldown", "type": "Compound", "sets": "4", "reps": "8", "rir": "2", "rest": "90s" },
+                        { "id": "ex_csr", "name": "Chest Supported Row", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }
                     ]},
-                    { "id": "ub3", "name": "Chest", "exercises": [{ "id": "ex_idp", "exerciseName": "Incline Dumbbell Press", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
-                    { "id": "ub4", "name": "Shoulders", "exercises": [{ "id": "ex_lr", "exerciseName": "Lateral Raise", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] },
+                    { "id": "ub3", "name": "Chest", "exercises": [{ "id": "ex_idp", "name": "Incline Dumbbell Press", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
+                    { "id": "ub4", "name": "Shoulders", "exercises": [{ "id": "ex_lr", "name": "Lateral Raise", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] },
                     { "id": "ub5", "name": "Arms", "exercises": [
-                        { "id": "ex_hc", "exerciseName": "Hammer Curl", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
-                        { "id": "ex_ote", "exerciseName": "Overhead Triceps Extension", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
+                        { "id": "ex_hc", "name": "Hammer Curl", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
+                        { "id": "ex_ote", "name": "Overhead Triceps Extension", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
                     ]}
                 ]
             },
@@ -229,13 +229,13 @@ VALUES (
                 "id": "lower_b",
                 "name": "Lower B",
                 "blocks": [
-                    { "id": "lb1", "name": "Warm-up", "exercises": [{ "id": "ex_wl", "exerciseName": "Walking Lunges", "sets": "2", "reps": "12", "rir": "3", "rest": "30s" }] },
+                    { "id": "lb1", "name": "Warm-up", "exercises": [{ "id": "ex_wl", "name": "Walking Lunges", "type": "Compound", "sets": "2", "reps": "12", "rir": "3", "rest": "30s" }] },
                     { "id": "lb2", "name": "Hamstrings & Glutes", "exercises": [
-                        { "id": "ex_rdl2", "exerciseName": "Romanian Deadlift", "sets": "4", "reps": "8", "rir": "2", "rest": "120s" },
-                        { "id": "ex_ht", "exerciseName": "Hip Thrust", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }
+                        { "id": "ex_rdl2", "name": "Romanian Deadlift", "type": "Compound", "sets": "4", "reps": "8", "rir": "2", "rest": "120s" },
+                        { "id": "ex_ht", "name": "Hip Thrust", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }
                     ]},
-                    { "id": "lb3", "name": "Quads", "exercises": [{ "id": "ex_lpr2", "exerciseName": "Leg Press", "sets": "3", "reps": "12", "rir": "2", "rest": "90s" }] },
-                    { "id": "lb4", "name": "Calves", "exercises": [{ "id": "ex_scr3", "exerciseName": "Seated Calf Raise", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] }
+                    { "id": "lb3", "name": "Quads", "exercises": [{ "id": "ex_lpr2", "name": "Leg Press", "type": "Compound", "sets": "3", "reps": "12", "rir": "2", "rest": "90s" }] },
+                    { "id": "lb4", "name": "Calves", "exercises": [{ "id": "ex_scr3", "name": "Seated Calf Raise", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] }
                 ]
             }
         ],
@@ -270,16 +270,16 @@ VALUES (
                 "id": "upper_strength",
                 "name": "Upper Strength",
                 "blocks": [
-                    { "id": "us1", "name": "Warm-up", "exercises": [{ "id": "ex_jr4", "exerciseName": "Jump Rope", "sets": "2", "reps": "45s", "rir": "0", "rest": "30s" }] },
-                    { "id": "us2", "name": "Chest", "exercises": [{ "id": "ex_bbp", "exerciseName": "Barbell Bench Press", "sets": "5", "reps": "5", "rir": "2", "rest": "150s" }] },
+                    { "id": "us1", "name": "Warm-up", "exercises": [{ "id": "ex_jr4", "name": "Jump Rope", "type": "Compound", "sets": "2", "reps": "45s", "rir": "0", "rest": "30s" }] },
+                    { "id": "us2", "name": "Chest", "exercises": [{ "id": "ex_bbp", "name": "Barbell Bench Press", "type": "Compound", "sets": "5", "reps": "5", "rir": "2", "rest": "150s" }] },
                     { "id": "us3", "name": "Back", "exercises": [
-                        { "id": "ex_wpu", "exerciseName": "Weighted Pull-Up", "sets": "4", "reps": "6", "rir": "2", "rest": "120s" },
-                        { "id": "ex_brow", "exerciseName": "Barbell Row", "sets": "4", "reps": "8", "rir": "2", "rest": "120s" }
+                        { "id": "ex_wpu", "name": "Weighted Pull-Up", "type": "Compound", "sets": "4", "reps": "6", "rir": "2", "rest": "120s" },
+                        { "id": "ex_brow", "name": "Barbell Row", "type": "Compound", "sets": "4", "reps": "8", "rir": "2", "rest": "120s" }
                     ]},
-                    { "id": "us4", "name": "Shoulders", "exercises": [{ "id": "ex_sdsp", "exerciseName": "Seated Dumbbell Shoulder Press", "sets": "3", "reps": "8", "rir": "2", "rest": "90s" }] },
+                    { "id": "us4", "name": "Shoulders", "exercises": [{ "id": "ex_sdsp", "name": "Seated Dumbbell Shoulder Press", "type": "Compound", "sets": "3", "reps": "8", "rir": "2", "rest": "90s" }] },
                     { "id": "us5", "name": "Arms", "exercises": [
-                        { "id": "ex_bc", "exerciseName": "Barbell Curl", "sets": "3", "reps": "10", "rir": "2", "rest": "60s" },
-                        { "id": "ex_sc", "exerciseName": "Skull Crushers", "sets": "3", "reps": "10", "rir": "2", "rest": "60s" }
+                        { "id": "ex_bc", "name": "Barbell Curl", "type": "Isolation", "sets": "3", "reps": "10", "rir": "2", "rest": "60s" },
+                        { "id": "ex_sc", "name": "Skull Crushers", "type": "Isolation", "sets": "3", "reps": "10", "rir": "2", "rest": "60s" }
                     ]}
                 ]
             },
@@ -287,55 +287,55 @@ VALUES (
                 "id": "lower_strength",
                 "name": "Lower Strength",
                 "blocks": [
-                    { "id": "ls1", "name": "Warm-up", "exercises": [{ "id": "ex_bws2", "exerciseName": "Bodyweight Squat", "sets": "2", "reps": "15", "rir": "3", "rest": "30s" }] },
-                    { "id": "ls2", "name": "Quads", "exercises": [{ "id": "ex_bbs3", "exerciseName": "Barbell Back Squat", "sets": "5", "reps": "5", "rir": "2", "rest": "150s" }] },
-                    { "id": "ls3", "name": "Posterior Chain", "exercises": [{ "id": "ex_rdl3", "exerciseName": "Romanian Deadlift", "sets": "4", "reps": "6", "rir": "2", "rest": "150s" }] },
-                    { "id": "ls4", "name": "Glutes", "exercises": [{ "id": "ex_ht2", "exerciseName": "Hip Thrust", "sets": "3", "reps": "8", "rir": "2", "rest": "120s" }] },
-                    { "id": "ls5", "name": "Calves", "exercises": [{ "id": "ex_scr4", "exerciseName": "Standing Calf Raise", "sets": "4", "reps": "12", "rir": "2", "rest": "60s" }] }
+                    { "id": "ls1", "name": "Warm-up", "exercises": [{ "id": "ex_bws2", "name": "Bodyweight Squat", "type": "Compound", "sets": "2", "reps": "15", "rir": "3", "rest": "30s" }] },
+                    { "id": "ls2", "name": "Quads", "exercises": [{ "id": "ex_bbs3", "name": "Barbell Back Squat", "type": "Compound", "sets": "5", "reps": "5", "rir": "2", "rest": "150s" }] },
+                    { "id": "ls3", "name": "Posterior Chain", "exercises": [{ "id": "ex_rdl3", "name": "Romanian Deadlift", "type": "Compound", "sets": "4", "reps": "6", "rir": "2", "rest": "150s" }] },
+                    { "id": "ls4", "name": "Glutes", "exercises": [{ "id": "ex_ht2", "name": "Hip Thrust", "type": "Compound", "sets": "3", "reps": "8", "rir": "2", "rest": "120s" }] },
+                    { "id": "ls5", "name": "Calves", "exercises": [{ "id": "ex_scr4", "name": "Standing Calf Raise", "type": "Isolation", "sets": "4", "reps": "12", "rir": "2", "rest": "60s" }] }
                 ]
             },
             {
                 "id": "push_hypertrophy",
                 "name": "Push Hypertrophy",
                 "blocks": [
-                    { "id": "ph1", "name": "Warm-up", "exercises": [{ "id": "ex_ac", "exerciseName": "Arm Circles", "sets": "2", "reps": "30s", "rir": "0", "rest": "20s" }] },
+                    { "id": "ph1", "name": "Warm-up", "exercises": [{ "id": "ex_ac", "name": "Arm Circles", "type": "Isolation", "sets": "2", "reps": "30s", "rir": "0", "rest": "20s" }] },
                     { "id": "ph2", "name": "Chest", "exercises": [
-                        { "id": "ex_idp2", "exerciseName": "Incline Dumbbell Press", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_cfm", "exerciseName": "Chest Fly Machine", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
+                        { "id": "ex_idp2", "name": "Incline Dumbbell Press", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_cfm", "name": "Chest Fly Machine", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
                     ]},
                     { "id": "ph3", "name": "Shoulders", "exercises": [
-                        { "id": "ex_lr2", "exerciseName": "Lateral Raise", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" },
-                        { "id": "ex_cfr", "exerciseName": "Cable Front Raise", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
+                        { "id": "ex_lr2", "name": "Lateral Raise", "type": "Isolation", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" },
+                        { "id": "ex_cfr", "name": "Cable Front Raise", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
                     ]},
-                    { "id": "ph4", "name": "Triceps", "exercises": [{ "id": "ex_rpd", "exerciseName": "Rope Pushdown", "sets": "4", "reps": "12", "rir": "2", "rest": "60s" }] }
+                    { "id": "ph4", "name": "Triceps", "exercises": [{ "id": "ex_rpd", "name": "Rope Pushdown", "type": "Isolation", "sets": "4", "reps": "12", "rir": "2", "rest": "60s" }] }
                 ]
             },
             {
                 "id": "pull_hypertrophy",
                 "name": "Pull Hypertrophy",
                 "blocks": [
-                    { "id": "puh1", "name": "Warm-up", "exercises": [{ "id": "ex_bpa", "exerciseName": "Band Pull-Apart", "sets": "2", "reps": "20", "rir": "0", "rest": "20s" }] },
+                    { "id": "puh1", "name": "Warm-up", "exercises": [{ "id": "ex_bpa", "name": "Band Pull-Apart", "type": "Isolation", "sets": "2", "reps": "20", "rir": "0", "rest": "20s" }] },
                     { "id": "puh2", "name": "Back", "exercises": [
-                        { "id": "ex_lp3", "exerciseName": "Lat Pulldown", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_csr2", "exerciseName": "Chest Supported Row", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_sacr", "exerciseName": "Single Arm Cable Row", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
+                        { "id": "ex_lp3", "name": "Lat Pulldown", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_csr2", "name": "Chest Supported Row", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_sacr", "name": "Single Arm Cable Row", "type": "Compound", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
                     ]},
-                    { "id": "puh3", "name": "Rear Delts", "exercises": [{ "id": "ex_rpd2", "exerciseName": "Reverse Pec Deck", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] },
-                    { "id": "puh4", "name": "Biceps", "exercises": [{ "id": "ex_dhc", "exerciseName": "Dumbbell Hammer Curl", "sets": "4", "reps": "12", "rir": "2", "rest": "60s" }] }
+                    { "id": "puh3", "name": "Rear Delts", "exercises": [{ "id": "ex_rpd2", "name": "Reverse Pec Deck", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] },
+                    { "id": "puh4", "name": "Biceps", "exercises": [{ "id": "ex_dhc", "name": "Dumbbell Hammer Curl", "type": "Isolation", "sets": "4", "reps": "12", "rir": "2", "rest": "60s" }] }
                 ]
             },
             {
                 "id": "lower_hypertrophy",
                 "name": "Lower Hypertrophy",
                 "blocks": [
-                    { "id": "lh1", "name": "Warm-up", "exercises": [{ "id": "ex_wl2", "exerciseName": "Walking Lunges", "sets": "2", "reps": "12", "rir": "3", "rest": "30s" }] },
+                    { "id": "lh1", "name": "Warm-up", "exercises": [{ "id": "ex_wl2", "name": "Walking Lunges", "type": "Compound", "sets": "2", "reps": "12", "rir": "3", "rest": "30s" }] },
                     { "id": "lh2", "name": "Quads", "exercises": [
-                        { "id": "ex_lpr3", "exerciseName": "Leg Press", "sets": "4", "reps": "12", "rir": "2", "rest": "90s" },
-                        { "id": "ex_le2", "exerciseName": "Leg Extension", "sets": "3", "reps": "15", "rir": "2", "rest": "75s" }
+                        { "id": "ex_lpr3", "name": "Leg Press", "type": "Compound", "sets": "4", "reps": "12", "rir": "2", "rest": "90s" },
+                        { "id": "ex_le2", "name": "Leg Extension", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "75s" }
                     ]},
-                    { "id": "lh3", "name": "Hamstrings", "exercises": [{ "id": "ex_slc", "exerciseName": "Seated Leg Curl", "sets": "4", "reps": "12", "rir": "2", "rest": "75s" }] },
-                    { "id": "lh4", "name": "Glutes", "exercises": [{ "id": "ex_bss", "exerciseName": "Bulgarian Split Squat", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
-                    { "id": "lh5", "name": "Calves", "exercises": [{ "id": "ex_slc2", "exerciseName": "Seated Calf Raise", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] }
+                    { "id": "lh3", "name": "Hamstrings", "exercises": [{ "id": "ex_slc", "name": "Seated Leg Curl", "type": "Isolation", "sets": "4", "reps": "12", "rir": "2", "rest": "75s" }] },
+                    { "id": "lh4", "name": "Glutes", "exercises": [{ "id": "ex_bss", "name": "Bulgarian Split Squat", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
+                    { "id": "lh5", "name": "Calves", "exercises": [{ "id": "ex_slc2", "name": "Seated Calf Raise", "type": "Isolation", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] }
                 ]
             }
         ],
@@ -371,19 +371,19 @@ VALUES (
                 "id": "upper_a_hyper",
                 "name": "Upper A",
                 "blocks": [
-                    { "id": "ua1h", "name": "Warm-up", "exercises": [{ "id": "ex_jr5", "exerciseName": "Jump Rope", "sets": "2", "reps": "30s", "rir": "0", "rest": "20s" }] },
+                    { "id": "ua1h", "name": "Warm-up", "exercises": [{ "id": "ex_jr5", "name": "Jump Rope", "type": "Compound", "sets": "2", "reps": "30s", "rir": "0", "rest": "20s" }] },
                     { "id": "ua2h", "name": "Chest", "exercises": [
-                        { "id": "ex_idp3", "exerciseName": "Incline Dumbbell Press", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_mcp", "exerciseName": "Machine Chest Press", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
+                        { "id": "ex_idp3", "name": "Incline Dumbbell Press", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_mcp", "name": "Machine Chest Press", "type": "Compound", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
                     ]},
                     { "id": "ua3h", "name": "Back", "exercises": [
-                        { "id": "ex_lp4", "exerciseName": "Lat Pulldown", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_csr3", "exerciseName": "Chest Supported Row", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
+                        { "id": "ex_lp4", "name": "Lat Pulldown", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_csr3", "name": "Chest Supported Row", "type": "Compound", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
                     ]},
-                    { "id": "ua4h", "name": "Shoulders", "exercises": [{ "id": "ex_lr3", "exerciseName": "Lateral Raise", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] },
+                    { "id": "ua4h", "name": "Shoulders", "exercises": [{ "id": "ex_lr3", "name": "Lateral Raise", "type": "Isolation", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] },
                     { "id": "ua5h", "name": "Arms", "exercises": [
-                        { "id": "ex_cc", "exerciseName": "Cable Curl", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
-                        { "id": "ex_rpd3", "exerciseName": "Rope Pushdown", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
+                        { "id": "ex_cc", "name": "Cable Curl", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
+                        { "id": "ex_rpd3", "name": "Rope Pushdown", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
                     ]}
                 ]
             },
@@ -391,32 +391,32 @@ VALUES (
                 "id": "lower_a_hyper",
                 "name": "Lower A",
                 "blocks": [
-                    { "id": "la1h", "name": "Warm-up", "exercises": [{ "id": "ex_bws3", "exerciseName": "Bodyweight Squat", "sets": "2", "reps": "15", "rir": "3", "rest": "20s" }] },
+                    { "id": "la1h", "name": "Warm-up", "exercises": [{ "id": "ex_bws3", "name": "Bodyweight Squat", "type": "Compound", "sets": "2", "reps": "15", "rir": "3", "rest": "20s" }] },
                     { "id": "la2h", "name": "Quads", "exercises": [
-                        { "id": "ex_lpr4", "exerciseName": "Leg Press", "sets": "4", "reps": "12", "rir": "2", "rest": "90s" },
-                        { "id": "ex_le3", "exerciseName": "Leg Extension", "sets": "3", "reps": "15", "rir": "2", "rest": "75s" }
+                        { "id": "ex_lpr4", "name": "Leg Press", "type": "Compound", "sets": "4", "reps": "12", "rir": "2", "rest": "90s" },
+                        { "id": "ex_le3", "name": "Leg Extension", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "75s" }
                     ]},
-                    { "id": "la3h", "name": "Hamstrings", "exercises": [{ "id": "ex_slc3", "exerciseName": "Seated Leg Curl", "sets": "4", "reps": "12", "rir": "2", "rest": "75s" }] },
-                    { "id": "la4h", "name": "Glutes", "exercises": [{ "id": "ex_bss2", "exerciseName": "Bulgarian Split Squat", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
-                    { "id": "la5h", "name": "Calves", "exercises": [{ "id": "ex_scr5", "exerciseName": "Seated Calf Raise", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] }
+                    { "id": "la3h", "name": "Hamstrings", "exercises": [{ "id": "ex_slc3", "name": "Seated Leg Curl", "type": "Isolation", "sets": "4", "reps": "12", "rir": "2", "rest": "75s" }] },
+                    { "id": "la4h", "name": "Glutes", "exercises": [{ "id": "ex_bss2", "name": "Bulgarian Split Squat", "type": "Compound", "sets": "3", "reps": "10", "rir": "2", "rest": "90s" }] },
+                    { "id": "la5h", "name": "Calves", "exercises": [{ "id": "ex_scr5", "name": "Seated Calf Raise", "type": "Isolation", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] }
                 ]
             },
             {
                 "id": "push_hyper",
                 "name": "Push",
                 "blocks": [
-                    { "id": "puh1h", "name": "Warm-up", "exercises": [{ "id": "ex_ac2", "exerciseName": "Arm Circles", "sets": "2", "reps": "30s", "rir": "0", "rest": "20s" }] },
+                    { "id": "puh1h", "name": "Warm-up", "exercises": [{ "id": "ex_ac2", "name": "Arm Circles", "type": "Isolation", "sets": "2", "reps": "30s", "rir": "0", "rest": "20s" }] },
                     { "id": "puh2h", "name": "Chest", "exercises": [
-                        { "id": "ex_fdp", "exerciseName": "Flat Dumbbell Press", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_ccf", "exerciseName": "Cable Chest Fly", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }
+                        { "id": "ex_fdp", "name": "Flat Dumbbell Press", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_ccf", "name": "Cable Chest Fly", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }
                     ]},
                     { "id": "puh3h", "name": "Shoulders", "exercises": [
-                        { "id": "ex_sdsp2", "exerciseName": "Seated Dumbbell Shoulder Press", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_clr", "exerciseName": "Cable Lateral Raise", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }
+                        { "id": "ex_sdsp2", "name": "Seated Dumbbell Shoulder Press", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_clr", "name": "Cable Lateral Raise", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }
                     ]},
                     { "id": "puh4h", "name": "Triceps", "exercises": [
-                        { "id": "ex_ote2", "exerciseName": "Overhead Triceps Extension", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
-                        { "id": "ex_tp2", "exerciseName": "Triceps Pushdown", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
+                        { "id": "ex_ote2", "name": "Overhead Triceps Extension", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
+                        { "id": "ex_tp2", "name": "Triceps Pushdown", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
                     ]}
                 ]
             },
@@ -424,16 +424,16 @@ VALUES (
                 "id": "pull_hyper",
                 "name": "Pull",
                 "blocks": [
-                    { "id": "phh1h", "name": "Warm-up", "exercises": [{ "id": "ex_bpa2", "exerciseName": "Band Pull-Apart", "sets": "2", "reps": "20", "rir": "0", "rest": "20s" }] },
+                    { "id": "phh1h", "name": "Warm-up", "exercises": [{ "id": "ex_bpa2", "name": "Band Pull-Apart", "type": "Isolation", "sets": "2", "reps": "20", "rir": "0", "rest": "20s" }] },
                     { "id": "phh2h", "name": "Back", "exercises": [
-                        { "id": "ex_pua", "exerciseName": "Pull-Up Assisted", "sets": "4", "reps": "8", "rir": "2", "rest": "90s" },
-                        { "id": "ex_scr6", "exerciseName": "Seated Cable Row", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
-                        { "id": "ex_sadr", "exerciseName": "Single Arm Dumbbell Row", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
+                        { "id": "ex_pua", "name": "Pull-Up Assisted", "type": "Compound", "sets": "4", "reps": "8", "rir": "2", "rest": "90s" },
+                        { "id": "ex_scr6", "name": "Seated Cable Row", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" },
+                        { "id": "ex_sadr", "name": "Single Arm Dumbbell Row", "type": "Compound", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }
                     ]},
-                    { "id": "phh3h", "name": "Rear Delts", "exercises": [{ "id": "ex_rpd4", "exerciseName": "Reverse Pec Deck", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] },
+                    { "id": "phh3h", "name": "Rear Delts", "exercises": [{ "id": "ex_rpd4", "name": "Reverse Pec Deck", "type": "Isolation", "sets": "3", "reps": "15", "rir": "2", "rest": "60s" }] },
                     { "id": "phh4h", "name": "Biceps", "exercises": [
-                        { "id": "ex_hc2", "exerciseName": "Hammer Curl", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
-                        { "id": "ex_pcm", "exerciseName": "Preacher Curl Machine", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
+                        { "id": "ex_hc2", "name": "Hammer Curl", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" },
+                        { "id": "ex_pcm", "name": "Preacher Curl Machine", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "60s" }
                     ]}
                 ]
             },
@@ -441,14 +441,14 @@ VALUES (
                 "id": "lower_b_hyper",
                 "name": "Lower B",
                 "blocks": [
-                    { "id": "lb1h", "name": "Warm-up", "exercises": [{ "id": "ex_wl3", "exerciseName": "Walking Lunges", "sets": "2", "reps": "12", "rir": "3", "rest": "20s" }] },
+                    { "id": "lb1h", "name": "Warm-up", "exercises": [{ "id": "ex_wl3", "name": "Walking Lunges", "type": "Compound", "sets": "2", "reps": "12", "rir": "3", "rest": "20s" }] },
                     { "id": "lb2h", "name": "Posterior Chain", "exercises": [
-                        { "id": "ex_rdl4", "exerciseName": "Romanian Deadlift", "sets": "4", "reps": "10", "rir": "2", "rest": "120s" },
-                        { "id": "ex_ht3", "exerciseName": "Hip Thrust", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" }
+                        { "id": "ex_rdl4", "name": "Romanian Deadlift", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "120s" },
+                        { "id": "ex_ht3", "name": "Hip Thrust", "type": "Compound", "sets": "4", "reps": "10", "rir": "2", "rest": "90s" }
                     ]},
-                    { "id": "lb3h", "name": "Quads", "exercises": [{ "id": "ex_hsq", "exerciseName": "Hack Squat", "sets": "3", "reps": "12", "rir": "2", "rest": "90s" }] },
-                    { "id": "lb4h", "name": "Hamstrings", "exercises": [{ "id": "ex_llc", "exerciseName": "Lying Leg Curl", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }] },
-                    { "id": "lb5h", "name": "Calves", "exercises": [{ "id": "ex_scr6", "exerciseName": "Standing Calf Raise", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] }
+                    { "id": "lb3h", "name": "Quads", "exercises": [{ "id": "ex_hsq", "name": "Hack Squat", "type": "Compound", "sets": "3", "reps": "12", "rir": "2", "rest": "90s" }] },
+                    { "id": "lb4h", "name": "Hamstrings", "exercises": [{ "id": "ex_llc", "name": "Lying Leg Curl", "type": "Isolation", "sets": "3", "reps": "12", "rir": "2", "rest": "75s" }] },
+                    { "id": "lb5h", "name": "Calves", "exercises": [{ "id": "ex_scr6", "name": "Standing Calf Raise", "type": "Isolation", "sets": "4", "reps": "15", "rir": "2", "rest": "60s" }] }
                 ]
             }
         ],
@@ -484,21 +484,21 @@ VALUES (
                 "id": "full_body_mobility",
                 "name": "Full Body Mobility",
                 "blocks": [
-                    { "id": "m1", "name": "Warm-up", "exercises": [{ "id": "ex_wte", "exerciseName": "Walk Treadmill Easy", "sets": "1", "reps": "5 min", "rir": null, "rest": "0s" }] },
+                    { "id": "m1", "name": "Warm-up", "exercises": [{ "id": "ex_wte", "name": "Walk Treadmill Easy", "type": "Compound", "sets": "1", "reps": "5 min", "rir": null, "rest": "0s" }] },
                     { "id": "m2", "name": "Mobility Block", "exercises": [
-                        { "id": "ex_ccw", "exerciseName": "Cat Cow", "sets": "2", "reps": "10", "rir": "3", "rest": "20s" },
-                        { "id": "ex_tr", "exerciseName": "Thoracic Rotation", "sets": "2", "reps": "10", "rir": "3", "rest": "20s" },
-                        { "id": "ex_wgs", "exerciseName": "World’s Greatest Stretch", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" },
-                        { "id": "ex_dsh", "exerciseName": "Deep Squat Hold", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }
+                        { "id": "ex_ccw", "name": "Cat Cow", "type": "Isolation", "sets": "2", "reps": "10", "rir": "3", "rest": "20s" },
+                        { "id": "ex_tr", "name": "Thoracic Rotation", "type": "Isolation", "sets": "2", "reps": "10", "rir": "3", "rest": "20s" },
+                        { "id": "ex_wgs", "name": "World’s Greatest Stretch", "type": "Compound", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" },
+                        { "id": "ex_dsh", "name": "Deep Squat Hold", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }
                     ]},
                     { "id": "m3", "name": "Activation Block", "exercises": [
-                        { "id": "ex_gb", "exerciseName": "Glute Bridge", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" },
-                        { "id": "ex_bd", "exerciseName": "Bird Dog", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" },
-                        { "id": "ex_db", "exerciseName": "Dead Bug", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" }
+                        { "id": "ex_gb", "name": "Glute Bridge", "type": "Isolation", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" },
+                        { "id": "ex_bd", "name": "Bird Dog", "type": "Isolation", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" },
+                        { "id": "ex_db", "name": "Dead Bug", "type": "Isolation", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" }
                     ]},
                     { "id": "m4", "name": "Cool Down", "exercises": [
-                        { "id": "ex_cp", "exerciseName": "Child’s Pose", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
-                        { "id": "ex_bds", "exerciseName": "Breathing Drill Supine", "sets": "2", "reps": "60s", "rir": null, "rest": "20s" }
+                        { "id": "ex_cp", "name": "Child’s Pose", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
+                        { "id": "ex_bds", "name": "Breathing Drill Supine", "type": "Isolation", "sets": "2", "reps": "60s", "rir": null, "rest": "20s" }
                     ]}
                 ]
             },
@@ -506,20 +506,20 @@ VALUES (
                 "id": "upper_recovery",
                 "name": "Upper Recovery",
                 "blocks": [
-                    { "id": "ur1", "name": "Warm-up", "exercises": [{ "id": "ex_ac3", "exerciseName": "Arm Circles", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }] },
+                    { "id": "ur1", "name": "Warm-up", "exercises": [{ "id": "ex_ac3", "name": "Arm Circles", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }] },
                     { "id": "ur2", "name": "Mobility Block", "exercises": [
-                        { "id": "ex_bpa3", "exerciseName": "Band Pull-Apart", "sets": "3", "reps": "15", "rir": "3", "rest": "30s" },
-                        { "id": "ex_ws", "exerciseName": "Wall Slides", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" },
-                        { "id": "ex_spu", "exerciseName": "Scapular Push-Up", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" },
-                        { "id": "ex_dps", "exerciseName": "Doorway Pec Stretch", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }
+                        { "id": "ex_bpa3", "name": "Band Pull-Apart", "type": "Isolation", "sets": "3", "reps": "15", "rir": "3", "rest": "30s" },
+                        { "id": "ex_ws", "name": "Wall Slides", "type": "Isolation", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" },
+                        { "id": "ex_spu", "name": "Scapular Push-Up", "type": "Isolation", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" },
+                        { "id": "ex_dps", "name": "Doorway Pec Stretch", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }
                     ]},
                     { "id": "ur3", "name": "Light Strength Block", "exercises": [
-                        { "id": "ex_scrl", "exerciseName": "Seated Cable Row Light", "sets": "2", "reps": "15", "rir": "4", "rest": "45s" },
-                        { "id": "ex_dser", "exerciseName": "Dumbbell Shoulder External Rotation", "sets": "2", "reps": "12", "rir": "4", "rest": "45s" }
+                        { "id": "ex_scrl", "name": "Seated Cable Row Light", "type": "Compound", "sets": "2", "reps": "15", "rir": "4", "rest": "45s" },
+                        { "id": "ex_dser", "name": "Dumbbell Shoulder External Rotation", "type": "Isolation", "sets": "2", "reps": "12", "rir": "4", "rest": "45s" }
                     ]},
                     { "id": "ur4", "name": "Cool Down", "exercises": [
-                        { "id": "ex_ns", "exerciseName": "Neck Stretch", "sets": "2", "reps": "20s", "rir": null, "rest": "20s" },
-                        { "id": "ex_uts", "exerciseName": "Upper Trap Stretch", "sets": "2", "reps": "20s", "rir": null, "rest": "20s" }
+                        { "id": "ex_ns", "name": "Neck Stretch", "type": "Isolation", "sets": "2", "reps": "20s", "rir": null, "rest": "20s" },
+                        { "id": "ex_uts", "name": "Upper Trap Stretch", "type": "Isolation", "sets": "2", "reps": "20s", "rir": null, "rest": "20s" }
                     ]}
                 ]
             },
@@ -527,21 +527,21 @@ VALUES (
                 "id": "lower_recovery",
                 "name": "Lower Recovery",
                 "blocks": [
-                    { "id": "lr1", "name": "Warm-up", "exercises": [{ "id": "ex_wte2", "exerciseName": "Walk Treadmill Easy", "sets": "1", "reps": "5 min", "rir": null, "rest": "0s" }] },
+                    { "id": "lr1", "name": "Warm-up", "exercises": [{ "id": "ex_wte2", "name": "Walk Treadmill Easy", "type": "Compound", "sets": "1", "reps": "5 min", "rir": null, "rest": "0s" }] },
                     { "id": "lr2", "name": "Mobility Block", "exercises": [
-                        { "id": "ex_lwb", "exerciseName": "Walking Lunges Bodyweight", "sets": "2", "reps": "10", "rir": "3", "rest": "30s" },
-                        { "id": "ex_hfs", "exerciseName": "Hip Flexor Stretch", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
-                        { "id": "ex_hss", "exerciseName": "Hamstring Stretch Supine", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
-                        { "id": "ex_add", "exerciseName": "Ankle Dorsiflexion Drill", "sets": "2", "reps": "12", "rir": "3", "rest": "20s" }
+                        { "id": "ex_lwb", "name": "Walking Lunges Bodyweight", "type": "Compound", "sets": "2", "reps": "10", "rir": "3", "rest": "30s" },
+                        { "id": "ex_hfs", "name": "Hip Flexor Stretch", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
+                        { "id": "ex_hss", "name": "Hamstring Stretch Supine", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
+                        { "id": "ex_add", "name": "Ankle Dorsiflexion Drill", "type": "Isolation", "sets": "2", "reps": "12", "rir": "3", "rest": "20s" }
                     ]},
                     { "id": "lr3", "name": "Activation Block", "exercises": [
-                        { "id": "ex_bws4", "exerciseName": "Bodyweight Squat", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" },
-                        { "id": "ex_sub", "exerciseName": "Step-Up Bodyweight", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" },
-                        { "id": "ex_crb", "exerciseName": "Calf Raise Bodyweight", "sets": "3", "reps": "15", "rir": "3", "rest": "30s" }
+                        { "id": "ex_bws4", "name": "Bodyweight Squat", "type": "Compound", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" },
+                        { "id": "ex_sub", "name": "Step-Up Bodyweight", "type": "Compound", "sets": "3", "reps": "10", "rir": "3", "rest": "30s" },
+                        { "id": "ex_crb", "name": "Calf Raise Bodyweight", "type": "Isolation", "sets": "3", "reps": "15", "rir": "3", "rest": "30s" }
                     ]},
                     { "id": "lr4", "name": "Cool Down", "exercises": [
-                        { "id": "ex_f4s", "exerciseName": "Figure 4 Stretch", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
-                        { "id": "ex_sff", "exerciseName": "Seated Forward Fold", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }
+                        { "id": "ex_f4s", "name": "Figure 4 Stretch", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
+                        { "id": "ex_sff", "name": "Seated Forward Fold", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }
                     ]}
                 ]
             },
@@ -549,20 +549,20 @@ VALUES (
                 "id": "flow_core",
                 "name": "Flow + Core",
                 "blocks": [
-                    { "id": "fc1", "name": "Warm-up", "exercises": [{ "id": "ex_mip", "exerciseName": "March in Place", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }] },
+                    { "id": "fc1", "name": "Warm-up", "exercises": [{ "id": "ex_mip", "name": "March in Place", "type": "Compound", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" }] },
                     { "id": "fc2", "name": "Flow Block", "exercises": [
-                        { "id": "ex_iw", "exerciseName": "Inchworm", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" },
-                        { "id": "ex_ddcf", "exerciseName": "Down Dog to Cobra Flow", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" },
-                        { "id": "ex_ss", "exerciseName": "Spiderman Stretch", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" }
+                        { "id": "ex_iw", "name": "Inchworm", "type": "Compound", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" },
+                        { "id": "ex_ddcf", "name": "Down Dog to Cobra Flow", "type": "Compound", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" },
+                        { "id": "ex_ss", "name": "Spiderman Stretch", "type": "Compound", "sets": "2", "reps": "8", "rir": "3", "rest": "20s" }
                     ]},
                     { "id": "fc3", "name": "Core Stability", "exercises": [
-                        { "id": "ex_plnk", "exerciseName": "Plank", "sets": "3", "reps": "30s", "rir": null, "rest": "30s" },
-                        { "id": "ex_splnk", "exerciseName": "Side Plank", "sets": "2", "reps": "20s", "rir": null, "rest": "30s" },
-                        { "id": "ex_pp", "exerciseName": "Pallof Press", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" }
+                        { "id": "ex_plnk", "name": "Plank", "type": "Isolation", "sets": "3", "reps": "30s", "rir": null, "rest": "30s" },
+                        { "id": "ex_splnk", "name": "Side Plank", "type": "Isolation", "sets": "2", "reps": "20s", "rir": null, "rest": "30s" },
+                        { "id": "ex_pp", "name": "Pallof Press", "type": "Isolation", "sets": "3", "reps": "12", "rir": "3", "rest": "30s" }
                     ]},
                     { "id": "fc4", "name": "Cool Down", "exercises": [
-                        { "id": "ex_cp2", "exerciseName": "Child’s Pose", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
-                        { "id": "ex_bdse", "exerciseName": "Breathing Drill Seated", "sets": "2", "reps": "60s", "rir": null, "rest": "20s" }
+                        { "id": "ex_cp2", "name": "Child’s Pose", "type": "Isolation", "sets": "2", "reps": "30s", "rir": null, "rest": "20s" },
+                        { "id": "ex_bdse", "name": "Breathing Drill Seated", "type": "Isolation", "sets": "2", "reps": "60s", "rir": null, "rest": "20s" }
                     ]}
                 ]
             }

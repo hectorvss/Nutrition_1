@@ -22,6 +22,7 @@ interface PlannedExercise {
   reps: string;
   rir: string;
   rest: string;
+  explanation?: string;
 }
 
 interface WorkoutBlock {
@@ -36,111 +37,24 @@ interface WorkoutBlock {
 interface WorkoutLogExpansionProps {
   exercise: PlannedExercise;
   clientId: string;
+  onUpdateExplanation: (text: string) => void;
 }
 
-const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, clientId }) => {
-  const [setsLogged, setSetsLogged] = useState<any[]>([]);
-  const [notes, setNotes] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    // Initialize sets based on target
-    const count = Number(exercise.sets) || 1;
-    setSetsLogged(Array.from({ length: count }, () => ({ weight: "", reps: "", rir: "" })));
-  }, [exercise.sets]);
-
-  const updateSet = (idx: number, field: string, value: string) => {
-    const newSets = [...setsLogged];
-    newSets[idx] = { ...newSets[idx], [field]: value };
-    setSetsLogged(newSets);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await fetchWithAuth(`/manager/clients/${clientId}/workout-logs`, {
-        method: 'POST',
-        body: JSON.stringify({
-          workout_name: "Manual Entry",
-          exercises: [{
-            name: exercise.name,
-            sets_logged: setsLogged,
-            notes: notes
-          }],
-          logged_at: new Date().toISOString()
-        })
-      });
-      alert('Log saved successfully!');
-    } catch (err) {
-      console.error('Error saving log:', err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
+const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onUpdateExplanation }) => {
   return (
-    <div className="px-6 py-8 bg-slate-50/50 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
-      <div className="flex items-center justify-between mb-6">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-2 shadow-sm">
-          <span className="material-symbols-outlined text-[16px] text-emerald-500">edit_note</span>
-          Client Log
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-        <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center px-1">
-            <div>Set</div><div>Weight</div><div>Reps</div><div>RIR</div>
-          </div>
-          {setsLogged.map((s, sIdx) => (
-            <div key={sIdx} className="grid grid-cols-4 gap-2">
-              <div className="h-10 flex items-center justify-center text-xs font-bold text-slate-300">#{sIdx+1}</div>
-              <input 
-                className="h-10 text-center text-sm font-bold bg-white border border-slate-200 rounded-xl text-slate-700 outline-none focus:ring-1 focus:ring-emerald-500" 
-                placeholder="-" 
-                value={s.weight} 
-                onChange={(e) => updateSet(sIdx, 'weight', e.target.value)}
-              />
-              <input 
-                className="h-10 text-center text-sm font-bold bg-white border border-slate-200 rounded-xl text-slate-700 outline-none focus:ring-1 focus:ring-emerald-500" 
-                placeholder="-" 
-                value={s.reps} 
-                onChange={(e) => updateSet(sIdx, 'reps', e.target.value)}
-              />
-              <input 
-                className="h-10 text-center text-sm font-bold bg-white border border-slate-200 rounded-xl text-slate-700 outline-none focus:ring-1 focus:ring-emerald-500" 
-                placeholder="-" 
-                value={s.rir} 
-                onChange={(e) => updateSet(sIdx, 'rir', e.target.value)}
-              />
-            </div>
-          ))}
-          <button 
-            onClick={() => setSetsLogged([...setsLogged, { weight: "", reps: "", rir: "" }])}
-            className="w-full py-2 rounded-xl border border-dashed border-slate-200 text-[10px] font-bold text-slate-400 hover:text-emerald-500 hover:border-emerald-500 transition-colors uppercase tracking-widest flex items-center justify-center gap-1"
-          >
-            <span className="material-symbols-outlined text-[14px]">add</span> Add Set
-          </button>
+    <div className="px-6 py-6 bg-slate-50/50 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 px-1">
+          <span className="material-symbols-outlined text-[18px] text-emerald-500">description</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Explicación del ejercicio</span>
         </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block px-1">Notes & Sensations</label>
-          <textarea 
-            className="w-full p-4 rounded-2xl bg-white border border-slate-200 min-h-[120px] text-sm text-slate-600 outline-none focus:ring-1 focus:ring-emerald-500 resize-none font-medium placeholder:text-slate-300"
-            placeholder="Notes, sensations, difficulties..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-          <div className="flex justify-end pt-4">
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className={`px-6 py-2 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all flex items-center gap-2 ${isSaving ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-95 shadow-sm'}`}
-            >
-              {isSaving ? <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <span className="material-symbols-outlined text-[16px]">save</span>}
-              Save Log
-            </button>
-          </div>
-        </div>
+        <textarea 
+          className="w-full p-4 rounded-2xl bg-white border border-slate-200 min-h-[100px] text-sm text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500/50 resize-none font-medium placeholder:text-slate-300 transition-all shadow-sm"
+          placeholder="Añade aquí una explicación o notas para el cliente..."
+          value={exercise.explanation || ""}
+          onChange={(e) => onUpdateExplanation(e.target.value)}
+        />
+        <p className="text-[9px] text-slate-400 px-1 italic">Este bloque aparecerá en el móvil del cliente cuando abra el ejercicio.</p>
       </div>
     </div>
   );
@@ -338,7 +252,8 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
       sets: '3',
       reps: '10',
       rir: '2',
-      rest: '90s'
+      rest: '90s',
+      explanation: ''
     };
 
     setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, exercises: [...b.exercises, newEx] } : b));
@@ -564,7 +479,6 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                                     <div className="min-w-0 flex flex-col gap-1 flex-1">
                                       <h4 className="text-sm font-bold text-slate-900 truncate flex items-center gap-2">
                                         {ex.name}
-                                        <span className={`material-symbols-outlined text-[16px] transition-transform ${isExpanded ? 'rotate-90 text-emerald-500' : 'text-slate-300'}`}>chevron_right</span>
                                       </h4>
                                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{ex.type}</p>
@@ -596,6 +510,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                                 <WorkoutLogExpansion 
                                   exercise={ex} 
                                   clientId={clientId} 
+                                  onUpdateExplanation={(text) => updateExerciseField(block.id, ex.id, 'explanation', text)}
                                 />
                               )}
                             </div>
