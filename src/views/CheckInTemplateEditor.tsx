@@ -9,18 +9,61 @@ import {
   AlertCircle,
   Loader2,
   Copy,
-  Trash2
+  Trash2,
+  ChevronRight
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
-import { Reorder, AnimatePresence, motion } from 'framer-motion';
+import { Reorder, AnimatePresence, motion, useDragControls } from 'framer-motion';
 
 interface CheckInTemplateEditorProps {
   templateId: string;
   onClose: () => void;
   onSave?: (template: CheckInTemplate) => void;
+}
+
+interface SidebarItemProps {
+  step: CheckInStep;
+  idx: number;
+  isSelected: boolean;
+  onSelect: () => void;
+  themeColor: string;
+}
+
+function SidebarItem({ step, idx, isSelected, onSelect, themeColor }: SidebarItemProps) {
+  const controls = useDragControls();
+
+  return (
+    <Reorder.Item 
+      value={step}
+      dragListener={false}
+      dragControls={controls}
+      className={`group flex items-center gap-1 p-4 rounded-3xl cursor-pointer transition-all border-2
+        ${isSelected 
+          ? 'shadow-lg border-transparent' 
+          : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
+      style={isSelected ? { backgroundColor: themeColor, color: 'white' } : {}}
+      onClick={onSelect}
+    >
+      <div 
+        className={`p-1 ${isSelected ? 'text-white/40' : 'text-slate-300'} transition-opacity cursor-grab active:cursor-grabbing`}
+        onPointerDown={(e) => controls.start(e)}
+      >
+         <GripVertical className="w-4 h-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className="block text-[13px] font-semibold truncate tracking-tight">{step.title}</span>
+      </div>
+      <div 
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
+          ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
+      >
+        {idx + 1}
+      </div>
+    </Reorder.Item>
+  );
 }
 
 export default function CheckInTemplateEditor({ templateId, onClose, onSave }: CheckInTemplateEditorProps) {
@@ -151,6 +194,12 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
 
   const handleReorderSteps = (newOrder: CheckInStep[]) => {
     if (!template) return;
+    // Find the new index of the currently selected step if it moved
+    const selectedStep = template.templateSchema[selectedStepIndex];
+    if (selectedStep) {
+      const newIdx = newOrder.findIndex(s => s.id === selectedStep.id);
+      if (newIdx !== -1) setSelectedStepIndex(newIdx);
+    }
     setTemplate({ ...template, templateSchema: newOrder });
   };
 
@@ -234,29 +283,14 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
               <Reorder.Group axis="y" values={template.templateSchema} onReorder={handleReorderSteps} className="space-y-3">
                 <AnimatePresence initial={false}>
                   {template.templateSchema.map((step, idx) => (
-                    <Reorder.Item 
-                      key={step.id} 
-                      value={step}
-                      className={`group flex items-center gap-1 p-4 rounded-3xl cursor-pointer transition-all border-2
-                        ${selectedStepIndex === idx 
-                          ? 'shadow-lg border-transparent' 
-                          : 'bg-white dark:bg-slate-900 border-transparent text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-100 dark:hover:border-slate-700'}`}
-                      style={selectedStepIndex === idx ? { backgroundColor: settings.theme_color, color: 'white' } : {}}
-                      onClick={() => setSelectedStepIndex(idx)}
-                    >
-                      <div className={`p-1 ${selectedStepIndex === idx ? 'text-white/40' : 'text-slate-300'} transition-opacity cursor-grab active:cursor-grabbing`}>
-                         <GripVertical className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="block text-[13px] font-semibold truncate tracking-tight">{step.title}</span>
-                      </div>
-                      <div 
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
-                          ${selectedStepIndex === idx ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
-                      >
-                        {idx + 1}
-                      </div>
-                    </Reorder.Item>
+                    <SidebarItem 
+                      key={step.id}
+                      step={step}
+                      idx={idx}
+                      isSelected={selectedStepIndex === idx}
+                      onSelect={() => setSelectedStepIndex(idx)}
+                      themeColor={settings.theme_color}
+                    />
                   ))}
                 </AnimatePresence>
               </Reorder.Group>
@@ -340,6 +374,20 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                     </div>
                     <span className="text-sm font-semibold uppercase tracking-widest" style={{ color: `${settings.theme_color}80` }}>Add Question Sub-card</span>
                   </button>
+
+                  {/* Next Step Navigation */}
+                  {selectedStepIndex < template.templateSchema.length - 1 && (
+                    <div className="flex justify-end pt-8 border-t border-slate-50 dark:border-slate-800/50 mt-12">
+                      <button 
+                        onClick={() => setSelectedStepIndex(selectedStepIndex + 1)}
+                        style={{ backgroundColor: `${settings.theme_color}10`, color: settings.theme_color }}
+                        className="flex items-center gap-3 px-8 py-4 rounded-2xl text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-sm border border-transparent hover:border-current"
+                      >
+                        Siguiente bloque: {template.templateSchema[selectedStepIndex + 1].title}
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
