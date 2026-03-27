@@ -136,9 +136,13 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
     }
 
     if (currentStep <= totalSteps) {
-      setValidationError(null);
-      setCurrentStep(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (currentStep === totalSteps) {
+        handleFinish();
+      } else {
+        setValidationError(null);
+        setCurrentStep(prev => prev + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
@@ -229,31 +233,6 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
     );
   }
 
-  // Page N+1: Finish
-  if (currentStep > totalSteps) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 bg-slate-50 dark:bg-slate-900 text-center animate-in zoom-in-95 duration-500">
-         <div className="mb-8 relative">
-            <div className="absolute inset-0 bg-emerald-400/20 blur-3xl rounded-full scale-150" />
-            <div className="relative w-24 h-24 bg-emerald-500 text-white rounded-[2rem] flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/40">
-               <span className="material-symbols-outlined text-4xl">celebration</span>
-            </div>
-         </div>
-         <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">Mission Accomplished!</h2>
-         <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto mb-12 font-medium leading-relaxed">
-            Your weekly data has been synchronized with your coach. Expect a review and personalized adjustments shortly.
-         </p>
-         <button 
-           onClick={handleFinish}
-           disabled={isSubmitting}
-           className="bg-slate-900 dark:bg-white dark:text-slate-900 text-white px-12 py-4 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-xl disabled:opacity-50"
-         >
-           {isSubmitting ? 'Syncing...' : 'Done'}
-         </button>
-      </div>
-    );
-  }
-
   // Page 1..N: Dynamic Step
   const stepData = steps[currentStep - 1];
 
@@ -307,17 +286,18 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
                 {validationError}
               </div>
             )}
-         </div>
 
-         {/* Floating Action Button */}
-         <div className="fixed bottom-10 right-10 z-50">
-            <button 
-              onClick={handleNext} 
-              className="bg-slate-900 dark:bg-[#17cf54] text-white px-10 py-5 rounded-2xl font-bold flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-emerald-500/20"
-            >
-               <span className="text-lg">{currentStep === totalSteps ? 'Finalize' : 'Continue'}</span>
-               <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-            </button>
+            <div className="flex justify-end pt-4">
+              <button 
+                onClick={handleNext} 
+                disabled={isSubmitting}
+                className="text-white px-10 py-5 rounded-2xl font-bold flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-emerald-500/10 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--brand-primary, #17cf54)' }}
+              >
+                <span className="text-lg">{isSubmitting ? 'Submitting...' : (currentStep === totalSteps ? 'Check-in submitted' : 'Continue')}</span>
+                <span className="material-symbols-outlined text-[20px]">{currentStep === totalSteps ? 'task_alt' : 'arrow_forward'}</span>
+              </button>
+            </div>
          </div>
       </div>
     </div>
