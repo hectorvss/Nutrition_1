@@ -13,7 +13,7 @@ import {
   Info
 } from 'lucide-react';
 import { CheckInQuestion, CheckInStepType } from '../../types/checkIn';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface CheckInQuestionEditorCardProps {
   question: CheckInQuestion;
