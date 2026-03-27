@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { CheckInTemplate } from '../types/checkIn';
+import { useTheme } from '../context/ThemeContext';
 import { DEFAULT_CHECKIN_TEMPLATE } from '../constants/defaultCheckInTemplate';
 
 interface CheckInTemplatesProps {
@@ -24,6 +25,7 @@ interface CheckInTemplatesProps {
 }
 
 export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
+  const { settings } = useTheme();
   const [templates, setTemplates] = useState<CheckInTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,7 +151,8 @@ It will be archived if it has active submissions.`;
         </div>
         <button 
           onClick={handleCreateFromDefault}
-          className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 hover:bg-black transition-all"
+          style={{ backgroundColor: settings.theme_color }}
+          className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-sm font-bold shadow-lg hover:opacity-90 transition-all"
         >
           <Plus className="w-4 h-4" />
           Create Template
@@ -311,7 +314,8 @@ It will be archived if it has active submissions.`;
                   </button>
                   <button 
                     onClick={() => onEdit?.(template.id)}
-                    className="flex items-center justify-center w-10 h-10 bg-slate-900 text-white rounded-xl hover:bg-emerald-500 transition-all shadow-sm"
+                    style={{ backgroundColor: settings.theme_color }}
+                    className="flex items-center justify-center w-10 h-10 text-white rounded-xl hover:opacity-90 transition-all shadow-sm"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>

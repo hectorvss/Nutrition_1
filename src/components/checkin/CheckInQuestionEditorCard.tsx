@@ -96,7 +96,8 @@ export default function CheckInQuestionEditorCard({
         <div className="flex items-center gap-2 opacity-0 group-hover/q:opacity-100 transition-opacity">
           <button 
             onClick={onDuplicate}
-            className="p-3 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-2xl transition-all"
+            style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
+            className="p-3 rounded-2xl transition-all hover:scale-105"
             title="Duplicate Question"
           >
             <Copy className="w-5 h-5" />
@@ -120,11 +121,8 @@ export default function CheckInQuestionEditorCard({
              {question.options?.map((opt, idx) => (
                 <div 
                   key={idx}
-                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border-2 transition-all group/opt
-                    ${editingOptionIdx === idx 
-                      ? 'bg-white border-brand-primary shadow-lg scale-105 z-10' 
-                      : 'bg-white border-slate-100 hover:border-brand-primary hover:shadow-sm'}`}
-                  style={editingOptionIdx === idx ? { borderColor: settings.theme_color } : {}}
+                  className={`relative flex items-center gap-2 px-5 py-3 rounded-2xl border-2 transition-all group/opt bg-white border-slate-100 hover:shadow-sm`}
+                  style={editingOptionIdx === idx ? { borderColor: settings.theme_color, transform: 'scale(1.05)', zIndex: 10, boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' } : {}}
                 >
                   <div className={`w-4 h-4 rounded-full border-2 border-slate-200 flex items-center justify-center shrink-0
                     ${question.type === 'single_choice' ? 'rounded-full' : 'rounded-md'}`} 
@@ -159,7 +157,7 @@ export default function CheckInQuestionEditorCard({
              ))}
              <button 
                onClick={handleAddOption}
-               style={{ color: settings.theme_color, borderColor: `${settings.theme_color}40` }}
+               style={{ color: settings.theme_color, borderColor: `${settings.theme_color}40`, backgroundColor: `${settings.theme_color}05` }}
                className="px-5 py-3 rounded-2xl border-2 border-dashed text-slate-400 hover:opacity-80 transition-all flex items-center gap-2 text-sm font-bold"
              >
                <Plus className="w-4 h-4" />
@@ -243,9 +241,10 @@ export default function CheckInQuestionEditorCard({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-6 border-t border-slate-50 dark:border-slate-800/50">
         <div className="relative">
           <button 
+            id={`type-selector-${question.id}`}
             onClick={() => setShowTypeSelector(!showTypeSelector)}
             style={{ backgroundColor: settings.theme_color }}
-            className="flex items-center justify-between gap-3 px-8 py-3.5 min-w-[280px] rounded-2xl text-white text-xs font-bold uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-brand-primary/20 active:scale-95 z-20"
+            className="flex items-center justify-between gap-3 px-8 py-3.5 min-w-[280px] rounded-2xl text-white text-xs font-bold uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-brand-primary/20 active:scale-95 z-30"
           >
             <div className="flex items-center gap-3">
               {activeType.icon}
@@ -257,10 +256,10 @@ export default function CheckInQuestionEditorCard({
           <AnimatePresence>
             {showTypeSelector && (
               <motion.div 
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute top-full left-0 mt-3 w-80 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[2rem] shadow-2xl z-40 p-3 overflow-hidden"
+                initial={{ opacity: 0, x: -10, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -10, scale: 0.95 }}
+                className="absolute top-0 left-full ml-4 w-80 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[2rem] shadow-2xl z-40 p-3 overflow-hidden"
               >
                 <div className="py-2 px-4 mb-2">
                    <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Select Question Type</span>
@@ -274,9 +273,10 @@ export default function CheckInQuestionEditorCard({
                     }}
                     className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-[11px] font-semibold transition-all group/item ${
                       question.type === type.id 
-                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md' 
+                        ? 'text-white shadow-md' 
                         : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                     }`}
+                    style={question.type === type.id ? { backgroundColor: settings.theme_color } : {}}
                   >
                     <div className="flex items-center gap-4">
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${question.type === type.id ? 'bg-white/10' : 'bg-slate-50 dark:bg-slate-700'}`}>
@@ -284,7 +284,7 @@ export default function CheckInQuestionEditorCard({
                       </div>
                       {type.label}
                     </div>
-                    {question.type === type.id && <CheckCircle2 className="w-4 h-4 opacity-40" />}
+                    {question.type === type.id && <CheckCircle2 className="w-4 h-4 opacity-40 text-white" />}
                   </button>
                 ))}
               </motion.div>
@@ -308,12 +308,6 @@ export default function CheckInQuestionEditorCard({
               </div>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Required</span>
            </label>
-
-           <div className="h-8 w-px bg-slate-100 dark:bg-slate-800" />
-
-           <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-300 uppercase italic">
-              ID: {question.id.substring(0, 8)}...
-           </div>
         </div>
       </div>
     </div>
