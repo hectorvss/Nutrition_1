@@ -12,17 +12,17 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
   const steps = template.templateSchema || [];
 
   const SectionWrapper = ({ title, subtitle, icon, children }: any) => (
-    <div className="bg-white dark:bg-slate-900 rounded-[32px] p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 mb-8">
-      <div className="flex items-center gap-5 mb-2">
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isClient ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-[#17cf54]'} dark:bg-slate-800`}>
-          <span className="material-symbols-outlined text-3xl font-light">{icon || 'description'}</span>
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 mb-6">
+      <div className="flex items-center gap-4 mb-2">
+        <div className="w-12 h-12 rounded-2xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center">
+          <span className="material-symbols-outlined text-2xl">{icon || 'description'}</span>
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-          {subtitle && <p className="text-sm text-slate-500 font-medium">{subtitle}</p>}
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
+          <p className="text-sm text-slate-500">{subtitle}</p>
         </div>
       </div>
-      <div className={`grid gap-x-10 gap-y-8 ${!isClient ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
+      <div className={`grid gap-x-8 gap-y-6 ${!isClient ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
         {children}
       </div>
     </div>
@@ -32,17 +32,17 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
     const isEmpty = value === undefined || value === null || value === '';
     
     return (
-      <div className={`w-full ${type === 'long_text' ? 'md:col-span-2' : ''} space-y-2`}>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{label}</p>
-        <div className={`p-4 rounded-2xl border transition-all hover:border-slate-200
-          ${isEmpty ? 'bg-slate-50/50 dark:bg-slate-800/30 border-dashed border-slate-100 dark:border-slate-700' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'}`}>
-          <div className="text-[14px] font-bold text-slate-700 dark:text-slate-200 leading-relaxed">
+      <div className={`w-full ${type === 'long_text' ? 'md:col-span-2' : ''}`}>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
+        <div className={`p-3.5 rounded-xl border border-slate-100 dark:border-slate-700
+          ${isEmpty ? 'bg-slate-50/50 dark:bg-slate-800/30 border-dashed' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
+          <div className="text-sm font-bold text-slate-700 dark:text-slate-200">
             {isEmpty ? (
-              <span className="text-slate-300 dark:text-slate-700 italic font-medium">No response provided</span>
+              <span className="text-slate-300 dark:text-slate-600 italic font-medium">No response provided</span>
             ) : Array.isArray(value) ? (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mt-1">
                 {value.map((v: string) => (
-                  <span key={v} className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${isClient ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/30' : 'bg-emerald-50 text-[#17cf54] border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/30'}`}>{v}</span>
+                  <span key={v} className="px-3 py-1 bg-[#17cf54]/10 text-[#17cf54] rounded-lg text-[11px] font-bold uppercase">{v}</span>
                 ))}
               </div>
             ) : (
@@ -58,20 +58,20 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
     // Handle special multi-question types
     if (q.type === 'photo_group') {
       return (
-        <div key={q.id} className="w-full md:col-span-2 space-y-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{q.title || 'Photos'}</p>
+        <div key={q.id} className="w-full md:col-span-2 mt-2">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{q.title || 'Photos'}</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {['front', 'side', 'back'].map(pos => {
               const photoKey = `${q.id}_${pos}`;
               const photoUrl = answers[photoKey];
               return (
-                <div key={pos} className="aspect-[3/4] rounded-3xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 overflow-hidden flex items-center justify-center relative group">
+                <div key={pos} className="aspect-[3/4] rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 overflow-hidden flex items-center justify-center">
                   {photoUrl ? (
                     <img src={photoUrl} alt={pos} className="w-full h-full object-cover" />
                   ) : (
                     <div className="text-slate-300 dark:text-slate-700 flex flex-col items-center">
                       <Camera className="w-8 h-8 mb-2" />
-                      <span className="text-[10px] font-black uppercase tracking-widest opacity-50">{pos}</span>
+                      <span className="text-[10px] font-bold uppercase">{pos}</span>
                     </div>
                   )}
                 </div>
@@ -84,14 +84,14 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
 
     if (q.type === 'measurement_group') {
        return (
-         <div key={q.id} className="w-full md:col-span-2 space-y-3">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{q.title || 'Measurements'}</p>
+         <div key={q.id} className="w-full md:col-span-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{q.title || 'Measurements'}</p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                {(q.options || []).map(opt => (
-                 <div key={opt} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em] mb-1 truncate">{opt}</p>
+                 <div key={opt} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1 truncate">{opt}</p>
                     <p className="text-sm font-bold text-slate-900 dark:text-white">
-                       {answers[opt] ? `${answers[opt]}${q.unit || 'cm'}` : '—'}
+                       {answers[opt] ? `${answers[opt]}cm` : '—'}
                     </p>
                  </div>
                ))}
