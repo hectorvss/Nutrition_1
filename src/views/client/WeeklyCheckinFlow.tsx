@@ -47,7 +47,7 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<s
 export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyCheckinFlowProps) {
   const [template, setTemplate] = useState<CheckInTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState(0); // 0 = Intro, 1..N = Steps, N+1 = Finish
+  const [currentStep, setCurrentStep] = useState(1); // 0 = Intro, 1..N = Steps, N+1 = Finish
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -170,7 +170,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
         <div className="max-w-3xl mx-auto w-full space-y-8">
            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
              <div className="flex items-center justify-between mb-8">
-               <h3 className="text-xl font-bold text-slate-900 dark:text-white">Weekly Progress Review</h3>
+               <h3 className="text-xl font-bold text-slate-900 dark:text-white">{template?.title || 'Weekly Progress Review'}</h3>
                <span className="text-xs font-black px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg uppercase tracking-widest border border-amber-100 dark:border-amber-900/30">Action Required</span>
              </div>
              <div className="space-y-6">
@@ -267,7 +267,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
             <div className="h-6 w-px bg-slate-200 dark:border-slate-800" />
             <div className="flex flex-col">
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">Checking in</p>
-               <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-none">Weekly Progress</h2>
+               <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-none">{template?.title || 'Weekly Progress'}</h2>
             </div>
          </div>
          <div className="flex items-center gap-4">
