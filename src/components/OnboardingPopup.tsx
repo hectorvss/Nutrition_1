@@ -107,25 +107,26 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 transition-all duration-300">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col relative max-h-[90vh]"
+        className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col relative max-h-[90vh] border border-slate-200 dark:border-slate-800"
       >
         {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
           <div>
-            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">{activeAssignment?.template?.name}</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-              Step {currentStepIndex + 1} of {templateSchema.length}
-            </p>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">Onboarding Active</p>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{activeAssignment?.template?.name}</h3>
           </div>
           <button 
             onClick={() => onComplete()}
-            className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all hover:rotate-90"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -165,29 +166,41 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-6 border-t border-slate-100 flex items-center justify-between gap-6 shrink-0 bg-slate-50/50">
-          <button 
-            onClick={handleBack}
-            disabled={currentStepIndex === 0 || submitting}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all ${
-              currentStepIndex === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
+        <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-6 shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={handleBack}
+              disabled={currentStepIndex === 0 || submitting}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                currentStepIndex === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700 shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-600'
+              }`}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+            
+            <div className="hidden sm:flex flex-col">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Progress</p>
+              <div className="w-24 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-500 transition-all duration-500" 
+                  style={{ width: `${((currentStepIndex + 1) / templateSchema.length) * 100}%` }} 
+                />
+              </div>
+            </div>
+          </div>
 
           <button 
             onClick={handleNext}
             disabled={submitting}
-            style={{ backgroundColor: settings.theme_color || '#16a34a' }}
-            className="px-10 py-4 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-slate-900/10 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 disabled:opacity-50"
+            style={{ backgroundColor: settings.theme_color || '#17cf54' }}
+            className="px-8 py-4 text-white rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 disabled:opacity-50"
           >
             {submitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <>
-                <span>{currentStepIndex === templateSchema.length - 1 ? 'Complete Onboarding' : 'Continue'}</span>
+                <span className="text-sm">{currentStepIndex === templateSchema.length - 1 ? 'Complete Setup' : 'Continue'}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
