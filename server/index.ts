@@ -7,6 +7,7 @@ import messageRoutes from './routes/messages.js';
 import checkInRoutes from './routes/check_ins.js';
 import stripeRoutes from './routes/stripe.js';
 import automationRoutes from './routes/automations.js';
+import onboardingRoutes from './routes/onboarding.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3005;
@@ -29,6 +30,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/check-ins', checkInRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/automations', automationRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
