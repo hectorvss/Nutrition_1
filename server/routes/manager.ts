@@ -1928,35 +1928,95 @@ router.get('/analytics', async (req: any, res) => {
       .order('date', { ascending: false })
       .limit(10);
 
-    const activity = (recentCheckIns || []).map(ci => {
-      const userData = ci.users as any;
-      const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
-      const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
+    // Fetch recent messages received by manager from clients
+    const { data: recentMessages } = await supabaseAdmin
+      .from('messages')
+      .select(`
+        id,
+        content,
+        created_at,
+        sender_id,
+        users!sender_id (
+          email,
+          role,
+          profiles!left (full_name)
+        )
+      `)
+      .eq('receiver_id', managerId)
+      .eq('users.role', 'CLIENT')
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-      return {
-        type: 'CHECK_IN',
-        title: 'New Check-in',
-        sub: `from ${clientName}`,
-        time: ci.date,
-        color: 'bg-emerald-100 text-emerald-600',
-        checkInId: ci.id,
-        clientId: ci.client_id
-      };
-    });
+    const activity = [
+      ...(recentCheckIns || []).map(ci => {
+        const userData = ci.users as any;
+        const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+        const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
 
-    const attentionRequired = (recentCheckIns || [])
-      .filter(ci => !ci.reviewed_at)
-      .map(ci => ({
-        id: ci.id,
-        type: 'CHECK_IN',
-        client: (ci.users as any)?.name || 'Client',
-        clientId: ci.client_id,
-        title: 'Weekly Check-in',
-        desc: 'New submission pending review',
-        timeLabel: ci.date,
-        status: 'pending',
-        avatar: `https://ui-avatars.com/api/?name=${(ci.users as any)?.name || 'C'}&background=random`
-      }));
+        return {
+          type: 'CHECK_IN',
+          title: 'New Check-in',
+          sub: `from ${clientName}`,
+          time: ci.date,
+          color: 'bg-emerald-100 text-emerald-600',
+          checkInId: ci.id,
+          clientId: ci.client_id
+        };
+      }),
+      ...(recentMessages || []).map(msg => {
+        const userData = msg.users as any;
+        const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+        const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
+
+        return {
+          type: 'MESSAGE',
+          title: 'New Message',
+          sub: `from ${clientName}`,
+          time: msg.created_at,
+          color: 'bg-blue-100 text-blue-600',
+          clientId: msg.sender_id
+        };
+      })
+    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 10);
+
+    const attentionRequired = [
+      ...(recentCheckIns || [])
+        .filter(ci => !ci.reviewed_at)
+        .map(ci => {
+          const userData = ci.users as any;
+          const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+          const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
+          return {
+            id: ci.id,
+            type: 'CHECK_IN',
+            client: clientName,
+            clientId: ci.client_id,
+            title: 'Review Check-in',
+            desc: `Pending review since ${ci.date}`,
+            timeLabel: ci.date,
+            status: 'pending',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=random`
+          };
+        }),
+      ...(recentMessages || [])
+        .slice(0, 5) // Prioritize messages
+        .map(msg => {
+          const userData = msg.users as any;
+          const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+          const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
+          return {
+            id: msg.id,
+            type: 'MESSAGE',
+            client: clientName,
+            clientId: msg.sender_id,
+            title: 'New Message',
+            desc: msg.content.substring(0, 60) + (msg.content.length > 60 ? '...' : ''),
+            timeLabel: msg.created_at,
+            status: 'pending',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=random`
+          };
+        })
+    ].sort((a, b) => new Date(b.timeLabel).getTime() - new Date(a.timeLabel).getTime());
 
     // 7. Revenue & Stripe
     let revenue = 0;
