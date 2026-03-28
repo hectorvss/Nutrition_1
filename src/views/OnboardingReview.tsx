@@ -101,9 +101,11 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
          {template && template.template_schema ? (
            <CheckInReviewRenderer 
              template={{
-               id: template.id,
-               name: template.name,
-               templateSchema: template.template_schema || []
+               id: template?.id || '',
+               name: template?.name || 'Onboarding',
+               templateSchema: template?.template_schema || [],
+               key: template?.id || '',
+               version: 1
              }} 
              answers={dj} 
            />

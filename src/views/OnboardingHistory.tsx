@@ -83,7 +83,9 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 font-medium text-sm">
             No onboarding submissions yet.
           </div>
-        ) : submissions.map((item, idx) => (
+        ) : (submissions || []).map((item, idx) => {
+          if (!item) return null;
+          return (
           <div
             key={item.id}
             onClick={() => onViewReview(item.id)}
@@ -99,7 +101,7 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
                   </h3>
                   <div className="flex items-center gap-2 text-sm text-slate-500 mt-0.5">
                     <CalendarIcon className="w-4 h-4" />
-                    {new Date(item.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    {item.submitted_at ? new Date(item.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Date unknown'}
                   </div>
                </div>
             </div>
@@ -110,7 +112,7 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
                </button>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );
