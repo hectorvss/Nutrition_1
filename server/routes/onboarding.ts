@@ -54,8 +54,64 @@ router.get('/manager/templates', verifyManager, async (req: any, res) => {
   }
 });
 
-// Create/Update Template... (omitted for brevity, keeping existing logic)
-// ... but ensuring we use the right return types
+// Create a new template
+router.post('/manager/templates', verifyManager, async (req: any, res) => {
+  const managerId = req.user.id;
+  const { name, description, template_schema, is_default } = req.body;
+  try {
+    if (is_default) {
+      await supabaseAdmin.from('onboarding_templates').update({ is_default: false }).eq('manager_id', managerId);
+    }
+    const { data, error } = await supabaseAdmin
+      .from('onboarding_templates')
+      .insert({
+        manager_id: managerId,
+        name,
+        description,
+        template_schema: template_schema || [],
+        is_default: !!is_default,
+        version: 1
+      })
+      .select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update a template
+router.patch('/manager/templates/:id', verifyManager, async (req: any, res) => {
+  const managerId = req.user.id;
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('onboarding_templates')
+      .update({ ...req.body, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('manager_id', managerId)
+      .select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete a template
+router.delete('/manager/templates/:id', verifyManager, async (req: any, res) => {
+  try {
+    const { error } = await supabaseAdmin
+      .from('onboarding_templates')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('manager_id', req.user.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // --- Assignments & Operations ---
 
