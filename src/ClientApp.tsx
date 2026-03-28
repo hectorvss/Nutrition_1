@@ -14,6 +14,8 @@ import ActivityEditor from './views/ActivityEditor';
 import OnboardingPopup from './components/OnboardingPopup';
 import { fetchWithAuth } from './api';
 import ClientProgress from './views/client/ClientProgress';
+import WeeklyCheckinFlow from './views/client/WeeklyCheckinFlow';
+import ClientActionFAB from './components/client/ClientActionFAB';
 
 export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'settings' | 'activity-editor';
 
@@ -22,6 +24,7 @@ export default function ClientApp() {
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
   const { user } = useAuth();
   const [onboardingData, setOnboardingData] = useState<any>(null);
 
@@ -96,7 +99,15 @@ export default function ClientApp() {
 
   return (
     <div className="flex min-h-screen bg-[#f6f8f6] dark:bg-[#112116] text-slate-900 dark:text-slate-100 font-sans selection:bg-[#17cf54]/20 selection:text-[#17cf54] overflow-hidden">
-      {showOnboarding && <OnboardingPopup onComplete={() => setShowOnboarding(false)} />}
+      {showOnboarding && <OnboardingPopup onComplete={() => { setShowOnboarding(false); setOnboardingData(null); }} />}
+      {showCheckIn && <WeeklyCheckinFlow onComplete={() => setShowCheckIn(false)} onCancel={() => setShowCheckIn(false)} />}
+      
+      <ClientActionFAB 
+        onboardingData={onboardingData}
+        onOpenOnboarding={() => setShowOnboarding(true)}
+        onOpenCheckIn={() => setShowCheckIn(true)}
+      />
+
       <ClientSidebar 
         currentView={currentView} 
         onNavigate={(view) => {
