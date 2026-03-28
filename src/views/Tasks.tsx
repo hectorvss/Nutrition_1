@@ -161,7 +161,19 @@ export default function Tasks({ onNavigate }: TasksProps) {
                     {prioTasks.map((task) => (
                       <div 
                         key={task.id}
-                        onClick={() => onNavigate('create-task', { taskId: task.id })}
+                        onClick={() => {
+                          // Handle navigation based on task type
+                          if (task.type === 'WEEKLY CHECK-IN' || task.type === 'OVERDUE CHECK-IN') {
+                            onNavigate('check-ins', { clientId: task.clientId || task.id });
+                          } else if (task.type === 'PLAN UPDATE' || task.type === 'MISSING PLAN') {
+                            onNavigate('planning', { clientId: task.clientId || task.id });
+                          } else if (task.type === 'AUTOMATIC ALERT') {
+                            onNavigate('planning', { clientId: task.clientId || task.id });
+                          } else {
+                            // Manual tasks or unknown types go to editor
+                            onNavigate('create-task', { taskId: task.id });
+                          }
+                        }}
                         className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${config.borderInactive}`}
                       >
                         <div className="flex items-start gap-3 sm:gap-4">
