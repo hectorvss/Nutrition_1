@@ -17,9 +17,13 @@ CREATE TABLE IF NOT EXISTS public.client_onboarding_assignments (
     client_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     template_id UUID NOT NULL REFERENCES public.onboarding_templates(id) ON DELETE CASCADE,
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT TRUE,
-    UNIQUE (client_id, is_active) WHERE (is_active = TRUE)
+    is_active BOOLEAN DEFAULT TRUE
 );
+
+-- Partial index to ensure only one active assignment per client
+CREATE UNIQUE INDEX IF NOT EXISTS idx_client_onboarding_active_unique 
+ON public.client_onboarding_assignments (client_id) 
+WHERE (is_active = TRUE);
 
 -- 3. Create Client Onboarding Submissions Table
 CREATE TABLE IF NOT EXISTS public.client_onboarding_submissions (
