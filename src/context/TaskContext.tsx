@@ -21,7 +21,7 @@ export interface TaskItem {
   client: string;
   program: string;
   avatar: string;
-  status: 'overdue' | 'today' | 'pending';
+  status: 'overdue' | 'today' | 'pending' | 'completed';
   timeLabel: string;
   priority: 'high' | 'medium' | 'low';
   metrics?: {
@@ -82,7 +82,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         client: t.users?.name || 'General',
         program: 'Custom',
         avatar: '',
-        status: t.status === 'completed' ? 'pending' : 'today',
+        status: t.status as any || 'today',
         timeLabel: t.time,
         priority: 'medium',
         type: t.type,
@@ -143,7 +143,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
           method: 'PATCH',
           body: JSON.stringify({ status: 'completed' })
         });
-        setManualTasks(prev => prev.filter(t => t.id !== taskId));
+        setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
       } catch (error) {
         console.error('Failed to mark manual task as done:', error);
       }
@@ -261,41 +261,54 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         // Filter out completed automated tasks for the active list
         const idStr = String(t.id);
         if (typeof t.id === 'number' || !idStr.includes('-')) {
-          return !completedAutomatedIds[idStr];
+          if (completedAutomatedIds[idStr]) return false;
         }
-        return true; // Manual tasks already handled
+        // Filter out manual tasks marked as completed
+        if (t.status === 'completed') return false;
+        return true;
       })
       .sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
   }, [clients, rules, manualTasks, completedAutomatedIds]);
 
   const completedTasks = useMemo(() => {
-     // For simplicity in this demo, we'll just show the automated IDs from today 
-     // but we'd normally want to keep their full objects. 
-     // Let's filter the 'total generated' list specifically for completed items.
-     
-     // Re-run evaluation but only keep the ones in completedAutomatedIds
-     const allPotentials: TaskItem[] = [];
-     let counter = 1;
-
-     const evaluateForHistory = (client: any) => {
-        // ... (simplified version of evaluate to reconstruct basic title/client for history)
-        // Checkin
-        allPotentials.push({
+    // 1. Completed Manual Tasks
+    const completedManual = manualTasks.filter(t => t.status === 'completed');
+    
+    // 2. Completed Automated Tasks (reconstruct)
+    const allAutomated: TaskItem[] = [];
+    let counter = 1;
+    
+    const evaluateForHistory = (client: any) => {
+      // Re-run the same evaluate logic but only keep IDs in completedAutomatedIds
+      // NOTE: This logic should ideally be a shared internal generator to avoid parity issues.
+      // For now, let's keep it simple and ensure the manual tasks at least work.
+      
+      const checkinRule = rules.find(r => r.id === 'weekly-overdue');
+      if (checkinRule && checkinRule.enabled) {
+        if (client.lastCheckIn === 'Never' || client.status === 'Inactive') {
+          allAutomated.push({
             id: counter++, type: 'WEEKLY CHECK-IN', title: `Review ${client.name}'s Status`, 
-            client: client.name, avatar: client.avatar, status: 'pending', timeLabel: 'Done today', priority: 'low',
+            client: client.name, avatar: client.avatar, status: 'completed', timeLabel: 'Done', priority: 'low',
             label: 'COMPLETED', desc: 'Manual review finished', program: client.plan || 'Custom'
+          });
+        }
+      }
+      
+      const planRule = rules.find(r => r.id === 'plan-update');
+      if (planRule && planRule.enabled && client.plan === 'No Plan' && client.status === 'Active') {
+        allAutomated.push({
+          id: counter++, type: 'PLAN UPDATE', title: `Assign Plan to ${client.name}`, 
+          client: client.name, avatar: client.avatar, status: 'completed', timeLabel: 'Done', priority: 'low',
+          label: 'COMPLETED', desc: 'Plan assigned', program: client.plan || 'Custom'
         });
-        // Plan
-        allPotentials.push({
-            id: counter++, type: 'PLAN UPDATE', title: `Assign Plan to ${client.name}`, 
-            client: client.name, avatar: client.avatar, status: 'pending', timeLabel: 'Done today', priority: 'low',
-            label: 'COMPLETED', desc: 'Plan assigned', program: client.plan || 'Custom'
-        });
-     };
-     clients.forEach(evaluateForHistory);
-
-     return allPotentials.filter(t => completedAutomatedIds[t.id.toString()]);
-  }, [clients, completedAutomatedIds]);
+      }
+    };
+    
+    clients.forEach(evaluateForHistory);
+    const completedAutomated = allAutomated.filter(t => completedAutomatedIds[t.id.toString()]);
+    
+    return [...completedManual, ...completedAutomated];
+  }, [clients, manualTasks, completedAutomatedIds, rules]);
 
   return (
     <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks: fetchManualTasks, markTaskAsDone, completedTasks }}>
