@@ -13,7 +13,9 @@ import {
   Edit2,
   Check,
   X,
-  Archive
+  Archive,
+  UserPlus,
+  Loader2
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { CheckInTemplate } from '../types/checkIn';
@@ -31,6 +33,11 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
   const [searchQuery, setSearchQuery] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
+  const [assigningTemplateId, setAssigningTemplateId] = useState<string | null>(null);
+  const [clients, setClients] = useState<any[]>([]);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [loadingClients, setLoadingClients] = useState(false);
 
   const loadTemplates = async () => {
     setIsLoading(true);
@@ -134,6 +141,42 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
       loadTemplates();
     } catch (err: any) {
       alert('Error deleting template: ' + err.message);
+    }
+  };
+
+  const openAssignModal = async (id: string) => {
+    setAssigningTemplateId(id);
+    setLoadingClients(true);
+    try {
+      const data = await fetchWithAuth('/manager/clients');
+      setClients(data);
+    } catch (err) {
+      console.error('Error fetching clients:', err);
+    } finally {
+      setLoadingClients(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    if (selectedClients.length === 0 || !assigningTemplateId) return;
+    setIsAssigning(true);
+    try {
+      await Promise.all(selectedClients.map(clientId => 
+        fetchWithAuth('/onboarding/manager/assign', {
+          method: 'POST',
+          body: JSON.stringify({
+            client_id: clientId,
+            template_id: assigningTemplateId
+          })
+        })
+      ));
+      alert('Onboarding assigned successfully!');
+      setAssigningTemplateId(null);
+      setSelectedClients([]);
+    } catch (err: any) {
+      alert('Error assigning onboarding: ' + err.message);
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -242,11 +285,85 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
                   <button onClick={() => handleSetDefault(template.id)} disabled={template.is_default} className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${template.is_default ? 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600'}`}>Set Default</button>
                   <button onClick={() => handleDuplicate(template.id)} className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-all"><Copy className="w-4 h-4" /></button>
                   <button onClick={() => handleDelete(template.id, template.name)} className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => openAssignModal(template.id)} className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-500 transition-all" title="Assign to Clients"><UserPlus className="w-4 h-4" /></button>
                   <button onClick={() => onEdit?.(template.id)} style={{ backgroundColor: settings.theme_color }} className="flex items-center justify-center w-10 h-10 text-white rounded-xl hover:opacity-90 transition-all shadow-sm"><ChevronRight className="w-5 h-5" /></button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {assigningTemplateId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Assign Onboarding</h2>
+                <p className="text-sm text-slate-500 font-medium">Select clients who should receive this flow.</p>
+              </div>
+              <button 
+                onClick={() => { setAssigningTemplateId(null); setSelectedClients([]); }} 
+                className="p-2 hover:bg-white rounded-xl text-slate-400 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 flex-1 overflow-y-auto space-y-3">
+              {loadingClients ? (
+                <div className="flex flex-col items-center justify-center py-12"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin" /></div>
+              ) : clients.length === 0 ? (
+                <div className="text-center py-12 text-slate-400">No clients found.</div>
+              ) : clients.map(client => (
+                <label 
+                  key={client.id}
+                  className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
+                    selectedClients.includes(client.id) ? 'bg-emerald-50 border-emerald-500/30' : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500">
+                      {client.full_name?.[0] || 'C'}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">{client.full_name}</p>
+                      <p className="text-xs text-slate-500 font-medium">{client.email}</p>
+                    </div>
+                  </div>
+                  <input 
+                    type="checkbox"
+                    checked={selectedClients.includes(client.id)}
+                    onChange={() => {
+                      if (selectedClients.includes(client.id)) {
+                        setSelectedClients(selectedClients.filter(id => id !== client.id));
+                      } else {
+                        setSelectedClients([...selectedClients, client.id]);
+                      }
+                    }}
+                    className="rounded text-emerald-500 focus:ring-emerald-500 border-slate-300 w-5 h-5"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button 
+                onClick={() => { setAssigningTemplateId(null); setSelectedClients([]); }}
+                className="flex-1 py-3 text-slate-600 font-bold rounded-xl hover:bg-white transition-colors border border-transparent"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleAssign}
+                disabled={isAssigning || selectedClients.length === 0}
+                style={{ backgroundColor: settings.theme_color }}
+                className="flex-[2] py-3 text-white font-bold rounded-xl shadow-lg shadow-slate-900/10 hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isAssigning ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Assignment'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
