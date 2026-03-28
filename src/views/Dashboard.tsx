@@ -131,6 +131,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
                   onClick={() => {
                     if (item.type === 'CHECK_IN') onNavigate('check-ins', { clientId: item.clientId, checkInId: item.id });
+                    else if (item.type === 'MESSAGE') onNavigate('messages', { clientId: item.clientId });
+                    else if (item.type === 'TASK') onNavigate('tasks');
                     else onNavigate('tasks');
                   }}
                 >
@@ -229,24 +231,33 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">Latest Updates</h3>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 py-2">
               {activity.map((update, idx) => {
-                const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'NEW_CLIENT' ? UserPlus : Check);
+                const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'MESSAGE' ? Send : (update.type === 'NEW_CLIENT' ? UserPlus : Check));
                 return (
                   <div 
                     key={idx} 
                     onClick={() => {
-                        if (update.type === 'CHECK_IN') onNavigate('check-ins');
+                        if (update.type === 'CHECK_IN') onNavigate('check-ins', { clientId: update.clientId, checkInId: update.checkInId });
+                        else if (update.type === 'MESSAGE') onNavigate('messages', { clientId: update.clientId });
                     }}
-                    className={`flex gap-4 relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden ${update.type === 'CHECK_IN' ? 'cursor-pointer hover:bg-slate-50 p-2 -m-2 rounded-xl transition-colors' : ''}`}
+                    className={`flex items-center gap-4 group relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden hover:bg-slate-50 p-2.5 -m-2.5 rounded-xl transition-all cursor-pointer`}
                   >
-                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm`}>
+                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm group-hover:scale-110 transition-transform`}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 pt-0.5">
-                      <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{update.title}</span> {update.sub}</p>
-                      <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                        {update.time}
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <div className="flex justify-between items-start gap-2">
+                        <p className="text-sm text-slate-700 leading-snug font-medium flex-1">
+                          <span className="font-bold text-slate-900">{update.title}</span> {update.sub}
+                        </p>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter shrink-0">{new Date(update.time).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit'})}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                        {update.type === 'CHECK_IN' ? 'Ready for review' : (update.type === 'MESSAGE' ? 'New interaction' : 'Action recorded')}
                       </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="material-symbols-outlined text-slate-300 text-lg">chevron_right</span>
                     </div>
                   </div>
                 );
