@@ -12,7 +12,8 @@ import {
   Dumbbell, 
   BookOpen, 
   BarChart3, 
-  Settings 
+  Settings,
+  ShieldCheck
 } from 'lucide-react';
 import { Zap } from 'lucide-react';
 
@@ -43,6 +44,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
       items: [
         { id: 'clients', label: 'Clients', icon: Users },
         { id: 'check-ins', label: 'Check-ins', icon: ClipboardCheck },
+        { id: 'onboarding', label: 'Onboarding', icon: ShieldCheck },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
       ]
     },

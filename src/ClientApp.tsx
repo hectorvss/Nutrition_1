@@ -12,6 +12,7 @@ import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
 import ActivityEditor from './views/ActivityEditor';
 import OnboardingPopup from './components/OnboardingPopup';
+import { fetchWithAuth } from './api';
 import ClientProgress from './views/client/ClientProgress';
 
 export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'settings' | 'activity-editor';
@@ -22,6 +23,23 @@ export default function ClientApp() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { user } = useAuth();
+  const [onboardingData, setOnboardingData] = useState<any>(null);
+
+  React.useEffect(() => {
+    checkOnboarding();
+  }, []);
+
+  const checkOnboarding = async () => {
+    try {
+      const data = await fetchWithAuth('/onboarding/client/active');
+      if (data && data.template) {
+        setOnboardingData(data);
+        setShowOnboarding(true);
+      }
+    } catch (err) {
+      console.error('Failed to check onboarding:', err);
+    }
+  };
 
   const renderView = () => {
     switch (currentView) {
@@ -87,6 +105,8 @@ export default function ClientApp() {
         }} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        showOnboardingReminder={!!onboardingData}
+        onOpenOnboarding={() => setShowOnboarding(true)}
       />
       
       <main className="flex-1 lg:ml-64 flex flex-col h-screen overflow-hidden">

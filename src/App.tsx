@@ -256,7 +256,7 @@ export default function App() {
         return <ExerciseCreate onBack={() => setCurrentView('exercises')} />;
       case 'analytics':
         return <Analytics />;
-      /* case 'onboarding':
+      case 'onboarding':
         return <OnboardingDashboard onNavigate={(view, data) => {
           if (data?.flowId) setSelectedFlowId(data.flowId);
           setCurrentView(view as View);
@@ -265,7 +265,7 @@ export default function App() {
         return <OnboardingFlowEditor flowId={selectedFlowId || undefined} onBack={() => {
           setSelectedFlowId(null);
           setCurrentView('onboarding');
-        }} />; */
+        }} />;
       case 'settings':
         return <Settings />;
       default:
