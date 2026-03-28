@@ -142,7 +142,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
       </div>
 
       {/* Header (Check-in Parity) */}
-      <div className="relative z-10 px-6 py-5 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md flex items-center justify-between">
+      <div className="relative z-10 px-6 lg:px-10 py-5 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md flex items-center justify-between">
          <div className="flex items-center gap-4">
             <button 
               onClick={handleBack} 
@@ -174,8 +174,8 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
       </div>
 
       {/* Content Area */}
-      <div className="relative z-10 flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
-         <div className="max-w-3xl mx-auto w-full space-y-10 animate-in slide-in-from-bottom-8 duration-700">
+      <div className="relative z-10 flex-1 overflow-y-auto p-6 lg:p-10 scroll-smooth">
+         <div className="max-w-5xl mx-auto w-full space-y-10 animate-in slide-in-from-bottom-8 duration-700">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStepIndex}
