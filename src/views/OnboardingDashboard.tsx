@@ -16,6 +16,7 @@ export default function OnboardingDashboard({ initialClientId, initialSubmission
   const [viewMode, setViewMode] = useState<OnboardingViewMode>(
     initialSubmissionId ? 'review' : (initialClientId ? 'history' : 'list')
   );
+  console.log('DEBUG: OnboardingDashboard mounting/rendering in mode:', viewMode, { initialClientId, initialSubmissionId });
   const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(initialSubmissionId || null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export default function OnboardingDashboard({ initialClientId, initialSubmission
 
       {viewMode === 'editor' && editingTemplateId && (
         <OnboardingFlowEditor 
-          templateId={editingTemplateId} 
+          flowId={editingTemplateId} 
           onBack={() => setViewMode('templates')} 
         />
       )}
