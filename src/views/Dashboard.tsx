@@ -13,8 +13,7 @@ import {
   Check, 
   Video, 
   MapPin,
-  Zap,
-  ChevronRight
+  Zap
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { useCalendar, getEventPresentationInfo } from '../context/CalendarContext';
@@ -131,15 +130,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   key={item.id} 
                   className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
                   onClick={() => {
-                    if (item.type === 'CHECK_IN' || item.type === 'WEEKLY CHECK-IN') {
-                      onNavigate('check-ins', { clientId: item.clientId, checkInId: item.id });
-                    } else if (item.type === 'UNREAD_MESSAGE' || item.type === 'COMMUNICATIONS') {
-                      onNavigate('messages', { clientId: item.clientId });
-                    } else if (item.type === 'PLAN UPDATE' || item.type === 'MISSING PLAN') {
-                      onNavigate('planning', { clientId: item.clientId });
-                    } else {
-                      onNavigate('tasks');
-                    }
+                    if (item.type === 'CHECK_IN') onNavigate('check-ins', { clientId: item.clientId, checkInId: item.id });
+                    else onNavigate('tasks');
                   }}
                 >
                   <div className="relative">
@@ -242,27 +234,19 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <div 
                     key={idx} 
                     onClick={() => {
-                        if (update.type === 'CHECK_IN') onNavigate('check-ins', { clientId: update.clientId, checkInId: update.checkInId });
-                        else if (update.type === 'NEW_CLIENT') onNavigate('clients');
+                        if (update.type === 'CHECK_IN') onNavigate('check-ins');
                     }}
-                    className={`flex items-center gap-4 relative group/item before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden hover:bg-slate-50 p-2.5 -m-2.5 rounded-xl transition-all cursor-pointer`}
+                    className={`flex gap-4 relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden ${update.type === 'CHECK_IN' ? 'cursor-pointer hover:bg-slate-50 p-2 -m-2 rounded-xl transition-colors' : ''}`}
                   >
-                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm group-hover/item:scale-110 transition-transform`}>
+                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm`}>
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <p className="text-sm text-slate-900 leading-snug font-medium">
-                        <span className="font-bold text-slate-950">{update.title}</span> {update.sub}
-                      </p>
+                    <div className="min-w-0 pt-0.5">
+                      <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{update.title}</span> {update.sub}</p>
                       <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
                         <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                         {update.time}
                       </p>
-                    </div>
-                    <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
                     </div>
                   </div>
                 );
