@@ -222,9 +222,10 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                         e.stopPropagation();
                                         markTaskAsDone(task.id);
                                       }}
-                                      className={`px-8 py-3 ${config.dotFill} text-white rounded-2xl text-xs font-bold hover:brightness-90 transition-all shadow-lg active:scale-95 whitespace-nowrap`}
+                                      className={`w-12 h-12 ${config.dotFill} text-white rounded-full flex items-center justify-center hover:scale-110 hover:brightness-110 transition-all shadow-lg active:scale-95 cursor-pointer group/btn`}
+                                      title="Mark as complete"
                                     >
-                                      Complete
+                                      <CheckCircle2 className="w-6 h-6 group-hover/btn:scale-110 transition-transform" />
                                     </button>
                                   )}
                                 </div>

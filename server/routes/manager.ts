@@ -2854,20 +2854,19 @@ router.post('/integrations/stripe/test', async (req: any, res) => {
 // Update a task
 router.patch('/tasks/:id', async (req: any, res) => {
   try {
+    // Filter out undefined fields to allow safe partial updates
+    const updates: any = { updated_at: new Date().toISOString() };
+    const allowedFields = ['title', 'description', 'type', 'date', 'time', 'end_time', 'duration', 'client_id', 'status'];
+    
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
     const { data, error } = await supabaseAdmin
       .from('tasks')
-      .update({
-        title: req.body.title,
-        description: req.body.description,
-        type: req.body.type,
-        date: req.body.date,
-        time: req.body.time,
-        end_time: req.body.end_time,
-        duration: req.body.duration,
-        client_id: req.body.client_id,
-        status: req.body.status,
-        updated_at: new Date().toISOString()
-      })
+      .update(updates)
       .eq('id', req.params.id)
       .eq('manager_id', req.user.id)
       .select()
