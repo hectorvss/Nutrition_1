@@ -206,34 +206,17 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                 </div>
                                   <div className="flex items-center gap-3">
                                    <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 ${config.badgeText} ${config.badgeBg}`}>
-                                     <Clock className="w-3 h-3" />
-                                     {task.status === 'today' && <ChevronRight className="w-3 h-3 ml-1" />}
+                                     {task.status === 'today' && <ChevronRight className="w-3 h-3" />}
                                    </div>
-                                   {/* Slide to Complete */}
-                                   <div className="relative w-40 h-9 bg-slate-100 rounded-full border border-slate-200 overflow-hidden group/slider shadow-inner">
-                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest group-hover/slider:text-blue-500 transition-colors">
-                                         Desliza para completar
-                                       </span>
-                                     </div>
-                                     <motion.div 
-                                       drag="x"
-                                       dragConstraints={{ left: 0, right: 124 }}
-                                       dragElastic={0.05}
-                                       dragSnapToOrigin={true}
-                                       whileDrag={{ scale: 1.05 }}
-                                       whileHover={{ scale: 1.02 }}
-                                       onDragEnd={(_, info) => {
-                                         if (info.offset.x >= 110) {
-                                           markTaskAsDone(task.id);
-                                         }
-                                       }}
-                                       className="absolute left-1 top-1 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg z-10 transition-colors hover:bg-blue-600"
-                                     >
-                                       <ChevronRight className="w-4 h-4 text-white" />
-                                     </motion.div>
-                                     <div className="absolute inset-y-0 left-0 bg-blue-500/10 pointer-events-none transition-all duration-300" style={{ width: '100%' }} />
-                                   </div>
+                                   <button 
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       markTaskAsDone(task.id);
+                                     }}
+                                     className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-600 transition-all shadow-sm active:scale-95"
+                                   >
+                                     Complete
+                                   </button>
                                  </div>
                               </div>
                               <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1 truncate">{task.title}</h3>
