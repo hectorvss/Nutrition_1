@@ -129,7 +129,11 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
       .maybeSingle();
 
     if (clientErr || !client || client.manager_id !== managerId) {
-      return res.status(403).json({ error: 'Access denied or client not found' });
+      console.warn(`[Assignment] User ${managerId} attempted to assign onboarding to unauthorized client ${client_id}`);
+      return res.status(400).json({ 
+        error: 'Invalid client association', 
+        message: 'This client does not belong to your account or was not found.' 
+      });
     }
 
     // 2. Deactivate previous

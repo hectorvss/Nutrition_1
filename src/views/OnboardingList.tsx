@@ -71,8 +71,9 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
       const template = availableTemplates.find(t => t.id === templateId);
       setAssignments(prev => ({ ...prev, [selectedClient.id]: template?.name || 'Assigned' }));
       setIsModalOpen(false);
-    } catch (err) {
-      alert('Error assigning onboarding flow');
+    } catch (err: any) {
+      console.error('Assignment error:', err);
+      alert(`Error assigning onboarding flow: ${err.message || 'Unknown error'}`);
     } finally {
       setIsAssigning(false);
     }
@@ -215,7 +216,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
 
       {/* Template Selector Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 animate-in fade-in duration-300">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
