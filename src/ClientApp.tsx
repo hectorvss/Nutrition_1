@@ -17,7 +17,7 @@ import ClientProgress from './views/client/ClientProgress';
 import WeeklyCheckinFlow from './views/client/WeeklyCheckinFlow';
 import ClientActionFAB from './components/client/ClientActionFAB';
 
-export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'settings' | 'activity-editor';
+export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'settings' | 'activity-editor' | 'none';
 
 export default function ClientApp() {
   const [currentView, setCurrentView] = useState<ClientView>('dashboard');
@@ -104,8 +104,14 @@ export default function ClientApp() {
       
       <ClientActionFAB 
         onboardingData={onboardingData}
-        onOpenOnboarding={() => setShowOnboarding(true)}
-        onOpenCheckIn={() => setShowCheckIn(true)}
+        onOpenOnboarding={() => {
+          setCurrentView('none');
+          setShowOnboarding(true);
+        }}
+        onOpenCheckIn={() => {
+          setCurrentView('check-ins');
+          setShowCheckIn(true);
+        }}
       />
 
       <ClientSidebar 
