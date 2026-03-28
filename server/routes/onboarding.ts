@@ -136,7 +136,10 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
       });
     }
 
-    // 2. Deactivate previous
+    // 2. Ensure profile exists for foreign key (safety for new/legacy users)
+    await supabaseAdmin.from('profiles').upsert({ user_id: client_id }, { onConflict: 'user_id' });
+
+    // 3. Deactivate previous
     await supabaseAdmin
       .from('client_onboarding_assignments')
       .update({ is_active: false })
