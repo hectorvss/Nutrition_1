@@ -193,17 +193,6 @@ export default function Tasks({ onNavigate }: TasksProps) {
                           className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${config.borderInactive}`}
                         >
                           <div className="flex items-start gap-3 sm:gap-4">
-                            <div className="pt-1 hidden sm:block">
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  markTaskAsDone(task.id);
-                                }}
-                                className={`w-5 h-5 rounded-full border-2 bg-white flex items-center justify-center transition-all ${config.dotCircle} hover:border-emerald-500 hover:bg-emerald-50 shadow-sm`}
-                              >
-                                <div className={`w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${config.dotFill}`} />
-                              </button>
-                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-start mb-2 gap-2">
                                 <div className="flex items-center gap-2 min-w-0">
@@ -215,9 +204,20 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                     {task.type}: {task.label}
                                   </span>
                                 </div>
-                                <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 ${config.badgeText} ${config.badgeBg}`}>
-                                  <Clock className="w-3 h-3" />
-                                  {task.status === 'today' && <ChevronRight className="w-3 h-3 ml-1" />}
+                                <div className="flex items-center gap-3">
+                                  <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 ${config.badgeText} ${config.badgeBg}`}>
+                                    <Clock className="w-3 h-3" />
+                                    {task.status === 'today' && <ChevronRight className="w-3 h-3 ml-1" />}
+                                  </div>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markTaskAsDone(task.id);
+                                    }}
+                                    className="w-6 h-6 rounded-full border-2 border-blue-200 bg-blue-50 flex items-center justify-center transition-all hover:bg-blue-100 hover:border-blue-400 group/check shadow-sm"
+                                  >
+                                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 opacity-0 group-hover/check:opacity-100 transition-opacity" />
+                                  </button>
                                 </div>
                               </div>
                               <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1 truncate">{task.title}</h3>
