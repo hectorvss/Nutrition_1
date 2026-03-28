@@ -42,6 +42,8 @@ interface TaskContextType {
   updateRule: (id: string, updates: Partial<AutomationRule>) => void;
   saveRules: () => void;
   refreshTasks: () => Promise<void>;
+  markTaskAsDone: (taskId: number | string) => Promise<void>;
+  completedTasks: TaskItem[];
 }
 
 const defaultRules: AutomationRule[] = [
@@ -63,6 +65,7 @@ import { fetchWithAuth } from '../api';
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const [rules, setRules] = useState<AutomationRule[]>(defaultRules);
   const [manualTasks, setManualTasks] = useState<TaskItem[]>([]);
+  const [completedAutomatedIds, setCompletedAutomatedIds] = useState<Record<string, string>>({}); // { id: dateStr }
   const [isLoading, setIsLoading] = useState(true);
   const { clients } = useClient();
 
@@ -102,6 +105,22 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         console.error("Failed to parse automation rules", e);
       }
     }
+    
+    const savedCompleted = localStorage.getItem('completed_automated_tasks');
+    if (savedCompleted) {
+      try {
+        const parsed = JSON.parse(savedCompleted);
+        const todayStr = new Date().toISOString().split('T')[0];
+        // Cleanup old day completions
+        const fresh = Object.fromEntries(
+          Object.entries(parsed).filter(([_, date]) => date === todayStr)
+        );
+        setCompletedAutomatedIds(fresh as any);
+      } catch (e) {
+        console.error("Failed to parse completed automated tasks", e);
+      }
+    }
+
     fetchManualTasks();
   }, []);
 
@@ -111,6 +130,30 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const saveRules = () => {
     localStorage.setItem('automation_rules', JSON.stringify(rules));
+  };
+
+  const markTaskAsDone = async (taskId: number | string) => {
+    // 1. Identify if it's manual OR automated
+    const isManual = typeof taskId === 'string' && taskId.includes('-'); // UUID-like
+    const isLocalManual = manualTasks.find(t => t.id === taskId);
+
+    if (isLocalManual) {
+      try {
+        await fetchWithAuth(`/manager/tasks/${taskId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'completed' })
+        });
+        setManualTasks(prev => prev.filter(t => t.id !== taskId));
+      } catch (error) {
+        console.error('Failed to mark manual task as done:', error);
+      }
+    } else {
+      // It's an automated generated task (numeric ID)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const updated = { ...completedAutomatedIds, [taskId.toString()]: todayStr };
+      setCompletedAutomatedIds(updated);
+      localStorage.setItem('completed_automated_tasks', JSON.stringify(updated));
+    }
   };
 
   const addManualTask = async (task: ManualTaskInput) => {
@@ -213,11 +256,49 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     clients.forEach(evaluate);
     
     const priorityOrder = { 'high': 0, 'medium': 1, 'low': 2 };
-    return generated.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
-  }, [clients, rules, manualTasks]);
+    return generated
+      .filter(t => {
+        // Filter out completed automated tasks for the active list
+        const idStr = String(t.id);
+        if (typeof t.id === 'number' || !idStr.includes('-')) {
+          return !completedAutomatedIds[idStr];
+        }
+        return true; // Manual tasks already handled
+      })
+      .sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
+  }, [clients, rules, manualTasks, completedAutomatedIds]);
+
+  const completedTasks = useMemo(() => {
+     // For simplicity in this demo, we'll just show the automated IDs from today 
+     // but we'd normally want to keep their full objects. 
+     // Let's filter the 'total generated' list specifically for completed items.
+     
+     // Re-run evaluation but only keep the ones in completedAutomatedIds
+     const allPotentials: TaskItem[] = [];
+     let counter = 1;
+
+     const evaluateForHistory = (client: any) => {
+        // ... (simplified version of evaluate to reconstruct basic title/client for history)
+        // Checkin
+        allPotentials.push({
+            id: counter++, type: 'WEEKLY CHECK-IN', title: `Review ${client.name}'s Status`, 
+            client: client.name, avatar: client.avatar, status: 'pending', timeLabel: 'Done today', priority: 'low',
+            label: 'COMPLETED', desc: 'Manual review finished', program: client.plan || 'Custom'
+        });
+        // Plan
+        allPotentials.push({
+            id: counter++, type: 'PLAN UPDATE', title: `Assign Plan to ${client.name}`, 
+            client: client.name, avatar: client.avatar, status: 'pending', timeLabel: 'Done today', priority: 'low',
+            label: 'COMPLETED', desc: 'Plan assigned', program: client.plan || 'Custom'
+        });
+     };
+     clients.forEach(evaluateForHistory);
+
+     return allPotentials.filter(t => completedAutomatedIds[t.id.toString()]);
+  }, [clients, completedAutomatedIds]);
 
   return (
-    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks: fetchManualTasks }}>
+    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks: fetchManualTasks, markTaskAsDone, completedTasks }}>
       {children}
     </TaskContext.Provider>
   );
