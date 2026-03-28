@@ -153,7 +153,37 @@ export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowE
   };
 
   if (isLoading) return <div className="flex-1 flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin" /></div>;
-  if (!template || error) return <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm m-8"><AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" /><h3 className="text-lg font-bold text-slate-900">{error || 'Something went wrong'}</h3><button onClick={onBack} className="mt-4 text-emerald-600 font-bold hover:underline">Return to Library</button></div>;
+  
+  if (error || (!template && flowId)) {
+    return (
+      <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm m-8">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-slate-900">{error || 'Flow not found'}</h3>
+        <button onClick={onBack} className="mt-4 text-emerald-600 font-bold hover:underline">Return to Library</button>
+      </div>
+    );
+  }
+
+  // Handle new flow state if template is still null but we're not loading and have no error
+  if (!template) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-10 bg-slate-50">
+        <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center text-center max-w-md">
+           <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-500 mb-6">
+              <PlusCircle className="w-10 h-10" />
+           </div>
+           <h2 className="text-2xl font-bold text-slate-900 mb-2">Create New Flow</h2>
+           <p className="text-slate-500 mb-8 font-medium">To start designing this flow, please initialize it with a basic structure.</p>
+           <button 
+            onClick={() => setTemplate({ id: 'new', name: 'New Flow', templateSchema: [] })}
+            className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl font-bold shadow-xl hover:bg-slate-800 transition-all active:scale-95"
+           >
+            Initialize Flow
+           </button>
+        </div>
+      </div>
+    );
+  }
 
   const selectedStep = template.templateSchema[selectedStepIndex];
 
