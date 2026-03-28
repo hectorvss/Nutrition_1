@@ -23,7 +23,6 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     loadActiveOnboarding();
@@ -91,7 +90,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
 
   if (isSubmitted) {
     return (
-      <div className="fixed inset-0 lg:left-64 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="fixed inset-0 lg:left-64 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -107,34 +106,8 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
     );
   }
 
-  if (!isOpen) {
-    return (
-      <motion.button
-        initial={{ scale: 0, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        whileHover={{ scale: 1.05, y: -4 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 z-[150] w-16 h-16 rounded-full bg-gradient-to-br from-[#17cf54] to-[#15b84a] shadow-xl shadow-emerald-500/40 flex items-center justify-center text-white group"
-      >
-        <div className="absolute inset-0 rounded-full bg-[#17cf54] animate-ping opacity-20" />
-        <div className="relative z-10">
-          <span className="material-symbols-outlined text-3xl group-hover:rotate-12 transition-transform">rocket_launch</span>
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border-2 border-[#17cf54]">
-            <div className="w-1.5 h-1.5 bg-[#17cf54] rounded-full animate-pulse" />
-          </div>
-        </div>
-        
-        {/* Tooltip */}
-        <div className="absolute right-20 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-           <p className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-widest">Setup Profile</p>
-        </div>
-      </motion.button>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 lg:left-64 z-[200] flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
+    <div className="fixed inset-0 lg:left-64 z-[250] flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
       {/* Background patterns (Check-in Parity) */}
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.07] pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -165,7 +138,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
                </div>
             </div>
             <button 
-              onClick={() => setIsOpen(false)} 
+              onClick={() => onComplete()} 
               className="p-2 text-slate-400 hover:text-red-500 transition-colors"
             >
                <X className="w-6 h-6" />
