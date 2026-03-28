@@ -211,7 +211,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
     return () => clearInterval(timer);
   }, []);
 
-  const { getEventsForDate } = useCalendar();
+  const { getEventsForDate, updateEvent } = useCalendar();
 
   const getLocalDateString = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000;
@@ -505,22 +505,34 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-bold text-slate-900 truncate">{event.title}</h4>
+                        <h4 className={`font-bold truncate ${event.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{event.title}</h4>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{event.duration}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <div className={`flex items-center gap-2 text-xs ${event.status === 'completed' ? 'text-slate-300' : 'text-slate-500'}`}>
                         <EventIcon className="w-3.5 h-3.5" />
                         <span>{event.type}</span>
                         <span>•</span>
                         <span>{event.duration}</span>
                       </div>
                       {event.desc && (
-                        <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">{event.desc}</p>
+                        <p className={`text-xs mt-2 line-clamp-2 leading-relaxed ${event.status === 'completed' ? 'text-slate-300' : 'text-slate-500'}`}>{event.desc}</p>
                       )}
                     </div>
-                    <button className="p-1 hover:bg-white/50 rounded-lg transition-colors">
-                      <MoreVertical className="w-4 h-4 text-slate-400" />
-                    </button>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newStatus = event.status === 'completed' ? 'pending' : 'completed';
+                          updateEvent(event.id, { status: newStatus });
+                        }}
+                        className={`p-1.5 rounded-lg transition-all ${event.status === 'completed' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white/50 text-slate-400 hover:text-emerald-500 hover:bg-white active:scale-95 border border-slate-200/50'}`}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
+                      <button className="p-1.5 hover:bg-white/50 rounded-lg transition-colors text-slate-400">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </div>
                     </div>
                   );
                 });
