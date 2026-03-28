@@ -28,6 +28,7 @@ export interface TaskItem {
     weightChange: string;
     compliance: string;
   };
+  clientId?: string;
   actionItems?: string[];
   notes?: string;
 }
@@ -81,7 +82,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         status: t.status === 'completed' ? 'pending' : 'today',
         timeLabel: t.time,
         priority: 'medium',
-        type: t.type
+        type: t.type,
+        clientId: t.client_id || t.clientId
       }));
       setManualTasks(formatted);
     } catch (error) {
@@ -164,6 +166,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
             status: checkinRule.priority === 'High' ? 'overdue' : 'today',
             timeLabel: 'Overdue 2d',
             priority: checkinRule.priority.toLowerCase() as any,
+            clientId: client.id
           });
         }
       }
@@ -183,6 +186,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
           status: adherenceRule.priority === 'High' ? 'overdue' : 'pending',
           timeLabel: 'Alert',
           priority: adherenceRule.priority.toLowerCase() as any,
+          clientId: client.id
         });
       }
       
@@ -201,6 +205,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
           status: 'today',
           timeLabel: 'Due Today',
           priority: planRule.priority.toLowerCase() as any,
+          clientId: client.id
         });
       }
     };

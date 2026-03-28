@@ -108,6 +108,8 @@ export default function App() {
       case 'tasks':
         return <Tasks onNavigate={(view, data) => {
           if (data?.taskId) setSelectedTaskId(data.taskId);
+          if (data?.clientId) setSelectedClientId(data.clientId);
+          if (data?.checkInId) setSelectedCheckInId(data.checkInId);
           setCurrentView(view as View);
         }} />;
       case 'calendar':
