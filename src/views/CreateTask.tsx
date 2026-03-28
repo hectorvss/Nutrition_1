@@ -352,7 +352,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                               const base = window.location.origin;
                               const path = cat.id.toLowerCase();
                               setLinkUrl(`${base}/${path}/${selectedClientId}`);
-                            } else if (cat.id !== 'Call') {
+                            } else {
+                              // Clear for Call or Admin to allow clean manual input
                               setLinkUrl('');
                             }
                           }}
@@ -372,27 +373,12 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                       </label>
                       <div className="flex items-center gap-2">
                         {category === 'Call' ? (
-                          <>
-                            <input 
-                              value={linkUrl}
-                              onChange={e => setLinkUrl(e.target.value)}
-                              placeholder="e.g., https://zoom.us/j/..."
-                              className="flex-1 rounded-lg border-slate-200 bg-slate-50 text-sm py-2.5 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                            />
-                            {linkUrl && (
-                              <button 
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(linkUrl);
-                                  alert("Link copied to clipboard!");
-                                }}
-                                className="px-4 py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm"
-                              >
-                                <Link className="w-3.5 h-3.5" />
-                                Copy
-                              </button>
-                            )}
-                          </>
+                          <input 
+                            value={linkUrl}
+                            onChange={e => setLinkUrl(e.target.value)}
+                            placeholder="e.g., https://zoom.us/j/..."
+                            className="w-full rounded-lg border-slate-200 bg-slate-50 text-sm py-2.5 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                          />
                         ) : (
                           <div className={`flex items-center gap-3 px-4 py-2.5 rounded-full border shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 ${
                             category === 'Training' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
