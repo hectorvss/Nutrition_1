@@ -80,13 +80,13 @@ export default function Tasks({ onNavigate }: TasksProps) {
     },
     low: {
       label: 'Low Priority (Routine)',
-      borderActive: 'border-l-emerald-500 ring-2 ring-emerald-500/10',
-      borderInactive: 'border-l-emerald-500/50 hover:border-l-emerald-500',
-      dotCircle: 'border-emerald-200 group-hover:border-emerald-500',
-      dotFill: 'bg-emerald-500',
-      textIcon: 'text-emerald-500',
-      badgeText: 'text-emerald-500',
-      badgeBg: 'bg-emerald-50',
+      borderActive: 'border-l-slate-400 ring-2 ring-slate-400/10',
+      borderInactive: 'border-l-slate-400/50 hover:border-l-slate-400',
+      dotCircle: 'border-slate-200 group-hover:border-slate-400',
+      dotFill: 'bg-slate-400',
+      textIcon: 'text-slate-500',
+      badgeText: 'text-slate-500',
+      badgeBg: 'bg-slate-50',
     }
   };
 
@@ -222,7 +222,7 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                         e.stopPropagation();
                                         markTaskAsDone(task.id);
                                       }}
-                                      className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all shadow-md active:scale-95 whitespace-nowrap"
+                                      className={`px-8 py-3 ${config.dotFill} text-white rounded-2xl text-xs font-bold hover:brightness-90 transition-all shadow-lg active:scale-95 whitespace-nowrap`}
                                     >
                                       Complete
                                     </button>
