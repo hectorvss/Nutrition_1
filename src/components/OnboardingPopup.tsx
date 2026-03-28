@@ -91,7 +91,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
 
   if (isSubmitted) {
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="fixed inset-0 lg:left-64 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -127,14 +127,14 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
         
         {/* Tooltip */}
         <div className="absolute right-20 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-           <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Setup Profile</p>
+           <p className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-widest">Setup Profile</p>
         </div>
       </motion.button>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
+    <div className="fixed inset-0 lg:left-64 z-[200] flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
       {/* Background patterns (Check-in Parity) */}
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.07] pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />

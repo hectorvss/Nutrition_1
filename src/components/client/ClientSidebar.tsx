@@ -52,23 +52,6 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
           </button>
         </div>
 
-        {showOnboardingReminder && (
-          <div className="px-4 mb-4">
-            <button 
-              onClick={onOpenOnboarding}
-              className="w-full bg-[#17cf54] text-white p-4 rounded-2xl shadow-lg shadow-[#17cf54]/20 flex items-center gap-3 group hover:scale-[1.02] transition-all"
-            >
-              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-sm">rocket_launch</span>
-              </div>
-              <div className="flex flex-col items-start overflow-hidden">
-                <span className="text-xs font-bold uppercase tracking-widest opacity-80">Action Required</span>
-                <span className="text-sm font-bold truncate">Finish Onboarding</span>
-              </div>
-              <span className="material-symbols-outlined ml-auto group-hover:translate-x-1 transition-transform">chevron_right</span>
-            </button>
-          </div>
-        )}
 
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
