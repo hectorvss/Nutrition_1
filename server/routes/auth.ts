@@ -28,6 +28,14 @@ router.post('/login', async (req, res) => {
        console.warn('User missing in custom table', userError);
     }
 
+    // Update last_login if user is a CLIENT
+    if (userData?.role === 'CLIENT') {
+      await supabaseAdmin
+        .from('clients_profiles')
+        .update({ last_login: new Date().toISOString() })
+        .eq('user_id', authData.user.id);
+    }
+
     res.json({
       token: authData.session.access_token,
       user: userData || {
