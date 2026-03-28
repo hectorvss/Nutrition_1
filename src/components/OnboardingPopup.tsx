@@ -23,6 +23,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     loadActiveOnboarding();
@@ -90,123 +91,143 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
 
   if (isSubmitted) {
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white rounded-[2.5rem] p-12 text-center space-y-6 max-w-sm shadow-2xl"
+          className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-12 text-center space-y-6 max-w-sm shadow-2xl border border-slate-200 dark:border-slate-800"
         >
-          <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+          <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-10 h-10" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 uppercase">Onboarding Submitted</h2>
-          <p className="text-slate-500">Thank you! Your information has been saved.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Setup Complete!</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Your profile has been updated successfully.</p>
         </motion.div>
       </div>
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 transition-all duration-300">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col relative max-h-[90vh] border border-slate-200 dark:border-slate-800"
+  if (!isOpen) {
+    return (
+      <motion.button
+        initial={{ scale: 0, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        whileHover={{ scale: 1.05, y: -4 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsOpen(true)}
+        className="fixed bottom-8 right-8 z-[150] w-16 h-16 rounded-full bg-gradient-to-br from-[#17cf54] to-[#15b84a] shadow-xl shadow-emerald-500/40 flex items-center justify-center text-white group"
       >
-        {/* Header */}
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">Onboarding Active</p>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{activeAssignment?.template?.name}</h3>
+        <div className="absolute inset-0 rounded-full bg-[#17cf54] animate-ping opacity-20" />
+        <div className="relative z-10">
+          <span className="material-symbols-outlined text-3xl group-hover:rotate-12 transition-transform">rocket_launch</span>
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border-2 border-[#17cf54]">
+            <div className="w-1.5 h-1.5 bg-[#17cf54] rounded-full animate-pulse" />
           </div>
-          <button 
-            onClick={() => onComplete()}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all hover:rotate-90"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
-
-        {/* Content */}
-        <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStepIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-8"
-            >
-              <div className="space-y-2">
-                <h2 className="text-2xl font-black text-slate-900 uppercase leading-tight">{currentStep?.title}</h2>
-                {currentStep?.subtitle && <p className="text-slate-500 font-medium text-lg">{currentStep?.subtitle}</p>}
-              </div>
-
-              <div className="space-y-6">
-                {currentStep && (
-                  <CheckInStepRenderer 
-                    step={currentStep}
-                    answers={answers}
-                    onUpdateAnswer={(key, val) => setAnswers(prev => ({ ...prev, [key]: val }))}
-                    onToggleArrayItem={(key, item) => {
-                      const current = answers[key] || [];
-                      const newVal = current.includes(item) 
-                        ? current.filter((i: string) => i !== item)
-                        : [...current, item];
-                      setAnswers(prev => ({ ...prev, [key]: newVal }));
-                    }}
-                  />
-                )}
-              </div>
-            </motion.div>
-          </AnimatePresence>
+        
+        {/* Tooltip */}
+        <div className="absolute right-20 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+           <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Setup Profile</p>
         </div>
+      </motion.button>
+    );
+  }
 
-        {/* Footer */}
-        <div className="px-8 py-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-6 shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
-          <div className="flex items-center gap-4">
+  return (
+    <div className="fixed inset-0 z-[200] flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
+      {/* Background patterns (Check-in Parity) */}
+      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.07] pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-500 blur-[100px] rounded-full translate-y-1/2 -translate-x-1/2" />
+      </div>
+
+      {/* Header (Check-in Parity) */}
+      <div className="relative z-10 px-6 py-5 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md flex items-center justify-between">
+         <div className="flex items-center gap-4">
             <button 
-              onClick={handleBack}
-              disabled={currentStepIndex === 0 || submitting}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
-                currentStepIndex === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700 shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-600'
-              }`}
+              onClick={handleBack} 
+              disabled={currentStepIndex === 0}
+              className={`p-2 rounded-xl transition-all ${currentStepIndex === 0 ? 'text-slate-200 dark:text-slate-700' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'}`}
             >
-              <ArrowLeft className="w-4 h-4" />
-              Back
+               <ArrowLeft className="w-5 h-5" />
             </button>
-            
-            <div className="hidden sm:flex flex-col">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">Progress</p>
-              <div className="w-24 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 transition-all duration-500" 
-                  style={{ width: `${((currentStepIndex + 1) / templateSchema.length) * 100}%` }} 
-                />
-              </div>
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
+            <div className="flex flex-col">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">Checking in</p>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-none">{activeAssignment?.template?.name}</h2>
             </div>
-          </div>
+         </div>
+         <div className="flex items-center gap-4">
+            <div className="hidden sm:flex flex-col items-end">
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Step {currentStepIndex + 1} of {templateSchema.length}</p>
+               <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${((currentStepIndex + 1) / templateSchema.length) * 100}%` }} />
+               </div>
+            </div>
+            <button 
+              onClick={() => setIsOpen(false)} 
+              className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+            >
+               <X className="w-6 h-6" />
+            </button>
+         </div>
+      </div>
 
-          <button 
-            onClick={handleNext}
-            disabled={submitting}
-            style={{ backgroundColor: settings.theme_color || '#17cf54' }}
-            className="px-8 py-4 text-white rounded-2xl font-bold shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 disabled:opacity-50"
-          >
-            {submitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <span className="text-sm">{currentStepIndex === templateSchema.length - 1 ? 'Complete Setup' : 'Continue'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </div>
-      </motion.div>
+      {/* Content Area */}
+      <div className="relative z-10 flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
+         <div className="max-w-3xl mx-auto w-full space-y-10 animate-in slide-in-from-bottom-8 duration-700">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStepIndex}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-10"
+              >
+                <div className="space-y-3">
+                  <h2 className="text-4xl font-black text-slate-900 dark:text-white uppercase leading-tight">{currentStep?.title}</h2>
+                  {currentStep?.subtitle && <p className="text-slate-500 dark:text-slate-400 font-medium text-xl">{currentStep?.subtitle}</p>}
+                </div>
+
+                <div className="bg-white dark:bg-slate-800/40 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+                  {currentStep && (
+                    <CheckInStepRenderer 
+                      step={currentStep}
+                      answers={answers}
+                      onUpdateAnswer={(key, val) => setAnswers(prev => ({ ...prev, [key]: val }))}
+                      onToggleArrayItem={(key, item) => {
+                        const current = answers[key] || [];
+                        const newVal = current.includes(item) 
+                          ? current.filter((i: string) => i !== item)
+                          : [...current, item];
+                        setAnswers(prev => ({ ...prev, [key]: newVal }));
+                      }}
+                    />
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Navigation (Check-in Parity) */}
+            <div className="flex justify-end pt-4">
+              <button 
+                onClick={handleNext} 
+                disabled={submitting}
+                className="text-white px-10 py-5 rounded-2xl font-bold flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-emerald-500/20 disabled:opacity-50"
+                style={{ backgroundColor: settings.theme_color || '#17cf54' }}
+              >
+                {submitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <span className="text-lg">{currentStepIndex === templateSchema.length - 1 ? 'Complete Setup' : 'Continue'}</span>
+                    <span className="material-symbols-outlined text-[20px]">{currentStepIndex === templateSchema.length - 1 ? 'task_alt' : 'arrow_forward'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+         </div>
+      </div>
     </div>
   );
 }
