@@ -177,7 +177,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   // Page 0: Intro
   if (currentStep === 0) {
     return (
-      <div className="flex-1 flex flex-col p-6 md:p-10 bg-slate-50 dark:bg-slate-900 scroll-smooth overflow-y-auto">
+      <div className="fixed inset-0 lg:left-64 z-[250] flex flex-col p-6 md:p-10 bg-slate-50 dark:bg-slate-900 scroll-smooth overflow-y-auto">
         <div className="max-w-3xl mx-auto w-full space-y-8">
            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
              <div className="flex items-center justify-between mb-8">
@@ -237,7 +237,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   const stepData = steps[currentStep - 1];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-900 overflow-hidden relative">
+    <div className="fixed inset-0 lg:left-64 z-[250] flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden">
       {/* Dynamic Background Pattern */}
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.07] pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500 blur-[100px] rounded-full -translate-y-1/2 translate-x-1/2" />
