@@ -49,7 +49,7 @@ router.get('/manager/templates', verifyManager, async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching onboarding templates:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', message: error.message, details: error });
   }
 });
 
