@@ -121,12 +121,12 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
 
   try {
-    // 1. Verify client belongs to manager (Check in profiles table)
+    // 1. Verify client belongs to manager (Check in users table - standard source of truth)
     const { data: client, error: clientErr } = await supabaseAdmin
-      .from('profiles')
-      .select('manager_id')
-      .eq('user_id', client_id)
-      .maybeSingle();
+      .from('users')
+      .select('id, manager_id')
+      .eq('id', client_id)
+      .single();
 
     if (clientErr || !client || client.manager_id !== managerId) {
       console.warn(`[Assignment] User ${managerId} attempted to assign onboarding to unauthorized client ${client_id}`);
@@ -163,11 +163,12 @@ router.get('/manager/assignments', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
     const { data: myClients } = await supabaseAdmin
-      .from('profiles')
-      .select('user_id')
-      .eq('manager_id', managerId);
+      .from('users')
+      .select('id')
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT');
     
-    const clientIds = (myClients || []).map(c => c.user_id);
+    const clientIds = (myClients || []).map(c => c.id);
     if (clientIds.length === 0) return res.json([]);
 
     const { data: assignments, error: assignErr } = await supabaseAdmin
@@ -188,12 +189,13 @@ router.get('/manager/submissions', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
     const { data: myClients, error: clientsErr } = await supabaseAdmin
-      .from('profiles')
-      .select('user_id, full_name, avatar_url')
-      .eq('manager_id', managerId);
+      .from('users')
+      .select('id')
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT');
     
     if (clientsErr) throw clientsErr;
-    const clientIds = (myClients || []).map(c => c.user_id);
+    const clientIds = (myClients || []).map(c => c.id);
     if (clientIds.length === 0) return res.json([]);
 
     const { data, error } = await supabaseAdmin
