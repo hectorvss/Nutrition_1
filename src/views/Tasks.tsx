@@ -192,20 +192,17 @@ export default function Tasks({ onNavigate }: TasksProps) {
                           }}
                           className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${config.borderInactive}`}
                         >
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markTaskAsDone(task.id);
-                            }}
-                            className="absolute top-4 right-4 p-2 rounded-full bg-slate-50 text-slate-400 hover:bg-emerald-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-10"
-                          >
-                            <CheckCircle2 className="w-5 h-5" />
-                          </button>
                           <div className="flex items-start gap-3 sm:gap-4">
                             <div className="pt-1 hidden sm:block">
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${config.dotCircle}`}>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  markTaskAsDone(task.id);
+                                }}
+                                className={`w-5 h-5 rounded-full border-2 bg-white flex items-center justify-center transition-all ${config.dotCircle} hover:border-emerald-500 hover:bg-emerald-50 shadow-sm`}
+                              >
                                 <div className={`w-2 h-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${config.dotFill}`} />
-                              </div>
+                              </button>
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-start mb-2 gap-2">
@@ -220,7 +217,6 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                 </div>
                                 <div className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 ${config.badgeText} ${config.badgeBg}`}>
                                   <Clock className="w-3 h-3" />
-                                  {task.timeLabel}
                                   {task.status === 'today' && <ChevronRight className="w-3 h-3 ml-1" />}
                                 </div>
                               </div>
@@ -252,26 +248,41 @@ export default function Tasks({ onNavigate }: TasksProps) {
                   <p className="text-slate-500 text-sm mt-1">Check off some tasks to see your daily progress here.</p>
                 </div>
               ) : (
-                completedTasks.map((task) => {
-                  const prioKey = (task.priority || 'medium') as keyof typeof PRIORITY_CONFIG;
-                  const config = PRIORITY_CONFIG[prioKey] || PRIORITY_CONFIG.medium;
-                  return (
-                    <div 
-                      key={task.id}
-                      className="bg-white/50 border border-slate-100 rounded-2xl p-4 opacity-75 grayscale flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-xl bg-slate-100 text-slate-400`}>
-                          <CheckCircle2 className="w-5 h-5" />
+                completedTasks.map((task) => (
+                  <div 
+                    key={task.id}
+                    className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 opacity-60 grayscale transition-all border-l-4 border-l-slate-400"
+                  >
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="pt-1 hidden sm:block">
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 bg-slate-100 flex items-center justify-center">
+                          <CheckCircle2 className="w-3 h-3 text-slate-500" />
                         </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-700 line-through">{task.title}</h4>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{task.client} • Done today</p>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-2 gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate text-slate-500">
+                              {task.type}: COMPLETED
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 bg-slate-100 text-slate-500">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Done today
+                          </div>
+                        </div>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-400 mb-1 truncate line-through">{task.title}</h3>
+                        <p className="text-xs sm:text-sm text-slate-300 mb-4 line-clamp-2">{task.desc}</p>
+                        <div className="flex items-center gap-2">
+                          {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full opacity-50" referrerPolicy="no-referrer" />}
+                          <span className="text-[11px] sm:text-xs font-bold text-slate-400 truncate">{task.client}</span>
+                          <span className="text-[11px] sm:text-xs text-slate-300 shrink-0">•</span>
+                          <span className="text-[11px] sm:text-xs text-slate-300 truncate">{task.program}</span>
                         </div>
                       </div>
                     </div>
-                  );
-                })
+                  </div>
+                ))
               )}
             </div>
           )}
