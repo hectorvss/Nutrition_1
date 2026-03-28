@@ -175,7 +175,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
 
       {/* Content Area */}
       <div className="relative z-10 flex-1 overflow-y-auto p-6 lg:p-10 scroll-smooth">
-         <div className="max-w-5xl mx-auto w-full space-y-10 animate-in slide-in-from-bottom-8 duration-700">
+         <div className="w-full space-y-10 animate-in slide-in-from-bottom-8 duration-700">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStepIndex}
