@@ -20,13 +20,13 @@ export default function ClientActionFAB({ onboardingData, onOpenOnboarding, onOp
         whileHover={{ scale: 1.05, y: -4 }}
         whileTap={{ scale: 0.95 }}
         onClick={onOpenOnboarding}
-        className="fixed bottom-8 right-8 z-[150] w-16 h-16 rounded-full bg-slate-900 border border-slate-800 shadow-2xl flex items-center justify-center text-white group"
+        className="fixed bottom-8 right-8 z-[150] w-16 h-16 rounded-full bg-white border border-slate-200 shadow-2xl flex items-center justify-center text-slate-900 group"
       >
-        <div className="absolute inset-0 rounded-full bg-slate-400 animate-ping opacity-10" />
-        <div className="relative z-10">
+        <div className="absolute inset-0 rounded-full bg-slate-100 animate-ping opacity-50" />
+        <div className="relative z-10 font-bold">
           <span className="material-symbols-outlined text-3xl group-hover:rotate-12 transition-transform">rocket_launch</span>
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border-2 border-slate-900">
-            <div className="w-1.5 h-1.5 bg-[#17cf54] rounded-full animate-pulse" />
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border-2 border-slate-200">
+            <div className="w-1.5 h-1.5 bg-slate-900 rounded-full animate-pulse" />
           </div>
         </div>
         
@@ -47,13 +47,13 @@ export default function ClientActionFAB({ onboardingData, onOpenOnboarding, onOp
         whileHover={{ scale: 1.05, y: -4 }}
         whileTap={{ scale: 0.95 }}
         onClick={onOpenCheckIn}
-        className="fixed bottom-8 right-8 z-[150] w-16 h-16 rounded-full bg-slate-900 border border-slate-800 shadow-2xl flex items-center justify-center text-white group"
+        className="fixed bottom-8 right-8 z-[150] w-16 h-16 rounded-full bg-white border border-slate-200 shadow-2xl flex items-center justify-center text-slate-900 group"
       >
-        <div className="absolute inset-0 rounded-full bg-slate-400 animate-ping opacity-10" />
-        <div className="relative z-10">
+        <div className="absolute inset-0 rounded-full bg-slate-100 animate-ping opacity-50" />
+        <div className="relative z-10 font-bold">
           <span className="material-symbols-outlined text-3xl group-hover:rotate-12 transition-transform">assignment</span>
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border-2 border-slate-900">
-            <div className="w-1.5 h-1.5 bg-[#17cf54] rounded-full animate-pulse" />
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center border-2 border-slate-200">
+            <div className="w-1.5 h-1.5 bg-slate-900 rounded-full animate-pulse" />
           </div>
         </div>
         
