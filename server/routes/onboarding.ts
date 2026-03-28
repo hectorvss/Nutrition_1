@@ -35,14 +35,15 @@ const verifyManager = async (req: any, res: any, next: any) => {
 
 // --- Onboarding Templates (Manager) ---
 
-// Get all templates
+// Get all templates (including global ones with manager_id = null)
 router.get('/manager/templates', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
     const { data, error } = await supabaseAdmin
       .from('onboarding_templates')
       .select('*')
-      .eq('manager_id', managerId)
+      .or(`manager_id.eq.${managerId},manager_id.is.null`)
+      .order('is_default', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -174,6 +175,66 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error assigning onboarding:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Submissions & Monitoring ---
+
+// Get all clients and their onboarding status
+router.get('/manager/submissions', verifyManager, async (req: any, res) => {
+  const managerId = req.user.id;
+  try {
+    const { data: clients, error: clientsError } = await supabaseAdmin
+      .from('users')
+      .select('id, full_name, email, avatar_url')
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT');
+
+    if (clientsError) throw clientsError;
+    const clientIds = (clients || []).map(c => c.id);
+    if (clientIds.length === 0) return res.json([]);
+    
+    const { data: assignments } = await supabaseAdmin
+      .from('client_onboarding_assignments')
+      .select('*, template:onboarding_templates(name)')
+      .in('client_id', clientIds)
+      .eq('is_active', true);
+
+    const { data: submissions } = await supabaseAdmin
+      .from('client_onboarding_submissions')
+      .select('*, template:onboarding_templates(name)')
+      .in('client_id', clientIds)
+      .order('submitted_at', { ascending: false });
+
+    const result = clients.map(client => {
+      const activeAssignment = assignments?.find(a => a.client_id === client.id);
+      const lastSubmission = submissions?.find(s => s.client_id === client.id);
+      return {
+        ...client,
+        status: lastSubmission ? 'completed' : (activeAssignment ? 'pending' : 'not_started'),
+        activeAssignment,
+        lastSubmission
+      };
+    });
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error fetching onboarding submissions:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get specific submission details
+router.get('/manager/submissions/:id', verifyManager, async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('client_onboarding_submissions')
+      .select('*, client:users(full_name, avatar_url), template:onboarding_templates(*)')
+      .eq('id', req.params.id)
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
     res.status(500).json({ error: 'Server error' });
   }
 });
