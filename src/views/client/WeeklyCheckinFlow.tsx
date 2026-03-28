@@ -47,7 +47,7 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<s
 export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyCheckinFlowProps) {
   const [template, setTemplate] = useState<CheckInTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentStep, setCurrentStep] = useState(1); // 0 = Intro, 1..N = Steps, N+1 = Finish
+  const [currentStep, setCurrentStep] = useState(1); // Start directly at step 1
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -174,64 +174,6 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
   // --- UI RENDERING ---
 
-  // Page 0: Intro
-  if (currentStep === 0) {
-    return (
-      <div className="fixed inset-0 lg:left-64 z-[250] flex flex-col p-6 md:p-10 bg-slate-50 dark:bg-slate-900 scroll-smooth overflow-y-auto">
-        <div className="max-w-3xl mx-auto w-full space-y-8">
-           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8">
-             <div className="flex items-center justify-between mb-8">
-               <h3 className="text-xl font-bold text-slate-900 dark:text-white">{template?.name || template?.title || 'Weekly Progress Review'}</h3>
-               <span className="text-xs font-black px-3 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg uppercase tracking-widest border border-amber-100 dark:border-amber-900/30">Action Required</span>
-             </div>
-             <div className="space-y-6">
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 flex items-start gap-4">
-                  <span className="material-symbols-outlined text-emerald-500 mt-1">info</span>
-                  <p className="text-emerald-900 dark:text-emerald-400 text-sm font-medium leading-relaxed">
-                    Detailed feedback is the engine of your transformation. Take 5 minutes to update your coach on your energy, mood, and performance.
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-                   <button onClick={handleNext} className="w-full sm:w-auto bg-[#17cf54] hover:bg-[#15b84a] text-white px-8 py-4 rounded-2xl transition-all flex items-center justify-center gap-3 font-bold text-base shadow-xl shadow-emerald-500/20 active:scale-95">
-                      <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
-                      Start Check-in
-                   </button>
-                   <button onClick={onCancel} className="w-full sm:w-auto px-8 py-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold transition-colors">
-                      Cancel
-                   </button>
-                </div>
-             </div>
-           </div>
-
-           {/* History Preview */}
-           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                 <h4 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Previous Milestones</h4>
-              </div>
-              <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                 {[
-                   { date: 'Oct 24, 2023', score: 'Excellent', status: 'Reviewed' },
-                   { date: 'Oct 17, 2023', score: 'On Track', status: 'Reviewed' }
-                 ].map((h, i) => (
-                   <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
-                      <div className="flex items-center gap-4">
-                         <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                           <span className="material-symbols-outlined text-[20px]">verified</span>
-                         </div>
-                         <div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">{h.date}</p>
-                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{h.score}</p>
-                         </div>
-                      </div>
-                      <span className="material-symbols-outlined text-slate-300">chevron_right</span>
-                   </div>
-                 ))}
-              </div>
-           </div>
-        </div>
-      </div>
-    );
-  }
 
   // Page 1..N: Dynamic Step
   const stepData = steps[currentStep - 1];
