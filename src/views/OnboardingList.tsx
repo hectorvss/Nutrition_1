@@ -80,13 +80,13 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
 
   const isLoading = isClientsLoading || isAssignmentsLoading;
 
-  const enrichedClients = clients.map((c) => {
+  const enrichedClients = (clients || []).map((c) => {
     // In a real app we'd fetch the submission status for each client
     // For now, we'll use the check_ins presence as a proxy or just the assignment
     return {
       id: c.id,
-      name: c.name,
-      email: c.email,
+      name: c.name || 'Unknown Client',
+      email: c.email || '',
       avatar: c.avatar,
       initials: (c.name || 'C').substring(0, 2).toUpperCase(),
       hasOnboarding: !!assignments[c.id],
@@ -95,7 +95,8 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
   });
 
   const filteredClients = enrichedClients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const clientName = client.name || '';
+    const matchesSearch = clientName.toLowerCase().includes(searchQuery.toLowerCase());
     if (filter === 'All') return matchesSearch;
     if (filter === 'Pending') return matchesSearch && client.hasOnboarding;
     if (filter === 'Completed') return false; // This would need submissions data

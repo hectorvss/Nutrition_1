@@ -158,16 +158,6 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
 router.get('/manager/assignments', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
-    const { data, error } = await supabaseAdmin
-      .from('client_onboarding_assignments')
-      .select('*, template:onboarding_templates(name)')
-      .eq('is_active', true)
-      .filter('client_id', 'in', 
-        supabaseAdmin.from('profiles').select('user_id').eq('manager_id', managerId)
-      );
-    
-    // Fallback if the subquery isn't supported in this version of the client
-    // or manually fetch client IDs first
     const { data: myClients } = await supabaseAdmin
       .from('profiles')
       .select('user_id')
@@ -193,11 +183,12 @@ router.get('/manager/assignments', verifyManager, async (req: any, res) => {
 router.get('/manager/submissions', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
-    const { data: myClients } = await supabaseAdmin
+    const { data: myClients, error: clientsErr } = await supabaseAdmin
       .from('profiles')
-      .select('user_id')
+      .select('user_id, full_name, avatar_url')
       .eq('manager_id', managerId);
     
+    if (clientsErr) throw clientsErr;
     const clientIds = (myClients || []).map(c => c.user_id);
     if (clientIds.length === 0) return res.json([]);
 
