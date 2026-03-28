@@ -146,7 +146,12 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
     // 3. Insert new
     const { data, error } = await supabaseAdmin
       .from('client_onboarding_assignments')
-      .insert({ client_id, template_id, is_active: true })
+      .insert({ 
+        client_id, 
+        template_id, 
+        is_active: true,
+        assigned_at: new Date().toISOString() 
+      })
       .select()
       .single();
 
@@ -154,7 +159,10 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error assigning onboarding:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ 
+      error: `Server error: ${error.message || 'Unknown database error'}`,
+      details: error
+    });
   }
 });
 
