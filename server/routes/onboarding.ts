@@ -144,7 +144,7 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
   try {
     // 1. Verify ownerships
     const { data: client } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .select('manager_id')
       .eq('id', client_id)
       .single();
@@ -186,7 +186,7 @@ router.get('/manager/submissions', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
     const { data: clients, error: clientsError } = await supabaseAdmin
-      .from('users')
+      .from('profiles')
       .select('id, full_name, email, avatar_url')
       .eq('manager_id', managerId)
       .eq('role', 'CLIENT');
@@ -229,7 +229,7 @@ router.get('/manager/submissions/:id', verifyManager, async (req: any, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('client_onboarding_submissions')
-      .select('*, client:users(full_name, avatar_url), template:onboarding_templates(*)')
+      .select('*, client:profiles(full_name, avatar_url), template:onboarding_templates(*)')
       .eq('id', req.params.id)
       .single();
     if (error) throw error;
