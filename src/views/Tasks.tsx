@@ -176,64 +176,81 @@ export default function Tasks({ onNavigate }: TasksProps) {
                   <section key={prio}>
                     <h2 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{config.label}</h2>
                     <div className="space-y-4">
-                      {prioTasks.map((task) => {
-                        const isCompleted = task.status === 'completed' || task.status === 'archived';
-                        return (
-                          <div 
-                            key={task.id}
-                          onClick={() => {
-                            if (task.type === 'WEEKLY CHECK-IN' || task.type === 'OVERDUE CHECK-IN') {
-                              onNavigate('check-ins', { clientId: task.clientId || task.id });
-                            } else if (task.type === 'PLAN UPDATE' || task.type === 'MISSING PLAN') {
-                              onNavigate('planning', { clientId: task.clientId || task.id });
-                            } else if (task.type === 'AUTOMATIC ALERT') {
-                              onNavigate('planning', { clientId: task.clientId || task.id });
-                            } else {
-                              onNavigate('create-task', { taskId: task.id });
-                            }
-                          }}
-                          className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${config.borderInactive}`}
-                        >
-                          <div className="flex items-start gap-3 sm:gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-start mb-2 gap-2">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    {task.type === 'AUTOMATIC ALERT' && <AlertTriangle className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
-                                    {task.type === 'WEEKLY CHECK-IN' && <ClipboardCheck className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
-                                    {task.type === 'MISSING PLAN' && <FileText className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
-                                    {task.type !== 'AUTOMATIC ALERT' && task.type !== 'WEEKLY CHECK-IN' && task.type !== 'MISSING PLAN' && <MessageSquare className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
-                                    <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${config.textIcon}`}>
-                                      {task.type}: {task.label}
-                                    </span>
+                      <AnimatePresence mode="popLayout">
+                        {prioTasks.map((task) => {
+                          const isCompleted = task.status === 'completed' || task.status === 'archived';
+                          return (
+                            <motion.div 
+                              layout
+                              key={task.id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ 
+                                opacity: 0, 
+                                x: 50,
+                                scale: 0.95,
+                                transition: { duration: 0.2 } 
+                              }}
+                              transition={{ 
+                                type: "spring", 
+                                stiffness: 500, 
+                                damping: 40,
+                                opacity: { duration: 0.2 }
+                              }}
+                              onClick={() => {
+                                if (task.type === 'WEEKLY CHECK-IN' || task.type === 'OVERDUE CHECK-IN') {
+                                  onNavigate('check-ins', { clientId: task.clientId || task.id });
+                                } else if (task.type === 'PLAN UPDATE' || task.type === 'MISSING PLAN') {
+                                  onNavigate('planning', { clientId: task.clientId || task.id });
+                                } else if (task.type === 'AUTOMATIC ALERT') {
+                                  onNavigate('planning', { clientId: task.clientId || task.id });
+                                } else {
+                                  onNavigate('create-task', { taskId: task.id });
+                                }
+                              }}
+                              className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${config.borderInactive}`}
+                            >
+                              <div className="flex items-start gap-3 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start mb-2 gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      {task.type === 'AUTOMATIC ALERT' && <AlertTriangle className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
+                                      {task.type === 'WEEKLY CHECK-IN' && <ClipboardCheck className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
+                                      {task.type === 'MISSING PLAN' && <FileText className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
+                                      {task.type !== 'AUTOMATIC ALERT' && task.type !== 'WEEKLY CHECK-IN' && task.type !== 'MISSING PLAN' && <MessageSquare className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
+                                      <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${config.textIcon}`}>
+                                        {task.type}: {task.label}
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                                <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1 truncate">{task.title}</h3>
-                                <p className="text-xs sm:text-sm text-slate-500 mb-4 line-clamp-2">{task.desc}</p>
-                                <div className="flex items-center justify-between gap-4">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full" referrerPolicy="no-referrer" />}
-                                    <span className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">{task.client}</span>
-                                    <span className="text-[11px] sm:text-xs text-slate-400 shrink-0">•</span>
-                                    <span className="text-[11px] sm:text-xs text-slate-400 truncate">{task.program}</span>
+                                  <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1 truncate">{task.title}</h3>
+                                  <p className="text-xs sm:text-sm text-slate-500 mb-4 line-clamp-2">{task.desc}</p>
+                                  <div className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full" referrerPolicy="no-referrer" />}
+                                      <span className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">{task.client}</span>
+                                      <span className="text-[11px] sm:text-xs text-slate-400 shrink-0">•</span>
+                                      <span className="text-[11px] sm:text-xs text-slate-400 truncate">{task.program}</span>
+                                    </div>
+                                    {!isCompleted && (
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          markTaskAsDone(task.id);
+                                        }}
+                                        className={`w-12 h-12 ${config.dotFill} text-white rounded-full flex items-center justify-center hover:scale-110 hover:brightness-110 transition-all shadow-lg active:scale-95 cursor-pointer group/btn`}
+                                        title="Mark as complete"
+                                      >
+                                        <CheckCircle2 className="w-6 h-6 group-hover/btn:scale-110 transition-transform" />
+                                      </button>
+                                    )}
                                   </div>
-                                  {!isCompleted && (
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        markTaskAsDone(task.id);
-                                      }}
-                                      className={`w-12 h-12 ${config.dotFill} text-white rounded-full flex items-center justify-center hover:scale-110 hover:brightness-110 transition-all shadow-lg active:scale-95 cursor-pointer group/btn`}
-                                      title="Mark as complete"
-                                    >
-                                      <CheckCircle2 className="w-6 h-6 group-hover/btn:scale-110 transition-transform" />
-                                    </button>
-                                  )}
                                 </div>
                               </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
                     </div>
                   </section>
                 );
