@@ -16,6 +16,8 @@ export interface CalendarEvent {
   avatar?: string | null;
   initials?: string;
   clientId?: string; // Optional reference to actual client
+  status: 'pending' | 'completed' | 'in_progress';
+  linkUrl?: string;
 }
 
 interface CalendarContextType {
@@ -37,7 +39,8 @@ const defaultEvents: CalendarEvent[] = [
     title: 'Sarah Jenkins: Morning Check-in',
     type: 'Video Call',
     client: 'Sarah Jenkins',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop'
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
+    status: 'completed'
   },
   {
     id: '2',
@@ -47,7 +50,8 @@ const defaultEvents: CalendarEvent[] = [
     title: 'Mike K: Plan Update',
     type: 'Training',
     client: 'Mike K.',
-    initials: 'MK'
+    initials: 'MK',
+    status: 'pending'
   },
   {
     id: '3',
@@ -57,7 +61,8 @@ const defaultEvents: CalendarEvent[] = [
     title: 'Follow-up: Diet Plan Review',
     type: 'In-Person',
     client: 'Mike Ross',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop'
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
+    status: 'pending'
   },
   {
     id: '4',
@@ -68,7 +73,8 @@ const defaultEvents: CalendarEvent[] = [
     type: 'Training Analysis',
     client: 'Alice L',
     initials: 'AL',
-    desc: "Review squat form videos and adjust next week's progressive overload targets. Check adherence to RPE."
+    desc: "Review squat form videos and adjust next week's progressive overload targets. Check adherence to RPE.",
+    status: 'pending'
   }
 ];
 
@@ -94,7 +100,9 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       client: clientName,
       avatar: t.avatar || (t.users?.email ? `https://ui-avatars.com/api/?name=${t.users.email}&background=random` : null),
       initials: t.initials || (clientName !== 'General' ? clientName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'GT'),
-      clientId: t.client_id || t.clientId
+      clientId: t.client_id || t.clientId,
+      status: t.status || 'pending',
+      linkUrl: t.link_url || t.linkUrl || ''
     };
   };
 
@@ -127,7 +135,8 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
           end_time: event.endTime,
           duration: event.duration || '1h',
           client_id: event.clientId,
-          status: 'pending'
+          status: event.status || 'pending',
+          link_url: event.linkUrl
         })
       });
       const mapped = mapBackendToFrontend(newEvent);
@@ -162,7 +171,8 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
           end_time: updates.endTime,
           duration: updates.duration,
           client_id: updates.clientId,
-          status: 'pending'
+          status: updates.status || 'pending',
+          link_url: updates.linkUrl
         })
       });
       const mapped = mapBackendToFrontend(updatedEvent);

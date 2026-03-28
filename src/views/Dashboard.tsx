@@ -16,8 +16,9 @@ import {
   Zap
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
-import { useCalendar, getEventPresentationInfo } from '../context/CalendarContext';
+import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
 import { useClient } from '../context/ClientContext';
+import { CheckCircle2 } from 'lucide-react';
 
 interface DashboardProps {
   onNavigate: (view: string, data?: { clientId?: string; checkInId?: string }) => void;
@@ -25,7 +26,7 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { tasks } = useTask();
-  const { getEventsForDate } = useCalendar();
+  const { getEventsForDate, updateEvent } = useCalendar();
   const { clients } = useClient();
   const [activity, setActivity] = useState<any[]>([]);
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
@@ -182,25 +183,41 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               )}
               {scheduleItems.map((item) => {
                 const info = getEventPresentationInfo(item.type);
-                const EventIcon = info.icon;
                 return (
-                <div key={item.id} className="flex gap-4">
-                  <div className="w-16 flex flex-col items-end pt-1 shrink-0">
-                    <span className="text-sm font-bold text-slate-700">{item.time.split(' ')[0]}</span>
-                    <span className="text-xs text-slate-400">{item.time.includes(' ') ? item.time.split(' ')[1] : ''}</span>
-                  </div>
-                  <div className={`flex-1 p-4 rounded-xl border-l-4 ${info.color} relative border-t border-r border-b border-r-slate-100 border-t-slate-100 border-b-slate-100 shadow-sm transition-all`}>
-                    <h4 className="font-bold text-slate-800 text-sm truncate mr-10">{item.title}</h4>
-                    <p className="text-slate-600 text-xs mt-1 truncate">with {item.client || item.initials} • {item.type}</p>
-                    <div className="absolute top-4 right-4">
-                       {item.avatar ? (
-                         <div className="w-8 h-8 rounded-full bg-cover bg-center border-2 border-white shadow-sm" style={{ backgroundImage: `url("${item.avatar}")` }} />
-                       ) : (
-                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 font-bold text-xs border-2 border-slate-100">{item.initials}</div>
-                       )}
+                  <div key={item.id} className="flex gap-4 group/item">
+                    <div className="w-16 flex flex-col items-end pt-1 shrink-0">
+                      <span className="text-sm font-bold text-slate-700">{item.time.split(' ')[0]}</span>
+                      <span className="text-xs text-slate-400">{item.time.includes(' ') ? item.time.split(' ')[1] : ''}</span>
+                    </div>
+                    <div 
+                      onClick={() => onNavigate('calendar')}
+                      className={`flex-1 p-4 rounded-xl border-l-4 ${info.color} relative border-t border-r border-b border-r-slate-100 border-t-slate-100 border-b-slate-100 shadow-sm transition-all cursor-pointer hover:shadow-md ${item.status === 'completed' ? 'opacity-60 grayscale' : ''}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="min-w-0 flex-1">
+                          <h4 className={`font-bold text-sm truncate mr-2 ${item.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'}`}>{item.title}</h4>
+                          <p className={`text-xs mt-1 truncate ${item.status === 'completed' ? 'text-slate-300' : 'text-slate-600'}`}>with {item.client || item.initials} • {item.type}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newStatus = item.status === 'completed' ? 'pending' : 'completed';
+                              updateEvent(item.id, { status: newStatus });
+                            }}
+                            className={`p-1.5 rounded-lg transition-all ${item.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-white text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 border border-slate-100'}`}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                          {item.avatar ? (
+                            <div className="w-8 h-8 rounded-full bg-cover bg-center border-2 border-white shadow-sm shrink-0" style={{ backgroundImage: `url("${item.avatar}")` }} />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 font-bold text-xs border-2 border-slate-100 shrink-0">{item.initials}</div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>
