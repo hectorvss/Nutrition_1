@@ -125,10 +125,6 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
             <ClipboardList className="w-4 h-4" />
             Check-in Templates
           </button>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all">
-            <Download className="w-4 h-4" />
-            Export Report
-          </button>
         </div>
       </div>
 
@@ -246,13 +242,9 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                     <p className="text-xs font-bold text-slate-600">{client.submitted}</p>
                   </div>
                   <div className="flex items-center gap-6">
-                    <div className="text-center">
+                    <div className="text-center min-w-[60px]">
                       <p className="text-lg font-bold text-slate-900">{client.weight}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase">Weight</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-slate-900">{client.nutritionAdherence || '--'}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Nutrition</p>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-all">
                       <ChevronRight className="w-5 h-5" />

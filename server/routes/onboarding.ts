@@ -3,6 +3,60 @@ import { supabaseAdmin } from '../db/index.js';
 
 const router = Router();
 
+const FIXED_ONBOARDING_QUESTIONS = [
+  {
+    id: 'core_info',
+    title: 'Core Information',
+    subtitle: 'Basic data for your profile',
+    type: 'info_card',
+    questions: [
+      { id: 'height', title: 'Current Height (cm)', type: 'number', unit: 'cm', required: true },
+      { id: 'weight', title: 'Current Weight (kg)', type: 'number', unit: 'kg', required: true },
+      { id: 'goal', title: 'Primary Goal', type: 'text', required: true },
+      { id: 'target_weight', title: 'Target Weight (kg)', type: 'number', unit: 'kg', required: false },
+      { id: 'body_fat', title: 'Estimated Body Fat %', type: 'number', unit: '%', required: false }
+    ]
+  },
+  {
+    id: 'dietary_info',
+    title: 'Dietary & Health',
+    subtitle: 'Nutritional preferences and health status',
+    type: 'info_card',
+    questions: [
+      { id: 'dietary_style', title: 'Dietary Style', type: 'select', options: ['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Omnivore', 'No preference'], required: true },
+      { id: 'allergies', title: 'Allergies / Intolerances', type: 'long_text', required: true, placeholder: 'List any allergies or intolerances...' },
+      { id: 'supplementation', title: 'Current Supplementation', type: 'long_text', required: false, placeholder: 'List supplements you are currently taking...' }
+    ]
+  },
+  {
+    id: 'measurements_step',
+    title: 'Initial Measurements',
+    subtitle: 'Base metrics for progress tracking',
+    questions: [
+      {
+        id: 'initial_measurements',
+        title: 'Measurements (cm)',
+        type: 'measurement_group',
+        options: ['waist', 'hip', 'thigh_r', 'arm_r']
+      }
+    ]
+  }
+];
+
+const injectFixedQuestions = (schema: any[]) => {
+  // Ensure we don't duplicate questions if the manager already added them with same IDs
+  const fixedIds = new Set(FIXED_ONBOARDING_QUESTIONS.flatMap(s => [s.id, ...(s.questions?.map(q => q.id) || [])]));
+  const customSchema = (schema || []).filter(step => {
+     if (fixedIds.has(step.id)) return false;
+     // Deep check questions
+     if (step.questions) {
+        step.questions = step.questions.filter((q: any) => !fixedIds.has(q.id));
+     }
+     return true;
+  });
+  return [...FIXED_ONBOARDING_QUESTIONS, ...customSchema];
+};
+
 // Middleware to verify if the user is a CLIENT
 const verifyClient = async (req: any, res: any, next: any) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -236,6 +290,9 @@ router.get('/client/active', verifyClient, async (req: any, res) => {
       .maybeSingle();
 
     if (error) throw error;
+    if (data && (data as any).template) {
+       (data as any).template.template_schema = injectFixedQuestions((data as any).template.template_schema);
+    }
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: 'Server error' });
@@ -265,6 +322,10 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
       const height = answers.height || answers.Height || answers['Current Height'];
       const allergies = answers.allergies || answers.Allergies || answers['Do you have any allergies?'];
 
+      const targetWeight = answers.target_weight || answers['Target Weight'];
+      const bodyFat = answers.body_fat || answers['Body Fat %'];
+      const diet = answers.dietary_style || answers['Dietary Style'];
+
       if (weight) updates.weight = Number(weight) || 0;
       if (goal) updates.goal = goal;
       if (height) updates.height = Number(height) || 0;
@@ -280,6 +341,9 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
         const newMetadata = { ...(profile?.metadata || {}) };
         if (allergies) newMetadata.allergies = Array.isArray(allergies) ? allergies : [allergies];
         if (supplementation) newMetadata.supplementation = Array.isArray(supplementation) ? supplementation : [supplementation];
+        if (targetWeight) newMetadata.target_weight = targetWeight;
+        if (bodyFat) newMetadata.body_fat = bodyFat;
+        if (diet) newMetadata.dietary_style = diet;
         
         // Initial Measurements
         const m = {
