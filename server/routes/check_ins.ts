@@ -19,14 +19,10 @@ const FIXED_CHECKIN_QUESTIONS = [
     ]
   },
   {
-    id: 'macros_step',
-    title: 'Plan Adherence',
-    subtitle: 'Nutrition and macro tracking',
+    id: 'nutrition_adherence_step',
+    title: 'Nutrition Adherence',
+    subtitle: 'How consistently did you follow your fuel plan?',
     questions: [
-      { id: 'protein', title: 'Avg. Daily Protein (g)', type: 'number', unit: 'g', required: true },
-      { id: 'carbs', title: 'Avg. Daily Carbs (g)', type: 'number', unit: 'g', required: true },
-      { id: 'fats', title: 'Avg. Daily Fats (g)', type: 'number', unit: 'g', required: true },
-      { id: 'calories', title: 'Avg. Daily Calories (kcal)', type: 'number', unit: 'kcal', required: true },
       {
         id: 'adherence_score',
         type: 'slider',
@@ -35,7 +31,18 @@ const FIXED_CHECKIN_QUESTIONS = [
         required: true,
         is_fixed: true,
         meta: { min: 1, max: 10, step: 1 }
-      },
+      }
+    ]
+  },
+  {
+    id: 'macros_step',
+    title: 'Macros & Fatigue',
+    subtitle: 'Nutrition and recovery tracking',
+    questions: [
+      { id: 'protein', title: 'Avg. Daily Protein (g)', type: 'number', unit: 'g', required: true },
+      { id: 'carbs', title: 'Avg. Daily Carbs (g)', type: 'number', unit: 'g', required: true },
+      { id: 'fats', title: 'Avg. Daily Fats (g)', type: 'number', unit: 'g', required: true },
+      { id: 'calories', title: 'Avg. Daily Calories (kcal)', type: 'number', unit: 'kcal', required: true },
       { id: 'fatigue', title: 'Fatigue Level (1-10)', type: 'select', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], required: true }
     ]
   }
@@ -43,8 +50,12 @@ const FIXED_CHECKIN_QUESTIONS = [
 
 const injectFixedQuestions = (schema: any[]) => {
   const fixedIds = new Set(FIXED_CHECKIN_QUESTIONS.flatMap(s => [s.id, ...(s.questions?.map(q => q.id) || [])]));
+  const fixedTitles = new Set(FIXED_CHECKIN_QUESTIONS.map(s => s.title));
+
   const customSchema = (schema || []).filter(step => {
-     if (fixedIds.has(step.id)) return false;
+     // Filter out steps that match fixed IDs or Titles
+     if (fixedIds.has(step.id) || fixedTitles.has(step.title)) return false;
+     
      if (step.questions) {
         step.questions = step.questions.filter((q: any) => !fixedIds.has(q.id));
      }
