@@ -13,7 +13,8 @@ import {
   Check, 
   Video, 
   MapPin,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
@@ -30,9 +31,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { clients } = useClient();
   const [activity, setActivity] = useState<any[]>([]);
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadAnalytics = async () => {
+      setLoading(true);
       try {
         const data = await fetchWithAuth('/manager/analytics');
         if (data.recentActivity) {
@@ -43,6 +46,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         }
       } catch (error) {
         console.error('Failed to load analytics:', error);
+      } finally {
+        setLoading(false);
       }
     };
     loadAnalytics();
@@ -123,10 +128,15 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-500">{combinedAttention.length} Items</span>
             </div>
             <div className="divide-y divide-slate-100">
-              {combinedAttention.length === 0 && (
-                <div className="p-8 text-center text-slate-500">No pending attention tasks! Great job.</div>
-              )}
-              {combinedAttention.slice(0, 5).map((item) => (
+              {loading ? (
+                <div className="p-12 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Items...</p>
+                </div>
+              ) : combinedAttention.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 italic">No pending attention tasks! Great job.</div>
+              ) : null}
+              {!loading && combinedAttention.slice(0, 5).map((item) => (
                 <div 
                   key={item.id} 
                   className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
@@ -246,33 +256,42 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-[520px]">
             <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">Latest Updates</h3>
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 py-2">
-              {activity.map((update, idx) => {
-                const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'MESSAGE' ? Send : (update.type === 'NEW_CLIENT' ? UserPlus : Check));
-                return (
-                  <div 
-                    key={idx} 
-                    onClick={() => {
-                        if (update.type === 'CHECK_IN') onNavigate('check-ins', { clientId: update.clientId, checkInId: update.checkInId });
-                        else if (update.type === 'MESSAGE') onNavigate('messages', { clientId: update.clientId });
-                    }}
-                    className={`flex gap-4 relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden py-1 ${ (update.type === 'CHECK_IN' || update.type === 'MESSAGE') ? 'cursor-pointer hover:bg-slate-50 p-2 -m-2 rounded-xl transition-colors' : ''}`}
-                  >
-                    <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 pt-0.5">
-                      <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{update.title}</span> {update.sub}</p>
-                      <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                        <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                        {update.time}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-              {activity.length === 0 && (
-                <p className="text-sm text-slate-500 italic">No recent activity found.</p>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 py-2 relative">
+              {loading ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fetching Updates...</p>
+                </div>
+              ) : (
+                <>
+                  {activity.map((update, idx) => {
+                    const Icon = update.type === 'CHECK_IN' ? FilePlus : (update.type === 'MESSAGE' ? Send : (update.type === 'NEW_CLIENT' ? UserPlus : Check));
+                    return (
+                      <div 
+                        key={idx} 
+                        onClick={() => {
+                            if (update.type === 'CHECK_IN') onNavigate('check-ins', { clientId: update.clientId, checkInId: update.checkInId });
+                            else if (update.type === 'MESSAGE') onNavigate('messages', { clientId: update.clientId });
+                        }}
+                        className={`flex gap-4 relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden py-1 ${ (update.type === 'CHECK_IN' || update.type === 'MESSAGE') ? 'cursor-pointer hover:bg-slate-50 p-2 -m-2 rounded-xl transition-colors' : ''}`}
+                      >
+                        <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 pt-0.5">
+                          <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{update.title}</span> {update.sub}</p>
+                          <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                            {update.time}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {activity.length === 0 && (
+                    <p className="text-sm text-slate-500 italic">No recent activity found.</p>
+                  )}
+                </>
               )}
             </div>
             <button 
