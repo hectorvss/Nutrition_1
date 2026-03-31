@@ -118,6 +118,28 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
        if (!isVisible) return null;
     }
 
+    if (q.type === 'slider') {
+      const val = answers[q.id];
+      return (
+        <div key={q.id} className="w-full space-y-3">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{q.title}</p>
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#17cf54] text-white flex items-center justify-center text-xl font-black shadow-lg shadow-emerald-500/20">
+                   {val || '—'}
+                </div>
+                <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                   <div 
+                     className="h-full bg-[#17cf54]" 
+                     style={{ width: val ? `${(val / (q.meta?.max || 10)) * 100}%` : '0%' }}
+                   />
+                </div>
+             </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <InfoField 
         key={q.id} 

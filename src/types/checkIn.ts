@@ -6,7 +6,8 @@ export type CheckInStepType =
   | 'number'
   | 'info_card'
   | 'measurement_group'
-  | 'photo_group';
+  | 'photo_group'
+  | 'slider';
 
 export interface CheckInQuestion {
   id: string;
@@ -14,6 +15,7 @@ export interface CheckInQuestion {
   title: string;
   subtitle?: string;
   required?: boolean;
+  is_fixed?: boolean;
   options?: string[];
   placeholder?: string;
   unit?: string;

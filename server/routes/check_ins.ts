@@ -27,7 +27,15 @@ const FIXED_CHECKIN_QUESTIONS = [
       { id: 'carbs', title: 'Avg. Daily Carbs (g)', type: 'number', unit: 'g', required: true },
       { id: 'fats', title: 'Avg. Daily Fats (g)', type: 'number', unit: 'g', required: true },
       { id: 'calories', title: 'Avg. Daily Calories (kcal)', type: 'number', unit: 'kcal', required: true },
-      { id: 'adherence_score', title: 'Plan Adherence (1-10)', type: 'select', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], required: true },
+      {
+        id: 'adherence_score',
+        type: 'slider',
+        title: 'Plan Adherence',
+        subtitle: 'On a scale of 1-10, how closely did you follow the plan?',
+        required: true,
+        is_fixed: true,
+        meta: { min: 1, max: 10, step: 1 }
+      },
       { id: 'fatigue', title: 'Fatigue Level (1-10)', type: 'select', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], required: true }
     ]
   }
@@ -823,7 +831,9 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
         carbs: answers.carbs || answers.Carbs,
         fats: answers.fats || answers.Fats,
         calories: answers.calories || answers.Calories,
-        adherence_score: answers.adherence_score || answers['Plan Adherence'],
+        adherence_score: answers.adherence_score !== undefined 
+          ? Number(answers.adherence_score) * 10 
+          : (answers['Plan Adherence'] || 0),
         fatigue: answers.fatigue || answers.Fatigue
       };
 
