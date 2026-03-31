@@ -122,7 +122,11 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string, isPermanent?: boolean) => {
+    if (isPermanent) {
+      alert('Permanent templates cannot be deleted.');
+      return;
+    }
     const message = `Are you sure you want to remove "${name}"?
 It will be archived if it has active submissions.`;
     if (!confirm(message)) return;
@@ -227,7 +231,11 @@ It will be archived if it has active submissions.`;
                   )}
                   <div className="relative group/menu">
                     <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                      <MoreVertical className="w-5 h-5" />
+                      {template.is_permanent ? (
+                        <Check className="w-5 h-5 text-emerald-500" />
+                      ) : (
+                        <MoreVertical className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -254,10 +262,14 @@ It will be archived if it has active submissions.`;
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{template.name}</h3>
                   <button 
-                    onClick={() => { setRenamingId(template.id); setNewName(template.name); }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 transition-all"
+                    onClick={() => { 
+                      if (template.is_permanent) return;
+                      setRenamingId(template.id); 
+                      setNewName(template.name); 
+                    }}
+                    className={`opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 transition-all ${template.is_permanent ? 'cursor-not-allowed' : ''}`}
                   >
-                    <Edit2 className="w-3.5 h-3.5" />
+                    {template.is_permanent ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Edit2 className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               )}
@@ -306,9 +318,14 @@ It will be archived if it has active submissions.`;
                     <Copy className="w-4 h-4" />
                   </button>
                   <button 
-                    onClick={() => handleDelete(template.id, template.name)}
-                    className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-all"
-                    title="Delete / Archive"
+                    onClick={() => handleDelete(template.id, template.name, !!template.is_permanent)}
+                    disabled={template.is_permanent}
+                    className={`p-2.5 bg-white border border-slate-200 rounded-xl transition-all ${
+                      template.is_permanent 
+                        ? 'opacity-40 cursor-not-allowed grayscale' 
+                        : 'text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-500'
+                    }`}
+                    title={template.is_permanent ? 'Permanent template' : 'Delete / Archive'}
                   >
                     <Archive className="w-4 h-4" />
                   </button>

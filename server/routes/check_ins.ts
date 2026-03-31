@@ -24,7 +24,7 @@ const FIXED_CHECKIN_QUESTIONS = [
     subtitle: 'How consistently did you follow your fuel plan?',
     questions: [
       {
-        id: 'adherence_score',
+        id: 'nutrition_adherence_score',
         type: 'slider',
         title: 'Plan Adherence',
         subtitle: 'On a scale of 1-10, how closely did you follow the plan?',
@@ -842,8 +842,8 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
         carbs: answers.carbs || answers.Carbs,
         fats: answers.fats || answers.Fats,
         calories: answers.calories || answers.Calories,
-        adherence_score: answers.adherence_score !== undefined 
-          ? Number(answers.adherence_score) * 10 
+        adherence_score: (answers.nutrition_adherence_score !== undefined || answers.adherence_score !== undefined)
+          ? Number(answers.nutrition_adherence_score ?? answers.adherence_score) * 10 
           : (answers['Plan Adherence'] || 0),
         fatigue: answers.fatigue || answers.Fatigue
       };
