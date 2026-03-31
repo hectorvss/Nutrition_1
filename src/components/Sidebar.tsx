@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProfile } from '../context/ProfileContext';
+import { fetchWithAuth } from '../api';
 
 import { 
   LayoutDashboard, 
@@ -24,6 +25,22 @@ interface SidebarProps {
 
 export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: SidebarProps & { isOpen?: boolean, onClose?: () => void }) {
   const { profile } = useProfile();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const data = await fetchWithAuth('/messages/unread-count');
+        setUnreadCount(data?.unreadCount || 0);
+      } catch (e) {
+        // ignore errors silently
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   const menuGroups = [
     {
       title: 'Core',
@@ -132,9 +149,14 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                      (item.id === 'exercises' && ['exercise-create'].includes(currentView)))
                      ? 'text-emerald-600' : 'text-slate-400 group-hover:text-emerald-500'
                   }`} />
-                  <span className={`text-sm ${currentView === item.id ? 'font-bold' : 'font-medium'}`}>
+                  <span className={`text-sm flex-1 text-left ${currentView === item.id ? 'font-bold' : 'font-medium'}`}>
                     {item.label}
                   </span>
+                  {item.id === 'messages' && unreadCount > 0 && (
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-md shadow-emerald-500/30">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

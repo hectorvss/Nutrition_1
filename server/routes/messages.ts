@@ -45,6 +45,24 @@ initStorage();
 
 router.use(authenticate);
 
+// Get total unread messages count
+router.get('/unread-count', async (req: any, res) => {
+  const userId = req.user.id;
+  try {
+    const { count, error } = await supabaseAdmin
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+    res.json({ unreadCount: count || 0 });
+  } catch (error: any) {
+    console.error('Error fetching unread count:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * Get the latest message for each conversation involving the current user.
  * This is used for the inbox view to show previews and sort by recency.

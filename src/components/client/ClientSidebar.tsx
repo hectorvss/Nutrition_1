@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClientView } from '../../ClientApp';
+import { fetchWithAuth } from '../../api';
 
 interface ClientSidebarProps {
   currentView: ClientView;
@@ -21,6 +22,22 @@ const navItems = [
 ];
 
 export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose, showOnboardingReminder, onOpenOnboarding }: ClientSidebarProps) {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const data = await fetchWithAuth('/messages/unread-count');
+        setUnreadCount(data?.unreadCount || 0);
+      } catch (e) {
+        // ignore silently
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -67,7 +84,12 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
                 }`}
               >
                 <span className="material-symbols-outlined">{item.icon}</span>
-                {item.label}
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.id === 'messages' && unreadCount > 0 && (
+                  <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#17cf54] text-white text-[10px] font-bold shadow-md shadow-[#17cf54]/30">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
             );
           })}
