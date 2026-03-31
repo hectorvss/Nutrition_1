@@ -27,7 +27,7 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const data = await fetchWithAuth('/messages/unread-count');
+        const data = await fetchWithAuth(`/messages/unread-count?t=${new Date().getTime()}`);
         setUnreadCount(data?.unreadCount || 0);
       } catch (e) {
         // ignore silently
