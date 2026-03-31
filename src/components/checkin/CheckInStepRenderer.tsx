@@ -120,6 +120,40 @@ export default function CheckInStepRenderer({
             </div>
           );
 
+        case 'slider':
+          const min = q.meta?.min ?? 1;
+          const max = q.meta?.max ?? 10;
+          const stepVal = q.meta?.step ?? 1;
+          const currentValue = value || min;
+
+          return (
+            <div key={q.id} className="space-y-6">
+              <div className="flex justify-between items-end">
+                <FieldLabel>{q.title}</FieldLabel>
+                <div className="bg-[#17cf54] text-white px-4 py-1 rounded-full text-xl font-black shadow-lg shadow-emerald-500/20">
+                  {currentValue}
+                </div>
+              </div>
+              <div className="relative pt-6 pb-2">
+                <input 
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={stepVal}
+                  value={currentValue}
+                  disabled={isEditMode}
+                  onChange={e => !isEditMode && onUpdateAnswer(q.id, Number(e.target.value))}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#17cf54]"
+                />
+                <div className="flex justify-between mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span>{min}</span>
+                  <span>{Math.round((min + max) / 2)}</span>
+                  <span>{max}</span>
+                </div>
+              </div>
+            </div>
+          );
+
         case 'photo_group':
           return (
             <div key={q.id} className="grid grid-cols-1 md:grid-cols-3 gap-6">

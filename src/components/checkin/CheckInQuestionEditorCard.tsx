@@ -13,7 +13,9 @@ import {
   Info,
   Camera,
   Ruler,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Sliders,
+  Lock
 } from 'lucide-react';
 import { CheckInQuestion, CheckInStepType } from '../../types/checkIn';
 import { useTheme } from '../../context/ThemeContext';
@@ -34,6 +36,7 @@ const QUESTION_TYPES: { id: CheckInStepType; label: string; icon: any; color: st
   { id: 'info_card', label: 'Information', icon: <Info className="w-4 h-4" />, color: 'slate' },
   { id: 'photo_group', label: 'Photo Module', icon: <Camera className="w-4 h-4" />, color: 'rose' },
   { id: 'measurement_group', label: 'Measurements', icon: <Ruler className="w-4 h-4" />, color: 'cyan' },
+  { id: 'slider', label: 'Slider (1-10)', icon: <Sliders className="w-4 h-4" />, color: 'emerald' },
 ];
 
 export default function CheckInQuestionEditorCard({ 
@@ -76,39 +79,53 @@ export default function CheckInQuestionEditorCard({
              </div>
           </div>
           <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-3">
+              <input 
+                type="text" 
+                readOnly={question.is_fixed}
+                value={question.title}
+                onChange={(e) => onUpdate({ title: e.target.value })}
+                placeholder="Question Title..."
+                className={`w-full bg-transparent border-none p-0 text-xl font-bold text-slate-900 dark:text-white focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200 tracking-tight ${question.is_fixed ? 'cursor-default' : ''}`}
+              />
+              {question.is_fixed && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700">
+                  <Lock className="w-3 h-3" />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Fixed</span>
+                </div>
+              )}
+            </div>
             <input 
               type="text" 
-              value={question.title}
-              onChange={(e) => onUpdate({ title: e.target.value })}
-              placeholder="Question Title..."
-              className="w-full bg-transparent border-none p-0 text-xl font-bold text-slate-900 dark:text-white focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200 tracking-tight"
-            />
-            <input 
-              type="text" 
+              readOnly={question.is_fixed}
               value={question.subtitle || ''}
               onChange={(e) => onUpdate({ subtitle: e.target.value })}
               placeholder="Add an optional instruction or description..."
-              className="w-full bg-transparent border-none p-0 text-sm font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200"
+              className={`w-full bg-transparent border-none p-0 text-sm font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200 ${question.is_fixed ? 'cursor-default' : ''}`}
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2 opacity-0 group-hover/q:opacity-100 transition-opacity">
-          <button 
-            onClick={onDuplicate}
-            style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
-            className="p-3 rounded-2xl transition-all hover:scale-105"
-            title="Duplicate Question"
-          >
-            <Copy className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={onDelete}
-            className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all"
-            title="Delete Question"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
+          {!question.is_fixed && (
+            <>
+              <button 
+                onClick={onDuplicate}
+                style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
+                className="p-3 rounded-2xl transition-all hover:scale-105"
+                title="Duplicate Question"
+              >
+                <Copy className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={onDelete}
+                className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all"
+                title="Delete Question"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -235,6 +252,19 @@ export default function CheckInQuestionEditorCard({
              ))}
           </div>
         )}
+
+        {/* Render Slider Preview */}
+        {question.type === 'slider' && (
+          <div className="space-y-4 py-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Slider Preview (1-10)</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">5</div>
+            </div>
+            <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full relative">
+              <div className="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-emerald-500 rounded-full shadow-sm" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer Area: Type Selector & Settings */}
@@ -242,15 +272,17 @@ export default function CheckInQuestionEditorCard({
         <div className="relative">
           <button 
             id={`type-selector-${question.id}`}
-            onClick={() => setShowTypeSelector(!showTypeSelector)}
-            style={{ backgroundColor: settings.theme_color }}
-            className="flex items-center justify-between gap-3 px-8 py-3.5 min-w-[280px] rounded-2xl text-white text-xs font-bold uppercase tracking-widest hover:scale-[1.02] transition-all shadow-xl shadow-brand-primary/20 active:scale-95 z-30"
+            disabled={question.is_fixed}
+            onClick={() => !question.is_fixed && setShowTypeSelector(!showTypeSelector)}
+            style={{ backgroundColor: settings.theme_color, opacity: question.is_fixed ? 0.7 : 1 }}
+            className={`flex items-center justify-between gap-3 px-8 py-3.5 min-w-[280px] rounded-2xl text-white text-xs font-bold uppercase tracking-widest transition-all shadow-xl shadow-brand-primary/20 z-30 ${question.is_fixed ? 'cursor-default' : 'hover:scale-[1.02] active:scale-95'}`}
           >
             <div className="flex items-center gap-3">
               {activeType.icon}
               <span>{activeType.label}</span>
             </div>
-            <ChevronDown className={`w-4 h-4 transition-transform ${showTypeSelector ? 'rotate-180' : ''}`} />
+            {!question.is_fixed && <ChevronDown className={`w-4 h-4 transition-transform ${showTypeSelector ? 'rotate-180' : ''}`} />}
+            {question.is_fixed && <Lock className="w-3 h-3 opacity-60" />}
           </button>
 
           <AnimatePresence>
