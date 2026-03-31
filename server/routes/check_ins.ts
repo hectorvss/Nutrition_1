@@ -753,6 +753,57 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
       .single();
 
     if (error) throw error;
+
+    // --- Sync Fixed Questions to Profile ---
+    try {
+      const answers = answers_json as any;
+      const updates: any = {};
+      
+      // Look for weight & macros
+      const weight = answers.weight || answers.Weight || answers['Current Weight'];
+      if (weight) updates.weight = Number(weight) || 0;
+
+      // Extract Measurements
+      const measurements = {
+        waist: answers.waist || answers.Waist || answers['Waist (cm)'],
+        hip: answers.hip || answers.Hip || answers['Hip (cm)'],
+        thigh_r: answers.thigh_r || answers.Thigh || answers['Right Thigh (cm)'],
+        arm_r: answers.arm_r || answers.Arm || answers['Right Arm (cm)']
+      };
+
+      const hasMeasurements = Object.values(measurements).some(v => v !== undefined && v !== null);
+      
+      if (hasMeasurements) {
+          // Get current metadata
+          const { data: profile } = await supabaseAdmin
+            .from('clients_profiles')
+            .select('metadata')
+            .eq('user_id', clientId)
+            .single();
+          
+          const currentMetadata = (profile as any)?.metadata || {};
+          const prevMeasurements = currentMetadata.measurements || {};
+
+          // Update profile
+          await supabaseAdmin
+            .from('clients_profiles')
+            .update({ 
+               ...updates, 
+               metadata: { 
+                 ...currentMetadata, 
+                 measurements: { ...prevMeasurements, ...measurements } 
+               } 
+            })
+            .eq('user_id', clientId);
+      } else if (Object.keys(updates).length > 0) {
+        await supabaseAdmin
+          .from('clients_profiles')
+          .update(updates)
+          .eq('user_id', clientId);
+      }
+    } catch (syncErr) {
+      console.error('Error syncing check-in data to profile:', syncErr);
+    }
     
     // 3. Trigger automations (need manager_id)
     const { data: clientData } = await supabaseAdmin

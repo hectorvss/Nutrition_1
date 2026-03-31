@@ -252,6 +252,59 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
       .select().single();
 
     if (error) throw error;
+
+    // --- Sync Fixed Questions to Profile ---
+    try {
+      const answers = answers_json as any;
+      const updates: any = {};
+      
+      // Look for weight/goal
+      const weight = answers.weight || answers.Weight || answers['Current Weight'];
+      const goal = answers.goal || answers.Goal || answers['Primary Goal'];
+      const supplementation = answers.supplementation || answers.Supplementation || answers['Are you taking any supplements?'];
+      const height = answers.height || answers.Height || answers['Current Height'];
+      const allergies = answers.allergies || answers.Allergies || answers['Do you have any allergies?'];
+
+      if (weight) updates.weight = Number(weight) || 0;
+      if (goal) updates.goal = goal;
+      if (height) updates.height = Number(height) || 0;
+      
+      if (allergies || supplementation) {
+        // Fetch current metadata to avoid overwriting other fields
+        const { data: profile } = await supabaseAdmin
+          .from('clients_profiles')
+          .select('metadata')
+          .eq('user_id', clientId)
+          .single();
+        
+        const newMetadata = { ...(profile?.metadata || {}) };
+        if (allergies) newMetadata.allergies = Array.isArray(allergies) ? allergies : [allergies];
+        if (supplementation) newMetadata.supplementation = Array.isArray(supplementation) ? supplementation : [supplementation];
+        
+        // Initial Measurements
+        const m = {
+          waist: answers.waist || answers.Waist || answers['Waist (cm)'],
+          hip: answers.hip || answers.Hip || answers['Hip (cm)'],
+          thigh_r: answers.thigh_r || answers.Thigh || answers['Right Thigh (cm)'],
+          arm_r: answers.arm_r || answers.Arm || answers['Right Arm (cm)']
+        };
+        if (Object.values(m).some(v => v !== undefined && v !== null)) {
+          newMetadata.measurements = { ...(newMetadata.measurements || {}), ...m };
+        }
+        
+        updates.metadata = newMetadata;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await supabaseAdmin
+          .from('clients_profiles')
+          .update(updates)
+          .eq('user_id', clientId);
+      }
+    } catch (syncErr) {
+      console.error('Error syncing onboarding data to profile:', syncErr);
+    }
+
     if (assignment_id) {
       await supabaseAdmin.from('client_onboarding_assignments').update({ is_active: false }).eq('id', assignment_id);
     }
