@@ -209,15 +209,31 @@ const GENERAL_CHECKIN_SCHEMA = [
 ];
 
 const injectFixedQuestions = (schema: any[]) => {
-  // ONLY filter by step ID — never by title.
-  // The user's custom 'Nutrition Adherence' step has a different ID (e.g. 'nutrition_adherence')
-  // than the fixed step ID ('nutrition_adherence_step'). Filtering by title was incorrectly
-  // replacing entire custom steps (with many questions) with the fixed step (slider only).
-  const fixedStepIds = new Set(FIXED_CHECKIN_QUESTIONS.map(s => s.id));
+  // Non-destructive injection: only add a fixed step if its question IDs
+  // are not already present ANYWHERE in the existing template.
+  // This way, the "General Check-in" (which already has the slider, measurements, etc.)
+  // passes through untouched with ALL its custom questions visible.
+  const safeSchema = schema || [];
+  
+  // Build a set of all question IDs already in the template
+  const existingQuestionIds = new Set<string>(
+    safeSchema.flatMap(step => (step.questions || []).map((q: any) => q.id))
+  );
 
-  const customSchema = (schema || []).filter(step => !fixedStepIds.has(step.id));
+  // Build a set of step IDs already in the template (to avoid duplicates)
+  const existingStepIds = new Set<string>(safeSchema.map(step => step.id));
 
-  return [...FIXED_CHECKIN_QUESTIONS, ...customSchema];
+  // Only add fixed steps whose "key questions" are completely absent
+  const stepsToInject = FIXED_CHECKIN_QUESTIONS.filter(fixedStep => {
+    // Skip if this step ID already exists in the template
+    if (existingStepIds.has(fixedStep.id)) return false;
+    // Skip if all of this step's questions are already in the template
+    const fixedQIds = (fixedStep.questions || []).map((q: any) => q.id);
+    const allPresent = fixedQIds.every((id: string) => existingQuestionIds.has(id));
+    return !allPresent;
+  });
+
+  return [...stepsToInject, ...safeSchema];
 };
 // ... (rest of the code until POST /client/check-ins)
 
