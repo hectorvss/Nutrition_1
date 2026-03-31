@@ -7,6 +7,7 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { useClient } from '../context/ClientContext';
 
 interface OnboardingHistoryProps {
   clientId: string;
@@ -15,9 +16,12 @@ interface OnboardingHistoryProps {
 }
 
 export default function OnboardingHistory({ clientId, onBack, onViewReview }: OnboardingHistoryProps) {
+  const { clients } = useClient();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [client, setClient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const contextClient = clients.find(c => c.id === clientId);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,7 +45,9 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
     fetchData();
   }, [clientId]);
 
-  const clientName = client?.full_name || 'Client';
+  const clientName = client?.full_name || contextClient?.name || 'Client';
+  const clientInitials = clientName.substring(0, 2).toUpperCase();
+  const clientAvatar = client?.avatar_url || contextClient?.avatar;
 
   if (isLoading) {
     return (
@@ -63,9 +69,18 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
 
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-           <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xl border-2 border-white shadow-md">
-            {clientName.substring(0, 2).toUpperCase()}
-          </div>
+           {clientAvatar ? (
+             <img 
+               src={clientAvatar} 
+               alt={clientName} 
+               className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md"
+               referrerPolicy="no-referrer"
+             />
+           ) : (
+             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xl border-2 border-white shadow-md">
+               {clientInitials}
+             </div>
+           )}
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{clientName}</h1>
