@@ -73,6 +73,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
   const [recipientSearch, setRecipientSearch] = useState('');
   const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
   const [showRecipientResults, setShowRecipientResults] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'unread' | 'needs_reply'>('all');
   const [favorites, setFavorites] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('chatFavorites') || '[]'); } catch { return []; }
   });
@@ -398,6 +399,19 @@ export default function Messages({ onNavigate }: MessagesProps) {
       return timeB - timeA;
     });
 
+    const unreadChatsCount = sortedClients.filter(c => {
+      const latest = latestMessages[c.id];
+      return latest && latest.unreadCount && latest.unreadCount > 0;
+    }).length;
+
+    const filteredClients = sortedClients.filter(client => {
+      const latest = latestMessages[client.id];
+      if (filterType === 'all') return true;
+      if (filterType === 'unread') return latest && latest.unreadCount && latest.unreadCount > 0;
+      if (filterType === 'needs_reply') return latest && latest.sender_id !== user?.id; // last message sent by client
+      return true;
+    });
+
     return (
       <div className="flex-1 h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden p-6 md:p-8 lg:p-10">
         <main className="w-full h-full bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden font-['Manrope',_sans-serif] flex flex-col">
@@ -425,13 +439,42 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar w-full sm:w-auto">
-                <button className="px-4 py-2 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors whitespace-nowrap">All Chats</button>
-                <button className="px-4 py-2 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2">
-                  Unread 
-                  <span className="bg-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded-md font-bold">2</span>
+                <button 
+                  onClick={() => setFilterType('all')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap ${
+                    filterType === 'all' 
+                      ? 'bg-slate-800 text-white' 
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  All Chats
                 </button>
-                <button className="px-4 py-2 rounded-2xl bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ring-2 ring-amber-100">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <button 
+                  onClick={() => setFilterType('unread')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+                    filterType === 'unread'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 ring-2 ring-emerald-100'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Unread 
+                  {unreadChatsCount > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
+                      filterType === 'unread' ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {unreadChatsCount}
+                    </span>
+                  )}
+                </button>
+                <button 
+                  onClick={() => setFilterType('needs_reply')}
+                  className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
+                    filterType === 'needs_reply'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200 ring-2 ring-amber-100'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${filterType === 'needs_reply' ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`}></span>
                   Needs Reply
                 </button>
               </div>
@@ -439,7 +482,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
           </div>
           
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {sortedClients.map((client) => {
+            {filteredClients.map((client) => {
               const latest = latestMessages[client.id];
               return (
                 <div 
