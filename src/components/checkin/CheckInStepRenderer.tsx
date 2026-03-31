@@ -44,6 +44,9 @@ export default function CheckInStepRenderer({
         if (!isVisible) return null;
       }
 
+      // 0.5 Skip Hidden Questions
+      if (q.hidden) return null;
+
       const value = answers[q.id];
       
       switch (q.type) {

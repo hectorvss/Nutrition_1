@@ -15,7 +15,9 @@ import {
   Ruler,
   Image as ImageIcon,
   Sliders,
-  Lock
+  Lock,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { CheckInQuestion, CheckInStepType } from '../../types/checkIn';
 import { useTheme } from '../../context/ThemeContext';
@@ -69,7 +71,12 @@ export default function CheckInQuestionEditorCard({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group/q p-8 space-y-8">
+    <div className={`bg-white dark:bg-slate-900 rounded-[2.5rem] border ${question.hidden ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50/30 opacity-[0.85]' : 'border-slate-100 dark:border-slate-800'} shadow-sm hover:shadow-xl transition-all group/q p-8 space-y-8 relative`}>
+      {question.hidden && (
+        <div className="absolute -top-3 right-8 px-3 py-1 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-1.5 border border-amber-200 dark:border-amber-500/30">
+          <EyeOff className="w-3 h-3" /> Hidden from Client
+        </div>
+      )}
       {/* Header Area */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-5 flex-1">
@@ -109,6 +116,13 @@ export default function CheckInQuestionEditorCard({
         <div className="flex items-center gap-2 opacity-0 group-hover/q:opacity-100 transition-opacity">
           {!question.is_fixed && (
             <>
+              <button 
+                onClick={() => onUpdate({ hidden: !question.hidden })}
+                className={`p-3 rounded-2xl transition-all hover:scale-105 ${question.hidden ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/10' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10'}`}
+                title={question.hidden ? "Show Question" : "Hide Question"}
+              >
+                {question.hidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
               <button 
                 onClick={onDuplicate}
                 style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
