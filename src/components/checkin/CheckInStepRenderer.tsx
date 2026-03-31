@@ -200,6 +200,29 @@ export default function CheckInStepRenderer({
             </div>
           );
 
+        case 'measurement_group':
+          return (
+            <div key={q.id} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {(q.options || []).map(opt => (
+                <div key={opt} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{opt}</p>
+                  <div className="relative">
+                    <input 
+                      type="number"
+                      step="0.1"
+                      placeholder="0.0"
+                      value={answers[opt] || ''}
+                      disabled={isEditMode}
+                      onChange={e => !isEditMode && onUpdateAnswer(opt, e.target.value)}
+                      className="w-full text-xl font-bold bg-transparent border-none outline-none text-slate-900 dark:text-white p-0"
+                    />
+                    <span className="absolute right-0 bottom-0 text-[10px] font-bold text-slate-300 uppercase">cm</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+
         default:
           return null;
       }
