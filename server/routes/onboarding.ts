@@ -211,7 +211,7 @@ router.get('/manager/submissions', verifyManager, async (req: any, res) => {
 
     const { data, error } = await supabaseAdmin
       .from('client_onboarding_submissions')
-      .select('*, client:profiles!client_id(full_name, avatar_url), template:onboarding_templates(name)')
+      .select('*, client:profiles!client_id(full_name, avatar_url), template:onboarding_templates(id, name, template_schema)')
       .in('client_id', clientIds)
       .order('submitted_at', { ascending: false });
 
