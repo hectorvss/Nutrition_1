@@ -65,16 +65,33 @@ router.get('/recent', async (req: any, res) => {
 
     if (error) throw error;
 
-    // Filter to get only the latest message per conversation partner
+    // Filter to get only the latest message per conversation partner and count unread
     const latestMessages: Record<string, any> = {};
+    const unreadCounts: Record<string, number> = {};
+
     messages?.forEach(msg => {
-      const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+      const isSender = msg.sender_id === userId;
+      const partnerId = isSender ? msg.receiver_id : msg.sender_id;
+      
       if (!latestMessages[partnerId]) {
         latestMessages[partnerId] = msg;
+        unreadCounts[partnerId] = 0;
+      }
+
+      if (!isSender && msg.is_read === false) {
+        unreadCounts[partnerId]++;
       }
     });
 
-    res.json(Object.values(latestMessages));
+    const recentData = Object.values(latestMessages).map(msg => {
+      const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+      return {
+        ...msg,
+        unreadCount: unreadCounts[partnerId] || 0
+      };
+    });
+
+    res.json(recentData);
   } catch (error: any) {
     console.error('Error fetching recent messages:', error);
     res.status(500).json({ error: error.message });
@@ -99,6 +116,27 @@ router.get('/:otherUserId', async (req: any, res) => {
     res.json(messages);
   } catch (error: any) {
     console.error('Error fetching messages:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mark messages from a specific conversation as read
+router.post('/:otherUserId/read', async (req: any, res) => {
+  const userId = req.user.id;
+  const { otherUserId } = req.params;
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('messages')
+      .update({ is_read: true })
+      .eq('receiver_id', userId)
+      .eq('sender_id', otherUserId)
+      .eq('is_read', false);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error marking messages as read:', error);
     res.status(500).json({ error: error.message });
   }
 });
