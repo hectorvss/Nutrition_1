@@ -616,55 +616,60 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
     const hasPermanent = (data || []).some((t: any) => t.is_permanent || t.name === 'General Check-in');
     
     if (!hasPermanent) {
-      console.log(`[CheckIn] General Check-in missing or archived for manager: ${managerId}. Checking all status...`);
+      console.log(`[CheckIn] General Check-in not found in list for manager: ${managerId}. Searching in all (including archived)...`);
       
-      // Check if it exists but is archived
-      const { data: existing, error: findError } = await supabaseAdmin
+      // Use maybeSingle() to avoid throwing on 0 rows
+      const { data: existing } = await supabaseAdmin
         .from('checkin_templates')
         .select('*')
         .eq('manager_id', managerId)
         .eq('name', 'General Check-in')
-        .single();
+        .maybeSingle();
 
-      if (existing && existing.is_archived) {
-        console.log(`[CheckIn] Found archived General Check-in. Unarchiving with full schema...`);
-        const { data: updated, error: updateError } = await supabaseAdmin
+      if (existing) {
+        // It exists but was filtered (archived or other reason) - unarchive it
+        console.log(`[CheckIn] Found existing General Check-in (id: ${existing.id}). Restoring...`);
+        const updatePayload: any = { 
+          template_schema: (existing.template_schema?.length > 0) ? existing.template_schema : GENERAL_CHECKIN_SCHEMA
+        };
+        // Only add these if the column exists (safe to try; will be ignored if it doesn't)
+        try { updatePayload.is_archived = false; } catch(_) {}
+        
+        const { data: updated } = await supabaseAdmin
           .from('checkin_templates')
-          .update({ 
-            is_archived: false, 
-            is_active: true, 
-            is_permanent: true,
-            // Restore the full schema if it's empty
-            template_schema: (existing.template_schema?.length > 0) ? existing.template_schema : GENERAL_CHECKIN_SCHEMA
-          })
+          .update(updatePayload)
           .eq('id', existing.id)
           .select()
-          .single();
+          .maybeSingle();
         
-        if (!updateError && updated) {
+        if (updated) {
           data.unshift(updated);
+        } else {
+          // If update failed, still show the existing record
+          data.unshift(existing);
         }
-      } else if (!existing) {
-        console.log(`[CheckIn] No General Check-in found. Creating new permanent one with full schema...`);
+      } else {
+        // No General Check-in exists at all — create it now
+        console.log(`[CheckIn] Creating new General Check-in for manager ${managerId}...`);
+        const insertPayload: any = {
+          manager_id: managerId,
+          name: 'General Check-in',
+          description: 'Comprehensive weekly check-in template. Tracks adherence, body progress, recovery, training, and more.',
+          template_schema: GENERAL_CHECKIN_SCHEMA, 
+          is_default: (data || []).length === 0,
+          version: 1
+        };
+
         const { data: newTemplate, error: insertError } = await supabaseAdmin
           .from('checkin_templates')
-          .insert({
-            manager_id: managerId,
-            name: 'General Check-in',
-            description: 'Comprehensive weekly check-in template. Tracks adherence, body progress, recovery, training, and more.',
-            template_schema: GENERAL_CHECKIN_SCHEMA, 
-            is_permanent: true,
-            is_archived: false,
-            is_active: true,
-            is_default: (data || []).length === 0,
-            version: 1
-          })
+          .insert(insertPayload)
           .select()
-          .single();
+          .maybeSingle();
         
         if (insertError) {
-          console.error(`[CheckIn] Error injecting template:`, insertError);
+          console.error(`[CheckIn] Error creating General Check-in:`, JSON.stringify(insertError));
         } else if (newTemplate) {
+          console.log(`[CheckIn] Created General Check-in: ${newTemplate.id}`);
           data.unshift(newTemplate);
         }
       }
