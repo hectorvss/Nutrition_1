@@ -467,102 +467,7 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
   );
 };
 
-const SupplementationCard = ({ clientId, initialSupps, onUpdate }: { clientId: string, initialSupps: string[], onUpdate: () => void }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [supps, setSupps] = useState(initialSupps.join(', '));
-  const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    setSupps(initialSupps.join(', '));
-  }, [initialSupps]);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const supplementation = supps.split(',').map(s => s.trim()).filter(s => s !== '');
-      await fetchWithAuth(`/manager/clients/${clientId}/supplementation`, {
-        method: 'POST',
-        body: JSON.stringify({ supplementation })
-      });
-      setIsEditing(false);
-      onUpdate();
-    } catch (error) {
-      console.error('Error saving supplementation:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const hasSupps = initialSupps.length > 0 && initialSupps[0] !== 'None';
-
-  if (isEditing) {
-    return (
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-emerald-500/30 dark:border-emerald-500/20 shadow-lg shadow-emerald-500/5 p-8 animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 flex items-center justify-center">
-                <Zap className="w-5 h-5" />
-             </div>
-             <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">Edit Supplementation</h3>
-          </div>
-          <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <textarea
-          className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 min-h-[120px] text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed mb-6 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400"
-          placeholder="Whey Protein, Creatine Monohydrate (5g), Multivitamin..."
-          value={supps}
-          onChange={(e) => setSupps(e.target.value)}
-        />
-        <div className="flex justify-end gap-3">
-          <button 
-            onClick={() => setIsEditing(false)} 
-            className="px-6 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors uppercase tracking-widest"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-8 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-500/20 active:scale-95 disabled:opacity-50 disabled:scale-100 uppercase tracking-widest flex items-center gap-2"
-          >
-            {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col items-center text-center group hover:border-emerald-500/30 transition-all">
-      <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-        <Zap className="w-8 h-8" />
-      </div>
-      <div className="flex items-center gap-2 mb-2">
-        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">Supplementation Notes</h3>
-        <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
-          <Edit className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      
-      {hasSupps ? (
-        <div className="flex flex-wrap justify-center gap-2 mt-4 max-w-lg">
-          {initialSupps.map((s, i) => (
-            <span key={i} className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold border border-slate-100 dark:border-slate-700 uppercase tracking-tight">
-              {s}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-slate-400 dark:text-slate-500 max-w-xs leading-relaxed mt-2 italic">
-          No specific supplementation protocol defined for this period yet.
-        </p>
-      )}
-    </div>
-  );
-};
 
 export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const { clients, deleteClient } = useClient();
@@ -849,16 +754,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-6 mt-6">
+      <div className="mt-6">
         <NutritionPlanCard plan={stats?.nutritionPlan} />
-        <SupplementationCard 
-          clientId={clientId} 
-          initialSupps={stats?.supplementation || []} 
-          onUpdate={async () => {
-            const data = await fetchWithAuth(`/manager/clients/${clientId}/profile-stats`);
-            setStats(data);
-          }} 
-        />
       </div>
       </>
       )}
