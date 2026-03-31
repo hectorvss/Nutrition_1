@@ -244,6 +244,227 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
   );
 };
 
+const NutritionPlanCard = ({ plan }: { plan: any }) => {
+  if (!plan) return (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
+      <Utensils className="w-10 h-10 mx-auto mb-3 opacity-20" />
+      <p className="text-sm font-bold uppercase tracking-widest text-slate-500">No Nutrition Plan Assigned</p>
+    </div>
+  );
+
+  const data = plan.data_json || {};
+  const isWeekly = data.type === 'weekly';
+  const [selectedDay, setSelectedDay] = useState('monday');
+  
+  const currentDayData = isWeekly ? (data.days?.[selectedDay] || {}) : data;
+  const meals = currentDayData.meals || [];
+
+  let totalP = 0, totalC = 0, totalF = 0, totalKcal = 0;
+  meals.forEach((m: any) => {
+    (m.items || []).forEach((i: any) => {
+      const qty = i.quantity || 1;
+      totalKcal += (i.calories || 0) * qty;
+      totalP += (i.protein || 0) * qty;
+      totalC += (i.carbs || 0) * qty;
+      totalF += (i.fats || 0) * qty;
+    });
+  });
+
+  if (totalKcal === 0 && (totalP > 0 || totalC > 0 || totalF > 0)) {
+    totalKcal = (totalP * 4) + (totalC * 4) + (totalF * 9);
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <Utensils className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Current Nutritional Plan</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{plan.name || 'Personalized Plan'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50">Active</span>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: 'Calories', value: Math.round(totalKcal), unit: 'kcal', color: 'text-orange-500' },
+            { label: 'Protein', value: Math.round(totalP), unit: 'g', color: 'text-blue-500' },
+            { label: 'Carbs', value: Math.round(totalC), unit: 'g', color: 'text-emerald-500' },
+            { label: 'Fats', value: Math.round(totalF), unit: 'g', color: 'text-amber-500' },
+          ].map((macro, i) => (
+            <div key={i} className="text-center">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{macro.label}</p>
+              <div className="flex flex-col">
+                <span className={`text-lg font-black tracking-tighter ${macro.color}`}>{macro.value}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase">{macro.unit}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {isWeekly && (
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide py-1">
+            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(d => (
+              <button
+                key={d}
+                onClick={() => setSelectedDay(d)}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all flex-1 min-w-[50px] ${
+                  selectedDay === d 
+                    ? 'bg-emerald-500 text-white shadow-sm' 
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 border border-slate-100 dark:border-slate-700'
+                }`}
+              >
+                {d.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {meals.map((meal: any, idx: number) => (
+            <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 group hover:border-emerald-500/30 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
+                  <span className="material-symbols-outlined text-lg">{meal.iconName === 'Sunrise' ? 'wb_twilight' : meal.iconName === 'Sun' ? 'sunny' : meal.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}</span>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight">{meal.name}</p>
+                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{meal.time || '--:--'}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-900 dark:text-white">{(meal.categories || []).map((c: any) => `${c.amount}g ${c.label.slice(0,1)}`).join(' / ')}</p>
+              </div>
+            </div>
+          ))}
+          {meals.length === 0 && (
+            <p className="text-center text-[10px] text-slate-400 italic py-2 uppercase tracking-widest">No meals defined for this day</p>
+          )}
+        </div>
+      </div>
+      <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
+        <button className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline flex items-center gap-1.5">
+          <ImageIcon className="w-3 h-3" /> View Photo Plan
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const TrainingProgramCard = ({ program }: { program: any }) => {
+  if (!program) return (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
+      <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-20" />
+      <p className="text-sm font-bold uppercase tracking-widest text-slate-500">No Training Program Assigned</p>
+    </div>
+  );
+
+  const data = program.data_json || {};
+  const isWeekly = !!data.weeklySchedule;
+  const [selectedDay, setSelectedDay] = useState('monday');
+
+  let blocks = [];
+  let workoutName = '';
+
+  if (isWeekly) {
+    const workoutId = data.weeklySchedule?.[selectedDay];
+    const workout = (data.workouts || []).find((w: any) => w.id === workoutId);
+    blocks = workout?.blocks || [];
+    workoutName = workout?.name || 'Rest Day';
+  } else {
+    blocks = data.blocks || [];
+    workoutName = program.name || 'Training Session';
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
+      <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <Dumbbell className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Active Training Program</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{program.name || 'Custom Routine'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800/50">Live</span>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {isWeekly && (
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide py-1">
+            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(d => (
+              <button
+                key={d}
+                onClick={() => setSelectedDay(d)}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all flex-1 min-w-[50px] ${
+                  selectedDay === d 
+                    ? 'bg-[#17cf54] text-white shadow-sm border-[#17cf54]' 
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 border border-slate-100 dark:border-slate-700'
+                }`}
+              >
+                {d.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{workoutName}</p>
+          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{blocks.length} Blocks</p>
+        </div>
+
+        <div className="space-y-4">
+          {blocks.length === 0 ? (
+            <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center">
+              <span className="material-symbols-outlined text-slate-200 dark:text-slate-700 text-3xl mb-2">self_improvement</span>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rest & Recovery Day</p>
+            </div>
+          ) : (
+            blocks.slice(0, 3).map((block: any, idx: number) => (
+              <div key={idx} className="flex flex-col gap-2 p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 group hover:border-[#17cf54]/30 transition-all">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-lg text-blue-500">{block.icon || 'fitness_center'}</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight">{block.name}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{block.exercises?.length || 0} Exercises</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 ml-7">
+                  {(block.exercises || []).slice(0, 4).map((ex: any, exIdx: number) => (
+                    <span key={exIdx} className="text-[8px] font-bold text-slate-500 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-md border border-slate-100 dark:border-slate-800 uppercase tracking-tighter truncate max-w-[100px]">
+                      {ex.name}
+                    </span>
+                  ))}
+                  {(block.exercises || []).length > 4 && <span className="text-[8px] font-bold text-slate-400">+{block.exercises.length - 4} more</span>}
+                </div>
+              </div>
+            ))
+          )}
+          {blocks.length > 3 && (
+            <p className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2">Plus {blocks.length - 3} more blocks...</p>
+          )}
+        </div>
+      </div>
+      <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
+        <button className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline flex items-center gap-1.5">
+          <Target className="w-3 h-3" /> Open Full Program
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const { clients, deleteClient } = useClient();
   const [activeTab, setActiveTab] = useState<Tab>('Information');
@@ -527,6 +748,16 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <NutritionPlanCard plan={stats?.nutritionPlan} />
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-center items-center text-center">
+             <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6" />
+             </div>
+             <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">Supplementation Notes</h3>
+             <p className="text-xs text-slate-500 max-w-xs">No specific supplementation protocol defined for this period yet.</p>
         </div>
       </div>
       </>
@@ -901,6 +1132,23 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 </p>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-8">
+        <div className="flex items-center gap-3 mb-6">
+           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap px-4">Program Assignment</h3>
+           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TrainingProgramCard program={stats?.trainingPlan} />
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col items-center justify-center text-center">
+               <div className="w-16 h-16 rounded-3xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-6 text-slate-300 dark:text-slate-600">
+                  <span className="material-symbols-outlined text-3xl">psychology</span>
+               </div>
+               <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">Focus & Intensity</h4>
+               <p className="text-xs text-slate-500 max-w-xs leading-relaxed">This client is currently in a <b>Hypertrophy</b> phase with high mechanical tension focus.</p>
           </div>
         </div>
       </div>

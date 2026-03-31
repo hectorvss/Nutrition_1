@@ -240,7 +240,7 @@ router.get('/clients', async (req: any, res) => {
         email, 
         created_at,
         status,
-        profiles!user_id (full_name),
+        profiles!user_id (full_name, avatar_url),
         clients_profiles!user_id (weight, goal, notes, temp_password),
         check_ins (id, date, reviewed_at, data_json),
         workout_logs!client_id (logged_at),
@@ -307,6 +307,7 @@ router.get('/clients', async (req: any, res) => {
         status: c.status || 'Active',
         isAtRisk,
         name: c.profiles?.full_name || c.profiles?.[0]?.full_name || c.email.split('@')[0],
+        avatar: c.profiles?.avatar_url || c.profiles?.[0]?.avatar_url || null,
         gender: c.clients_profiles?.gender || c.clients_profiles?.[0]?.gender || 'Unknown',
         age: c.clients_profiles?.age || c.clients_profiles?.[0]?.age || '--',
         weight: dj.weight || c.clients_profiles?.weight || c.clients_profiles?.[0]?.weight || null,
@@ -354,14 +355,16 @@ router.patch('/clients/:id/status', async (req: any, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const { error } = await supabaseAdmin
+    const { data: updatedUser, error } = await supabaseAdmin
       .from('users')
       .update({ status })
       .eq('id', id)
-      .eq('manager_id', req.user.id);
+      .eq('manager_id', req.user.id)
+      .select()
+      .single();
 
     if (error) throw error;
-    res.json({ success: true });
+    res.json({ success: true, user: updatedUser });
   } catch (error: any) {
     console.error('Error updating client status:', error);
     res.status(500).json({ error: error?.message || 'Server error' });
@@ -1681,6 +1684,13 @@ router.get('/analytics', async (req: any, res) => {
       .eq('manager_id', managerId)
       .eq('role', 'CLIENT');
       
+    const { count: activeClients } = await supabaseAdmin
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT')
+      .eq('status', 'Active');
+      
     const now = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -2100,6 +2110,7 @@ router.get('/analytics', async (req: any, res) => {
     res.json({
       business: {
         totalClients: totalClients || 0,
+        activeClients: activeClients || 0,
         newLeads: newClients || 0,
         retention: retentionRate, 
         churnRate,
@@ -2520,6 +2531,21 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       { name: 'Initial Assessment.pdf', date: client.created_at, type: 'PDF' }
     ];
 
+    // 12. Active Plans
+    const { data: nutritionPlans } = await supabaseAdmin
+      .from('nutrition_plans')
+      .select('*')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    const { data: trainingPrograms } = await supabaseAdmin
+      .from('training_programs')
+      .select('*')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
     res.json({
       weightHistory,
       latestWeight: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : client.weight,
@@ -2548,7 +2574,9 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       measurements,
       activity,
       documents,
-      allergies: (client as any).metadata?.allergies || ['None']
+      allergies: (client as any).metadata?.allergies || ['None'],
+      nutritionPlan: nutritionPlans && nutritionPlans.length > 0 ? nutritionPlans[0] : null,
+      trainingPlan: trainingPrograms && trainingPrograms.length > 0 ? trainingPrograms[0] : null
     });
   } catch (error: any) {
     console.error('Error fetching profile stats:', error);
