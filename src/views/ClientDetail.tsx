@@ -1064,6 +1064,12 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         </div>
       </div>
 
+      <div className="mt-8 mb-12">
+        <div className="flex flex-col gap-6">
+          <TrainingProgramCard program={stats?.trainingPlan} />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
@@ -1134,16 +1140,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               )}
             </div>
           </div>
-        </div>
-      </div>
-      <div className="mt-12">
-        <div className="flex items-center gap-3 mb-6">
-           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap px-4">Program Assignment</h3>
-           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-        </div>
-        <div className="flex flex-col gap-6">
-          <TrainingProgramCard program={stats?.trainingPlan} />
         </div>
       </div>
       </>
