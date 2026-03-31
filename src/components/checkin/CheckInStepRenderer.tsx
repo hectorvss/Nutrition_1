@@ -230,10 +230,13 @@ export default function CheckInStepRenderer({
   };
 
   const renderGroupedContent = () => {
-    if (step.type === 'measurement_group') {
+    // Only use the measurement_group grid layout when the step itself is typed as one
+    // AND the questions inside don't have their own type (i.e., they're raw measurement fields, not typed questions)
+    const questionsHaveTypes = (step.questions || []).some((q: any) => q.type);
+    if (step.type === 'measurement_group' && !questionsHaveTypes) {
       return (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {(step.questions || []).map(q => (
+          {(step.questions || []).map((q: any) => (
             <div key={q.id} className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{q.title}</p>
               <div className="relative">

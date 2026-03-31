@@ -7,7 +7,6 @@ const router = Router();
 const FIXED_CHECKIN_QUESTIONS = [
   {
     id: 'measurements_step',
-    type: 'measurement_group',
     title: 'Weekly Measurements',
     subtitle: 'Track your physical progress',
     meta: { icon: 'monitoring' },
