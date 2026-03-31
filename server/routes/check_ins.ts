@@ -209,18 +209,17 @@ const GENERAL_CHECKIN_SCHEMA = [
 ];
 
 const injectFixedQuestions = (schema: any[]) => {
-  const fixedIds = new Set(FIXED_CHECKIN_QUESTIONS.flatMap(s => [s.id, ...(s.questions?.map(q => q.id) || [])]));
-  const fixedTitles = new Set(FIXED_CHECKIN_QUESTIONS.map(s => s.title));
+  // Only filter steps by their top-level ID or title — never remove individual questions
+  // from custom steps (they may share IDs like 'protein', 'energy', etc.)
+  const fixedStepIds = new Set(FIXED_CHECKIN_QUESTIONS.map(s => s.id));
+  const fixedStepTitles = new Set(FIXED_CHECKIN_QUESTIONS.map(s => s.title));
 
   const customSchema = (schema || []).filter(step => {
-     // Filter out steps that match fixed IDs or Titles
-     if (fixedIds.has(step.id) || fixedTitles.has(step.title)) return false;
-     
-     if (step.questions) {
-        step.questions = step.questions.filter((q: any) => !fixedIds.has(q.id));
-     }
-     return true;
+    // Remove any step that clashes with a fixed step ID or Title
+    if (fixedStepIds.has(step.id) || fixedStepTitles.has(step.title)) return false;
+    return true;
   });
+
   return [...FIXED_CHECKIN_QUESTIONS, ...customSchema];
 };
 // ... (rest of the code until POST /client/check-ins)
