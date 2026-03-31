@@ -2419,8 +2419,21 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       ? Number((logsWithRPE.reduce((s, l) => s + Number(l.session_rpe), 0) / logsWithRPE.length).toFixed(1))
       : 0;
 
-    // Fatigue: if latest RPE > 8 consider high  
-    const fatigue = logsWithRPE.length > 0 ? Number(logsWithRPE[0].session_rpe) : 5;
+    // Fatigue: Pull from latest check-in if possible, otherwise use session RPE as fallback
+    const latestAnyCheckIn = allCheckInsCombined.length > 0 ? allCheckInsCombined[allCheckInsCombined.length - 1] : null;
+    let fatigue = 5; // Default middle
+    if (latestAnyCheckIn) {
+      const a = latestAnyCheckIn.answers;
+      const fatigueVal = a.fatigue || a.Fatigue || a['Fatigue Level'] || a.energy_level || a.stress_level;
+      if (fatigueVal) {
+        // If it's a number (1-10), use it. If it's energy_level (high = low fatigue), invert it if needed.
+        // For simplicity, we try to parse it.
+        const parsed = parseInt(fatigueVal);
+        if (!isNaN(parsed)) fatigue = parsed;
+      }
+    } else if (logsWithRPE.length > 0) {
+      fatigue = Number(logsWithRPE[0].session_rpe);
+    }
 
     // 9. Strength PRs & History from workout_logs
     // PRs & Latest status for ALL exercises
