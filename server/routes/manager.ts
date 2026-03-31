@@ -2604,28 +2604,33 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       })).filter(h => h.energy || h.stress || h.mood || h.motivation)
     };
 
-    // 11. Documents (Real data from messages and submissions)
+    // 11. Documents (Filtered real data from messages and submissions)
     const { data: messageAttachments } = await supabaseAdmin
       .from('messages')
-      .select('attachment_name, attachment_url, created_at, attachment_type')
+      .select('attachment_name, attachment_url, created_at, attachment_type, content')
       .or(`sender_id.eq.${id},receiver_id.eq.${id}`)
       .not('attachment_url', 'is', null);
 
-    const documents = (messageAttachments || []).map(m => ({
-      name: m.attachment_name || 'Untitled Document',
-      url: m.attachment_url,
-      date: m.created_at,
-      type: m.attachment_type || 'File'
-    }));
+    const documents = (messageAttachments || [])
+      .filter(m => m.attachment_url) // Real files only
+      .map(m => ({
+        name: m.attachment_name || (m.attachment_type === 'image' ? 'Image Attachment' : 'Chat File'),
+        url: m.attachment_url,
+        date: m.created_at,
+        type: m.attachment_type || 'File'
+      }));
 
     // Add initial assessment if it exists from profile
     if ((client.clients_profiles as any)?.metadata?.initial_assessment_url) {
-      documents.push({
-        name: 'Initial Assessment.pdf',
-        url: (client.clients_profiles as any).metadata.initial_assessment_url,
-        date: client.created_at,
-        type: 'PDF'
-      });
+      const assessmentUrl = (client.clients_profiles as any).metadata.initial_assessment_url;
+      if (assessmentUrl) {
+          documents.unshift({
+            name: 'Initial Assessment.pdf',
+            url: assessmentUrl,
+            date: client.created_at,
+            type: 'PDF'
+          });
+      }
     }
 
     // 12. Active Plans
