@@ -149,11 +149,17 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
   const archiveClient = async (clientId: string, status: 'Active' | 'Archived') => {
     // Optimistic update
     setClients(prev => prev.map(c => c.id === clientId ? { ...c, status } : c));
+    
     try {
-      await fetchWithAuth(`/manager/clients/${clientId}/status`, {
+      const response = await fetchWithAuth(`/manager/clients/${clientId}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status })
       });
+      
+      if (response.success && response.user) {
+        // Sync with server's returned state
+        setClients(prev => prev.map(c => c.id === clientId ? { ...c, status: response.user.status } : c));
+      }
     } catch (err: any) {
       console.error('Error archiving client:', err);
       // Rollback on error

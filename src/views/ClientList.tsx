@@ -34,11 +34,18 @@ interface ClientListProps {
 export default function ClientList({ onViewDetail, onAddClient }: ClientListProps) {
   const { clients, isLoading: loading, error, deleteClient, archiveClient } = useClient();
   
+  const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'All' | 'Active' | 'At Risk' | 'Archived'>('All');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const filteredClients = clients.filter(client => {
+    // Search filter
+    if (searchQuery && !client.name.toLowerCase().includes(searchQuery.toLowerCase()) && !client.email.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+    
+    // Status filter
     if (filter === 'Active') return client.status === 'Active';
     if (filter === 'Archived') return client.status === 'Archived';
     if (filter === 'At Risk') return client.isAtRisk;
@@ -166,6 +173,8 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                     className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 dark:text-white placeholder:text-slate-400" 
                     placeholder="Search clients..." 
                     type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
               </div>
@@ -232,9 +241,9 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                   {filteredClients.map((client) => (
                     <tr 
                       key={client.id} 
-                      className={`group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors relative ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}
+                      className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors relative"
                     >
-                      <td className="p-4 relative">
+                      <td className={`p-4 relative ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}>
                         {client.isAtRisk && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>}
                         <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewDetail(client.id.toString())}>
                           <img src={client.avatar} alt="" className="w-10 h-10 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm" referrerPolicy="no-referrer" />
@@ -244,7 +253,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                           </div>
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className={`p-4 ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}>
                         {client.isAtRisk ? (
                           <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-bold text-xs">
                             <AlertTriangle className="w-4 h-4" />
@@ -261,22 +270,22 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                           </span>
                         )}
                       </td>
-                      <td className="p-4">
+                      <td className={`p-4 ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-100 dark:border-purple-800/50">
                           {client.plan}
                         </span>
                       </td>
-                      <td className="p-4">
+                      <td className={`p-4 ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}>
                         <span className={`text-xs font-bold ${client.riskStatus ? 'text-red-500 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>
                           {client.lastCheckIn}
                         </span>
                       </td>
-                      <td className="p-4 text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <td className={`p-4 text-xs font-bold ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : 'text-slate-600 dark:text-slate-300'}`}>
                         {client.nextAppointment === 'Not Scheduled' ? (
                           <span className="text-amber-500">Not Scheduled</span>
                         ) : client.nextAppointment}
                       </td>
-                      <td className="p-4">
+                      <td className={`p-4 ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}>
                         <div className="w-24 bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                           <div 
                             className={`h-1.5 rounded-full ${
@@ -308,7 +317,11 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                                 View Details
                               </button>
                               <button
-                                onClick={() => { archiveClient(client.id.toString(), client.status === 'Archived' ? 'Active' : 'Archived'); setOpenMenuId(null); }}
+                                onClick={() => { 
+                                  const targetStatus = client.status === 'Archived' ? 'Active' : 'Archived';
+                                  archiveClient(client.id.toString(), targetStatus); 
+                                  setOpenMenuId(null); 
+                                }}
                                 className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
                               >
                                 <Archive className="w-4 h-4 text-slate-400" />
@@ -333,7 +346,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
             <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <p className="text-xs font-bold text-slate-400">
-                  Showing <span className="text-slate-900 dark:text-white">1-5</span> of <span className="text-slate-900 dark:text-white">124</span> clients
+                  Showing <span className="text-slate-900 dark:text-white">1-{filteredClients.length}</span> of <span className="text-slate-900 dark:text-white">{filteredClients.length}</span> clients
                 </p>
                 <select className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 py-1.5 pr-8 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none shadow-sm">
                   <option>10 per page</option>
