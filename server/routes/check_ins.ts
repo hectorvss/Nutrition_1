@@ -7,8 +7,10 @@ const router = Router();
 const FIXED_CHECKIN_QUESTIONS = [
   {
     id: 'measurements_step',
+    type: 'measurement_group',
     title: 'Weekly Measurements',
     subtitle: 'Track your physical progress',
+    meta: { icon: 'monitoring' },
     questions: [
       {
         id: 'measurements',
@@ -22,6 +24,7 @@ const FIXED_CHECKIN_QUESTIONS = [
     id: 'nutrition_adherence_step',
     title: 'Nutrition Adherence',
     subtitle: 'How consistently did you follow your fuel plan?',
+    meta: { icon: 'restaurant' },
     questions: [
       {
         id: 'nutrition_adherence_score',
@@ -38,6 +41,7 @@ const FIXED_CHECKIN_QUESTIONS = [
     id: 'macros_step',
     title: 'Macros & Fatigue',
     subtitle: 'Nutrition and recovery tracking',
+    meta: { icon: 'analytics' },
     questions: [
       { id: 'protein', title: 'Avg. Daily Protein (g)', type: 'number', unit: 'g', required: true },
       { id: 'carbs', title: 'Avg. Daily Carbs (g)', type: 'number', unit: 'g', required: true },
@@ -54,6 +58,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'general_sentiment', title: 'How did your week go overall?',
     subtitle: 'Your general sentiment sets the context for everything else.',
+    meta: { icon: 'mood' },
     questions: [
       { id: 'overallWeek', type: 'single_choice', title: 'Select Sentiment', options: ['Very bad', 'Bad', 'Average', 'Good', 'Excellent'] },
       { id: 'matchPlan', type: 'single_choice', title: 'How closely did this week match the plan?', options: ['Not at all', 'Slightly', 'Moderately', 'Mostly', 'Completely'] },
@@ -64,25 +69,23 @@ const GENERAL_CHECKIN_SCHEMA = [
     ]
   },
   {
-    id: 'body_progress', title: 'Body Progress',
-    subtitle: 'Track your physical metrics and how you feel in your own skin.',
+    id: 'body_perception_step', title: 'Body Perception & Photos',
+    subtitle: 'Track your physical changes and progress photos.',
+    meta: { icon: 'camera_alt' },
     questions: [
-      { id: 'weight', type: 'number', title: 'Current Weight (kg)', unit: 'KG', placeholder: '00.0' },
-      { id: 'avgWeight', type: 'number', title: 'Average Weekly Weight (kg)', unit: 'KG', placeholder: '00.0' },
       { id: 'bodyPerception', type: 'single_choice', title: 'Body Perception', options: ['Leaner', 'Same', 'More bloated', 'Stronger look', 'Softer', 'Defined', 'Flatter', 'Fuller', 'Tighter waist', 'More watery'] },
       { id: 'visibleChanges', type: 'single_choice', title: 'Did you notice any visible changes?', options: ['No changes', 'Slight', 'Moderate', 'Big changes'] },
       { id: 'biggestChangeArea', type: 'single_choice', title: 'Where did you notice the biggest change?', options: ['Waist', 'Stomach', 'Legs', 'Glutes', 'Arms', 'Back', 'Face', 'Overall', 'Hard to tell'] },
       { id: 'satisfaction', type: 'single_choice', title: 'How satisfied are you with your current progress?', options: ['Very dissatisfied', 'Dissatisfied', 'Neutral', 'Satisfied', 'Very satisfied'] },
       { id: 'menstrualImpact', type: 'single_choice', title: 'Menstrual / hormonal impact this week', options: ['No impact', 'Mild', 'Moderate', 'Strong', 'N/A'] },
-      { id: 'measurements', type: 'measurement_group', title: 'Measurements (Optional)', options: ['Waist', 'Hips', 'Chest', 'Arms', 'Thighs'] },
       { id: 'photos', type: 'photo_group', title: 'Progress Photos (Front, Side, Back)', options: ['photoFront', 'photoSide', 'photoBack'] }
     ]
   },
   {
-    id: 'nutrition_adherence', title: 'Nutrition Adherence',
-    subtitle: 'How consistently did you follow your fuel plan?',
+    id: 'custom_nutrition_adherence', title: 'Nutrition Details',
+    subtitle: 'Track specific adherence metrics and feedback.',
+    meta: { icon: 'restaurant' },
     questions: [
-      { id: 'nutrition_adherence_score', type: 'slider', title: 'Plan Adherence Score', subtitle: 'On a scale of 1-10, how closely did you follow the plan?', required: true, is_fixed: true, meta: { min: 1, max: 10, step: 1 } },
       { id: 'nutritionAdherence', type: 'single_choice', title: 'Weekly Compliance (Overall %)', options: ['Perfect (>95%)', 'Good (80-95%)', 'Average (50-80%)', 'Poor (<50%)'] },
       { id: 'mealsFollowed', type: 'single_choice', title: 'How many meals did you follow as planned?', options: ['Almost all', 'Most', 'About half', 'Few', 'Almost none'] },
       { id: 'hitCalories', type: 'single_choice', title: 'Did you hit your calorie target?', options: ['Yes, daily', 'Mostly', 'Above', 'Below', 'No track'] },
@@ -98,6 +101,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'digestion_satiety', title: 'Digestion & Satiety',
     subtitle: 'Internal biofeedback is key to adjusting your plan.',
+    meta: { icon: 'health_and_safety' },
     questions: [
       { id: 'hunger', type: 'single_choice', title: 'Hunger Levels', options: ['Very low', 'Low', 'Manageable', 'High', 'Extreme'] },
       { id: 'cravings', type: 'single_choice', title: 'Cravings Intensity', options: ['None', 'Mild', 'Moderate', 'Strong', 'Unstoppable'] },
@@ -114,6 +118,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'daily_foundations', title: 'Daily Foundations',
     subtitle: 'The small habits that drive the big results.',
+    meta: { icon: 'water_drop' },
     questions: [
       { id: 'waterIntake', type: 'single_choice', title: 'Hydration Consistency', options: ['Met goal daily', 'Met most days', 'Struggled', 'Very low'] },
       { id: 'waterAmount', type: 'single_choice', title: 'Approximate daily water intake', options: ['<1L', '1–1.5L', '1.5–2L', '2–3L', '3L+'] },
@@ -129,6 +134,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'training_performance', title: 'Training Performance',
     subtitle: 'Analyze your physical execution and strength levels.',
+    meta: { icon: 'fitness_center' },
     questions: [
       { id: 'trainingAdherence', type: 'single_choice', title: 'Training Adherence', options: ['All sessions', 'Missed 1', 'Missed 2', 'Missed several', "Didn't train"] },
       { id: 'strength', type: 'single_choice', title: 'Overall Strength Perception', options: ['Down', 'Same', 'Up'] },
@@ -146,6 +152,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'recovery_sleep', title: 'Recovery & Sleep',
     subtitle: 'The foundation of your progress happens while you rest.',
+    meta: { icon: 'dark_mode' },
     questions: [
       { id: 'sleepQuantity', type: 'single_choice', title: 'Sleep Quantity', options: ['<5h', '5–6h', '6–7h', '7–8h', '8h+'] },
       { id: 'sleepQuality', type: 'single_choice', title: 'Sleep Quality', options: ['Very poor', 'Poor', 'Average', 'Good', 'Excellent'] },
@@ -162,6 +169,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'pain_tracking', title: 'Injury & Pain Tracking',
     subtitle: 'Your safety is our priority. Report any discomfort immediately.',
+    meta: { icon: 'healing' },
     questions: [
       { id: 'painLevel', type: 'single_choice', title: 'Current Pain / Discomfort Level', options: ['No issues', 'Minor discomfort', 'Moderate pain', 'Serious issue'] },
       { id: 'affectedArea', type: 'single_choice', title: 'Affected Area', options: ['Neck', 'Shoulder', 'Upper back', 'Lower back', 'Elbow', 'Wrist', 'Hip', 'Knee', 'Ankle', 'Foot', 'Abdomen', 'Other'], conditional: { field: 'painLevel', operator: 'not_equals', value: 'No issues' } },
@@ -176,6 +184,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'activity_movement', title: 'Activity & Movement',
     subtitle: 'Tracking your non-exercise activity and cardio adherence.',
+    meta: { icon: 'directions_run' },
     questions: [
       { id: 'cardioAdherence', type: 'single_choice', title: 'Cardio Adherence', options: ['Did all', 'Missed some', 'Very little', 'Did none'] },
       { id: 'stepRange', type: 'single_choice', title: 'Daily Steps (Average Range)', options: ['<4k', '4k–6k', '6k–8k', '8k–10k', '10k+'] },
@@ -189,6 +198,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   {
     id: 'looking_ahead', title: 'Looking Ahead',
     subtitle: 'Define your focus for the upcoming week.',
+    meta: { icon: 'flag' },
     questions: [
       { id: 'improvementGoals', type: 'multi_select', title: 'Primary Focus Areas', options: ['Nutrition adherence', 'Hunger management', 'Meal prep / organization', 'Training intensity', 'Technique / form', 'Sleep hygiene', 'Stress management', 'Activity (Steps/Cardio)', 'Daily habits / Routine', 'Mental focus', 'Social events management'] },
       { id: 'nonNegotiables', type: 'long_text', title: 'What are your absolute non-negotiables?', placeholder: '3 things you WILL get done no matter what...' },
