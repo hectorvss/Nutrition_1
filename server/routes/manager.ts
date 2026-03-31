@@ -2261,35 +2261,96 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       bodyFat: (ci.data_json as any).body_fat || null
     })).filter(w => w.weight !== null);
 
-    // 4. Latest Measurements
-    const lastCheckIn = checkIns && checkIns.length > 0 ? checkIns[checkIns.length - 1] : null;
-    const measurements = lastCheckIn ? (lastCheckIn.data_json as any).measurements || {} : {};
+    // 4. Latest Measurements (From legacy and dynamic)
+    const { data: dynamicCheckIns } = await supabaseAdmin
+      .from('client_checkin_submissions')
+      .select('*')
+      .eq('client_id', id)
+      .order('submitted_at', { ascending: true });
+
+    // Combine all to find latest measurements
+    const allCheckInsCombined = [
+      ...(checkIns || []).map(ci => ({ date: ci.date, answers: ci.data_json as any })),
+      ...(dynamicCheckIns || []).map(ci => ({ date: ci.submitted_at, answers: ci.answers_json as any }))
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const lastCheckInAny = allCheckInsCombined.length > 0 ? allCheckInsCombined[allCheckInsCombined.length - 1] : null;
+    const prevCheckInAny = allCheckInsCombined.length > 1 ? allCheckInsCombined[allCheckInsCombined.length - 2] : null;
+
+    const measurements: any = lastCheckInAny ? (lastCheckInAny.answers.measurements || {}) : {};
+    const prevMeasurements: any = prevCheckInAny ? (prevCheckInAny.answers.measurements || {}) : {};
+    
+    // Attempt to extract from top-level dynamic questions if not in .measurements
+    const extractM = (a: any) => {
+      if (!a) return {};
+      const m = a.measurements || {};
+      if (Object.keys(m).length === 0) {
+        if (a.waist || a.Waist) m.waist = a.waist || a.Waist || a['Waist (cm)'];
+        if (a.hip || a.Hip) m.hip = a.hip || a.Hip || a['Hip (cm)'];
+        if (a.thigh_r || a.Thigh || a['Right Thigh']) m.thigh_r = a.thigh_r || a.Thigh || a['Right Thigh'] || a['Right Thigh (cm)'];
+        if (a.arm_r || a.Arm || a['Right Arm']) m.arm_r = a.arm_r || a.Arm || a['Right Arm'] || a['Right Arm (cm)'];
+      }
+      return m;
+    };
+
+    const currentM = extractM(lastCheckInAny?.answers);
+    const oldM = extractM(prevCheckInAny?.answers);
+
+    const calcChange = (curr: any, old: any) => {
+      const c = Number(curr);
+      const o = Number(old);
+      if (isNaN(c) || isNaN(o)) return '0';
+      const diff = c - o;
+      return diff === 0 ? '0' : diff.toFixed(1);
+    };
+
+    const finalMeasurements = {
+      ...currentM,
+      waistChange: calcChange(currentM.waist, oldM.waist),
+      hipChange: calcChange(currentM.hip, oldM.hip),
+      thighChange: calcChange(currentM.thigh_r, oldM.thigh_r),
+      armChange: calcChange(currentM.arm_r, oldM.arm_r)
+    };
 
     // 5. Macro Adherence (Last 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= sevenDaysAgo);
+    const recentLegacyCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= sevenDaysAgo);
     
+    // Fetch dynamic check-ins for the last 7 days too
+    const { data: recentDynamicCheckIns } = await supabaseAdmin
+      .from('client_checkin_submissions')
+      .select('*')
+      .eq('client_id', id)
+      .gte('submitted_at', sevenDaysAgo.toISOString())
+      .order('submitted_at', { ascending: false });
+
     let avgProteinAdherence = 0;
     let avgCarbsAdherence = 0;
     let avgFatsAdherence = 0;
     let dailyCaloricAvg = 0;
 
-    if (recentCheckIns.length > 0) {
+    // Combine both legacy and dynamic check-ins
+    const allRecentCheckIns = [
+      ...recentLegacyCheckIns.map(ci => ({ ...ci, data: ci.data_json as any })),
+      ...(recentDynamicCheckIns || []).map(ci => ({ ...ci, data: ci.answers_json as any }))
+    ];
+
+    if (allRecentCheckIns.length > 0) {
       let totalP = 0, totalC = 0, totalF = 0, totalKcal = 0;
       let countP = 0, countC = 0, countF = 0, countKcal = 0;
 
-      recentCheckIns.forEach(ci => {
-        const d = ci.data_json as any;
+      allRecentCheckIns.forEach(ci => {
+        const d = ci.data;
         if (d.protein_intake && d.protein_goal) { totalP += (d.protein_intake / d.protein_goal); countP++; }
         if (d.carbs_intake && d.carbs_goal) { totalC += (d.carbs_intake / d.carbs_goal); countC++; }
         if (d.fats_intake && d.fats_goal) { totalF += (d.fats_intake / d.fats_goal); countF++; }
         if (d.calories_intake) { totalKcal += d.calories_intake; countKcal++; }
       });
 
-      avgProteinAdherence = countP > 0 ? Math.round((totalP / countP) * 100) : 90;
-      avgCarbsAdherence = countC > 0 ? Math.round((totalC / countC) * 100) : 85;
-      avgFatsAdherence = countF > 0 ? Math.round((totalF / countF) * 100) : 92;
+      avgProteinAdherence = countP > 0 ? Math.round((totalP / countP) * 100) : 0;
+      avgCarbsAdherence = countC > 0 ? Math.round((totalC / countC) * 100) : 0;
+      avgFatsAdherence = countF > 0 ? Math.round((totalF / countF) * 100) : 0;
       dailyCaloricAvg = countKcal > 0 ? Math.round(totalKcal / countKcal) : 0;
     }
 
@@ -2530,10 +2591,29 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       })).filter(h => h.energy || h.stress || h.mood || h.motivation)
     };
 
-    // 11. Documents (Mock for now)
-    const documents = [
-      { name: 'Initial Assessment.pdf', date: client.created_at, type: 'PDF' }
-    ];
+    // 11. Documents (Real data from messages and submissions)
+    const { data: messageAttachments } = await supabaseAdmin
+      .from('messages')
+      .select('attachment_name, attachment_url, created_at, attachment_type')
+      .or(`sender_id.eq.${id},receiver_id.eq.${id}`)
+      .not('attachment_url', 'is', null);
+
+    const documents = (messageAttachments || []).map(m => ({
+      name: m.attachment_name || 'Untitled Document',
+      url: m.attachment_url,
+      date: m.created_at,
+      type: m.attachment_type || 'File'
+    }));
+
+    // Add initial assessment if it exists from profile
+    if ((client.clients_profiles as any)?.metadata?.initial_assessment_url) {
+      documents.push({
+        name: 'Initial Assessment.pdf',
+        url: (client.clients_profiles as any).metadata.initial_assessment_url,
+        date: client.created_at,
+        type: 'PDF'
+      });
+    }
 
     // 12. Active Plans
     const { data: nutritionPlans } = await supabaseAdmin
@@ -2550,13 +2630,37 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       .order('created_at', { ascending: false })
       .limit(1);
 
+    // Dynamic Allergies from Recent Onboarding or Metadata
+    const { data: latestOnboarding } = await supabaseAdmin
+      .from('client_onboarding_submissions')
+      .select('answers_json')
+      .eq('client_id', id)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let allergies = (client.clients_profiles as any)?.metadata?.allergies || [];
+    let supplementation = (client.clients_profiles as any)?.metadata?.supplementation || [];
+    if (latestOnboarding?.answers_json) {
+      const answers = latestOnboarding.answers_json as any;
+      const onboardingAllergies = answers.allergies || answers.Allergies || answers['Do you have any allergies?'];
+      if (onboardingAllergies) {
+         allergies = Array.isArray(onboardingAllergies) ? onboardingAllergies : [onboardingAllergies];
+      }
+      
+      const onboardingSupps = answers.supplementation || answers.Supplementation || answers['Are you taking any supplements?'];
+      if (onboardingSupps && (!supplementation || supplementation.length === 0)) {
+         supplementation = Array.isArray(onboardingSupps) ? onboardingSupps : [onboardingSupps];
+      }
+    }
+
     res.json({
       weightHistory,
-      latestWeight: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : client.weight,
-      goal: client.goal || 'TBD',
+      latestWeight: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].weight : (client.clients_profiles as any)?.weight || 0,
+      goal: (client.clients_profiles as any)?.goal || 'TBD',
       bodyFat: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].bodyFat : '--',
-      activeDays: checkIns?.length || 0,
-      adherenceRate: checkIns ? Math.round((checkIns.length / 30) * 100) : 0, 
+      activeDays: (checkIns?.length || 0) + (recentDynamicCheckIns?.length || 0),
+      adherenceRate: checkIns ? Math.round(((checkIns?.length || 0) / 30) * 100) : 0, 
       macros: {
         protein: avgProteinAdherence,
         carbs: avgCarbsAdherence,
@@ -2575,15 +2679,62 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         sensations
       },
       mindset,
-      measurements,
+      measurements: finalMeasurements,
       activity,
       documents,
-      allergies: (client as any).metadata?.allergies || ['None'],
+      allergies: allergies.length > 0 ? allergies : ['None'],
+      supplementation: supplementation.length > 0 ? supplementation : ['None'],
       nutritionPlan: nutritionPlans && nutritionPlans.length > 0 ? nutritionPlans[0] : null,
       trainingPlan: trainingPrograms && trainingPrograms.length > 0 ? trainingPrograms[0] : null
     });
   } catch (error: any) {
     console.error('Error fetching profile stats:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Supplementation handlers
+router.get('/clients/:id/supplementation', async (req: any, res) => {
+  const { id } = req.params;
+  try {
+    const { data: profile, error } = await supabaseAdmin
+      .from('clients_profiles')
+      .select('metadata')
+      .eq('user_id', id)
+      .single();
+
+    if (error) throw error;
+    res.json(profile?.metadata?.supplementation || []);
+  } catch (error: any) {
+    console.error('Error fetching supplementation:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.post('/clients/:id/supplementation', async (req: any, res) => {
+  const { id } = req.params;
+  const { supplementation } = req.body;
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from('clients_profiles')
+      .select('metadata')
+      .eq('user_id', id)
+      .single();
+
+    const metadata = {
+      ...(profile?.metadata || {}),
+      supplementation: Array.isArray(supplementation) ? supplementation : [supplementation]
+    };
+
+    const { error } = await supabaseAdmin
+      .from('clients_profiles')
+      .update({ metadata })
+      .eq('user_id', id);
+
+    if (error) throw error;
+    res.json({ success: true, supplementation: metadata.supplementation });
+  } catch (error: any) {
+    console.error('Error updating supplementation:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
