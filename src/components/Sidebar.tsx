@@ -30,7 +30,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const data = await fetchWithAuth('/messages/unread-count');
+        const data = await fetchWithAuth(`/messages/unread-count?t=${new Date().getTime()}`);
         setUnreadCount(data?.unreadCount || 0);
       } catch (e) {
         // ignore errors silently
