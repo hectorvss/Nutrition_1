@@ -411,7 +411,7 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
                 onClick={() => setSelectedDay(d)}
                 className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter transition-all flex-1 min-w-[50px] ${
                   selectedDay === d 
-                    ? 'bg-[#17cf54] text-white shadow-sm border-[#17cf54]' 
+                    ? 'bg-emerald-500 text-white shadow-sm border-emerald-500' 
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 border border-slate-100 dark:border-slate-700'
                 }`}
               >
@@ -434,7 +434,7 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
             </div>
           ) : (
             blocks.slice(0, 3).map((block: any, idx: number) => (
-              <div key={idx} className="flex flex-col gap-2 p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 group hover:border-[#17cf54]/30 transition-all">
+              <div key={idx} className="flex flex-col gap-2 p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 group hover:border-emerald-500/30 transition-all">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg text-blue-500">{block.icon || 'fitness_center'}</span>
@@ -813,7 +813,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     <div className="space-y-6">
       {isLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
-          <div className="w-10 h-10 border-4 border-[#17cf54]/20 border-t-[#17cf54] rounded-full animate-spin"></div>
+          <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
           <p className="text-sm font-medium">Cargando entrenamiento...</p>
         </div>
       ) : (
