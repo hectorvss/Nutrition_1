@@ -7,6 +7,7 @@ import {
   FileText
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { useClient } from '../context/ClientContext';
 import CheckInReviewRenderer from '../components/checkin/CheckInReviewRenderer';
 
 interface OnboardingReviewProps {
@@ -16,6 +17,7 @@ interface OnboardingReviewProps {
 }
 
 export default function OnboardingReview({ clientId, submissionId, onBack }: OnboardingReviewProps) {
+  const { clients } = useClient();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,6 +62,10 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
 
   const { client, template } = data;
   const dj = data.answers_json || {};
+  const contextClient = clients.find(c => c.id === clientId);
+  const clientName = client?.full_name || contextClient?.name || 'Client';
+  const clientAvatar = client?.avatar_url || contextClient?.avatar;
+  const clientInitials = clientName.substring(0, 2).toUpperCase();
 
   return (
     <div className="p-6 md:p-8 w-full space-y-6">
@@ -67,18 +73,27 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
         <div className="flex items-center gap-2">
           <button onClick={onBack} className="hover:text-emerald-600 transition-colors">History</button>
           <ChevronRight className="w-4 h-4" />
-          <span className="font-medium text-slate-900">{client?.full_name || 'Client'}</span>
+          <span className="font-medium text-slate-900">{clientName}</span>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xl border-2 border-white shadow-md">
-            {(client?.full_name || 'C').substring(0,2).toUpperCase()}
-          </div>
+           {clientAvatar ? (
+             <img 
+               src={clientAvatar} 
+               alt={clientName} 
+               className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md"
+               referrerPolicy="no-referrer"
+             />
+           ) : (
+             <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xl border-2 border-white shadow-md">
+               {clientInitials}
+             </div>
+           )}
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{client?.full_name || 'Client'}</h1>
+              <h1 className="text-2xl font-bold text-slate-900">{clientName}</h1>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Submitted
               </span>

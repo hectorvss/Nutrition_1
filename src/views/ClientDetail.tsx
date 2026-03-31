@@ -1307,7 +1307,14 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     </div>
   );
 
-  return (
+    const onboardingAnswers = onboardingSubmission?.answers_json || {};
+    const displayGender = onboardingAnswers.genero || onboardingAnswers.gender || client.gender || 'Unknown';
+    const displayAge = onboardingAnswers.edad || onboardingAnswers.age || client.age || '--';
+    const displayLocation = onboardingAnswers.localizacion || onboardingAnswers.location || client.location || 'Unknown';
+    const displayPlan = client.planFamilyLabel || client.plan || 'No Plan';
+    const joinDate = client.created_at ? new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2023';
+
+    return (
     <>
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
@@ -1330,17 +1337,17 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                     Active
                   </span>
                 </div>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium">
-                  {client.gender || 'Unknown'}, {client.age || '--'} years • {client.location || 'Unknown'}
+                <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium uppercase tracking-tight text-[10px] font-black">
+                  {displayGender}, {displayAge} years • {displayLocation}
                 </p>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                   <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
                     <Dumbbell className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Hypertrophy Plan</span>
+                    <span>{displayPlan}</span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
                     <Calendar className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Joined Aug 2023</span>
+                    <span>Joined {joinDate}</span>
                   </div>
                 </div>
               </div>
