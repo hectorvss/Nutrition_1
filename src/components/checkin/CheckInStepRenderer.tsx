@@ -27,6 +27,8 @@ export default function CheckInStepRenderer({
   onUploadFile,
   isEditMode = false
 }: CheckInStepRendererProps) {
+  // DEBUG: Log step data to browser console for diagnosis
+  console.log('[CheckInStepRenderer] Step:', step?.id, '| Questions:', step?.questions?.length, JSON.stringify(step?.questions?.map((q: any) => ({ id: q.id, type: q.type, title: q.title }))));
   
   // Render based on step type
   const renderQuestions = () => {
