@@ -121,6 +121,15 @@ export const DEFAULT_CHECKIN_TEMPLATE: CheckInTemplate = {
       icon: 'restaurant',
       questions: [
         {
+          id: 'adherence_score',
+          type: 'slider',
+          title: 'Plan Adherence Score',
+          subtitle: 'On a scale of 1-10, how closely did you follow the plan?',
+          required: true,
+          is_fixed: true,
+          meta: { min: 1, max: 10, step: 1 }
+        },
+        {
           id: 'nutritionAdherence',
           type: 'single_choice',
           title: 'Weekly Compliance (Overall %)',
