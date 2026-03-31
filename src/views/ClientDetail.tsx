@@ -282,8 +282,8 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
             <Utensils className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Current Nutritional Plan</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{plan.name || 'Personalized Plan'}</p>
+            <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Current Nutritional Plan</h3>
+            <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{plan.name || 'Personalized Plan'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -335,8 +335,8 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
                   <span className="material-symbols-outlined text-lg">{meal.iconName === 'Sunrise' ? 'wb_twilight' : meal.iconName === 'Sun' ? 'sunny' : meal.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}</span>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight">{meal.name}</p>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{meal.time || '--:--'}</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{meal.name}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{meal.time || '--:--'}</p>
                 </div>
               </div>
               <div className="text-right">
@@ -391,8 +391,8 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
             <Dumbbell className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Active Training Program</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{program.name || 'Custom Routine'}</p>
+            <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Active Training Program</h3>
+            <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{program.name || 'Custom Routine'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -436,7 +436,7 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg text-blue-500">{block.icon || 'fitness_center'}</span>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight">{block.name}</span>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{block.name}</span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{block.exercises?.length || 0} Exercises</span>
                 </div>
@@ -750,14 +750,14 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div className="flex flex-col gap-6 mt-6">
         <NutritionPlanCard plan={stats?.nutritionPlan} />
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex flex-col justify-center items-center text-center">
-             <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-6 h-6" />
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col justify-center items-center text-center">
+             <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-900/20 text-amber-500 flex items-center justify-center mb-6">
+                <AlertTriangle className="w-8 h-8" />
              </div>
              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">Supplementation Notes</h3>
-             <p className="text-xs text-slate-500 max-w-xs">No specific supplementation protocol defined for this period yet.</p>
+             <p className="text-xs text-slate-500 max-w-xs leading-relaxed">No specific supplementation protocol defined for this period yet.</p>
         </div>
       </div>
       </>
@@ -821,6 +821,25 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         </div>
       ) : (
       <>
+      <div className="mb-0">
+        <div className="flex items-center gap-3 mb-6">
+           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap px-4">Program Assignment</h3>
+           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+        </div>
+        <div className="flex flex-col gap-6 mb-12">
+          <TrainingProgramCard program={stats?.trainingPlan} />
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-10 flex flex-col items-center justify-center text-center">
+               <div className="w-20 h-20 rounded-[2rem] bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-6 text-slate-300 dark:text-slate-600 border border-slate-100 dark:border-slate-800 shadow-inner">
+                  <span className="material-symbols-outlined text-4xl">psychology</span>
+               </div>
+               <h4 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Focus & Intensity</h4>
+               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Hypertrophy Phase</h3>
+               <p className="text-xs text-slate-500 max-w-sm leading-relaxed">This client is currently in a high-volume block focused on <b>Mechanical Tension</b> and progressive overload across major compound movements.</p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
@@ -1132,23 +1151,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 </p>
               )}
             </div>
-          </div>
-        </div>
-      </div>
-      <div className="mt-8">
-        <div className="flex items-center gap-3 mb-6">
-           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap px-4">Program Assignment</h3>
-           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TrainingProgramCard program={stats?.trainingPlan} />
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col items-center justify-center text-center">
-               <div className="w-16 h-16 rounded-3xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-6 text-slate-300 dark:text-slate-600">
-                  <span className="material-symbols-outlined text-3xl">psychology</span>
-               </div>
-               <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest mb-2">Focus & Intensity</h4>
-               <p className="text-xs text-slate-500 max-w-xs leading-relaxed">This client is currently in a <b>Hypertrophy</b> phase with high mechanical tension focus.</p>
           </div>
         </div>
       </div>
