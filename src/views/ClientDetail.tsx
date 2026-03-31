@@ -821,24 +821,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         </div>
       ) : (
       <>
-      <div className="mb-0">
-        <div className="flex items-center gap-3 mb-6">
-           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap px-4">Program Assignment</h3>
-           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
-        </div>
-        <div className="flex flex-col gap-6 mb-12">
-          <TrainingProgramCard program={stats?.trainingPlan} />
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-10 flex flex-col items-center justify-center text-center">
-               <div className="w-20 h-20 rounded-[2rem] bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-6 text-slate-300 dark:text-slate-600 border border-slate-100 dark:border-slate-800 shadow-inner">
-                  <span className="material-symbols-outlined text-4xl">psychology</span>
-               </div>
-               <h4 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Focus & Intensity</h4>
-               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Hypertrophy Phase</h3>
-               <p className="text-xs text-slate-500 max-w-sm leading-relaxed">This client is currently in a high-volume block focused on <b>Mechanical Tension</b> and progressive overload across major compound movements.</p>
-          </div>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -1152,6 +1134,16 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               )}
             </div>
           </div>
+        </div>
+      </div>
+      <div className="mt-12">
+        <div className="flex items-center gap-3 mb-6">
+           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+           <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap px-4">Program Assignment</h3>
+           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1"></div>
+        </div>
+        <div className="flex flex-col gap-6">
+          <TrainingProgramCard program={stats?.trainingPlan} />
         </div>
       </div>
       </>
