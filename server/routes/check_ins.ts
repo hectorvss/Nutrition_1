@@ -460,6 +460,29 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+
+    // --- AUTO-INJECT GENERAL CHECK-IN IF MISSING ---
+    const hasPermanent = (data || []).some((t: any) => t.is_permanent || t.name === 'General Check-in');
+    if (!hasPermanent) {
+      const { data: newTemplate, error: insertError } = await supabaseAdmin
+        .from('checkin_templates')
+        .insert({
+          manager_id: managerId,
+          name: 'General Check-in',
+          description: 'Permanent base template for tracking overall progress and adherence.',
+          template_schema: [], // Will be augmented by FIXED_CHECKIN_QUESTIONS
+          is_permanent: true,
+          is_default: (data || []).length === 0,
+          version: 1
+        })
+        .select()
+        .single();
+      
+      if (!insertError && newTemplate) {
+        data.unshift(newTemplate);
+      }
+    }
+
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching templates:', error);
