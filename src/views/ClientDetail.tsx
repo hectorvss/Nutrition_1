@@ -29,6 +29,8 @@ import {
   Info,
   Camera,
   FileText,
+  FileImage,
+  FileVideo,
   History,
   X,
   Plus,
@@ -1628,26 +1630,32 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="flex flex-col gap-3">
-              {stats?.documents?.map((doc: any, idx: number) => (
-                <a 
-                  key={idx} 
-                  href={doc.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-500/50 transition-colors group cursor-pointer"
-                >
-                  <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500`}>
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{doc.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase">{new Date(doc.date).toLocaleDateString()}</p>
-                  </div>
-                  <button className="text-slate-400 group-hover:text-emerald-500 transition-colors p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg">
-                    <Download className="w-4 h-4" />
-                  </button>
-                </a>
-              ))}
+              {stats?.documents?.map((doc: any, idx: number) => {
+                const isImage = doc.type === 'image' || doc.url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                const isVideo = doc.type === 'video' || doc.url.match(/\.(mp4|mov|avi|wmv)$/i);
+                
+                return (
+                  <a 
+                    key={idx} 
+                    href={doc.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    download={doc.name}
+                    className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-500/50 transition-colors group cursor-pointer"
+                  >
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500`}>
+                      {isImage ? <FileImage className="w-5 h-5" /> : isVideo ? <FileVideo className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{doc.name}</p>
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase">{new Date(doc.date).toLocaleDateString()}</p>
+                    </div>
+                    <div className="text-slate-400 group-hover:text-emerald-500 transition-colors p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg">
+                      <Download className="w-4 h-4" />
+                    </div>
+                  </a>
+                );
+              })}
           </div>
         </div>
       </div>
