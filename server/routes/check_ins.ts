@@ -3,6 +3,47 @@ import { supabaseAdmin } from '../db/index.js';
 import { processTrigger } from './automations.js';
 
 const router = Router();
+
+const FIXED_CHECKIN_QUESTIONS = [
+  {
+    id: 'measurements_step',
+    title: 'Weekly Measurements',
+    subtitle: 'Track your physical progress',
+    questions: [
+      {
+        id: 'measurements',
+        title: 'Body Measurements (cm)',
+        type: 'measurement_group',
+        options: ['weight', 'waist', 'hip', 'thigh_r', 'arm_r']
+      }
+    ]
+  },
+  {
+    id: 'macros_step',
+    title: 'Plan Adherence',
+    subtitle: 'Nutrition and macro tracking',
+    questions: [
+      { id: 'protein', title: 'Avg. Daily Protein (g)', type: 'number', unit: 'g', required: true },
+      { id: 'carbs', title: 'Avg. Daily Carbs (g)', type: 'number', unit: 'g', required: true },
+      { id: 'fats', title: 'Avg. Daily Fats (g)', type: 'number', unit: 'g', required: true },
+      { id: 'calories', title: 'Avg. Daily Calories (kcal)', type: 'number', unit: 'kcal', required: true },
+      { id: 'adherence_score', title: 'Plan Adherence (1-10)', type: 'select', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], required: true },
+      { id: 'fatigue', title: 'Fatigue Level (1-10)', type: 'select', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], required: true }
+    ]
+  }
+];
+
+const injectFixedQuestions = (schema: any[]) => {
+  const fixedIds = new Set(FIXED_CHECKIN_QUESTIONS.flatMap(s => [s.id, ...(s.questions?.map(q => q.id) || [])]));
+  const customSchema = (schema || []).filter(step => {
+     if (fixedIds.has(step.id)) return false;
+     if (step.questions) {
+        step.questions = step.questions.filter((q: any) => !fixedIds.has(q.id));
+     }
+     return true;
+  });
+  return [...FIXED_CHECKIN_QUESTIONS, ...customSchema];
+};
 // ... (rest of the code until POST /client/check-ins)
 
 // Middleware to verify if the user is a CLIENT
@@ -695,6 +736,7 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     if (defaultError) throw defaultError;
 
     if (defaultTemplate) {
+      defaultTemplate.template_schema = injectFixedQuestions(defaultTemplate.template_schema);
       return res.json(defaultTemplate);
     }
 
@@ -765,10 +807,20 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
 
       // Extract Measurements
       const measurements = {
+        weight: answers.weight || answers.Weight,
         waist: answers.waist || answers.Waist || answers['Waist (cm)'],
         hip: answers.hip || answers.Hip || answers['Hip (cm)'],
         thigh_r: answers.thigh_r || answers.Thigh || answers['Right Thigh (cm)'],
         arm_r: answers.arm_r || answers.Arm || answers['Right Arm (cm)']
+      };
+      
+      const macros = {
+        protein: answers.protein || answers.Protein,
+        carbs: answers.carbs || answers.Carbs,
+        fats: answers.fats || answers.Fats,
+        calories: answers.calories || answers.Calories,
+        adherence_score: answers.adherence_score || answers['Plan Adherence'],
+        fatigue: answers.fatigue || answers.Fatigue
       };
 
       const hasMeasurements = Object.values(measurements).some(v => v !== undefined && v !== null);
@@ -791,7 +843,8 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
                ...updates, 
                metadata: { 
                  ...currentMetadata, 
-                 measurements: { ...prevMeasurements, ...measurements } 
+                 measurements: { ...prevMeasurements, ...measurements },
+                 macros: { ...(currentMetadata.macros || {}), ...macros } 
                } 
             })
             .eq('user_id', clientId);
