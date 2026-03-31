@@ -73,7 +73,7 @@ interface ClientDetailProps {
   onBack: () => void;
 }
 
-type Tab = 'Information' | 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
+type Tab = 'Information' | 'Nutrition' | 'Training' | 'Planning' | 'Mindset';
 
 const weightData = [
   { date: 'Aug 1', weight: 78 },
@@ -1750,7 +1750,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </header>
 
           <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto scrollbar-hide">
-            {(['Information', 'Nutrition', 'Training', 'Planning', 'Mindset', 'Check-ins'] as Tab[]).map((tab) => (
+            {(['Information', 'Nutrition', 'Training', 'Planning', 'Mindset'] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1773,27 +1773,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           {activeTab === 'Training' && renderTraining()}
           {activeTab === 'Planning' && renderPlanning()}
           {activeTab === 'Mindset' && renderMindset()}
-          {activeTab === 'Check-ins' && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[600px]">
-              {innerView === 'review' && selectedCheckInId ? (
-                <CheckInReview 
-                  clientId={clientId} 
-                  checkInId={selectedCheckInId} 
-                  onBack={() => setInnerView('info')} 
-                />
-              ) : (
-                <CheckInHistory 
-                  clientId={clientId} 
-                  onBack={() => onBack()} 
-                  hideHeader={true}
-                  onViewReview={(checkInId) => {
-                    setSelectedCheckInId(checkInId);
-                    setInnerView('review');
-                  }}
-                />
-              )}
-            </div>
-          )}
 
           {/* Global Insights Section */}
           {renderInsights()}
