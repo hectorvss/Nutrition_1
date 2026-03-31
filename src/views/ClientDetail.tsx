@@ -57,6 +57,8 @@ import {
 import { useClient } from '../context/ClientContext';
 import CheckInHistory from './CheckInHistory';
 import CheckInReview from './CheckInReview';
+import CheckInReviewRenderer from '../components/checkin/CheckInReviewRenderer';
+import { Loader2 } from 'lucide-react';
 
 const primaryExercises = [
   'Bench Press', 'Squat', 'Deadlift', 'Military Press', 'Barbell Row',
@@ -69,7 +71,7 @@ interface ClientDetailProps {
   onBack: () => void;
 }
 
-type Tab = 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
+type Tab = 'Information' | 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
 
 const weightData = [
   { date: 'Aug 1', weight: 78 },
@@ -244,8 +246,10 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
 
 export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const { clients, deleteClient } = useClient();
-  const [activeTab, setActiveTab] = useState<Tab>('Nutrition');
+  const [activeTab, setActiveTab] = useState<Tab>('Information');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
+  const [onboardingSubmission, setOnboardingSubmission] = useState<any>(null);
+  const [isLoadingOnboarding, setIsLoadingOnboarding] = useState(true);
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
   const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Weekly Volume');
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
@@ -275,6 +279,27 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       }
     };
     fetchStats();
+  }, [clientId]);
+
+  useEffect(() => {
+    const fetchOnboarding = async () => {
+      setIsLoadingOnboarding(true);
+      try {
+        const submissions = await fetchWithAuth('/onboarding/manager/submissions');
+        const clientSubmission = (submissions || [])
+          .filter((s: any) => s.client_id === clientId)
+          .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())[0];
+        
+        if (clientSubmission) {
+          setOnboardingSubmission(clientSubmission);
+        }
+      } catch (error) {
+        console.error('Error fetching onboarding info:', error);
+      } finally {
+        setIsLoadingOnboarding(false);
+      }
+    };
+    fetchOnboarding();
   }, [clientId]);
 
   useEffect(() => {
@@ -319,6 +344,61 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     location: '--',
     gender: '--',
     progress: 0
+  };
+
+  const renderInformation = () => {
+    if (isLoadingOnboarding) {
+      return (
+        <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+          <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+          <p className="text-sm font-medium">Cargando información general...</p>
+        </div>
+      );
+    }
+
+    if (!onboardingSubmission) {
+      return (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
+          <Info className="w-12 h-12 mx-auto mb-4 opacity-20" />
+          <p className="text-lg font-medium text-slate-600 dark:text-slate-300">No onboarding data found</p>
+          <p className="text-sm mt-2 max-w-xs mx-auto">This client hasn't completed any onboarding forms yet, or the data is still being processed.</p>
+        </div>
+      );
+    }
+
+    const { template, answers_json } = onboardingSubmission;
+
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">General Information</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Consolidated data from latest onboarding: <span className="font-bold text-emerald-600">{template?.name || 'Onboarding'}</span></p>
+          </div>
+          <div className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-100 dark:border-emerald-800/50 flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5" />
+            Submitted: {new Date(onboardingSubmission.submitted_at).toLocaleDateString()}
+          </div>
+        </div>
+        
+        {template?.template_schema ? (
+          <CheckInReviewRenderer 
+            template={{
+              id: template?.id || '',
+              name: template?.name || 'Onboarding',
+              templateSchema: template?.template_schema || [],
+              key: template?.id || '',
+              version: 1
+            }} 
+            answers={answers_json || {}} 
+          />
+        ) : (
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
+            No rendering schema found for this template.
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderNutrition = () => (
@@ -1308,7 +1388,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           </header>
 
           <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto scrollbar-hide">
-            {(['Nutrition', 'Training', 'Planning', 'Mindset', 'Check-ins'] as Tab[]).map((tab) => (
+            {(['Information', 'Nutrition', 'Training', 'Planning', 'Mindset', 'Check-ins'] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1326,6 +1406,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             ))}
           </div>
 
+          {activeTab === 'Information' && renderInformation()}
           {activeTab === 'Nutrition' && renderNutrition()}
           {activeTab === 'Training' && renderTraining()}
           {activeTab === 'Planning' && renderPlanning()}
