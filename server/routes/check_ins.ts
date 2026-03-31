@@ -463,23 +463,53 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
 
     // --- AUTO-INJECT GENERAL CHECK-IN IF MISSING ---
     const hasPermanent = (data || []).some((t: any) => t.is_permanent || t.name === 'General Check-in');
+    
     if (!hasPermanent) {
-      const { data: newTemplate, error: insertError } = await supabaseAdmin
-        .from('checkin_templates')
-        .insert({
-          manager_id: managerId,
-          name: 'General Check-in',
-          description: 'Permanent base template for tracking overall progress and adherence.',
-          template_schema: [], // Will be augmented by FIXED_CHECKIN_QUESTIONS
-          is_permanent: true,
-          is_default: (data || []).length === 0,
-          version: 1
-        })
-        .select()
-        .single();
+      console.log(`[CheckIn] General Check-in missing or archived for manager: ${managerId}. Checking all status...`);
       
-      if (!insertError && newTemplate) {
-        data.unshift(newTemplate);
+      // Check if it exists but is archived
+      const { data: existing, error: findError } = await supabaseAdmin
+        .from('checkin_templates')
+        .select('*')
+        .eq('manager_id', managerId)
+        .eq('name', 'General Check-in')
+        .single();
+
+      if (existing && existing.is_archived) {
+        console.log(`[CheckIn] Found archived General Check-in. Unarchiving...`);
+        const { data: updated, error: updateError } = await supabaseAdmin
+          .from('checkin_templates')
+          .update({ is_archived: false, is_active: true, is_permanent: true })
+          .eq('id', existing.id)
+          .select()
+          .single();
+        
+        if (!updateError && updated) {
+          data.unshift(updated);
+        }
+      } else if (!existing) {
+        console.log(`[CheckIn] No General Check-in found. Creating new permanent one...`);
+        const { data: newTemplate, error: insertError } = await supabaseAdmin
+          .from('checkin_templates')
+          .insert({
+            manager_id: managerId,
+            name: 'General Check-in',
+            description: 'Permanent base template for tracking overall progress and adherence.',
+            template_schema: [], 
+            is_permanent: true,
+            is_archived: false,
+            is_active: true,
+            is_default: (data || []).length === 0,
+            version: 1
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error(`[CheckIn] Error injecting template:`, insertError);
+        } else if (newTemplate) {
+          data.unshift(newTemplate);
+        }
       }
     }
 
