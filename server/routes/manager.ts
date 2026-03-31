@@ -270,8 +270,13 @@ router.get('/clients', async (req: any, res) => {
       c.training_programs = (trainingRes.data || []).filter(t => t.client_id === c.id);
     });
     
-    // Helper to map adherence string to percentage
-    const mapAdherence = (str: string): number => {
+    // Helper to map adherence string/score to percentage
+    const mapAdherence = (str: string, d?: any): number => {
+      // Prioritize numeric slider (1-10 -> 10-100%)
+      if (d?.nutrition_adherence_score !== undefined) return Number(d.nutrition_adherence_score) * 10;
+      if (d?.adherence_score !== undefined) return Number(d.adherence_score) * 10;
+      
+      // Fallback to text
       if (!str) return 0;
       if (str.includes('>95%')) return 98;
       if (str.includes('80-95%')) return 85;
@@ -319,7 +324,7 @@ router.get('/clients', async (req: any, res) => {
         planningAssigned: !!(c.roadmaps && c.roadmaps.length > 0),
         roadmaps: c.roadmaps || [],
         plan_name: planName,
-        progress: mapAdherence(dj.nutritionAdherence),
+        progress: mapAdherence(dj.nutritionAdherence, dj),
         lastCheckInDate: latestCheckIn?.date || null,
         lastCheckIn: latestCheckIn ? (() => {
           const diff = now.getTime() - lastCheckInDate!.getTime();
@@ -1802,7 +1807,8 @@ router.get('/analytics', async (req: any, res) => {
         const dayIdx = last7Days.indexOf(ciDate);
         
         // Map qualitative to quantitative if needed, prioritizing numeric adherence_score
-        const adherenceBase = d.adherence_score !== undefined ? Number(d.adherence_score) * 10 : null;
+        const adherenceBase = d.nutrition_adherence_score !== undefined ? Number(d.nutrition_adherence_score) * 10 
+                            : (d.adherence_score !== undefined ? Number(d.adherence_score) * 10 : null);
         const nutVal = adherenceBase ?? (mapping[d.nutritionAdherence] ?? Number(d.nutritionAdherence || 0));
         const traVal = adherenceBase ?? (mapping[d.trainingAdherence] ?? Number(d.trainingAdherence || 0));
         const hydrateVal = mapping[d.waterIntake] ?? Number(d.hydration_percent || 0);

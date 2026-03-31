@@ -253,6 +253,28 @@ router.get('/profile-stats', async (req: any, res) => {
       dailyCaloricAvg = countKcal > 0 ? Math.round(totalKcal / countKcal) : 0;
     }
 
+    let calculatedAdherenceRate = 0;
+    if (recentCheckIns.length > 0) {
+      let totalAdh = 0;
+      let countAdh = 0;
+      recentCheckIns.forEach(ci => {
+        const d = ci.data_json as any;
+        const val = d.nutrition_adherence_score !== undefined ? Number(d.nutrition_adherence_score) * 10 :
+                    (d.adherence_score !== undefined ? Number(d.adherence_score) * 10 : null);
+        if (val !== null) {
+          totalAdh += val;
+          countAdh++;
+        } else if (d.nutritionAdherence) {
+          const str = d.nutritionAdherence;
+          if (str.includes('>95%')) { totalAdh += 98; countAdh++; }
+          else if (str.includes('80-95%')) { totalAdh += 85; countAdh++; }
+          else if (str.includes('50-80%')) { totalAdh += 65; countAdh++; }
+          else if (str.includes('<50%')) { totalAdh += 30; countAdh++; }
+        }
+      });
+      calculatedAdherenceRate = countAdh > 0 ? Math.round(totalAdh / countAdh) : 85; // Fallback to 85 if no scorable data
+    }
+
     // 6. Recent Activity (Messages)
     const { data: recentMsgs } = await supabaseAdmin
       .from('messages')
@@ -446,7 +468,7 @@ router.get('/profile-stats', async (req: any, res) => {
       latestWeight: (lastCheckIn?.data_json as any)?.weight || null,
       goal: client.clients_profiles?.[0]?.goal || null,
       bodyFat: (lastCheckIn?.data_json as any)?.body_fat || null,
-      adherenceRate: 85, // Mock or calculate
+      adherenceRate: calculatedAdherenceRate,
       weightHistory,
       macros: {
           protein: avgProteinAdherence,
