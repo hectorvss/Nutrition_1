@@ -121,7 +121,7 @@ export const DEFAULT_CHECKIN_TEMPLATE: CheckInTemplate = {
       icon: 'restaurant',
       questions: [
         {
-          id: 'adherence_score',
+          id: 'nutrition_adherence_score',
           type: 'slider',
           title: 'Plan Adherence Score',
           subtitle: 'On a scale of 1-10, how closely did you follow the plan?',
