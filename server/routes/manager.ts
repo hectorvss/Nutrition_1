@@ -1801,9 +1801,10 @@ router.get('/analytics', async (req: any, res) => {
         const ciDate = ci.date;
         const dayIdx = last7Days.indexOf(ciDate);
         
-        // Map qualitative to quantitative if needed
-        const nutVal = mapping[d.nutritionAdherence] ?? Number(d.nutritionAdherence || 0);
-        const traVal = mapping[d.trainingAdherence] ?? Number(d.trainingAdherence || 0);
+        // Map qualitative to quantitative if needed, prioritizing numeric adherence_score
+        const adherenceBase = d.adherence_score !== undefined ? Number(d.adherence_score) * 10 : null;
+        const nutVal = adherenceBase ?? (mapping[d.nutritionAdherence] ?? Number(d.nutritionAdherence || 0));
+        const traVal = adherenceBase ?? (mapping[d.trainingAdherence] ?? Number(d.trainingAdherence || 0));
         const hydrateVal = mapping[d.waterIntake] ?? Number(d.hydration_percent || 0);
         const stressVal = mapping[d.stress] ?? 0;
         
