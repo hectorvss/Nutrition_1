@@ -209,16 +209,13 @@ const GENERAL_CHECKIN_SCHEMA = [
 ];
 
 const injectFixedQuestions = (schema: any[]) => {
-  // Only filter steps by their top-level ID or title — never remove individual questions
-  // from custom steps (they may share IDs like 'protein', 'energy', etc.)
+  // ONLY filter by step ID — never by title.
+  // The user's custom 'Nutrition Adherence' step has a different ID (e.g. 'nutrition_adherence')
+  // than the fixed step ID ('nutrition_adherence_step'). Filtering by title was incorrectly
+  // replacing entire custom steps (with many questions) with the fixed step (slider only).
   const fixedStepIds = new Set(FIXED_CHECKIN_QUESTIONS.map(s => s.id));
-  const fixedStepTitles = new Set(FIXED_CHECKIN_QUESTIONS.map(s => s.title));
 
-  const customSchema = (schema || []).filter(step => {
-    // Remove any step that clashes with a fixed step ID or Title
-    if (fixedStepIds.has(step.id) || fixedStepTitles.has(step.title)) return false;
-    return true;
-  });
+  const customSchema = (schema || []).filter(step => !fixedStepIds.has(step.id));
 
   return [...FIXED_CHECKIN_QUESTIONS, ...customSchema];
 };
