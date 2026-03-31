@@ -25,6 +25,7 @@ export interface CheckInQuestion {
     operator: 'equals' | 'not_equals';
     value: any;
   };
+  hidden?: boolean;
   meta?: Record<string, any>;
 }
 
