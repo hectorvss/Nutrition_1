@@ -31,6 +31,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { clients } = useClient();
   const [activity, setActivity] = useState<any[]>([]);
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
+  const [activeCount, setActiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +44,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         }
         if (data.attentionRequired) {
           setAttentionCheckIns(data.attentionRequired);
+        }
+        if (data.business && typeof data.business.activeClients === 'number') {
+          setActiveCount(data.business.activeClients);
         }
       } catch (error) {
         console.error('Failed to load analytics:', error);
@@ -241,7 +245,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-emerald-100 text-sm font-medium opacity-90">Active Clients</p>
-                  <h3 className="text-3xl font-bold mt-1">{clients.length}</h3>
+                  <h3 className="text-3xl font-bold mt-1">{activeCount}</h3>
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
                   <TrendingUp className="w-5 h-5" />

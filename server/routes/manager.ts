@@ -363,10 +363,14 @@ router.patch('/clients/:id/status', async (req: any, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error updating status:', error);
+      return res.status(500).json({ error: error.message, details: error });
+    }
+    
     res.json({ success: true, user: updatedUser });
   } catch (error: any) {
-    console.error('Error updating client status:', error);
+    console.error('Catch block error updating client status:', error);
     res.status(500).json({ error: error?.message || 'Server error' });
   }
 });
