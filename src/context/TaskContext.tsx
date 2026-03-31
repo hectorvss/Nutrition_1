@@ -23,6 +23,9 @@ export interface TaskItem {
   avatar: string;
   status: 'overdue' | 'today' | 'pending' | 'completed';
   timeLabel: string;
+  endTime?: string;
+  duration?: string;
+  date?: string;
   priority: 'high' | 'medium' | 'low';
   metrics?: {
     weightChange: string;
@@ -84,7 +87,10 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         avatar: '',
         status: t.status as any || 'today',
         timeLabel: t.time,
-        priority: 'medium',
+        endTime: t.end_time || t.endTime,
+        duration: t.duration,
+        date: t.date,
+        priority: t.priority || 'medium',
         type: t.type,
         clientId: t.client_id || t.clientId
       }));
@@ -163,9 +169,11 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         title: task.title,
         description: task.desc,
         type: task.type || 'MANUAL TASK',
-        date: new Date().toISOString().split('T')[0], // Default to today for manual tasks unless specified
-        time: '09:00', // Default
-        duration: '30m'
+        date: task.date || new Date().toISOString().split('T')[0],
+        time: task.timeLabel || '09:00',
+        end_time: task.endTime || (parseInt((task.timeLabel || '09:00').split(':')[0]) + 1).toString().padStart(2, '0') + ':' + (task.timeLabel || '09:00').split(':')[1],
+        duration: task.duration || '1h',
+        priority: task.priority || 'medium'
       };
       
       const response = await fetchWithAuth('/manager/tasks', {

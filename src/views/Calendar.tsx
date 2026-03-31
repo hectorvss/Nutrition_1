@@ -117,8 +117,17 @@ const getOverlapData = (events: any[]) => {
 
   sorted.forEach(event => {
     const startMins = timeToMinutes(event.time) ?? 540;
-    const endMins = startMins + durationToMinutes(event.duration); // Simplified for clustering logic
-    // Note: getOverlapData only needs approximate clustering, individual rendering is precise.
+    
+    let dur = 60;
+    const endMin = timeToMinutes(event.endTime);
+    if (endMin !== null) {
+      dur = endMin - startMins;
+      if (dur <= 0) dur = 60; // Fallback
+    } else {
+      dur = durationToMinutes(event.duration);
+    }
+    
+    const endMins = startMins + dur;
 
     if (startMins >= clusterEnd) {
       if (currentCluster.length > 0) clusters.push(currentCluster);
