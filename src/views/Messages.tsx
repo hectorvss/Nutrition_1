@@ -44,6 +44,7 @@ interface Message {
   attachment_type?: 'image' | 'file' | 'audio' | 'check_in';
   attachment_name?: string;
   created_at: string;
+  unreadCount?: number;
 }
 
 interface MessagesProps {
@@ -72,6 +73,17 @@ export default function Messages({ onNavigate }: MessagesProps) {
   const [recipientSearch, setRecipientSearch] = useState('');
   const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
   const [showRecipientResults, setShowRecipientResults] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('chatFavorites') || '[]'); } catch { return []; }
+  });
+
+  const toggleFavorite = (e: React.MouseEvent, clientId: string) => {
+    e.stopPropagation();
+    const isFav = favorites.includes(clientId);
+    const updated = isFav ? favorites.filter(id => id !== clientId) : [...favorites, clientId];
+    setFavorites(updated);
+    localStorage.setItem('chatFavorites', JSON.stringify(updated));
+  };
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +163,20 @@ export default function Messages({ onNavigate }: MessagesProps) {
     const interval = setInterval(loadMessages, 5000); // Polling for simplicity
     return () => clearInterval(interval);
   }, [activeRecipient]);
+
+  // Mark as read when entering a chat
+  useEffect(() => {
+    if (activeRecipient?.id && user?.role === 'MANAGER') {
+      const latest = latestMessages[activeRecipient.id];
+      if (latest && latest.unreadCount && latest.unreadCount > 0) {
+        fetchWithAuth(`/messages/${activeRecipient.id}/read`, { method: 'POST' }).catch(console.error);
+        setLatestMessages(prev => ({
+          ...prev,
+          [activeRecipient.id]: { ...prev[activeRecipient.id], unreadCount: 0 }
+        }));
+      }
+    }
+  }, [activeRecipient, user, latestMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -362,6 +388,11 @@ export default function Messages({ onNavigate }: MessagesProps) {
 
   if (user?.role === 'MANAGER' && !selectedClientId && !isComposing) {
     const sortedClients = [...clients].sort((a, b) => {
+      const isAFav = favorites.includes(a.id);
+      const isBFav = favorites.includes(b.id);
+      if (isAFav && !isBFav) return -1;
+      if (!isAFav && isBFav) return 1;
+
       const timeA = new Date(latestMessages[a.id]?.created_at || 0).getTime();
       const timeB = new Date(latestMessages[b.id]?.created_at || 0).getTime();
       return timeB - timeA;
@@ -419,14 +450,13 @@ export default function Messages({ onNavigate }: MessagesProps) {
                   }}
                   className="group p-5 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors relative"
                 >
-                  {latest && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-r-full"></div>}
+                  {(latest?.unreadCount || 0) > 0 && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-r-full"></div>}
                   <div className="flex gap-4 items-start">
                     <div className="relative flex-shrink-0">
                       <div 
                         className="w-14 h-14 rounded-2xl bg-cover bg-center shadow-sm" 
                         style={{ backgroundImage: `url(${client.avatar})` }}
                       ></div>
-                      <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1">
@@ -453,9 +483,13 @@ export default function Messages({ onNavigate }: MessagesProps) {
                           )}
                         </p>
                         <div className="flex-shrink-0 flex items-center gap-3">
-                          <Star className="w-5 h-5 text-slate-300 group-hover:text-emerald-500 transition-colors" />
-                          {latest && (
-                            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-md shadow-emerald-500/30">1</span>
+                          <button onClick={(e) => toggleFavorite(e, client.id)} className="focus:outline-none">
+                            <Star className={`w-5 h-5 transition-colors ${favorites.includes(client.id) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 group-hover:text-emerald-500'}`} />
+                          </button>
+                          {(latest?.unreadCount || 0) > 0 && (
+                            <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-md shadow-emerald-500/30">
+                              {latest.unreadCount}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -607,7 +641,6 @@ export default function Messages({ onNavigate }: MessagesProps) {
                     <div key={client.id} className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                       <div className="relative">
                         <img src={client.avatar} alt="" className="w-11 h-11 rounded-full object-cover shadow-sm" />
-                        <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 w-3 h-3 rounded-full border-2 border-white shadow-sm"></div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-bold text-slate-900 truncate">{client.name}</h4>
@@ -686,17 +719,12 @@ export default function Messages({ onNavigate }: MessagesProps) {
               className="w-12 h-12 rounded-full object-cover" 
               src={activeRecipient?.avatar} 
             />
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
           </div>
           <div>
             <div className="flex items-center space-x-1">
               <h2 className="font-bold text-slate-900">{activeRecipient?.name || 'Loading...'}</h2>
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             </div>
-            <p className="text-xs font-medium text-emerald-600 flex items-center">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5"></span>
-              Active now
-            </p>
           </div>
         </div>
         <div className="flex items-center space-x-3">

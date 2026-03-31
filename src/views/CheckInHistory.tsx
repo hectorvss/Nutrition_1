@@ -85,6 +85,10 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
     if (!dj) return null;
     
     // Check for direct numeric adherence from dynamic system first
+    if (dj.nutrition_adherence_score !== undefined) {
+      const score = Number(dj.nutrition_adherence_score);
+      if (!isNaN(score)) return score * 10;
+    }
     if (dj.adherence_score !== undefined) {
       const score = Number(dj.adherence_score);
       if (!isNaN(score)) return score * 10; // 1-10 scale to 0-100
