@@ -714,7 +714,11 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     if (assignmentError) throw assignmentError;
 
     if (assignment?.template) {
-      return res.json(assignment.template);
+      const template = assignment.template as any;
+      if (template && !Array.isArray(template)) {
+        template.template_schema = injectFixedQuestions(template.template_schema);
+        return res.json(template);
+      }
     }
 
     // 2. Fallback to manager's default template
@@ -873,6 +877,78 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
   } catch (err: any) {
     console.error('Error saving submission:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Manager: Delete check-in (Legacy)
+router.delete('/manager/check-ins/:checkInId', verifyManager, async (req: any, res) => {
+  const { checkInId } = req.params;
+  const managerId = req.user.id;
+  try {
+    const { data: checkin, error: fetchError } = await supabaseAdmin
+      .from('check_ins')
+      .select('client_id')
+      .eq('id', checkInId)
+      .single();
+
+    if (fetchError || !checkin) return res.status(404).json({ error: 'Check-in not found' });
+
+    const { data: client, error: clientErr } = await supabaseAdmin
+      .from('users')
+      .select('manager_id')
+      .eq('id', checkin.client_id)
+      .single();
+
+    if (clientErr || !client || client.manager_id !== managerId) {
+      return res.status(403).json({ error: 'Access denied: Permission check failed' });
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from('check_ins')
+      .delete()
+      .eq('id', checkInId);
+
+    if (deleteError) throw deleteError;
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error deleting legacy check-in:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Manager: Delete dynamic check-in submission
+router.delete('/manager/client-submissions/:submissionId', verifyManager, async (req: any, res) => {
+  const { submissionId } = req.params;
+  const managerId = req.user.id;
+  try {
+    const { data: submission, error: fetchError } = await supabaseAdmin
+      .from('client_checkin_submissions')
+      .select('client_id')
+      .eq('id', submissionId)
+      .single();
+
+    if (fetchError || !submission) return res.status(404).json({ error: 'Check-in not found' });
+
+    const { data: client, error: clientErr } = await supabaseAdmin
+      .from('users')
+      .select('manager_id')
+      .eq('id', submission.client_id)
+      .single();
+
+    if (clientErr || !client || client.manager_id !== managerId) {
+      return res.status(403).json({ error: 'Access denied: Permission check failed' });
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from('client_checkin_submissions')
+      .delete()
+      .eq('id', submissionId);
+
+    if (deleteError) throw deleteError;
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error('Error deleting dynamic check-in:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
