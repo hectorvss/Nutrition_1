@@ -23,7 +23,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
-  const [isAssigning, setIsAssigning] = useState(false);
+  const [isAssigning, setIsAssigning] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadAssignments() {
@@ -58,7 +58,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
 
   const handleAssign = async (templateId: string) => {
     if (!selectedClient) return;
-    setIsAssigning(true);
+    setIsAssigning(templateId);
     try {
       await fetchWithAuth('/check-ins/manager/assign-template', {
         method: 'POST',
@@ -73,7 +73,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     } catch (err) {
       alert('Error assigning template');
     } finally {
-      setIsAssigning(false);
+      setIsAssigning(null);
     }
   };
 
@@ -282,8 +282,9 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                   <button 
                     key={t.id}
                     onClick={() => handleAssign(t.id)}
-                    disabled={isAssigning}
+                    disabled={!!isAssigning}
                     className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left group
+                      ${isAssigning === t.id ? 'opacity-70 cursor-wait' : !!isAssigning ? 'opacity-50 cursor-not-allowed' : ''}
                       ${assignments[selectedClient?.id] === t.name 
                         ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/30 ring-1 ring-emerald-500/20' 
                         : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-emerald-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
@@ -294,8 +295,8 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                       </p>
                       {t.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Recommended</span>}
                     </div>
-                    {isAssigning && selectedClient?.id === selectedClient?.id ? (
-                       <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    {isAssigning === t.id ? (
+                      <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                     ) : assignments[selectedClient?.id] === t.name ? (
                       <span className="material-symbols-outlined text-emerald-500">check_circle</span>
                     ) : (
