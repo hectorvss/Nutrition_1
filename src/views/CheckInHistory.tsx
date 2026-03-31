@@ -7,7 +7,9 @@ import {
   Flag,
   ChevronRight,
   History,
-  Archive
+  Archive,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 
@@ -49,12 +51,46 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
     fetchData();
   }, [clientId]);
 
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    if (confirmDelete !== item.id) {
+      setConfirmDelete(item.id);
+      return;
+    }
+
+    setIsDeleting(item.id);
+    try {
+      const endpoint = item.type === 'dynamic' 
+        ? `/check-ins/manager/client-submissions/${item.id}`
+        : `/check-ins/manager/check-ins/${item.id}`;
+      
+      await fetchWithAuth(endpoint, { method: 'DELETE' });
+      setCheckIns(prev => prev.filter(ci => ci.id !== item.id));
+      setConfirmDelete(null);
+    } catch (err) {
+      console.error('Error deleting check-in:', err);
+      alert('Failed to delete check-in');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const clientName = client?.name || 'Client';
   const clientAvatar = client?.avatar;
 
   const getComplianceScore = (dj: any): number | null => {
     if (!dj) return null;
-    // Map adherence words to scores
+    
+    // Check for direct numeric adherence from dynamic system first
+    if (dj.adherence_score !== undefined) {
+      const score = Number(dj.adherence_score);
+      if (!isNaN(score)) return score * 10; // 1-10 scale to 0-100
+    }
+
+    // Map adherence words to scores (Legacy support)
     const map: Record<string, number> = {
       'Perfect': 100, 'Very High': 95, 'High': 90, 'All': 100, 'Did all': 100,
       'Good': 80, '5-6': 80, 'Moderate': 70, 'Some': 60,
@@ -186,10 +222,30 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
                 </div>
               </div>
 
-              <div className="flex items-center justify-end min-w-[120px]">
+              <div className="flex items-center justify-end gap-3 min-w-[160px]">
+                {!isClient && (
+                  <button
+                    onClick={(e) => handleDelete(e, item)}
+                    disabled={isDeleting === item.id}
+                    title="Delete check-in"
+                    className={`p-2.5 rounded-xl transition-all flex items-center justify-center gap-2 border shadow-sm ${
+                      confirmDelete === item.id 
+                        ? 'bg-red-500 text-white border-red-600 hover:bg-red-600' 
+                        : 'bg-white text-slate-400 border-slate-200 hover:text-red-500 hover:border-red-200 hover:bg-red-50'
+                    }`}
+                  >
+                    {isDeleting === item.id ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : confirmDelete === item.id ? (
+                      <><Trash2 className="w-4 h-4" /><span className="text-[10px] font-black uppercase tracking-widest">Confirm?</span></>
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={() => onViewReview(item.id)}
-                  className={`px-5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 w-full text-sm ${
+                  className={`px-5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 flex-1 text-sm ${
                     isNew
                       ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20'
                       : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
