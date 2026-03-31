@@ -243,12 +243,14 @@ router.get('/clients', async (req: any, res) => {
         profiles!user_id (full_name, avatar_url),
         clients_profiles!user_id (weight, goal, notes, temp_password),
         check_ins (id, date, reviewed_at, data_json),
+        client_checkin_submissions!client_id (id, submitted_at, reviewed_at, answers_json),
         workout_logs!client_id (logged_at),
         tasks!client_id (*)
       `)
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
       .order('date', { foreignTable: 'check_ins', ascending: false })
+      .order('submitted_at', { foreignTable: 'client_checkin_submissions', ascending: false })
       .order('logged_at', { foreignTable: 'workout_logs', ascending: false });
       
     if (error) throw error;
@@ -286,7 +288,20 @@ router.get('/clients', async (req: any, res) => {
     };
 
     const formattedClients = clients.map((c: any) => {
-      const latestCheckIn = c.check_ins?.[0] || null;
+      // Merge legacy check-ins and new submissions
+      const legacyCheckIns = c.check_ins || [];
+      const newSubmissions = (c.client_checkin_submissions || []).map((s: any) => ({
+        id: s.id,
+        date: s.submitted_at,
+        reviewed_at: s.reviewed_at,
+        data_json: s.answers_json
+      }));
+      
+      const allCheckIns = [...legacyCheckIns, ...newSubmissions].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      const latestCheckIn = allCheckIns[0] || null;
       const latestWorkout = c.workout_logs?.[0] || null;
       let dj = latestCheckIn?.data_json || {};
       if (typeof dj === 'string') {
@@ -343,7 +358,7 @@ router.get('/clients', async (req: any, res) => {
           return `${new Date(next.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} ${next.time.substring(0, 5)}`;
         })(),
         isUnreviewed: latestCheckIn ? !(latestCheckIn.reviewed_at || latestCheckIn.data_json?.reviewed_at) : false,
-        check_ins: c.check_ins || []
+        check_ins: allCheckIns
       };
     });
     
