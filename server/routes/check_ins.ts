@@ -971,7 +971,7 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     if (assignment?.template) {
       const template = assignment.template as any;
       if (template && !Array.isArray(template)) {
-        template.template_schema = injectFixedQuestions(template.template_schema);
+        // Return template exactly as stored — no injection needed
         return res.json(template);
       }
     }
@@ -995,7 +995,7 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     if (defaultError) throw defaultError;
 
     if (defaultTemplate) {
-      defaultTemplate.template_schema = injectFixedQuestions(defaultTemplate.template_schema);
+      // Return template exactly as stored — no injection needed
       return res.json(defaultTemplate);
     }
 
