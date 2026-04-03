@@ -31,14 +31,24 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
     const fetchUnread = async () => {
       try {
         const data = await fetchWithAuth(`/messages/unread-count?t=${new Date().getTime()}`);
-        setUnreadCount(data?.unreadCount || 0);
+        if (data && typeof data.unreadCount === 'number') {
+          console.log('[Sidebar] Unread count:', data.unreadCount);
+          setUnreadCount(data.unreadCount);
+        }
       } catch (e) {
-        // ignore errors silently
+        console.error('[Sidebar] Error fetching unread count:', e);
       }
     };
     fetchUnread();
     const interval = setInterval(fetchUnread, 15000);
-    return () => clearInterval(interval);
+    
+    // Listen for manual updates (when marking as read)
+    window.addEventListener('updateUnreadCount', fetchUnread);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('updateUnreadCount', fetchUnread);
+    };
   }, []);
 
   const menuGroups = [
@@ -153,7 +163,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                     {item.label}
                   </span>
                   {item.id === 'messages' && unreadCount > 0 && (
-                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-md shadow-emerald-500/30">
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#10b981] text-white text-[10px] font-bold shadow-lg shadow-emerald-500/40 animate-in zoom-in-50 duration-300">
                       {unreadCount}
                     </span>
                   )}

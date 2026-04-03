@@ -49,15 +49,14 @@ router.use(authenticate);
 router.get('/unread-count', async (req: any, res) => {
   const userId = req.user.id;
   try {
-    const { data: msgs, error } = await supabaseAdmin
+    const { count, error } = await supabaseAdmin
       .from('messages')
-      .select('id, is_read')
-      .eq('receiver_id', userId);
+      .select('*', { count: 'exact', head: true })
+      .eq('receiver_id', userId)
+      .or('is_read.eq.false,is_read.is.null');
 
     if (error) throw error;
-    
-    const count = (msgs || []).filter(m => m.is_read !== true && m.is_read !== 'true').length;
-    res.json({ unreadCount: count });
+    res.json({ unreadCount: count || 0 });
   } catch (error: any) {
     console.error('Error fetching unread count:', error);
     res.status(500).json({ error: error.message });
@@ -147,19 +146,14 @@ router.post('/:otherUserId/read', async (req: any, res) => {
   const { otherUserId } = req.params;
 
   try {
-    const { data: toUpdate } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('messages')
-      .select('id')
+      .update({ is_read: true })
       .eq('receiver_id', userId)
-      .eq('sender_id', otherUserId);
-      
-    if (toUpdate && toUpdate.length > 0) {
-      await supabaseAdmin
-        .from('messages')
-        .update({ is_read: true })
-        .in('id', toUpdate.map(m => m.id));
-    }
+      .eq('sender_id', otherUserId)
+      .or('is_read.eq.false,is_read.is.null');
 
+    if (error) throw error;
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error marking messages as read:', error);
