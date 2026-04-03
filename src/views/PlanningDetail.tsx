@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
@@ -75,8 +75,9 @@ interface TrajectoryGoals {
   startWeight: number;
   targetStrengthKg: number;
   startStrengthKg: number;
-  exerciseName: string; // The reference lift exercise name
-  programStartDate?: string; // ISO date string, optional
+  exerciseName: string;
+  programStartDate: string; // ISO date string YYYY-MM-DD
+  totalWeeks: number;       // managed here, overrides roadmap.totalWeeks for trajectory purposes
 }
 
 interface RoadmapData {
@@ -222,13 +223,8 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
   <span className={`material-symbols-outlined ${className}`} style={{ fontSize: 'inherit' }}>{name}</span>
 );
 
-// --- TRAJECTORY HELPERS ---
 
-interface TrajectoryPoint {
-  week: number;
-  weight: number;
-  strengthKg: number;
-}
+// --- TRAJECTORY HELPERS ---
 
 /** Classify phase rate from title/type */
 function getPhaseRates(block: RoadmapBlock): { weightRate: number; strengthRate: number } {
@@ -267,65 +263,69 @@ function getPhaseRates(block: RoadmapBlock): { weightRate: number; strengthRate:
 
 function computeTrajectory(
   roadmap: RoadmapData,
-  checkInWeightsByWeek: Map<number, number>,
-  workoutStrengthByWeek: Map<number, number>,
+  checkInsByDate: { date: string; weight: number }[],
   goals: TrajectoryGoals
-): { actual: TrajectoryPoint[]; projected: TrajectoryPoint[] } {
-  const totalWeeks = roadmap.totalWeeks || 12;
+): { chartData: any[]; currentWeekIndex: number } {
+  const totalWeeks = goals.totalWeeks || roadmap.totalWeeks || 12;
   const startW = goals.startWeight || 0;
-  const startS = goals.startStrengthKg || 0;
-
-  // Build projected curve week by week
-  const projected: TrajectoryPoint[] = [];
-  let projW = startW;
-  let projS = startS;
-
-  // Merge nutrition + training rates per week (take both, weight from nutrition, strength from training)
   const allBlocks = [...roadmap.nutrition, ...roadmap.training];
 
-  for (let w = 1; w <= totalWeeks; w++) {
-    // Find active blocks for this week
-    const activeBlocks = allBlocks.filter(b => w >= b.startWeek && w <= b.endWeek);
-    let weekWeightRate = 0;
-    let weekStrengthRate = 0;
-    let hasNutBlock = false;
-    let hasTrainBlock = false;
+  const programStart = goals.programStartDate
+    ? new Date(goals.programStartDate)
+    : new Date();
 
+  // Compute current week index (0-based for array)
+  const now = new Date();
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+  const currentWeekIndex = Math.max(
+    0,
+    Math.min(totalWeeks - 1, Math.floor((now.getTime() - programStart.getTime()) / msPerWeek))
+  );
+
+  // Build one entry per week with projected weight
+  const chartData: any[] = [];
+  let projW = startW;
+
+  for (let w = 0; w < totalWeeks; w++) {
+    const weekNum = w + 1; // 1-based to match block startWeek / endWeek
+    const weekDate = new Date(programStart.getTime() + w * msPerWeek);
+    const weekLabel = weekDate.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+
+    // Projection: derive rates from active blocks this week
+    const activeBlocks = allBlocks.filter(b => weekNum >= b.startWeek && weekNum <= b.endWeek);
+    let weekWeightRate = 0;
+    let usedNutBlock = false;
     activeBlocks.forEach(b => {
-      const rates = getPhaseRates(b);
-      if (b.type === 'nutrition' && !hasNutBlock) {
-        weekWeightRate = rates.weightRate;
-        hasNutBlock = true;
-      }
-      if (b.type === 'training' && !hasTrainBlock) {
-        weekStrengthRate = rates.strengthRate;
-        hasTrainBlock = true;
+      if (b.type === 'nutrition' && !usedNutBlock) {
+        weekWeightRate = getPhaseRates(b).weightRate;
+        usedNutBlock = true;
       }
     });
 
     projW = parseFloat((projW + weekWeightRate).toFixed(2));
-    // Strength grows as a percentage per week of starting strength
-    projS = parseFloat((projS + (startS * weekStrengthRate) / 100).toFixed(1));
 
-    projected.push({ week: w, weight: projW, strengthKg: projS });
+    // Find a real check-in close to (within) this week window
+    const weekStart = weekDate;
+    const weekEnd = new Date(weekDate.getTime() + msPerWeek);
+    const ciInWeek = checkInsByDate.filter(ci => {
+      const d = new Date(ci.date);
+      return d >= weekStart && d < weekEnd;
+    });
+    // Prefer the last one of the week
+    const actualW = ciInWeek.length > 0
+      ? ciInWeek[ciInWeek.length - 1].weight
+      : undefined;
+
+    chartData.push({
+      week: weekNum,
+      label: weekLabel,
+      projected: projW,
+      actual: w <= currentWeekIndex ? actualW : undefined,
+      isCurrentWeek: w === currentWeekIndex,
+    });
   }
 
-  // Build actual data from real check-ins and workout logs
-  const currentWeek = roadmap.currentWeek || 1;
-  const actual: TrajectoryPoint[] = [];
-  for (let w = 1; w <= currentWeek; w++) {
-    const wt = checkInWeightsByWeek.get(w);
-    const st = workoutStrengthByWeek.get(w);
-    if (wt !== undefined || st !== undefined) {
-      actual.push({
-        week: w,
-        weight: wt ?? (actual.length > 0 ? actual[actual.length - 1].weight : startW),
-        strengthKg: st ?? (actual.length > 0 ? actual[actual.length - 1].strengthKg : startS),
-      });
-    }
-  }
-
-  return { actual, projected };
+  return { chartData, currentWeekIndex };
 }
 
 export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
@@ -341,10 +341,8 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   const [editError, setEditError] = useState<string | null>(null);
 
   // --- Trajectory Data ---
-  const [checkInsByWeek, setCheckInsByWeek] = useState<Map<number, number>>(new Map());
-  const [strengthByWeek, setStrengthByWeek] = useState<Map<number, number>>(new Map());
-  const [tooltipWeek, setTooltipWeek] = useState<number | null>(null);
-  const chartRef = useRef<SVGSVGElement>(null);
+  // Store check-ins as flat array with date + weight (not bucketed by week)
+  const [checkInsHistory, setCheckInsHistory] = useState<{ date: string; weight: number }[]>([]);
 
   const selectedBlock = useMemo(() => {
     if (!roadmap || !selectedBlockId) return null;
@@ -373,51 +371,27 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
       const checkInsData = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins`);
       const checkIns: any[] = checkInsData?.check_ins || [];
 
-      // Fetch workout logs for strength data
-      const logsData = await fetchWithAuth(`/manager/clients/${clientId}/workout-logs`);
-      const logs: any[] = Array.isArray(logsData) ? logsData : [];
-
-      // We need a program start date to map dates → weeks
-      // Use the earliest check-in or today - (currentWeek * 7) days as fallback
-      const sortedCI = [...checkIns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      const programStart = sortedCI.length > 0 ? new Date(sortedCI[0].date) : new Date();
-
-      const dateToWeek = (dateStr: string): number => {
-        const d = new Date(dateStr);
-        const diffMs = d.getTime() - programStart.getTime();
-        return Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1);
-      };
-
-      // Map check-in weights by week
-      const ciByWeek = new Map<number, number>();
+      // Parse each check-in into a flat { date, weight } entry (use actual calendar date)
+      const weightHistory: { date: string; weight: number }[] = [];
       checkIns.forEach((ci: any) => {
         const dj = ci.data_json || {};
-        // Support both top-level weight and nested measurements.weight
-        const w = dj.weight || dj.measurements?.weight || dj.measurements?.weight_kg;
-        if (w && !isNaN(Number(w))) {
-          const week = dateToWeek(ci.date || ci.created_at);
-          // Keep the latest for each week
-          if (!ciByWeek.has(week) || new Date(ci.date).getTime() > new Date(checkIns.find(x => dateToWeek(x.date) === week)?.date)?.getTime()) {
-            ciByWeek.set(week, parseFloat(Number(w).toFixed(1)));
-          }
+        // Support legacy weight field and nested measurements object
+        const wRaw =
+          dj.weight ||
+          dj.measurements?.weight ||
+          dj.measurements?.weight_kg ||
+          (Array.isArray(dj.measurements) ? dj.measurements.find((m: any) => m.type === 'weight' || m.id === 'weight')?.value : undefined);
+        const w = parseFloat(String(wRaw));
+        if (!isNaN(w) && w > 0) {
+          weightHistory.push({
+            date: ci.date || ci.created_at?.split('T')[0] || '',
+            weight: parseFloat(w.toFixed(1)),
+          });
         }
       });
-      setCheckInsByWeek(ciByWeek);
-
-      // Map workout logs max weight by week (find heaviest set across all exercises)
-      const stByWeek = new Map<number, number>();
-      logs.forEach((log: any) => {
-        const exercises: any[] = log.exercises || [];
-        const week = dateToWeek(log.logged_at);
-        let maxKg = stByWeek.get(week) || 0;
-        exercises.forEach((ex: any) => {
-          const wStr = ex.weight || ex.actual_weight || '';
-          const kg = parseFloat(String(wStr).replace(/[^0-9.]/g, ''));
-          if (!isNaN(kg) && kg > maxKg) maxKg = kg;
-        });
-        if (maxKg > 0) stByWeek.set(week, maxKg);
-      });
-      setStrengthByWeek(stByWeek);
+      // Sort by date ascending so chart renders left→right chronologically
+      weightHistory.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setCheckInsHistory(weightHistory);
     } catch (e) {
       console.warn('Trajectory data fetch failed (non-critical):', e);
     }
@@ -1183,71 +1157,76 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
           {/* --- 4. GOAL TRAJECTORY & PREDICTIONS --- */}
           {roadmap && (() => {
-            const tGoals: TrajectoryGoals = roadmap.trajectoryGoals || {
+            // Resolve trajectory goals with smart defaults
+            const today = new Date().toISOString().split('T')[0];
+            const tGoals: TrajectoryGoals = {
               targetWeight: 70,
-              startWeight: checkInsByWeek.size > 0 ? (checkInsByWeek.get(1) || 80) : 80,
+              startWeight: checkInsHistory.length > 0 ? checkInsHistory[0].weight : 80,
               targetStrengthKg: 100,
-              startStrengthKg: strengthByWeek.size > 0 ? (strengthByWeek.get(1) || 60) : 60,
+              startStrengthKg: 60,
               exerciseName: 'Key Lift',
+              programStartDate: today,
+              totalWeeks: roadmap.totalWeeks || 12,
+              ...(roadmap.trajectoryGoals || {}),
             };
 
-            const { actual, projected } = computeTrajectory(roadmap, checkInsByWeek, strengthByWeek, tGoals);
+            const totalWeeks = tGoals.totalWeeks || 12;
 
-            const totalWeeks = roadmap.totalWeeks || 12;
-            const currentWeek = roadmap.currentWeek || 4;
+            const { chartData, currentWeekIndex } = computeTrajectory(roadmap, checkInsHistory, tGoals);
 
-            // Scale helpers for SVG (viewBox 0 0 1000 200)
-            const CHART_W = 1000;
-            const CHART_H = 200;
-            const PAD_L = 0;
-            const PAD_R = 0;
+            // KPIs
+            const finalProjected = chartData[chartData.length - 1]?.projected ?? tGoals.startWeight;
+            const projWeightDelta = parseFloat((finalProjected - tGoals.startWeight).toFixed(1));
+            const hasActualData = checkInsHistory.length > 0;
 
+            // Find min/max for Y-axis domain
             const allWeights = [
-              ...projected.map(p => p.weight),
-              ...actual.map(p => p.weight),
+              ...chartData.map(d => d.projected).filter(Boolean),
+              ...checkInsHistory.map(c => c.weight),
               tGoals.targetWeight,
-              tGoals.startWeight,
             ].filter(v => v > 0);
-            const minW = Math.min(...allWeights) - 2;
-            const maxW = Math.max(...allWeights) + 2;
+            const minW = allWeights.length > 0 ? Math.floor(Math.min(...allWeights)) - 2 : 60;
+            const maxW = allWeights.length > 0 ? Math.ceil(Math.max(...allWeights)) + 2 : 100;
 
-            const toX = (week: number) => PAD_L + ((week - 1) / Math.max(totalWeeks - 1, 1)) * (CHART_W - PAD_L - PAD_R);
-            const toY = (weight: number) => CHART_H - ((weight - minW) / Math.max(maxW - minW, 1)) * CHART_H;
-
-            const projPath = projected.map((p, i) => `${i === 0 ? 'M' : 'L'} ${toX(p.week)},${toY(p.weight)}`).join(' ');
-            const actualPath = actual.map((p, i) => `${i === 0 ? 'M' : 'L'} ${toX(p.week)},${toY(p.weight)}`).join(' ');
-
-            // Phase band colors for background
-            const phaseColors: Record<string, string> = {
-              'bg-blue-100': '#eff6ff', 'bg-amber-100': '#fffbeb', 'bg-green-100': '#f0fdf4',
-              'bg-purple-100': '#faf5ff', 'bg-rose-100': '#fff1f2', 'bg-emerald-100': '#ecfdf5',
-              'bg-blue-900/30': '#1e3a5f', 'bg-amber-900/30': '#5c3d0f', 'bg-green-900/30': '#14532d',
-              'bg-purple-900/30': '#3b0764', 'bg-rose-900/30': '#4c0519', 'bg-emerald-900/30': '#064e3b',
+            const updateGoals = (partial: Partial<TrajectoryGoals>) => {
+              if (!roadmap) return;
+              setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, ...partial } });
             };
 
-            const getPhaseColor = (colorToken: string) => {
-              const bgPart = colorToken.split(' ')[0];
-              return phaseColors[bgPart] || '#f8fafc';
+            // Custom tooltip for Recharts
+            const ChartTooltip = ({ active, payload, label }: any) => {
+              if (!active || !payload?.length) return null;
+              const proj = payload.find((p: any) => p.dataKey === 'projected');
+              const actual = payload.find((p: any) => p.dataKey === 'actual');
+              return (
+                <div className="bg-slate-900 text-white rounded-xl px-3 py-2 shadow-xl text-[10px] font-bold min-w-[120px]">
+                  <div className="text-emerald-400 mb-1.5 uppercase tracking-widest">{label}</div>
+                  {actual?.value != null && (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />Actual</span>
+                      <span>{actual.value} kg</span>
+                    </div>
+                  )}
+                  {proj?.value != null && (
+                    <div className="flex items-center justify-between gap-3 mt-0.5">
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />Proj</span>
+                      <span>{proj.value} kg</span>
+                    </div>
+                  )}
+                </div>
+              );
             };
 
-            // Week tooltip point
-            const tooltipProj = tooltipWeek !== null ? projected.find(p => p.week === tooltipWeek) : null;
-            const tooltipActual = tooltipWeek !== null ? actual.find(p => p.week === tooltipWeek) : null;
-
-            // Final projected weight at end
-            const finalProjected = projected[projected.length - 1];
-            const projWeightDelta = finalProjected ? (finalProjected.weight - tGoals.startWeight) : 0;
-            const latestActual = actual[actual.length - 1];
-            const latestStrength = latestActual?.strengthKg || tGoals.startStrengthKg;
-            const projFinalStrength = projected[projected.length - 1]?.strengthKg || tGoals.startStrengthKg;
-            const strengthGainPct = tGoals.startStrengthKg > 0
-              ? Math.round(((projFinalStrength - tGoals.startStrengthKg) / tGoals.startStrengthKg) * 100)
-              : 0;
+            // Recharts imports used here (already available in the project via ClientDetail)
+            const {
+              ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid,
+              Tooltip: RechartTooltip, ReferenceLine, ReferenceArea
+            } = require('recharts');
 
             return (
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
                 {/* Header */}
-                <div className="flex justify-between items-center mb-5">
+                <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Icon name="analytics" className="text-emerald-500" />
                     Goal Trajectory & Predictions
@@ -1264,277 +1243,221 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-                  {/* LEFT: Editable targets */}
-                  <div className="flex flex-col gap-3">
-                    {/* Weight Target */}
-                    <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 group">
-                      <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">Target Weight</p>
-                      <div className="flex items-baseline gap-1.5">
+                <div className="flex flex-col lg:flex-row gap-5">
+                  {/* LEFT: Controls — fixed width on desktop, full width on mobile */}
+                  <div className="flex flex-col gap-3 lg:w-52 shrink-0">
+
+                    {/* Program Start Date */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Program Start Date</p>
+                      <input
+                        type="date"
+                        className="text-sm font-bold text-slate-900 dark:text-white bg-transparent border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 w-full focus:ring-2 focus:ring-emerald-500 outline-none"
+                        value={tGoals.programStartDate || ''}
+                        onChange={e => updateGoals({ programStartDate: e.target.value })}
+                      />
+                    </div>
+
+                    {/* Total Weeks */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Duration</p>
+                      <div className="flex items-center gap-2">
                         <input
                           type="number"
-                          step="0.5"
-                          className="text-3xl font-bold text-blue-700 dark:text-blue-300 bg-transparent border-none p-0 w-24 focus:ring-0 outline-none appearance-none"
-                          value={tGoals.targetWeight || ''}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value);
-                            if (!roadmap) return;
-                            setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, targetWeight: isNaN(v) ? 0 : v } });
+                          min="4" max="52"
+                          className="text-xl font-bold text-slate-900 dark:text-white bg-transparent border-none p-0 w-12 focus:ring-0 outline-none"
+                          value={tGoals.totalWeeks || ''}
+                          onChange={e => {
+                            const v = parseInt(e.target.value);
+                            if (!isNaN(v) && v > 0) updateGoals({ totalWeeks: v });
                           }}
                         />
-                        <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">kg</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">weeks</span>
                       </div>
-                      <p className={`text-[10px] mt-2 flex items-center gap-1 font-bold uppercase tracking-tight ${projWeightDelta >= 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      <p className="text-[9px] text-slate-400 mt-1">
+                        Week {Math.min(currentWeekIndex + 1, totalWeeks)} of {totalWeeks} &mdash; {currentWeekIndex >= totalWeeks - 1 ? 'Finished' : `${totalWeeks - currentWeekIndex - 1}w remaining`}
+                      </p>
+                    </div>
+
+                    {/* Target Weight */}
+                    <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
+                      <p className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">Target Weight</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <input
+                          type="number" step="0.5"
+                          className="text-3xl font-bold text-blue-700 dark:text-blue-300 bg-transparent border-none p-0 w-20 focus:ring-0 outline-none"
+                          value={tGoals.targetWeight || ''}
+                          onChange={e => { const v = parseFloat(e.target.value); updateGoals({ targetWeight: isNaN(v) ? 0 : v }); }}
+                        />
+                        <span className="text-sm font-bold text-blue-600">kg</span>
+                      </div>
+                      <p className={`text-[10px] mt-1.5 flex items-center gap-1 font-bold uppercase tracking-tight ${projWeightDelta >= 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
                         <Icon name={projWeightDelta >= 0 ? 'trending_up' : 'trending_down'} className="text-[14px]" />
-                        {projWeightDelta >= 0 ? '+' : ''}{projWeightDelta.toFixed(1)} kg projected
+                        {projWeightDelta >= 0 ? '+' : ''}{projWeightDelta} kg projected
                       </p>
                     </div>
 
                     {/* Start Weight */}
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                       <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Starting Weight</p>
                       <div className="flex items-baseline gap-1">
                         <input
-                          type="number"
-                          step="0.5"
-                          className="text-lg font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-16 focus:ring-0 outline-none"
+                          type="number" step="0.5"
+                          className="text-xl font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-16 focus:ring-0 outline-none"
                           value={tGoals.startWeight || ''}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value);
-                            if (!roadmap) return;
-                            setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, startWeight: isNaN(v) ? 0 : v } });
-                          }}
+                          onChange={e => { const v = parseFloat(e.target.value); updateGoals({ startWeight: isNaN(v) ? 0 : v }); }}
                         />
                         <span className="text-[10px] font-bold text-slate-400">kg</span>
                       </div>
+                      {hasActualData && (
+                        <p className="text-[9px] text-slate-400 mt-1">
+                          Latest: {checkInsHistory[checkInsHistory.length - 1]?.weight} kg
+                        </p>
+                      )}
                     </div>
 
                     {/* Strength Target */}
                     <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest">Strength Target</p>
-                      </div>
+                      <p className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">Strength Target</p>
                       <div className="flex items-baseline gap-1.5">
                         <input
-                          type="number"
-                          step="2.5"
+                          type="number" step="2.5"
                           className="text-3xl font-bold text-purple-700 dark:text-purple-300 bg-transparent border-none p-0 w-20 focus:ring-0 outline-none"
                           value={tGoals.targetStrengthKg || ''}
-                          onChange={(e) => {
-                            const v = parseFloat(e.target.value);
-                            if (!roadmap) return;
-                            setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, targetStrengthKg: isNaN(v) ? 0 : v } });
-                          }}
+                          onChange={e => { const v = parseFloat(e.target.value); updateGoals({ targetStrengthKg: isNaN(v) ? 0 : v }); }}
                         />
-                        <span className="text-sm font-bold text-purple-600 uppercase tracking-widest">kg</span>
+                        <span className="text-sm font-bold text-purple-600">kg</span>
                       </div>
-                      <p className="text-[10px] text-purple-600/70 mt-2 flex items-center gap-1 font-bold uppercase tracking-tight">
-                        <Icon name="bolt" className="text-[14px]" /> +{strengthGainPct}% projected
-                      </p>
                     </div>
 
-                    {/* Lift Name */}
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                    {/* Reference Lift */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
                       <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Reference Lift</p>
                       <input
                         className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-full focus:ring-0 outline-none"
                         value={tGoals.exerciseName || ''}
                         placeholder="e.g. Deadlift"
-                        onChange={(e) => {
-                          if (!roadmap) return;
-                          setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, exerciseName: e.target.value } });
-                        }}
+                        onChange={e => updateGoals({ exerciseName: e.target.value })}
                       />
-                      {tGoals.startStrengthKg > 0 && (
-                        <p className="text-[9px] text-slate-400 mt-0.5">Baseline: {tGoals.startStrengthKg} kg</p>
-                      )}
                     </div>
                   </div>
 
-                  {/* RIGHT: Dynamic SVG Chart */}
-                  <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 relative">
-                    {/* Phase legend strip at top */}
-                    <div className="flex gap-1 mb-3">
+                  {/* RIGHT: Recharts Chart — fills remaining space */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    {/* Phase strips */}
+                    <div className="flex gap-1 px-1">
                       {roadmap.nutrition.map(b => (
                         <div
                           key={b.id}
-                          style={{ width: `${((b.endWeek - b.startWeek + 1) / totalWeeks) * 100}%` }}
-                          className={`h-1.5 rounded-full ${b.colorToken?.split(' ')[0] || 'bg-blue-200'}`}
-                          title={b.title}
+                          style={{ flex: b.endWeek - b.startWeek + 1 }}
+                          className={`h-1.5 rounded-full ${b.colorToken?.split(' ')[0] || 'bg-blue-200'} flex items-center justify-center overflow-hidden`}
+                          title={`${b.title} (W${b.startWeek}–W${b.endWeek})`}
                         />
                       ))}
                     </div>
 
-                    <div
-                      className="relative"
-                      style={{ height: 180 }}
-                      onMouseLeave={() => setTooltipWeek(null)}
-                    >
-                      <svg
-                        ref={chartRef}
-                        viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-                        preserveAspectRatio="none"
-                        className="w-full h-full"
-                        onMouseMove={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const relX = (e.clientX - rect.left) / rect.width;
-                          const weekF = relX * (totalWeeks - 1) + 1;
-                          const nearestWeek = Math.max(1, Math.min(totalWeeks, Math.round(weekF)));
-                          setTooltipWeek(nearestWeek);
-                        }}
-                      >
-                        {/* Phase background bands */}
-                        {roadmap.nutrition.map(b => {
-                          const x1 = toX(b.startWeek);
-                          const x2 = toX(b.endWeek);
-                          return (
-                            <rect
-                              key={b.id}
-                              x={x1}
-                              y={0}
-                              width={x2 - x1}
-                              height={CHART_H}
-                              fill={getPhaseColor(b.colorToken || '')}
-                              opacity="0.5"
+                    {/* Chart */}
+                    <div className="w-full" style={{ height: 300 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={chartData} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="traj-projected" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="traj-actual" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
+
+                          <XAxis
+                            dataKey="label"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8', textAnchor: 'middle' }}
+                            interval={totalWeeks > 16 ? Math.floor(totalWeeks / 8) : 1}
+                          />
+                          <YAxis
+                            domain={[minW, maxW]}
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }}
+                            tickCount={5}
+                            tickFormatter={v => `${v}kg`}
+                            width={42}
+                          />
+
+                          <RechartTooltip content={<ChartTooltip />} />
+
+                          {/* Target weight reference line */}
+                          {tGoals.targetWeight > 0 && (
+                            <ReferenceLine
+                              y={tGoals.targetWeight}
+                              stroke="#10b981"
+                              strokeDasharray="6 4"
+                              strokeWidth={1.5}
+                              label={{
+                                value: `Target ${tGoals.targetWeight}kg`,
+                                position: 'right',
+                                fill: '#10b981',
+                                fontSize: 9,
+                                fontWeight: 700,
+                              }}
                             />
-                          );
-                        })}
+                          )}
 
-                        {/* Target weight dashed horizontal line */}
-                        {tGoals.targetWeight > 0 && (
-                          <line
-                            x1={0} y1={toY(tGoals.targetWeight)}
-                            x2={CHART_W} y2={toY(tGoals.targetWeight)}
-                            stroke="#10b981" strokeDasharray="6 4" strokeWidth="1.5" opacity="0.5"
-                          />
-                        )}
+                          {/* Current week reference line */}
+                          {chartData[currentWeekIndex] && (
+                            <ReferenceLine
+                              x={chartData[currentWeekIndex].label}
+                              stroke="#10b981"
+                              strokeDasharray="4 3"
+                              strokeWidth={2}
+                              label={{
+                                value: `W${currentWeekIndex + 1} Now`,
+                                position: 'top',
+                                fill: '#10b981',
+                                fontSize: 9,
+                                fontWeight: 700,
+                              }}
+                            />
+                          )}
 
-                        {/* Current week marker */}
-                        <line
-                          x1={toX(currentWeek)} y1={0}
-                          x2={toX(currentWeek)} y2={CHART_H}
-                          stroke="#10b981" strokeWidth="2" strokeDasharray="4 3" opacity="0.8"
-                        />
-
-                        {/* Projected line */}
-                        {projPath && (
-                          <path
-                            d={projPath}
-                            fill="none"
+                          {/* Projected area + line */}
+                          <Area
+                            type="monotone"
+                            dataKey="projected"
                             stroke="#10b981"
-                            strokeWidth="3"
-                            strokeDasharray="8 5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            strokeWidth={2.5}
+                            strokeDasharray="7 4"
+                            fill="url(#traj-projected)"
+                            dot={false}
+                            activeDot={false}
+                            connectNulls
                           />
-                        )}
 
-                        {/* Actual line */}
-                        {actualPath && (
-                          <path
-                            d={actualPath}
-                            fill="none"
+                          {/* Actual line + dots */}
+                          <Line
+                            type="monotone"
+                            dataKey="actual"
                             stroke="#3b82f6"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            dot={{ fill: 'white', stroke: '#3b82f6', strokeWidth: 2.5, r: 5 }}
+                            activeDot={{ r: 7, fill: '#3b82f6', stroke: 'white', strokeWidth: 2 }}
+                            connectNulls={false}
                           />
-                        )}
-
-                        {/* Actual data points */}
-                        {actual.map(p => (
-                          <circle
-                            key={p.week}
-                            cx={toX(p.week)}
-                            cy={toY(p.weight)}
-                            r="5"
-                            fill="white"
-                            stroke="#3b82f6"
-                            strokeWidth="3"
-                          />
-                        ))}
-
-                        {/* Hover indicator */}
-                        {tooltipWeek !== null && (
-                          <line
-                            x1={toX(tooltipWeek)} y1={0}
-                            x2={toX(tooltipWeek)} y2={CHART_H}
-                            stroke="#94a3b8" strokeWidth="1.5" opacity="0.6"
-                          />
-                        )}
-                      </svg>
-
-                      {/* Tooltip */}
-                      {tooltipWeek !== null && (tooltipActual || tooltipProj) && (() => {
-                        const pct = (tooltipWeek - 1) / Math.max(totalWeeks - 1, 1);
-                        const leftPct = pct > 0.75 ? undefined : pct * 100;
-                        const rightPct = pct > 0.75 ? (1 - pct) * 100 : undefined;
-                        return (
-                          <div
-                            className="absolute top-0 pointer-events-none z-10"
-                            style={{
-                              left: leftPct !== undefined ? `${leftPct}%` : undefined,
-                              right: rightPct !== undefined ? `${rightPct}%` : undefined,
-                              transform: leftPct !== undefined ? 'translateX(-50%)' : 'translateX(50%)'
-                            }}
-                          >
-                            <div className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl px-3 py-2 shadow-xl text-[10px] font-bold min-w-[110px]">
-                              <div className="text-emerald-400 dark:text-emerald-600 mb-1 uppercase tracking-widest">Week {tooltipWeek}</div>
-                              {tooltipActual && (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
-                                  Actual: <span className="ml-auto">{tooltipActual.weight} kg</span>
-                                </div>
-                              )}
-                              {tooltipProj && (
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                                  Proj: <span className="ml-auto">{tooltipProj.weight} kg</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Target label */}
-                      {tGoals.targetWeight > 0 && projected.length > 0 && (
-                        <div className="absolute right-2" style={{ top: `${(toY(tGoals.targetWeight) / CHART_H) * 100}%`, transform: 'translateY(-50%)' }}>
-                          <div className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg shadow-lg shadow-emerald-500/20 text-[9px] font-bold uppercase tracking-widest ring-2 ring-white dark:ring-slate-800">
-                            Target: {tGoals.targetWeight} kg
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Current week label */}
-                      <div className="absolute bottom-0" style={{ left: `${((currentWeek - 1) / Math.max(totalWeeks - 1, 1)) * 100}%`, transform: 'translateX(-50%)' }}>
-                        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
-                          W{currentWeek} Now
-                        </div>
-                      </div>
+                        </ComposedChart>
+                      </ResponsiveContainer>
                     </div>
 
-                    {/* Week axis */}
-                    <div className="flex justify-between mt-3 px-0.5">
-                      {Array.from({ length: totalWeeks }, (_, i) => i + 1).map(w => (
-                        <span
-                          key={w}
-                          className={`text-[9px] font-semibold uppercase tracking-widest text-center ${
-                            w === currentWeek ? 'text-emerald-500' : 'text-slate-400'
-                          }`}
-                          style={{ width: `${100 / totalWeeks}%` }}
-                        >
-                          W{w}
-                        </span>
-                      ))}
-                    </div>
-
-                    {actual.length === 0 && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-white/80 dark:bg-slate-800/80 px-4 py-2 rounded-xl">
-                          No check-in data yet — showing projection only
-                        </p>
-                      </div>
+                    {/* No data banner inside chart area */}
+                    {!hasActualData && (
+                      <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-1">
+                        No check-in weight data yet — showing projection only
+                      </p>
                     )}
                   </div>
                 </div>
