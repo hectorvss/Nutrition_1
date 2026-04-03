@@ -3222,6 +3222,37 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
 });
 
 
+// Get all workout logs for a client (for trajectory chart)
+router.get('/clients/:id/workout-logs', async (req: any, res) => {
+  const clientId = req.params.id;
+  const managerId = req.user.id;
+  try {
+    // Verify client belongs to this manager
+    const { data: clientData } = await supabaseAdmin
+      .from('users')
+      .select('id, manager_id')
+      .eq('id', clientId)
+      .eq('manager_id', managerId)
+      .maybeSingle();
+
+    if (!clientData) {
+      return res.status(403).json({ error: 'Access denied or client not found' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('workout_logs')
+      .select('id, logged_at, workout_name, exercises, session_rpe, notes')
+      .eq('client_id', clientId)
+      .order('logged_at', { ascending: true });
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    console.error('Error fetching workout logs:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 // Save or update a workout log for a client (Manager side)
 router.post('/clients/:id/workout-logs', async (req: any, res) => {
   const clientId = req.params.id;

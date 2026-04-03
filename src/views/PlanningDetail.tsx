@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
@@ -70,6 +70,15 @@ interface Goal {
   targetLabel: string;
 }
 
+interface TrajectoryGoals {
+  targetWeight: number;
+  startWeight: number;
+  targetStrengthKg: number;
+  startStrengthKg: number;
+  exerciseName: string; // The reference lift exercise name
+  programStartDate?: string; // ISO date string, optional
+}
+
 interface RoadmapData {
   status: string;
   currentWeek: number;
@@ -83,6 +92,7 @@ interface RoadmapData {
     sleep: string;
     constraints: string;
   };
+  trajectoryGoals?: TrajectoryGoals;
 }
 
 // --- INITIAL DATA FACTORY ---
@@ -212,6 +222,112 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
   <span className={`material-symbols-outlined ${className}`} style={{ fontSize: 'inherit' }}>{name}</span>
 );
 
+// --- TRAJECTORY HELPERS ---
+
+interface TrajectoryPoint {
+  week: number;
+  weight: number;
+  strengthKg: number;
+}
+
+/** Classify phase rate from title/type */
+function getPhaseRates(block: RoadmapBlock): { weightRate: number; strengthRate: number } {
+  const t = (block.title + ' ' + (block.stratData?.primaryObjective || '')).toLowerCase();
+  if (block.type === 'nutrition') {
+    if (t.includes('deficit') || t.includes('cut') || t.includes('fat loss') || t.includes('pérdida')) {
+      return { weightRate: -0.45, strengthRate: 0.2 }; // Fat loss: lose weight, strength stable
+    }
+    if (t.includes('maintenance') || t.includes('mantenimiento') || t.includes('maintain')) {
+      return { weightRate: 0, strengthRate: 0.5 }; // Flat
+    }
+    if (t.includes('bulk') || t.includes('gain') || t.includes('surplus') || t.includes('volumen')) {
+      return { weightRate: 0.35, strengthRate: 1.5 }; // Bulk
+    }
+    if (t.includes('recomp') || t.includes('recompos')) {
+      return { weightRate: -0.05, strengthRate: 0.8 }; // Subtle loss, muscle gain
+    }
+    if (t.includes('reverse')) {
+      return { weightRate: 0.05, strengthRate: 0.5 }; // Reverse diet
+    }
+    return { weightRate: -0.1, strengthRate: 0.3 };
+  } else {
+    // Training block rates (strength %) per week
+    if (t.includes('strength') || t.includes('fuerza') || t.includes('peak')) {
+      return { weightRate: 0, strengthRate: 2.5 };
+    }
+    if (t.includes('hypertrophy') || t.includes('hipertrofia') || t.includes('volume') || t.includes('base')) {
+      return { weightRate: 0, strengthRate: 1.5 };
+    }
+    if (t.includes('deload') || t.includes('recovery')) {
+      return { weightRate: 0, strengthRate: 0 };
+    }
+    return { weightRate: 0, strengthRate: 1.0 };
+  }
+}
+
+function computeTrajectory(
+  roadmap: RoadmapData,
+  checkInWeightsByWeek: Map<number, number>,
+  workoutStrengthByWeek: Map<number, number>,
+  goals: TrajectoryGoals
+): { actual: TrajectoryPoint[]; projected: TrajectoryPoint[] } {
+  const totalWeeks = roadmap.totalWeeks || 12;
+  const startW = goals.startWeight || 0;
+  const startS = goals.startStrengthKg || 0;
+
+  // Build projected curve week by week
+  const projected: TrajectoryPoint[] = [];
+  let projW = startW;
+  let projS = startS;
+
+  // Merge nutrition + training rates per week (take both, weight from nutrition, strength from training)
+  const allBlocks = [...roadmap.nutrition, ...roadmap.training];
+
+  for (let w = 1; w <= totalWeeks; w++) {
+    // Find active blocks for this week
+    const activeBlocks = allBlocks.filter(b => w >= b.startWeek && w <= b.endWeek);
+    let weekWeightRate = 0;
+    let weekStrengthRate = 0;
+    let hasNutBlock = false;
+    let hasTrainBlock = false;
+
+    activeBlocks.forEach(b => {
+      const rates = getPhaseRates(b);
+      if (b.type === 'nutrition' && !hasNutBlock) {
+        weekWeightRate = rates.weightRate;
+        hasNutBlock = true;
+      }
+      if (b.type === 'training' && !hasTrainBlock) {
+        weekStrengthRate = rates.strengthRate;
+        hasTrainBlock = true;
+      }
+    });
+
+    projW = parseFloat((projW + weekWeightRate).toFixed(2));
+    // Strength grows as a percentage per week of starting strength
+    projS = parseFloat((projS + (startS * weekStrengthRate) / 100).toFixed(1));
+
+    projected.push({ week: w, weight: projW, strengthKg: projS });
+  }
+
+  // Build actual data from real check-ins and workout logs
+  const currentWeek = roadmap.currentWeek || 1;
+  const actual: TrajectoryPoint[] = [];
+  for (let w = 1; w <= currentWeek; w++) {
+    const wt = checkInWeightsByWeek.get(w);
+    const st = workoutStrengthByWeek.get(w);
+    if (wt !== undefined || st !== undefined) {
+      actual.push({
+        week: w,
+        weight: wt ?? (actual.length > 0 ? actual[actual.length - 1].weight : startW),
+        strengthKg: st ?? (actual.length > 0 ? actual[actual.length - 1].strengthKg : startS),
+      });
+    }
+  }
+
+  return { actual, projected };
+}
+
 export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
   const { clients, reloadClients } = useClient();
   const client = clients.find(c => c.id === clientId);
@@ -223,6 +339,12 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   const [draftBlockValues, setDraftBlockValues] = useState<Partial<RoadmapBlock> | null>(null);
   const [draftStratData, setDraftStratData] = useState<BlockStrategicDetails | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // --- Trajectory Data ---
+  const [checkInsByWeek, setCheckInsByWeek] = useState<Map<number, number>>(new Map());
+  const [strengthByWeek, setStrengthByWeek] = useState<Map<number, number>>(new Map());
+  const [tooltipWeek, setTooltipWeek] = useState<number | null>(null);
+  const chartRef = useRef<SVGSVGElement>(null);
 
   const selectedBlock = useMemo(() => {
     if (!roadmap || !selectedBlockId) return null;
@@ -238,8 +360,68 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   }, [selectedBlockId]);
 
   useEffect(() => {
-    if (clientId) loadRoadmap();
+    if (clientId) {
+      loadRoadmap();
+      loadTrajectoryData();
+    }
   }, [clientId]);
+
+  const loadTrajectoryData = async () => {
+    if (!clientId) return;
+    try {
+      // Fetch check-ins for weight data
+      const checkInsData = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins`);
+      const checkIns: any[] = checkInsData?.check_ins || [];
+
+      // Fetch workout logs for strength data
+      const logsData = await fetchWithAuth(`/manager/clients/${clientId}/workout-logs`);
+      const logs: any[] = Array.isArray(logsData) ? logsData : [];
+
+      // We need a program start date to map dates → weeks
+      // Use the earliest check-in or today - (currentWeek * 7) days as fallback
+      const sortedCI = [...checkIns].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const programStart = sortedCI.length > 0 ? new Date(sortedCI[0].date) : new Date();
+
+      const dateToWeek = (dateStr: string): number => {
+        const d = new Date(dateStr);
+        const diffMs = d.getTime() - programStart.getTime();
+        return Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1);
+      };
+
+      // Map check-in weights by week
+      const ciByWeek = new Map<number, number>();
+      checkIns.forEach((ci: any) => {
+        const dj = ci.data_json || {};
+        // Support both top-level weight and nested measurements.weight
+        const w = dj.weight || dj.measurements?.weight || dj.measurements?.weight_kg;
+        if (w && !isNaN(Number(w))) {
+          const week = dateToWeek(ci.date || ci.created_at);
+          // Keep the latest for each week
+          if (!ciByWeek.has(week) || new Date(ci.date).getTime() > new Date(checkIns.find(x => dateToWeek(x.date) === week)?.date)?.getTime()) {
+            ciByWeek.set(week, parseFloat(Number(w).toFixed(1)));
+          }
+        }
+      });
+      setCheckInsByWeek(ciByWeek);
+
+      // Map workout logs max weight by week (find heaviest set across all exercises)
+      const stByWeek = new Map<number, number>();
+      logs.forEach((log: any) => {
+        const exercises: any[] = log.exercises || [];
+        const week = dateToWeek(log.logged_at);
+        let maxKg = stByWeek.get(week) || 0;
+        exercises.forEach((ex: any) => {
+          const wStr = ex.weight || ex.actual_weight || '';
+          const kg = parseFloat(String(wStr).replace(/[^0-9.]/g, ''));
+          if (!isNaN(kg) && kg > maxKg) maxKg = kg;
+        });
+        if (maxKg > 0) stByWeek.set(week, maxKg);
+      });
+      setStrengthByWeek(stByWeek);
+    } catch (e) {
+      console.warn('Trajectory data fetch failed (non-critical):', e);
+    }
+  };
 
   const loadRoadmap = async () => {
     try {
@@ -999,75 +1181,366 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             </div>
           </div>
 
-          {/* --- 4. GOAL TRAJECTORY & PREDICTIONS (Moved Down) --- */}
-          <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Icon name="analytics" className="text-emerald-500" />
-                Goal Trajectory & Predictions
-              </h3>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Actual</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full border-2 border-dashed border-emerald-500"></span>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Projected</span>
-                </div>
-              </div>
-            </div>
+          {/* --- 4. GOAL TRAJECTORY & PREDICTIONS --- */}
+          {roadmap && (() => {
+            const tGoals: TrajectoryGoals = roadmap.trajectoryGoals || {
+              targetWeight: 70,
+              startWeight: checkInsByWeek.size > 0 ? (checkInsByWeek.get(1) || 80) : 80,
+              targetStrengthKg: 100,
+              startStrengthKg: strengthByWeek.size > 0 ? (strengthByWeek.get(1) || 60) : 60,
+              exerciseName: 'Key Lift',
+            };
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="flex flex-col gap-4">
-                <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
-                  <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">Projected Weight</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-blue-700 dark:text-blue-300">141.2</span>
-                    <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">lbs</span>
-                  </div>
-                  <p className="text-[10px] text-blue-600/70 mt-2 flex items-center gap-1 font-bold uppercase tracking-tight">
-                    <Icon name="trending_down" className="text-[14px]" /> -8.8 lbs vs start
-                  </p>
-                </div>
-                <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
-                  <p className="text-[10px] font-semibold text-purple-600 dark:bg-purple-400 uppercase tracking-widest mb-1.5">Strength Peak</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-purple-700 dark:text-purple-300">+12%</span>
-                  </div>
-                  <p className="text-[10px] text-purple-600/70 mt-2 flex items-center gap-1 font-bold uppercase tracking-tight">
-                    <Icon name="bolt" className="text-[14px]" /> Expected Week 12
-                  </p>
-                </div>
-              </div>
+            const { actual, projected } = computeTrajectory(roadmap, checkInsByWeek, strengthByWeek, tGoals);
 
-              <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 relative shadow-inner">
-                <div className="h-40 flex items-end justify-between relative mb-8">
-                  <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 1200 160">
-                    <path d="M 0,20 L 100,28 L 200,45 L 300,65" fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="4" />
-                    <path d="M 300,65 L 400,85 L 500,105 L 600,125 L 700,120 L 800,115 L 900,125 L 1000,135 L 1100,145 L 1200,150" fill="none" stroke="#10b981" strokeDasharray="10 8" strokeLinecap="round" strokeWidth="4" />
-                    <circle cx="300" cy="65" fill="white" r="6" stroke="#3b82f6" strokeWidth="3" />
-                  </svg>
-                  <div className="absolute left-1/4 top-1/4 -translate-x-1/2 -mt-12">
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg shadow-md text-[10px] font-bold uppercase tracking-widest">
-                      Current: 148.5
+            const totalWeeks = roadmap.totalWeeks || 12;
+            const currentWeek = roadmap.currentWeek || 4;
+
+            // Scale helpers for SVG (viewBox 0 0 1000 200)
+            const CHART_W = 1000;
+            const CHART_H = 200;
+            const PAD_L = 0;
+            const PAD_R = 0;
+
+            const allWeights = [
+              ...projected.map(p => p.weight),
+              ...actual.map(p => p.weight),
+              tGoals.targetWeight,
+              tGoals.startWeight,
+            ].filter(v => v > 0);
+            const minW = Math.min(...allWeights) - 2;
+            const maxW = Math.max(...allWeights) + 2;
+
+            const toX = (week: number) => PAD_L + ((week - 1) / Math.max(totalWeeks - 1, 1)) * (CHART_W - PAD_L - PAD_R);
+            const toY = (weight: number) => CHART_H - ((weight - minW) / Math.max(maxW - minW, 1)) * CHART_H;
+
+            const projPath = projected.map((p, i) => `${i === 0 ? 'M' : 'L'} ${toX(p.week)},${toY(p.weight)}`).join(' ');
+            const actualPath = actual.map((p, i) => `${i === 0 ? 'M' : 'L'} ${toX(p.week)},${toY(p.weight)}`).join(' ');
+
+            // Phase band colors for background
+            const phaseColors: Record<string, string> = {
+              'bg-blue-100': '#eff6ff', 'bg-amber-100': '#fffbeb', 'bg-green-100': '#f0fdf4',
+              'bg-purple-100': '#faf5ff', 'bg-rose-100': '#fff1f2', 'bg-emerald-100': '#ecfdf5',
+              'bg-blue-900/30': '#1e3a5f', 'bg-amber-900/30': '#5c3d0f', 'bg-green-900/30': '#14532d',
+              'bg-purple-900/30': '#3b0764', 'bg-rose-900/30': '#4c0519', 'bg-emerald-900/30': '#064e3b',
+            };
+
+            const getPhaseColor = (colorToken: string) => {
+              const bgPart = colorToken.split(' ')[0];
+              return phaseColors[bgPart] || '#f8fafc';
+            };
+
+            // Week tooltip point
+            const tooltipProj = tooltipWeek !== null ? projected.find(p => p.week === tooltipWeek) : null;
+            const tooltipActual = tooltipWeek !== null ? actual.find(p => p.week === tooltipWeek) : null;
+
+            // Final projected weight at end
+            const finalProjected = projected[projected.length - 1];
+            const projWeightDelta = finalProjected ? (finalProjected.weight - tGoals.startWeight) : 0;
+            const latestActual = actual[actual.length - 1];
+            const latestStrength = latestActual?.strengthKg || tGoals.startStrengthKg;
+            const projFinalStrength = projected[projected.length - 1]?.strengthKg || tGoals.startStrengthKg;
+            const strengthGainPct = tGoals.startStrengthKg > 0
+              ? Math.round(((projFinalStrength - tGoals.startStrengthKg) / tGoals.startStrengthKg) * 100)
+              : 0;
+
+            return (
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-5">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Icon name="analytics" className="text-emerald-500" />
+                    Goal Trajectory & Predictions
+                  </h3>
+                  <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-1.5">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" /></svg>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Actual</span>
                     </div>
-                    <div className="w-px h-10 bg-slate-300 mx-auto mt-1" />
-                  </div>
-                  <div className="absolute right-0 bottom-0 mb-4 mr-2">
-                    <div className="bg-emerald-500 text-white px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 text-[10px] font-bold uppercase tracking-widest ring-4 ring-white dark:ring-slate-800">
-                      Target: 141.2
+                    <div className="flex items-center gap-1.5">
+                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#10b981" strokeWidth="3" strokeDasharray="5 3" strokeLinecap="round" /></svg>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Projected</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
-                  <span>W1</span><span>W2</span><span>W3</span>
-                  <span className="text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full ring-1 ring-emerald-500/30">W4 (Now)</span>
-                  <span>W5</span><span>W6</span><span>W7</span><span>W8</span><span>W9</span><span>W10</span><span>W11</span><span>W12</span>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+                  {/* LEFT: Editable targets */}
+                  <div className="flex flex-col gap-3">
+                    {/* Weight Target */}
+                    <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50 group">
+                      <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">Target Weight</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="text-3xl font-bold text-blue-700 dark:text-blue-300 bg-transparent border-none p-0 w-24 focus:ring-0 outline-none appearance-none"
+                          value={tGoals.targetWeight || ''}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            if (!roadmap) return;
+                            setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, targetWeight: isNaN(v) ? 0 : v } });
+                          }}
+                        />
+                        <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">kg</span>
+                      </div>
+                      <p className={`text-[10px] mt-2 flex items-center gap-1 font-bold uppercase tracking-tight ${projWeightDelta >= 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        <Icon name={projWeightDelta >= 0 ? 'trending_up' : 'trending_down'} className="text-[14px]" />
+                        {projWeightDelta >= 0 ? '+' : ''}{projWeightDelta.toFixed(1)} kg projected
+                      </p>
+                    </div>
+
+                    {/* Start Weight */}
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Starting Weight</p>
+                      <div className="flex items-baseline gap-1">
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="text-lg font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-16 focus:ring-0 outline-none"
+                          value={tGoals.startWeight || ''}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            if (!roadmap) return;
+                            setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, startWeight: isNaN(v) ? 0 : v } });
+                          }}
+                        />
+                        <span className="text-[10px] font-bold text-slate-400">kg</span>
+                      </div>
+                    </div>
+
+                    {/* Strength Target */}
+                    <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest">Strength Target</p>
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <input
+                          type="number"
+                          step="2.5"
+                          className="text-3xl font-bold text-purple-700 dark:text-purple-300 bg-transparent border-none p-0 w-20 focus:ring-0 outline-none"
+                          value={tGoals.targetStrengthKg || ''}
+                          onChange={(e) => {
+                            const v = parseFloat(e.target.value);
+                            if (!roadmap) return;
+                            setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, targetStrengthKg: isNaN(v) ? 0 : v } });
+                          }}
+                        />
+                        <span className="text-sm font-bold text-purple-600 uppercase tracking-widest">kg</span>
+                      </div>
+                      <p className="text-[10px] text-purple-600/70 mt-2 flex items-center gap-1 font-bold uppercase tracking-tight">
+                        <Icon name="bolt" className="text-[14px]" /> +{strengthGainPct}% projected
+                      </p>
+                    </div>
+
+                    {/* Lift Name */}
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Reference Lift</p>
+                      <input
+                        className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-full focus:ring-0 outline-none"
+                        value={tGoals.exerciseName || ''}
+                        placeholder="e.g. Deadlift"
+                        onChange={(e) => {
+                          if (!roadmap) return;
+                          setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, exerciseName: e.target.value } });
+                        }}
+                      />
+                      {tGoals.startStrengthKg > 0 && (
+                        <p className="text-[9px] text-slate-400 mt-0.5">Baseline: {tGoals.startStrengthKg} kg</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RIGHT: Dynamic SVG Chart */}
+                  <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 relative">
+                    {/* Phase legend strip at top */}
+                    <div className="flex gap-1 mb-3">
+                      {roadmap.nutrition.map(b => (
+                        <div
+                          key={b.id}
+                          style={{ width: `${((b.endWeek - b.startWeek + 1) / totalWeeks) * 100}%` }}
+                          className={`h-1.5 rounded-full ${b.colorToken?.split(' ')[0] || 'bg-blue-200'}`}
+                          title={b.title}
+                        />
+                      ))}
+                    </div>
+
+                    <div
+                      className="relative"
+                      style={{ height: 180 }}
+                      onMouseLeave={() => setTooltipWeek(null)}
+                    >
+                      <svg
+                        ref={chartRef}
+                        viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+                        preserveAspectRatio="none"
+                        className="w-full h-full"
+                        onMouseMove={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const relX = (e.clientX - rect.left) / rect.width;
+                          const weekF = relX * (totalWeeks - 1) + 1;
+                          const nearestWeek = Math.max(1, Math.min(totalWeeks, Math.round(weekF)));
+                          setTooltipWeek(nearestWeek);
+                        }}
+                      >
+                        {/* Phase background bands */}
+                        {roadmap.nutrition.map(b => {
+                          const x1 = toX(b.startWeek);
+                          const x2 = toX(b.endWeek);
+                          return (
+                            <rect
+                              key={b.id}
+                              x={x1}
+                              y={0}
+                              width={x2 - x1}
+                              height={CHART_H}
+                              fill={getPhaseColor(b.colorToken || '')}
+                              opacity="0.5"
+                            />
+                          );
+                        })}
+
+                        {/* Target weight dashed horizontal line */}
+                        {tGoals.targetWeight > 0 && (
+                          <line
+                            x1={0} y1={toY(tGoals.targetWeight)}
+                            x2={CHART_W} y2={toY(tGoals.targetWeight)}
+                            stroke="#10b981" strokeDasharray="6 4" strokeWidth="1.5" opacity="0.5"
+                          />
+                        )}
+
+                        {/* Current week marker */}
+                        <line
+                          x1={toX(currentWeek)} y1={0}
+                          x2={toX(currentWeek)} y2={CHART_H}
+                          stroke="#10b981" strokeWidth="2" strokeDasharray="4 3" opacity="0.8"
+                        />
+
+                        {/* Projected line */}
+                        {projPath && (
+                          <path
+                            d={projPath}
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="3"
+                            strokeDasharray="8 5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+
+                        {/* Actual line */}
+                        {actualPath && (
+                          <path
+                            d={actualPath}
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
+
+                        {/* Actual data points */}
+                        {actual.map(p => (
+                          <circle
+                            key={p.week}
+                            cx={toX(p.week)}
+                            cy={toY(p.weight)}
+                            r="5"
+                            fill="white"
+                            stroke="#3b82f6"
+                            strokeWidth="3"
+                          />
+                        ))}
+
+                        {/* Hover indicator */}
+                        {tooltipWeek !== null && (
+                          <line
+                            x1={toX(tooltipWeek)} y1={0}
+                            x2={toX(tooltipWeek)} y2={CHART_H}
+                            stroke="#94a3b8" strokeWidth="1.5" opacity="0.6"
+                          />
+                        )}
+                      </svg>
+
+                      {/* Tooltip */}
+                      {tooltipWeek !== null && (tooltipActual || tooltipProj) && (() => {
+                        const pct = (tooltipWeek - 1) / Math.max(totalWeeks - 1, 1);
+                        const leftPct = pct > 0.75 ? undefined : pct * 100;
+                        const rightPct = pct > 0.75 ? (1 - pct) * 100 : undefined;
+                        return (
+                          <div
+                            className="absolute top-0 pointer-events-none z-10"
+                            style={{
+                              left: leftPct !== undefined ? `${leftPct}%` : undefined,
+                              right: rightPct !== undefined ? `${rightPct}%` : undefined,
+                              transform: leftPct !== undefined ? 'translateX(-50%)' : 'translateX(50%)'
+                            }}
+                          >
+                            <div className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl px-3 py-2 shadow-xl text-[10px] font-bold min-w-[110px]">
+                              <div className="text-emerald-400 dark:text-emerald-600 mb-1 uppercase tracking-widest">Week {tooltipWeek}</div>
+                              {tooltipActual && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                                  Actual: <span className="ml-auto">{tooltipActual.weight} kg</span>
+                                </div>
+                              )}
+                              {tooltipProj && (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                                  Proj: <span className="ml-auto">{tooltipProj.weight} kg</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Target label */}
+                      {tGoals.targetWeight > 0 && projected.length > 0 && (
+                        <div className="absolute right-2" style={{ top: `${(toY(tGoals.targetWeight) / CHART_H) * 100}%`, transform: 'translateY(-50%)' }}>
+                          <div className="bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg shadow-lg shadow-emerald-500/20 text-[9px] font-bold uppercase tracking-widest ring-2 ring-white dark:ring-slate-800">
+                            Target: {tGoals.targetWeight} kg
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Current week label */}
+                      <div className="absolute bottom-0" style={{ left: `${((currentWeek - 1) / Math.max(totalWeeks - 1, 1)) * 100}%`, transform: 'translateX(-50%)' }}>
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                          W{currentWeek} Now
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Week axis */}
+                    <div className="flex justify-between mt-3 px-0.5">
+                      {Array.from({ length: totalWeeks }, (_, i) => i + 1).map(w => (
+                        <span
+                          key={w}
+                          className={`text-[9px] font-semibold uppercase tracking-widest text-center ${
+                            w === currentWeek ? 'text-emerald-500' : 'text-slate-400'
+                          }`}
+                          style={{ width: `${100 / totalWeeks}%` }}
+                        >
+                          W{w}
+                        </span>
+                      ))}
+                    </div>
+
+                    {actual.length === 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-white/80 dark:bg-slate-800/80 px-4 py-2 rounded-xl">
+                          No check-in data yet — showing projection only
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* --- 5. GOALS & TARGETS --- */}
           <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
