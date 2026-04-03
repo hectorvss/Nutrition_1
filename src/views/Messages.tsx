@@ -170,7 +170,17 @@ export default function Messages({ onNavigate }: MessagesProps) {
     if (activeRecipient?.id && user?.role === 'MANAGER') {
       const latest = latestMessages[activeRecipient.id];
       if (latest && latest.unreadCount && latest.unreadCount > 0) {
-        fetchWithAuth(`/messages/${activeRecipient.id}/read`, { method: 'POST' }).catch(console.error);
+        // 1. Mark as read on server
+        fetchWithAuth(`/messages/${activeRecipient.id}/read`, { method: 'POST' })
+          .then(() => {
+             // 2. Tell Sidebar to refresh its total count
+             window.dispatchEvent(new CustomEvent('updateUnreadCount'));
+             // 3. Briefly refresh the local list to be sure
+             setTimeout(loadLatestMessages, 500); 
+          })
+          .catch(console.error);
+
+        // 4. Update UI immediately for snappiness
         setLatestMessages(prev => ({
           ...prev,
           [activeRecipient.id]: { ...prev[activeRecipient.id], unreadCount: 0 }
