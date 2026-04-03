@@ -144,7 +144,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-2xl font-black text-slate-900 leading-tight">{client?.name || 'Sarah Jenkins'}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{client?.name || 'Sarah Jenkins'}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 font-medium">
               <span className="flex items-center gap-1">
                 <Icon name="target" className="text-slate-400" />
@@ -157,7 +157,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             </div>
           </div>
           <div className="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200">
-            <div className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1 text-center">Status</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1 text-center">Status</div>
             <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
               Ready to Program
@@ -171,7 +171,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
         {/* Left Column: Templates */}
         <div className="flex-1 lg:basis-[70%] flex flex-col gap-4 overflow-hidden">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 uppercase tracking-tight">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
               <Grid className="w-5 h-5 text-emerald-500" />
               Strategic Roadmap Templates
             </h2>
@@ -190,7 +190,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   <Plus className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div className="text-left leading-tight">
-                  <h3 className="font-black text-lg text-slate-700 uppercase tracking-tight">Custom Strategy</h3>
+                  <h3 className="font-bold text-lg text-slate-700 uppercase tracking-tight">Custom Strategy</h3>
                   <p className="text-sm text-slate-500 font-medium">Build a roadmap from scratch with manual phases</p>
                 </div>
               </div>
@@ -214,21 +214,21 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                 
                 {/* Duration & Basic Info (Mirroring Nutrition Calories/Name) */}
                 <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-6">
-                  <div className="flex items-center gap-1.5 justify-center sm:justify-start text-emerald-600 font-black text-xl mb-1">
+                  <div className="flex items-center gap-1.5 justify-center sm:justify-start text-emerald-600 font-bold text-xl mb-1">
                     <Calendar className="w-5 h-5" />
                     {template.duration} Weeks
                   </div>
-                  <h3 className="font-black text-lg text-slate-900 leading-tight uppercase tracking-tight">{template.name}</h3>
+                  <h3 className="font-bold text-lg text-slate-900 leading-tight uppercase tracking-tight">{template.name}</h3>
                   <p className="text-[10px] text-slate-500 mt-1.5 font-bold uppercase tracking-widest">{template.description}</p>
                 </div>
 
                 {/* Strategy Summary Info (Mirroring Macros Bar) */}
                 <div className="flex-1 w-full space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2.5 py-1 rounded-xl uppercase tracking-widest border border-emerald-100">
+                    <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2.5 py-1 rounded-xl uppercase tracking-widest border border-emerald-100">
                       {template.badge || 'Standard'}
                     </span>
-                    <div className="flex gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <div className="flex gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                       <span className="flex items-center gap-1.5">
                         <Layers className="w-3 h-3 text-emerald-400" />
                         {template.phases} Phases
@@ -262,7 +262,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                 {/* Small Visual Chart (Mirroring Week View Chart) */}
                 <div className="hidden sm:flex w-full sm:w-1/5 flex-shrink-0 flex-col pl-6 border-l border-slate-100 h-20 justify-center">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Load Projection</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Load Projection</span>
                   </div>
                   <div className="flex gap-1.5 h-10 items-end justify-between">
                     {[40, 60, 80, 70, 90, 100, 80, 60, 40].map((h, i) => (
@@ -286,7 +286,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-inner group-hover:scale-110 transition-transform">
               <Eye className="w-8 h-8 text-slate-300" />
             </div>
-            <h3 className="font-black text-slate-900 mb-2 uppercase tracking-tight">Template Preview</h3>
+            <h3 className="font-bold text-slate-900 mb-2 uppercase tracking-tight">Template Preview</h3>
             <p className="text-sm text-slate-500 font-medium leading-relaxed">
               {selectedTemplate 
                 ? `You've selected ${selectedTemplate.name}. Initial block distribution: ${selectedTemplate.roadmapPreview}.`
@@ -300,12 +300,12 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
                 <Settings2 className="w-5 h-5" />
               </div>
-              <h3 className="font-black text-slate-900 uppercase tracking-tight">Planning Settings</h3>
+              <h3 className="font-bold text-slate-900 uppercase tracking-tight">Planning Settings</h3>
             </div>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Total Duration</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Total Duration</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-emerald-500 transition-colors">
                     <Icon name="schedule" className="text-[20px]" />
@@ -326,7 +326,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Training Frequency</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Training Frequency</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-amber-500 transition-colors">
                     <Icon name="fitness_center" className="text-[20px]" />
@@ -347,7 +347,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Intensity Level</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Intensity Level</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-rose-500 transition-colors">
                     <Icon name="speed" className="text-[20px]" />
@@ -367,7 +367,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               </div>
 
               <div>
-                <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Primary Goal Override</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Primary Goal Override</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors">
                     <Icon name="target" className="text-[20px]" />

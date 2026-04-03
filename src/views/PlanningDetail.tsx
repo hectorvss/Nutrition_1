@@ -575,7 +575,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                 {/* Nutrition Lane */}
                 <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Nutrition</h4>
+                  <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Nutrition</h4>
                   <div className="flex gap-1 h-12 relative">
                     {roadmap.nutrition.map((block) => (
                       <div 
@@ -606,7 +606,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                 {/* Training Lane */}
                 <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
-                  <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Training</h4>
+                  <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Training</h4>
                   <div className="flex gap-1 h-12">
                     {roadmap.training.map((block) => (
                       <div 
@@ -715,7 +715,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
                           <Icon name="restaurant" className="text-[20px]" />
-                          <h4 className="font-bold text-xs uppercase tracking-widest">Nutrition Strategy</h4>
+                          <h4 className="font-semibold text-xs uppercase tracking-widest">Nutrition Strategy</h4>
                         </div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">(W{selectedBlock.startWeek}-{selectedBlock.endWeek})</span>
                       </div>
@@ -736,7 +736,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Macro Split</p>
                           <div className="flex flex-col">
                             <input 
-                              className="text-sm font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
+                              className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                               value={draftStratData?.macros || ''}
                               onChange={(e) => setDraftStratData(prev => prev ? { ...prev, macros: e.target.value } : null)}
                             />
@@ -810,7 +810,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
                         <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
                           <Icon name="fitness_center" className="text-[20px]" />
-                          <h4 className="font-bold text-xs uppercase tracking-widest">Training Strategy</h4>
+                          <h4 className="font-semibold text-xs uppercase tracking-widest">Training Strategy</h4>
                         </div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">(W{selectedBlock.startWeek}-{selectedBlock.endWeek})</span>
                       </div>
@@ -1021,7 +1021,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               <div className="flex flex-col gap-4">
                 <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
-                  <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">Projected Weight</p>
+                  <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">Projected Weight</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-bold text-blue-700 dark:text-blue-300">141.2</span>
                     <span className="text-sm font-bold text-blue-600 uppercase tracking-widest">lbs</span>
@@ -1031,7 +1031,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   </p>
                 </div>
                 <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
-                  <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">Strength Peak</p>
+                  <p className="text-[10px] font-semibold text-purple-600 dark:bg-purple-400 uppercase tracking-widest mb-1.5">Strength Peak</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-bold text-purple-700 dark:text-purple-300">+12%</span>
                   </div>
@@ -1060,7 +1060,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <div className="flex justify-between items-center text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
                   <span>W1</span><span>W2</span><span>W3</span>
                   <span className="text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full ring-1 ring-emerald-500/30">W4 (Now)</span>
                   <span>W5</span><span>W6</span><span>W7</span><span>W8</span><span>W9</span><span>W10</span><span>W11</span><span>W12</span>
@@ -1086,7 +1086,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       <Icon name={goal.type === 'physical' ? 'accessibility' : goal.type === 'nutrition' ? 'restaurant_menu' : goal.type === 'training' ? 'fitness_center' : 'psychology'} className={`text-[20px] ${goal.type === 'physical' ? 'text-blue-500' : goal.type === 'nutrition' ? 'text-amber-500' : goal.type === 'training' ? 'text-purple-500' : 'text-rose-500'}`} />
                       {goal.label}
                     </h4>
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider ${goal.type === 'physical' ? 'bg-blue-100 text-blue-600' : goal.type === 'nutrition' ? 'bg-amber-100 text-amber-600' : goal.type === 'training' ? 'bg-purple-100 text-purple-600' : 'bg-rose-100 text-rose-600'}`}>{goal.value}%</span>
+                    <span className={`text-[10px] font-semibold px-2 py-1 rounded-lg uppercase tracking-wider ${goal.type === 'physical' ? 'bg-blue-100 text-blue-600' : goal.type === 'nutrition' ? 'bg-amber-100 text-amber-600' : goal.type === 'training' ? 'bg-purple-100 text-purple-600' : 'bg-rose-100 text-rose-600'}`}>{goal.value}%</span>
                   </div>
                   <p className="text-[11px] font-medium text-slate-500 mb-4 line-clamp-1">{goal.desc}</p>
                   <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 shadow-inner overflow-hidden">
@@ -1096,7 +1096,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       className={`h-full rounded-full ${goal.type === 'physical' ? 'bg-blue-500' : goal.type === 'nutrition' ? 'bg-amber-500' : goal.type === 'training' ? 'bg-purple-500' : 'bg-rose-500'}`}
                     />
                   </div>
-                  <div className="flex justify-between text-[9px] font-black text-slate-400 mt-2 uppercase tracking-widest">
+                  <div className="flex justify-between text-[9px] font-semibold text-slate-400 mt-2 uppercase tracking-widest">
                     <span>{goal.currentLabel}</span>
                     <span>{goal.targetLabel}</span>
                   </div>
@@ -1110,11 +1110,11 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             {/* --- 6. MILESTONES --- */}
             <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-[11px] font-black text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">
+                <h3 className="text-[11px] font-semibold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">
                   <Icon name="timeline" className="text-slate-400" />
                   Key Milestones
                 </h3>
-                <button className="text-[10px] font-black text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ Add Milestone</button>
+                <button className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ Add Milestone</button>
               </div>
               <div className="space-y-3">
                 {roadmap.milestones.map((m) => (
@@ -1123,11 +1123,11 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       <div className={`w-2.5 h-2.5 rounded-full ${m.status === 'done' ? 'bg-green-500' : m.status === 'next' ? 'bg-emerald-500 shadow-lg shadow-emerald-500/40' : 'bg-slate-300 dark:bg-slate-600'}`} />
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white leading-none mb-1.5">{m.label}</p>
-                        <p className={`text-[10px] font-black uppercase tracking-widest ${m.status === 'next' ? 'text-emerald-500' : 'text-slate-400'}`}>{m.week}</p>
+                        <p className={`text-[10px] font-semibold uppercase tracking-widest ${m.status === 'next' ? 'text-emerald-500' : 'text-slate-400'}`}>{m.week}</p>
                       </div>
                     </div>
                     {m.status !== 'done' && (
-                      <button className="px-3 py-1.5 text-[9px] font-black bg-white dark:bg-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 uppercase tracking-widest shadow-sm">
+                      <button className="px-3 py-1.5 text-[9px] font-semibold bg-white dark:bg-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 uppercase tracking-widest shadow-sm">
                         <Icon name="task" className="text-[14px]" /> Connect
                       </button>
                     )}
@@ -1138,13 +1138,13 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
             {/* --- 7. ASSUMPTIONS --- */}
             <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
-              <h3 className="text-[11px] font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-widest">
+              <h3 className="text-[11px] font-semibold text-slate-900 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-widest">
                 <Icon name="rule" className="text-slate-400" />
                 Strategic Assumptions
               </h3>
               <div className="space-y-5">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Daily Steps Target</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Daily Steps Target</label>
                   <input 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
@@ -1153,7 +1153,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Sleep Hygiene</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Sleep Hygiene</label>
                   <input 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
@@ -1162,7 +1162,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Primary Constraints</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Primary Constraints</label>
                   <textarea 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all resize-none font-medium leading-relaxed h-20" 
                     value={roadmap.assumptions.constraints}
@@ -1214,7 +1214,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   )}
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Block Title</label>
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Block Title</label>
                     <input 
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                       value={draftBlockValues.title || ''}
@@ -1224,7 +1224,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Start Week</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Start Week</label>
                       <select 
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={draftBlockValues.startWeek}
@@ -1244,7 +1244,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Duration</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Duration</label>
                       <select 
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={(draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1) + 1}
@@ -1262,7 +1262,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">End Week</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">End Week</label>
                       <select 
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={draftBlockValues.endWeek}
@@ -1276,7 +1276,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Block Color</label>
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Block Color</label>
                     <div className="flex gap-2">
                       {[
                         'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
