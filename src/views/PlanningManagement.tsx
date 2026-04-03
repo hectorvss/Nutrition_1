@@ -44,11 +44,11 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                 <button className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/10 text-sm font-bold transition-all whitespace-nowrap">All Clients</button>
                 <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
                   Drafting
-                  <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-black">4</span>
+                  <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">4</span>
                 </button>
                 <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
                   Active Roadmap
-                  <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-lg font-black">12</span>
+                  <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">12</span>
                 </button>
               </div>
             </div>
@@ -80,7 +80,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3 mb-1.5">
                           <h3 className="font-bold text-lg text-slate-900">{client.name}</h3>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider border ${
                             client.status === 'ACTIVE' 
                               ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
                               : 'bg-amber-50 text-amber-600 border-amber-100'
@@ -103,7 +103,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
 
                     <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end pl-[5.25rem] md:pl-0">
                       <div className="flex flex-col items-end text-right">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Last Update</span>
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Last Update</span>
                         <span className="text-xs font-bold text-slate-600">2 days ago</span>
                       </div>
                       
