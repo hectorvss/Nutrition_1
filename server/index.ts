@@ -13,16 +13,20 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3005;
 
 // Middleware — CORS restringido a orígenes conocidos
+const frontendUrl = (process.env.FRONTEND_URL || 'https://nutrition-1-zeta.vercel.app').replace(/\/+$/, '');
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  process.env.FRONTEND_URL || 'https://nutrition-1-zeta.vercel.app',
+  frontendUrl,
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir peticiones sin origin (ej: curl, Postman en dev, serverless)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (curl, Postman, serverless same-origin)
+    if (!origin) return callback(null, true);
+    // Strip trailing slash from origin before comparing
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: origen no permitido: ${origin}`));
