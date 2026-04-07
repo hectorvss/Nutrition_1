@@ -16,12 +16,15 @@ const verifyClient = async (req: any, res: any, next: any) => {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    // Relaxed for now: Any user can access as long as they are authenticated, but normally:
-    // if (userData?.role !== 'CLIENT') {
-    //   return res.status(403).json({ error: 'Forbidden. Client role required.' });
-    // }
+    // Fallback a user_metadata si el registro aún no existe en la tabla users
+    const role = userData?.role || user.user_metadata?.role;
+
+    if (role !== 'CLIENT') {
+      return res.status(403).json({ error: 'Forbidden: se requiere rol CLIENT' });
+    }
+
     req.user = user;
     next();
   } catch (err) {

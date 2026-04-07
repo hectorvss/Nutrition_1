@@ -248,7 +248,6 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
            };
       });
       
-      console.log('DEBUG: ClientContext loaded IDs:', formatted.map((c: any) => c.id));
       setClients(formatted);
     } catch (err: any) {
       setError(err.message || 'Failed to load clients');

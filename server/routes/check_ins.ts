@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { processTrigger } from './automations.js';
+import { verifyManager as _verifyManager, verifyClient as _verifyClient } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -237,35 +238,9 @@ const injectFixedQuestions = (schema: any[]) => {
 };
 // ... (rest of the code until POST /client/check-ins)
 
-// Middleware to verify if the user is a CLIENT
-const verifyClient = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-// Manager verification for accessing client check-ins
-const verifyManager = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
+// Middleware centralizado con verificación de rol real
+const verifyClient = _verifyClient;
+const verifyManager = _verifyManager;
 
 // Client: Submit a new check-in
 router.post('/client/check-ins', verifyClient, async (req: any, res) => {

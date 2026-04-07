@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
+import { verifyManager, verifyClient } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -55,36 +56,6 @@ const injectFixedQuestions = (schema: any[]) => {
      return true;
   });
   return [...FIXED_ONBOARDING_QUESTIONS, ...customSchema];
-};
-
-// Middleware to verify if the user is a CLIENT
-const verifyClient = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
-// Middleware to verify if the user is a MANAGER
-const verifyManager = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
 };
 
 // --- Onboarding Templates (Manager) ---

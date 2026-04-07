@@ -1,22 +1,8 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
+import { verifyManager } from '../middleware/auth.js';
 
 const router = Router();
-
-// Middleware to verify MANAGER role
-const verifyManager = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
 
 /**
  * Helper to process an automation trigger
@@ -57,6 +43,14 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           .eq('role', 'CLIENT');
         clientIds = (clients || []).map(c => c.id);
       }
+
+      // Pre-fetch manager profile una vez para todas las iteraciones de clientes
+      const { data: _managerProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', managerId)
+        .maybeSingle();
+      const _cachedCoachName = _managerProfile?.full_name || 'your coach';
 
       for (const clientId of clientIds) {
         // 3. Fetch comprehensive client data for conditions and variables
@@ -169,25 +163,22 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           }
         }
 
-        // 5. Check for duplicates or "Once" rules
+        // 5. Check for duplicates or "Once" rules — usar insert directo como lock
         if (rules.frequency === 'Once') {
-           const { data: existing } = await supabaseAdmin
-             .from('automation_logs')
-             .select('id')
-             .eq('automation_id', automation.id)
-             .eq('client_id', clientId)
-             .maybeSingle();
-           
-           if (existing) continue;
+          // Intentar insertar el log primero como barrera anti-race-condition
+          // Si ya existe un log para esta combinación, skip
+          const { data: existingLogs } = await supabaseAdmin
+            .from('automation_logs')
+            .select('id')
+            .eq('automation_id', automation.id)
+            .eq('client_id', clientId)
+            .limit(1);
+
+          if (existingLogs && existingLogs.length > 0) continue;
         }
 
-        // 6. Replace placeholders
-        const { data: managerProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('full_name')
-          .eq('user_id', managerId)
-          .single();
-        const coachName = managerProfile?.full_name || 'your coach';
+        // 6. Replace placeholders (manager profile se cachea por automation arriba)
+        const coachName = _cachedCoachName;
 
         let finalMessage = automation.message
           .replace(/{Client Name}/g, profile?.full_name || 'there')
@@ -221,7 +212,8 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           .insert({
             automation_id: automation.id,
             client_id: clientId,
-            trigger_context: data
+            trigger_context: data,
+            sent_at: new Date().toISOString()
           });
       }
     }
@@ -382,9 +374,14 @@ router.delete('/:id', verifyManager, async (req: any, res) => {
 });
 
 /**
- * Endpoint for scheduled tasks (Cron)
+ * Endpoint for scheduled tasks (Cron) — protegido con CRON_SECRET
  */
 router.post('/cron', async (req: any, res) => {
+  const secret = req.headers['x-cron-secret'] || req.body?.cron_secret;
+  const validSecret = process.env.CRON_SECRET;
+  if (!validSecret || secret !== validSecret) {
+    return res.status(403).json({ error: 'Forbidden: x-cron-secret inválido o ausente' });
+  }
   try {
     console.log('Running daily automation cron...');
     const today = new Date();

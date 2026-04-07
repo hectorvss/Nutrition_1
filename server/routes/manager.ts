@@ -14,23 +14,31 @@ const verifyManager = async (req: any, res: any, next: any) => {
 
   try {
     const { data, error: authError } = await supabase.auth.getUser(token);
-    
+
     if (authError || !data?.user) {
-       console.error('verifyManager: Auth error', authError);
-       return res.status(401).json({ error: 'Invalid token' });
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
     const user = data.user;
 
-    // Log the user for debugging
-    console.log('verifyManager: Authenticated user', user.id);
+    // Verificar rol MANAGER desde la tabla de usuarios
+    const { data: userData, error: dbError } = await supabaseAdmin
+      .from('users')
+      .select('role, id')
+      .eq('id', user.id)
+      .maybeSingle();
 
-    // TEMPORARY: Relaxed check to ensure access isn't blocked by missing user records
-    // const { data: userData, error: dbError } = await supabaseAdmin
-    //   .from('users')
-    //   .select('role')
-    //   .eq('id', user.id)
-    //   .maybeSingle();
+    if (dbError) {
+      console.error('verifyManager: DB error', dbError);
+      return res.status(500).json({ error: 'Error verifying user role' });
+    }
+
+    // Fallback a user_metadata si el registro aún no existe en la tabla users
+    const role = userData?.role || user.user_metadata?.role;
+
+    if (role !== 'MANAGER') {
+      return res.status(403).json({ error: 'Forbidden: se requiere rol MANAGER' });
+    }
 
     req.user = user;
     next();

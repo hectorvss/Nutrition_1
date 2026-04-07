@@ -70,8 +70,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
     const loadCheckIn = async () => {
       setIsLoading(true);
       try {
-        console.log('DEBUG: CheckInReview fetching for:', { clientId, checkInId, isClient });
-        const endpoint = isClient 
+        const endpoint = isClient
           ? `/check-ins/client/check-ins/${checkInId}`
           : `/check-ins/manager/clients/${clientId}/check-ins/${checkInId}`;
         const result = await fetchWithAuth(endpoint);

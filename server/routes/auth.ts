@@ -50,35 +50,160 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Create initial user (dev only handler - delegates to Supabase Auth)
-router.post('/setup', async (req, res) => {
-  const { email, password, role, managerId } = req.body;
+// Create user — protegido por rol
+// - Para crear MANAGER: requiere cabecera x-setup-secret con SETUP_SECRET del .env
+// - Para crear CLIENT: requiere JWT válido de un MANAGER autenticado
+router.post('/setup', async (req: any, res) => {
+  const { email, password, role = 'CLIENT', managerId } = req.body;
+  const targetRole = (role || 'CLIENT').toUpperCase();
+
   try {
-    // Use Admin API to create user with email auto-confirmed
+    if (targetRole === 'MANAGER') {
+      // Solo se puede crear un manager con el secret de setup (onboarding inicial del sistema)
+      const secret = req.headers['x-setup-secret'];
+      const validSecret = process.env.SETUP_SECRET;
+      if (!validSecret || secret !== validSecret) {
+        return res.status(403).json({ error: 'Forbidden: se requiere x-setup-secret para crear managers' });
+      }
+    } else {
+      // Para crear clientes: el caller debe ser un MANAGER autenticado
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return res.status(401).json({ error: 'Unauthorized: se requiere autenticación para crear usuarios' });
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !authData?.user) {
+        return res.status(401).json({ error: 'Token inválido' });
+      }
+
+      const { data: callerData } = await supabaseAdmin
+        .from('users')
+        .select('role, id')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+      const callerRole = callerData?.role || authData.user.user_metadata?.role;
+      if (callerRole !== 'MANAGER') {
+        return res.status(403).json({ error: 'Forbidden: solo los managers pueden crear clientes' });
+      }
+
+      // El managerId del cliente es el caller si no se especifica
+      req.body.managerId = managerId || callerData?.id || authData.user.id;
+    }
+
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata: {
-        role: role || 'CLIENT'
-      }
+      user_metadata: { role: targetRole }
     });
-    
+
     if (error) {
       return res.status(400).json({ error: error.message });
     }
-    
-    // Auth trigger in supabase_schema.sql will automatically create the public.users record
-    
-    // If it's a client being created by a manager, we need to immediately update their manager_id
-    if (managerId && data.user) {
-       await supabaseAdmin.from('users').update({ manager_id: managerId }).eq('id', data.user.id);
+
+    if (req.body.managerId && data.user) {
+      await supabaseAdmin
+        .from('users')
+        .update({ manager_id: req.body.managerId })
+        .eq('id', data.user.id);
     }
-      
+
     res.json({ success: true, id: data.user?.id });
   } catch (error: any) {
     console.error('Setup error:', error);
     res.status(400).json({ error: error.message || 'Failed to create user' });
+  }
+});
+
+// GET /me — Endpoint para validar sesión y obtener rol desde el servidor
+// El frontend lo usa al arrancar para no depender solo de localStorage
+router.get('/me', async (req: any, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token' });
+
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authData?.user) {
+      return res.status(401).json({ error: 'Token inválido o expirado' });
+    }
+
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('id, email, role, manager_id')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+
+    res.json({
+      user: userData || {
+        id: authData.user.id,
+        email: authData.user.email,
+        role: authData.user.user_metadata?.role || 'CLIENT'
+      }
+    });
+  } catch (error) {
+    console.error('GET /me error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /forgot-password — Enviar email de reset via Supabase
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email requerido' });
+
+  try {
+    const redirectUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${redirectUrl}/reset-password`
+    });
+
+    if (error) {
+      console.error('Password reset error:', error);
+      // No revelamos si el email existe o no (seguridad)
+    }
+
+    // Siempre respondemos OK para no filtrar si el email existe
+    res.json({ success: true, message: 'Si el email existe, recibirás un enlace para restablecer tu contraseña.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /reset-password — Cambiar contraseña con token de Supabase
+router.post('/reset-password', async (req: any, res) => {
+  const { access_token, new_password } = req.body;
+  if (!access_token || !new_password) {
+    return res.status(400).json({ error: 'Token y nueva contraseña requeridos' });
+  }
+
+  if (new_password.length < 8) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+  }
+
+  try {
+    // Usar el token del email para obtener al usuario y actualizar su password
+    const { data: userData, error: userError } = await supabase.auth.getUser(access_token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ error: 'Token de reset inválido o expirado' });
+    }
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(
+      userData.user.id,
+      { password: new_password }
+    );
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ success: true, message: 'Contraseña actualizada correctamente' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

@@ -1,26 +1,8 @@
 import { Router } from 'express';
-import { supabase, supabaseAdmin } from '../db/index.js';
+import { supabaseAdmin } from '../db/index.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
-
-// Middleware to verify user using Supabase Auth
-const authenticate = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
-
-  try {
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) {
-      console.error('Messages auth error:', error);
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    req.user = data.user;
-    next();
-  } catch (err) {
-    console.error('Messages auth crash:', err);
-    res.status(401).json({ error: 'Authentication failed' });
-  }
-};
 
 // Initialize Storage Bucket
 const initStorage = async () => {
@@ -118,9 +100,7 @@ router.get('/recent', async (req: any, res) => {
   }
 });
 
-// Get messages for a specific conversation
-// For a manager: receiver_id is the client
-// For a client: receiver_id is the manager
+// Get messages for a specific conversation (filtra soft-deletes)
 router.get('/:otherUserId', async (req: any, res) => {
   const userId = req.user.id;
   const { otherUserId } = req.params;
@@ -133,7 +113,15 @@ router.get('/:otherUserId', async (req: any, res) => {
       .order('created_at', { ascending: true });
 
     if (error) throw error;
-    res.json(messages);
+
+    // Filtrar mensajes soft-deleted para este usuario
+    const filtered = (messages || []).filter(msg => {
+      if (msg.sender_id === userId && msg.deleted_by_sender) return false;
+      if (msg.receiver_id === userId && msg.deleted_by_receiver) return false;
+      return true;
+    });
+
+    res.json(filtered);
   } catch (error: any) {
     console.error('Error fetching messages:', error);
     res.status(500).json({ error: error.message });
@@ -161,7 +149,7 @@ router.post('/:otherUserId/read', async (req: any, res) => {
   }
 });
 
-// Send a message
+// Send a message — con validación de que el receiver es un contacto legítimo del sender
 router.post('/', async (req: any, res) => {
   const sender_id = req.user.id;
   const { receiver_id, content, attachment_url, attachment_type, attachment_name } = req.body;
@@ -171,6 +159,31 @@ router.post('/', async (req: any, res) => {
   }
 
   try {
+    // Validar que existe una relación manager-client entre sender y receiver
+    const { data: senderData } = await supabaseAdmin
+      .from('users')
+      .select('role, manager_id')
+      .eq('id', sender_id)
+      .maybeSingle();
+
+    const { data: receiverData } = await supabaseAdmin
+      .from('users')
+      .select('role, manager_id')
+      .eq('id', receiver_id)
+      .maybeSingle();
+
+    if (!receiverData) {
+      return res.status(404).json({ error: 'Receiver not found' });
+    }
+
+    // Un MANAGER solo puede escribir a sus CLIENTs, y un CLIENT solo a su MANAGER
+    const isManagerToClient = senderData?.role === 'MANAGER' && receiverData?.manager_id === sender_id;
+    const isClientToManager = senderData?.role === 'CLIENT' && senderData?.manager_id === receiver_id;
+
+    if (!isManagerToClient && !isClientToManager) {
+      return res.status(403).json({ error: 'No tienes permiso para enviar mensajes a este usuario' });
+    }
+
     const { data: message, error } = await supabaseAdmin
       .from('messages')
       .insert({
@@ -192,18 +205,27 @@ router.post('/', async (req: any, res) => {
   }
 });
 
-// Clear conversation history
+// Clear conversation history — soft-delete: solo marca como borrado para el usuario que lo solicita
+// Los mensajes siguen existiendo para el otro usuario
 router.delete('/:otherUserId', async (req: any, res) => {
   const userId = req.user.id;
   const { otherUserId } = req.params;
 
   try {
-    const { error } = await supabaseAdmin
+    // Marcar mensajes ENVIADOS por mí como borrados para mí
+    await supabaseAdmin
       .from('messages')
-      .delete()
-      .or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`);
+      .update({ deleted_by_sender: true })
+      .eq('sender_id', userId)
+      .eq('receiver_id', otherUserId);
 
-    if (error) throw error;
+    // Marcar mensajes RECIBIDOS por mí como borrados para mí
+    await supabaseAdmin
+      .from('messages')
+      .update({ deleted_by_receiver: true })
+      .eq('sender_id', otherUserId)
+      .eq('receiver_id', userId);
+
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error clearing messages:', error);

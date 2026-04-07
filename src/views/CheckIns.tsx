@@ -14,7 +14,6 @@ interface CheckInsProps {
 }
 
 export default function CheckIns({ initialClientId, initialCheckInId, onViewChange }: CheckInsProps) {
-  console.log('DEBUG: CheckIns received:', { initialClientId, initialCheckInId });
   const [viewMode, setViewMode] = useState<CheckInViewMode>(
     initialCheckInId ? 'review' : (initialClientId ? 'history' : 'list')
   );
