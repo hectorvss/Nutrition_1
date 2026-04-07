@@ -52,6 +52,19 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
+// Catch-all for undefined routes
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
+
+// Error handler middleware (must be last)
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Server error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error'
+  });
+});
+
 // Export for Vercel
 export default app;
 
