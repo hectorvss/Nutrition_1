@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useExerciseContext } from '../context/ExerciseContext';
 import { Trash2 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 type ExerciseCategory = 'Strength' | 'Mobility' | 'Warm-up' | 'Cardio' | 'Rehab';
 
@@ -9,6 +10,7 @@ interface TrainingLibraryProps {
 }
 
 export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<ExerciseCategory>('Strength');
   const [search, setSearch] = useState('');
   const { exercises, deleteExercise, isLoading, refreshExercises } = useExerciseContext();
@@ -29,16 +31,16 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
         <div>
           <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <span className="material-symbols-outlined text-4xl text-emerald-500">fitness_center</span>
-            Training Library
+            {t('training_library_title')}
           </h2>
-          <p className="text-slate-500 font-medium mt-1">Manage and recommend exercises for your clients</p>
+          <p className="text-slate-500 font-medium mt-1">{t('training_lib_desc')}</p>
         </div>
         <button 
           onClick={() => onNavigate('exercise-create')}
           className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/25 flex items-center gap-2 font-bold"
         >
           <span className="material-symbols-outlined text-[20px]">add</span>
-          Add Custom Exercise
+          {t('add_custom_exercise')}
         </button>
       </div>
 
@@ -52,7 +54,11 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
               activeTab === tab ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            {tab}
+            {tab === 'Strength' ? t('strength_cat') :
+             tab === 'Mobility' ? t('mobility_cat') :
+             tab === 'Warm-up' ? t('warmup_cat') :
+             tab === 'Cardio' ? t('cardio_cat') :
+             t('rehab_cat')}
           </button>
         ))}
       </div>
@@ -63,7 +69,7 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
           <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span>
           <input
             className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm font-bold text-slate-700"
-            placeholder={`Search exercises (e.g. Squat, Push Up)...`}
+            placeholder={t('search_exercises_placeholder')}
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -72,11 +78,11 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
         <div className="flex gap-3">
           <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
             <span className="material-symbols-outlined text-[18px]">filter_list</span>
-            Filter by Muscle
+            {t('filter_by_muscle')}
           </button>
           <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
             <span className="material-symbols-outlined text-[18px]">fitness_center</span>
-            Tools
+            {t('tools_label')}
           </button>
         </div>
       </div>
@@ -86,12 +92,12 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
         <div className="flex flex-col gap-6">
           {/* Table Header */}
           <div className="hidden md:grid grid-cols-12 gap-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-            <div className="col-span-4">Exercise Name</div>
+            <div className="col-span-4">{t('exercise_name_label')}</div>
             <div className="col-span-8 grid grid-cols-6 gap-4 text-center">
-              <div className="col-span-2 text-left pl-4">Muscle Group</div>
-              <div className="col-span-2 text-left">Tools</div>
-              <div className="col-span-1">Level</div>
-              <div className="col-span-1">Actions</div>
+              <div className="col-span-2 text-left pl-4">{t('muscle_group_label')}</div>
+              <div className="col-span-2 text-left">{t('tools_label')}</div>
+              <div className="col-span-1">{t('level_label')}</div>
+              <div className="col-span-1">{t('actions_label')}</div>
             </div>
           </div>
 
@@ -99,12 +105,12 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
             {isLoading ? (
               <div className="p-20 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-500 border-t-transparent mb-4"></div>
-                <p className="text-slate-500 font-bold">Loading library...</p>
+                <p className="text-slate-500 font-bold">{t('loading_library')}</p>
               </div>
             ) : filteredExercises.length === 0 ? (
               <div className="p-20 text-center bg-white rounded-3xl border border-slate-200">
                 <span className="material-symbols-outlined text-5xl text-slate-300 mb-4">search_off</span>
-                <p className="text-slate-500 font-bold">No exercises found for this category</p>
+                <p className="text-slate-500 font-bold">{t('no_exercises_found')}</p>
               </div>
             ) : (
               filteredExercises.map((exercise) => (
@@ -146,13 +152,15 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
                     </div>
                     
                     <div className="flex flex-col md:block text-center">
-                      <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">Level</span>
+                      <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('level_label')}</span>
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-widest ${
                         exercise.level === 'Beginner' ? 'bg-emerald-50 text-emerald-600' :
                         exercise.level === 'Intermediate' ? 'bg-amber-50 text-amber-600' :
                         'bg-red-50 text-red-600'
                       }`}>
-                        {exercise.level}
+                        {exercise.level === 'Beginner' ? t('beginner_level') :
+                         exercise.level === 'Intermediate' ? t('intermediate_level') :
+                         t('advanced_level')}
                       </span>
                     </div>
                     
@@ -175,7 +183,7 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
                 <div className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
                   <span className="material-symbols-outlined text-slate-400 group-hover:text-emerald-500 text-[20px] transition-colors">add</span>
                 </div>
-                <span className="font-bold text-sm text-slate-500 group-hover:text-emerald-600 transition-colors">Create New Exercise</span>
+                <span className="font-bold text-sm text-slate-500 group-hover:text-emerald-600 transition-colors">{t('create_new_exercise')}</span>
               </div>
             </div>
           </div>

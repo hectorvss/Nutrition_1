@@ -3,8 +3,6 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Plus, 
-  Search, 
-  Filter,
   CheckCircle2,
   Utensils,
   Dumbbell,
@@ -16,6 +14,7 @@ import {
   User
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CalendarProps {
   onNavigate: (view: string, data?: any) => void;
@@ -187,9 +186,12 @@ const getOverlapData = (events: any[]) => {
 };
 
 export default function CalendarView({ onNavigate, initialView, initialDate }: CalendarProps) {
+  const { t, language } = useLanguage();
   const [viewMode, setViewMode] = useState<ViewMode>(initialView || 'Day');
   const [currentDate, setCurrentDate] = useState(initialDate || new Date());
   const [now, setNow] = useState(new Date());
+  
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -243,7 +245,15 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
     setCurrentDate(newDate);
   };
 
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = [
+    t('mon_short'), 
+    t('tue_short'), 
+    t('wed_short'), 
+    t('thu_short'), 
+    t('fri_short'), 
+    t('sat_short'), 
+    t('sun_short')
+  ];
 
   const getWeekDates = (baseDate: Date) => {
     const currentDay = baseDate.getDay(); 
@@ -257,7 +267,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
       const isCurrent = d.toDateString() === new Date().toDateString();
       return {
         dateObj: d,
-        day: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        day: d.toLocaleDateString(locale, { weekday: 'short' }).toUpperCase(),
         date: d.getDate().toString().padStart(2, '0'),
         current: isCurrent,
         dateStr: getLocalDateString(d)
@@ -406,14 +416,11 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                 <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 shadow-sm"></div>
                 <div className="flex-1 h-px bg-red-500"></div>
                 <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">
-                  {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                   {now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </div>
               </div>
 
-              {/* Lunch Break (13:00 - 14:00) */}
-              <div className="absolute left-0 right-0 h-12 bg-slate-50/50 border-y border-slate-100 flex items-center justify-center z-10" style={{ top: `${13 * 96}px` }}>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">Lunch Break</span>
-              </div>
+              {/* Lunch Break removed as requested */}
 
               {/* Weekly Events */}
               {weekDates.map((weekDay, dayIdx) => {
@@ -475,10 +482,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                 <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i) * 128}px`, height: '1px' }}></div>
               ))}
 
-              {/* Lunch Break (13:00 - 14:00) */}
-              <div className="absolute left-0 right-0 h-16 border-y border-dashed border-slate-200 flex items-center justify-center z-0" style={{ top: `${13 * 128}px` }}>
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-white px-4 py-1.5 rounded-full border border-slate-100 shadow-sm">Lunch Break</span>
-              </div>
+              {/* Lunch Break removed as requested */}
 
               {/* Daily Events */}
               {(() => {
@@ -519,7 +523,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                       </div>
                       <div className={`flex items-center gap-2 text-xs ${event.status === 'completed' ? 'text-slate-300' : 'text-slate-500'}`}>
                         <EventIcon className="w-3.5 h-3.5" />
-                        <span>{event.type}</span>
+                        <span>{t(event.type)}</span>
                         <span>•</span>
                         <span>{event.duration}</span>
                       </div>
@@ -564,13 +568,13 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <header className="px-6 md:px-8 lg:px-10 py-8 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0 z-10">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              {viewMode === 'Day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-              {viewMode === 'Week' && `${weekDates[0].dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekDates[6].dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-              {viewMode === 'Month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight capitalize">
+              {viewMode === 'Day' && currentDate.toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' })}
+              {viewMode === 'Week' && `${weekDates[0].dateObj.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} - ${weekDates[6].dateObj.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}`}
+              {viewMode === 'Month' && currentDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
             </h1>
             <p className="text-sm text-slate-500 font-medium mt-1">
-              {viewMode === 'Day' ? 'Daily schedule overview' : 'Manage client schedules and tasks'}
+              {viewMode === 'Day' ? t('daily_schedule_desc') : t('manage_schedules_desc')}
             </p>
           </div>
           
@@ -586,7 +590,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                       : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  {mode}
+                  {t(`calendar_${mode.toLowerCase()}`)}
                 </button>
               ))}
             </div>
@@ -603,7 +607,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
 
             <button onClick={() => onNavigate('create-task', { date: getLocalDateString(currentDate), returnTo: viewMode })} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95">
               <Plus className="w-4 h-4" />
-              New Event
+              {t('new_event')}
             </button>
           </div>
         </header>

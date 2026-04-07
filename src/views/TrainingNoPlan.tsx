@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
 import { PROGRAM_TEMPLATES } from '../constants/training_presets';
 import { trainingPrograms } from '../constants/training';
+import { useLanguage } from '../context/LanguageContext';
 
 interface TrainingNoPlanProps {
   client: any;
@@ -164,6 +165,7 @@ const WEEKDAYS = [
 ];
 
 export default function TrainingNoPlan({ client, onBack, onStartPlan }: TrainingNoPlanProps) {
+  const { t } = useLanguage();
   const { assignTrainingPlan, reloadClients } = useClient();
   const [templates, setTemplates] = useState<any[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
@@ -304,18 +306,18 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                 <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-1">
                     <span className="material-symbols-outlined text-[16px] text-emerald-500">flag</span>
-                    Goal: {clientGoal}
+                    {t('goal_label')}: {clientGoal}
                   </div>
                   <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
                   <div className="flex items-center gap-1 text-slate-400">
-                    {client?.age || '28'} yrs
+                    {client?.age || '28'} {t('years_label')}
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
               <span className="material-symbols-outlined text-slate-400">info</span>
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Status: <span className="text-amber-500 font-bold animate-pulse">No Plan Yet</span></span>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{t('status_label')}: <span className="text-amber-500 font-bold animate-pulse">{t('no_plan_yet')}</span></span>
             </div>
           </div>
         </div>
@@ -326,7 +328,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
           <div className="w-full lg:w-[70%] space-y-4">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
               <span className="material-symbols-outlined text-emerald-500">library_add</span>
-              Assign Training Program
+              {t('assign_program')}
             </h2>
 
             <div className="flex flex-col gap-4">
@@ -339,8 +341,8 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                   <span className="material-symbols-outlined text-2xl text-slate-400 group-hover:text-emerald-500 transition-colors">add</span>
                 </div>
                 <div className="text-left">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">Create from Scratch</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Build a fully custom program tailored to specific needs.</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">{t('create_scratch')}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('create_scratch_desc')}</p>
                 </div>
               </button>
 
@@ -348,7 +350,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
               {isLoadingTemplates ? (
                 <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-3">
                   <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <p className="text-sm font-medium">Loading templates...</p>
+                  <p className="text-sm font-medium">{t('loading_templates')}</p>
                 </div>
               ) : allPresets.map((preset) => {
                 const isSelected = selectedId === preset.id;
@@ -392,7 +394,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
                             <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-                              <span>Intensity</span>
+                              <span>{t('intensity_label')}</span>
                               <span>{preset.intensity.label}</span>
                             </div>
                             <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
@@ -401,7 +403,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                           </div>
                           <div>
                             <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
-                              <span>Volume</span>
+                              <span>{t('volume_label')}</span>
                               <span>{preset.volume.label}</span>
                             </div>
                             <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden">
@@ -423,7 +425,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                       {/* Right Side: Schedule UI */}
                       <div className="md:w-48 pt-2 md:pt-0 md:border-l border-slate-200 dark:border-slate-700 md:pl-6 flex flex-col justify-center">
                         <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                          <span>Schedule</span>
+                          <span>{t('schedule_label')}</span>
                         </div>
                         <div className="flex justify-between items-center relative gap-1">
                           <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-100 dark:bg-slate-800 -z-10 rounded-full"></div>
@@ -464,12 +466,12 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
           {/* Right Column: Settings */}
           <div className="w-full lg:w-[30%] flex flex-col gap-6">
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 sticky top-6">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Program Settings</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{t('program_settings')}</h2>
               
               <div className="flex flex-col gap-5">
                 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Weekly Frequency</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('weekly_frequency')}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {['2x', '3x', '4x', '5x'].map((freq) => {
                       const isFreqSelected = selectedPreset.freqValue === freq;
@@ -487,7 +489,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Primary Focus</label>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('primary_focus')}</label>
                   <select 
                     className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white text-sm focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium py-2.5 px-3"
                     value={selectedPreset.focusValue}
@@ -501,7 +503,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                 </div>
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-700 mt-2">
-                  <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Program Preview</h3>
+                  <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{t('program_preview')}</h3>
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 text-sm">
                       <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
@@ -524,7 +526,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                   className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 mt-4 group"
                 >
                   <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">assignment_add</span>
-                  Assign Program
+                  {t('assign_btn')}
                 </button>
               </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ClientView } from '../../ClientApp';
 import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ClientDashboardProps {
   onNavigate: (view: ClientView) => void;
@@ -9,6 +10,7 @@ interface ClientDashboardProps {
 
 export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   const [plans, setPlans] = useState<any>(null);
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -52,7 +54,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
   const nutritionPlan = plans?.nutrition?.[0];
   const trainingProgram = plans?.training?.[0];
 
-  // Today's day name
+  // Today's day name (using English keys for logic but translating for display if needed)
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const todayName = days[new Date().getDay()];
 
@@ -103,7 +105,6 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
 
   // --- Stats ---
   const calculateStats = () => {
-    // Streak: consecutive days with at least one check-in
     let consecutiveDays = 0;
     const checkInDates = new Set((checkIns || []).map(c => c.date?.split('T')[0]));
     let curr = new Date();
@@ -115,7 +116,6 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       curr.setDate(curr.getDate() - 1);
     }
 
-    // Adherence: percentage of last 7 days that had a check-in
     let completedDays = 0;
     for (let i = 0; i < 7; i++) {
       const d = new Date();
@@ -130,16 +130,17 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
 
   const today = new Date();
   const hour = today.getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const formattedDate = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const greetingKey = hour < 12 ? 'good_morning' : hour < 18 ? 'good_afternoon' : 'good_evening';
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
+  const formattedDate = today.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{greeting}, {user?.email.split('@')[0]}</h1>
-          <p className="text-slate-500 dark:text-slate-400">{formattedDate}</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{t(greetingKey)}, {user?.email.split('@')[0]}</h1>
+          <p className="text-slate-500 dark:text-slate-400 capitalize">{formattedDate}</p>
         </div>
         <div className="flex items-center gap-4">
           <button className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
@@ -153,19 +154,19 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <button onClick={() => onNavigate('check-ins')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#112116] border border-slate-200 dark:border-slate-800 rounded-xl hover:border-[#17cf54]/50 transition-all group shadow-sm text-left">
           <div className="w-10 h-10 rounded-lg bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54] group-hover:bg-[#17cf54] group-hover:text-white transition-colors shrink-0"><span className="material-symbols-outlined">edit_note</span></div>
-          <span className="font-semibold text-slate-700 dark:text-slate-200">Log Check-in</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-200">{t('log_checkin')}</span>
         </button>
         <button onClick={() => onNavigate('nutrition')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#112116] border border-slate-200 dark:border-slate-800 rounded-xl hover:border-[#17cf54]/50 transition-all group shadow-sm text-left">
           <div className="w-10 h-10 rounded-lg bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54] group-hover:bg-[#17cf54] group-hover:text-white transition-colors shrink-0"><span className="material-symbols-outlined">restaurant_menu</span></div>
-          <span className="font-semibold text-slate-700 dark:text-slate-200">View Meals</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-200">{t('view_meals')}</span>
         </button>
         <button onClick={() => onNavigate('training')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#112116] border border-slate-200 dark:border-slate-800 rounded-xl hover:border-[#17cf54]/50 transition-all group shadow-sm text-left">
           <div className="w-10 h-10 rounded-lg bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54] group-hover:bg-[#17cf54] group-hover:text-white transition-colors shrink-0"><span className="material-symbols-outlined">play_circle</span></div>
-          <span className="font-semibold text-slate-700 dark:text-slate-200">Start Workout</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-200">{t('start_workout')}</span>
         </button>
         <button onClick={() => onNavigate('messages')} className="flex items-center gap-3 p-4 bg-white dark:bg-[#112116] border border-slate-200 dark:border-slate-800 rounded-xl hover:border-[#17cf54]/50 transition-all group shadow-sm text-left">
           <div className="w-10 h-10 rounded-lg bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54] group-hover:bg-[#17cf54] group-hover:text-white transition-colors shrink-0"><span className="material-symbols-outlined">forum</span></div>
-          <span className="font-semibold text-slate-700 dark:text-slate-200">Message Coach</span>
+          <span className="font-semibold text-slate-700 dark:text-slate-200">{t('message_coach')}</span>
         </button>
       </section>
 
@@ -177,12 +178,12 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
           <div className="bg-white dark:bg-[#112116] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Today's Plan</h2>
-                {todayTraining.name && <p className="text-sm text-slate-500 mt-0.5">{todayTraining.name} • {totalExercises} exercises</p>}
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('todays_plan')}</h2>
+                {todayTraining.name && <p className="text-sm text-slate-500 mt-0.5">{todayTraining.name} • {totalExercises} {t('exercises')}</p>}
               </div>
               {todayTraining.blocks.length > 0 && (
                 <button onClick={() => onNavigate('training')} className="text-[#17cf54] text-sm font-semibold hover:underline flex items-center gap-1">
-                  View Full Plan <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  {t('view_full_plan')} <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </button>
               )}
             </div>
@@ -197,16 +198,16 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm">{block.name}</h3>
-                        <p className="text-[11px] text-slate-400">{block.exercises?.length || 0} exercises</p>
+                        <p className="text-[11px] text-slate-400">{block.exercises?.length || 0} {t('exercises')}</p>
                       </div>
                     </div>
                     {/* Exercise list */}
                     <div className="ml-11 space-y-2">
-                      {(block.exercises || []).slice(0, 4).map((ex: any, eIdx: number) => (
+                       {(block.exercises || []).slice(0, 4).map((ex: any, eIdx: number) => (
                         <div key={eIdx} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
                           <div className="flex items-center gap-3">
                             <div className="w-1.5 h-6 bg-indigo-400 rounded-full"></div>
-                            <span className="text-sm text-slate-700 dark:text-slate-200">{ex.name || ex.exerciseName || 'Exercise'}</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-200">{ex.name || ex.exerciseName || t('exercise')}</span>
                           </div>
                           <span className="text-xs font-bold text-slate-400">
                             {ex.sets || '—'}×{ex.reps || ex.repRange || '—'}
@@ -214,7 +215,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                         </div>
                       ))}
                       {(block.exercises || []).length > 4 && (
-                        <p className="text-[11px] text-slate-400 pl-4">+ {block.exercises.length - 4} more exercises</p>
+                        <p className="text-[11px] text-slate-400 pl-4">+ {(block.exercises.length - 4)} more {t('exercises')}</p>
                       )}
                     </div>
                   </div>
@@ -225,8 +226,8 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                 <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="material-symbols-outlined text-slate-300">event_busy</span>
                 </div>
-                <p className="text-slate-400 text-sm">Rest day — no exercises planned</p>
-                <button onClick={() => onNavigate('training')} className="mt-3 text-[#17cf54] text-sm font-semibold hover:underline">View Training Schedule</button>
+                <p className="text-slate-400 text-sm">{t('rest_day')}</p>
+                <button onClick={() => onNavigate('training')} className="mt-3 text-[#17cf54] text-sm font-semibold hover:underline">{t('view_training_schedule')}</button>
               </div>
             )}
           </div>
@@ -235,14 +236,14 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
           <div className="bg-white dark:bg-[#112116] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Meals Today</h2>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('meals_today')}</h2>
                 {todayMeals.length > 0 && (
-                  <p className="text-sm text-slate-500 mt-0.5">{todayMeals.length} meals • {Math.round(todayMeals.reduce((a: number, m: any) => a + (m.items || []).reduce((s: number, i: any) => s + (i.calories * (i.quantity || 1)), 0), 0))} kcal total</p>
+                  <p className="text-sm text-slate-500 mt-0.5">{todayMeals.length} {t('view_meals')} • {Math.round(todayMeals.reduce((a: number, m: any) => a + (m.items || []).reduce((s: number, i: any) => s + (i.calories * (i.quantity || 1)), 0), 0))} {t('kcal_total')}</p>
                 )}
               </div>
               {todayMeals.length > 0 && (
                 <button onClick={() => onNavigate('nutrition')} className="text-[#17cf54] text-sm font-semibold hover:underline flex items-center gap-1">
-                  View Full Plan <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  {t('view_full_plan')} <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </button>
               )}
             </div>
@@ -262,7 +263,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                           <div>
                             <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
                               {meal.name}
-                              {isNext && <span className="text-[10px] bg-[#17cf54] text-white px-2 py-0.5 rounded-full uppercase tracking-tight font-bold">Next Up</span>}
+                              {isNext && <span className="text-[10px] bg-[#17cf54] text-white px-2 py-0.5 rounded-full uppercase tracking-tight font-bold">{t('next_up')}</span>}
                             </h4>
                             <p className="text-[11px] text-slate-400">{meal.time} • {mealKcal} kcal • {mealProtein}g protein</p>
                           </div>
@@ -276,11 +277,11 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                               <div className={`w-1.5 h-5 rounded-full ${isNext ? 'bg-[#17cf54]' : 'bg-emerald-400'}`}></div>
                               <span className="text-xs text-slate-600 dark:text-slate-300">{item.name}</span>
                             </div>
-                            <span className="text-[10px] font-bold text-slate-400">{Math.round((item.quantity || 1) * 100) / 100} units</span>
+                            <span className="text-[10px] font-bold text-slate-400">{Math.round((item.quantity || 1) * 100) / 100} {t('units')}</span>
                           </div>
                         ))}
                         {(meal.items || []).length > 3 && (
-                          <p className="text-[10px] text-slate-400 pl-3">+ {meal.items.length - 3} more items</p>
+                          <p className="text-[10px] text-slate-400 pl-3">+ {(meal.items.length - 3)} more items</p>
                         )}
                       </div>
                     </div>
@@ -292,8 +293,8 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                 <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="material-symbols-outlined text-slate-300">no_meals</span>
                 </div>
-                <p className="text-slate-400 text-sm">No meals defined in your plan</p>
-                <button onClick={() => onNavigate('nutrition')} className="mt-3 text-[#17cf54] text-sm font-semibold hover:underline">View Nutrition Plan</button>
+                <p className="text-slate-400 text-sm">{t('no_meals_defined')}</p>
+                <button onClick={() => onNavigate('nutrition')} className="mt-3 text-[#17cf54] text-sm font-semibold hover:underline">{t('view_nutrition_plan')}</button>
               </div>
             )}
           </div>
@@ -306,10 +307,10 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
           {/* Weekly Adherence */}
           <div className="bg-[#17cf54] p-6 rounded-xl text-white shadow-lg shadow-[#17cf54]/20 relative overflow-hidden">
             <div className="relative z-10">
-              <h2 className="text-lg font-semibold opacity-90 mb-4">Weekly Adherence</h2>
+              <h2 className="text-lg font-semibold opacity-90 mb-4">{t('weekly_adherence')}</h2>
               <div className="flex items-end gap-2 mb-6">
                 <span className="text-5xl font-bold">{adherence}%</span>
-                <span className="text-sm pb-2 opacity-80">Based on last 7 days</span>
+                <span className="text-sm pb-2 opacity-80">{t('based_on_last_7_days')}</span>
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
@@ -340,16 +341,16 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Current Streak</h3>
-              <p className="text-3xl font-black text-slate-900 dark:text-white">{streak} {streak === 1 ? 'Day' : 'Days'}</p>
-              <p className="text-xs text-slate-400 mt-1">{streak > 0 ? 'Keep it up!' : 'Start your journey today'}</p>
+              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">{t('current_streak')}</h3>
+              <p className="text-3xl font-black text-slate-900 dark:text-white">{streak} {streak === 1 ? t('day') : t('days')}</p>
+              <p className="text-xs text-slate-400 mt-1">{streak > 0 ? t('keep_it_up') : t('start_journey_today')}</p>
             </div>
           </div>
 
           {/* Coach Notes */}
           <div className="bg-white dark:bg-[#112116] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Coach Notes</h2>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('coach_notes')}</h2>
             </div>
             <div className="p-6 space-y-6">
               {messages.length > 0 ? messages.slice(0, 3).map((msg: any, idx: number) => (
@@ -357,9 +358,9 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                   <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full ${idx === 0 ? 'bg-[#17cf54]' : 'bg-slate-300 dark:bg-slate-700'} border-2 border-white dark:border-[#112116]`}></div>
                   <div className="mb-1 flex justify-between gap-2">
                     <span className={`text-[10px] font-black uppercase shrink-0 ${idx === 0 ? 'text-[#17cf54]' : 'text-slate-400'}`}>
-                       {new Date(msg.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                       {new Date(msg.created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
                     </span>
-                    <span className="text-[10px] text-slate-400 uppercase font-bold">{new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold">{new Date(msg.created_at).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                   </div>
                   <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic">
                     "{msg.content}"
@@ -367,13 +368,13 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                 </div>
               )) : (
                 <div className="text-center py-8">
-                   <p className="text-slate-400 text-sm">No notes from your coach yet.</p>
+                   <p className="text-slate-400 text-sm">{t('no_coach_notes')}</p>
                 </div>
               )}
             </div>
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50">
               <button onClick={() => onNavigate('messages')} className="w-full py-2 text-sm font-semibold text-[#17cf54] hover:bg-[#17cf54]/5 rounded-lg transition-colors">
-                Open Messenger
+                {t('open_messenger')}
               </button>
             </div>
           </div>

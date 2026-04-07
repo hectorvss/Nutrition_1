@@ -3,6 +3,7 @@ import { useClient } from '../context/ClientContext';
 import { useFoodContext } from '../context/FoodContext';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface NutritionNoPlanProps {
   client: any;
@@ -10,138 +11,142 @@ interface NutritionNoPlanProps {
   onStartPlan: (preset?: any, initialPlanData?: any) => void;
 }
 
-const PRESETS = [
-  {
-    id: 'fat_loss_basic',
-    calories: 1500,
-    title: 'Fat Loss Basic',
-    subtitle: 'Conservative cut',
-    tag: 'Balanced',
-    tagColor: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-    protein: 32,
-    carbs: 38,
-    fats: 30,
-    weekViewLabel: '3+2',
-    structure: '3 Meals + 2 Snacks',
-    macroId: 'Balanced (40/30/30)',
-    bars: [60, 80, 70, 60, 90, {h: 50, p: true}, {h: 40, p: true}],
-    recommendedFor: ['Weight Loss', 'Fat Loss']
-  },
-  {
-    id: 'active_maintain',
-    calories: 1800,
-    title: 'Active Maintain',
-    subtitle: 'Recommended for current goal',
-    tag: 'High Carb',
-    tagColor: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-    protein: 25,
-    carbs: 50,
-    fats: 25,
-    weekViewLabel: '4 meals',
-    structure: '4 Meals',
-    macroId: 'High Carb (25/50/25)',
-    bars: [70, 70, 70, 80, 80, {h: 60, p: true}, {h: 60, p: true}],
-    recommendedFor: ['Maintenance', 'Not Set']
-  },
-  {
-    id: 'moderate_gain',
-    calories: 2000,
-    title: 'Moderate Gain',
-    subtitle: 'Lean bulk approach',
-    tag: 'High Protein',
-    tagColor: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
-    protein: 40,
-    carbs: 35,
-    fats: 25,
-    weekViewLabel: '3+2',
-    structure: '3 Meals + 2 Snacks',
-    macroId: 'Balanced (40/30/30)',
-    bars: [80, 80, 80, 80, 80, {h: 80, p: true}, {h: 80, p: true}],
-    recommendedFor: ['Muscle Gain']
-  },
-  {
-    id: 'active_build',
-    calories: 2200,
-    title: 'Active Build',
-    subtitle: 'Standard muscle gain',
-    tag: 'Standard',
-    tagColor: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-    protein: 30,
-    carbs: 40,
-    fats: 30,
-    weekViewLabel: '3+3',
-    structure: '3 Meals + 3 Snacks',
-    macroId: 'Balanced (40/30/30)',
-    bars: [90, 90, 90, 90, 90, 90, {h: 70, p: true}],
-    recommendedFor: ['Muscle Gain']
-  },
-  {
-    id: 'athlete_perform',
-    calories: 2500,
-    title: 'Athlete Perform',
-    subtitle: 'Sport performance',
-    tag: 'High Energy',
-    tagColor: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
-    protein: 25,
-    carbs: 48,
-    fats: 27,
-    weekViewLabel: '4+2',
-    structure: '4 Meals + 2 Snacks',
-    macroId: 'Balanced (40/30/30)',
-    bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 60, p: true}],
-    recommendedFor: ['Performance']
-  },
-  {
-    id: 'mass_builder',
-    calories: 2800,
-    title: 'Mass Builder',
-    subtitle: 'Significant surplus',
-    tag: 'High Carb',
-    tagColor: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
-    protein: 25,
-    carbs: 55,
-    fats: 20,
-    weekViewLabel: '5 meals',
-    structure: '5 Meals',
-    macroId: 'High Carb (25/55/20)',
-    bars: [95, 95, 95, 95, 95, {h: 80, p: true}, {h: 80, p: true}],
-    recommendedFor: ['Muscle Gain']
-  },
-  {
-    id: 'power_lifting',
-    calories: 3100,
-    title: 'Power Lifting',
-    subtitle: 'Strength focus',
-    tag: 'Balanced+',
-    tagColor: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-    protein: 30,
-    carbs: 40,
-    fats: 30,
-    weekViewLabel: '5+1',
-    structure: '5 Meals + 1 Snack',
-    macroId: 'Balanced (40/30/30)',
-    bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 50, p: true}],
-    recommendedFor: ['Strength']
-  },
-  {
-    id: 'extreme_bulk',
-    calories: 3300,
-    title: 'Extreme Bulk',
-    subtitle: 'Maximum surplus',
-    tag: 'Max Carb',
-    tagColor: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-    protein: 20,
-    carbs: 60,
-    fats: 20,
-    weekViewLabel: '6 meals',
-    structure: '6 Meals',
-    macroId: 'High Carb (20/60/20)',
-    bars: [100, 100, 100, 100, 100, 100, {h: 100, p: true}],
-    recommendedFor: ['Muscle Gain']
-  }
-];
+
 
 export default function NutritionNoPlan({ client, onBack, onStartPlan }: NutritionNoPlanProps) {
+  const { t } = useLanguage();
+  
+  const PRESETS = [
+    {
+      id: 'fat_loss_basic',
+      calories: 1500,
+      title: t('fat_loss_basic'),
+      subtitle: t('conservative_cut'),
+      tag: t('balanced'),
+      tagColor: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+      protein: 32,
+      carbs: 38,
+      fats: 30,
+      weekViewLabel: '3+2',
+      structure: t('three_meals_two_snacks'),
+      macroId: 'Balanced (40/30/30)',
+      bars: [60, 80, 70, 60, 90, {h: 50, p: true}, {h: 40, p: true}],
+      recommendedFor: ['Weight Loss', 'Fat Loss']
+    },
+    {
+      id: 'active_maintain',
+      calories: 1800,
+      title: t('active_maintain'),
+      subtitle: t('recommended_current_goal'),
+      tag: t('high_carb'),
+      tagColor: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+      protein: 25,
+      carbs: 50,
+      fats: 25,
+      weekViewLabel: '4 meals',
+      structure: t('four_meals'),
+      macroId: 'High Carb (25/50/25)',
+      bars: [70, 70, 70, 80, 80, {h: 60, p: true}, {h: 60, p: true}],
+      recommendedFor: ['Maintenance', 'Not Set']
+    },
+    {
+      id: 'moderate_gain',
+      calories: 2000,
+      title: t('moderate_gain'),
+      subtitle: t('lean_bulk_approach'),
+      tag: t('high_protein'),
+      tagColor: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+      protein: 40,
+      carbs: 35,
+      fats: 25,
+      weekViewLabel: '3+2',
+      structure: t('three_meals_two_snacks'),
+      macroId: 'Balanced (40/30/30)',
+      bars: [80, 80, 80, 80, 80, {h: 80, p: true}, {h: 80, p: true}],
+      recommendedFor: ['Muscle Gain']
+    },
+    {
+      id: 'active_build',
+      calories: 2200,
+      title: t('active_build'),
+      subtitle: t('standard_muscle_gain'),
+      tag: t('standard'),
+      tagColor: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
+      protein: 30,
+      carbs: 40,
+      fats: 30,
+      weekViewLabel: '3+3',
+      structure: t('three_meals_three_snacks'),
+      macroId: 'Balanced (40/30/30)',
+      bars: [90, 90, 90, 90, 90, 90, {h: 70, p: true}],
+      recommendedFor: ['Muscle Gain']
+    },
+    {
+      id: 'athlete_perform',
+      calories: 2500,
+      title: t('athlete_perform'),
+      subtitle: t('sport_performance'),
+      tag: t('high_energy'),
+      tagColor: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
+      protein: 25,
+      carbs: 48,
+      fats: 27,
+      weekViewLabel: '4+2',
+      structure: t('four_meals_two_snacks'),
+      macroId: 'Balanced (40/30/30)',
+      bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 60, p: true}],
+      recommendedFor: ['Performance']
+    },
+    {
+      id: 'mass_builder',
+      calories: 2800,
+      title: t('mass_builder'),
+      subtitle: t('significant_surplus'),
+      tag: t('high_carb'),
+      tagColor: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+      protein: 25,
+      carbs: 55,
+      fats: 20,
+      weekViewLabel: '5 meals',
+      structure: t('five_meals'),
+      macroId: 'High Carb (25/55/20)',
+      bars: [95, 95, 95, 95, 95, {h: 80, p: true}, {h: 80, p: true}],
+      recommendedFor: ['Muscle Gain']
+    },
+    {
+      id: 'power_lifting',
+      calories: 3100,
+      title: t('power_lifting'),
+      subtitle: t('strength_focus'),
+      tag: t('balanced_plus'),
+      tagColor: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+      protein: 30,
+      carbs: 40,
+      fats: 30,
+      weekViewLabel: '5+1',
+      structure: t('five_meals_one_snack'),
+      macroId: 'Balanced (40/30/30)',
+      bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 50, p: true}],
+      recommendedFor: ['Strength']
+    },
+    {
+      id: 'extreme_bulk',
+      calories: 3300,
+      title: t('extreme_bulk'),
+      subtitle: t('maximum_surplus'),
+      tag: t('max_carb'),
+      tagColor: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+      protein: 20,
+      carbs: 60,
+      fats: 20,
+      weekViewLabel: '6 meals',
+      structure: t('six_meals'),
+      macroId: 'High Carb (20/60/20)',
+      bars: [100, 100, 100, 100, 100, 100, {h: 100, p: true}],
+      recommendedFor: ['Muscle Gain']
+    }
+  ];
+
   const { assignNutritionPlan, reloadClients } = useClient();
   const { foods } = useFoodContext();
   const [templates, setTemplates] = useState<any[]>([]);
@@ -517,7 +522,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
               <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-500 transition-colors">
-                Nutrition
+                {t('nutrition')}
               </button>
             </li>
             <li>
@@ -557,10 +562,10 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
             </div>
           </div>
           <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
-            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">Status</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">{t('status')}</div>
             <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium text-sm">
               <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
-              No Plan Yet
+              {t('no_plan_yet')}
             </div>
           </div>
         </div>
@@ -572,13 +577,8 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="material-symbols-outlined text-emerald-500">grid_view</span>
-              Start from a Template
+              {t('start_from_template')}
             </h2>
-            <div className="flex gap-2">
-              <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                <span className="material-symbols-outlined text-[20px]">filter_list</span>
-              </button>
-            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide pb-10">
@@ -594,8 +594,8 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                     <span className="material-symbols-outlined text-emerald-500 text-2xl">add</span>
                   </div>
                   <div className="text-left">
-                    <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200">Create New Plan</h3>
-                    <p className="text-sm text-slate-500">Start from scratch with custom macros</p>
+                    <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200">{t('create_new_plan')}</h3>
+                    <p className="text-sm text-slate-500">{t('create_new_plan_desc')}</p>
                   </div>
                 </div>
                 <span className="material-symbols-outlined text-slate-400 group-hover:text-emerald-500 transition-colors">arrow_forward</span>
@@ -632,7 +632,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                         {isRecommended ? (
                           <span className="text-blue-500 font-bold flex items-center gap-1">
                             <span className="material-symbols-outlined text-[14px]">star</span>
-                            Recommended for current planning
+                            {t('recommended_for_planning')}
                           </span>
                         ) : preset.subtitle}
                       </p>
@@ -658,7 +658,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
 
                     <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-700 pt-4 sm:pt-0">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Week View</span>
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{t('week_view')}</span>
                         <span className="text-[10px] text-slate-400 font-medium">{preset.weekViewLabel}</span>
                       </div>
                       <div className="flex gap-1 h-8 items-end justify-between">
@@ -688,15 +688,15 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
             <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 dark:border-emerald-800">
               <span className="material-symbols-outlined text-3xl text-emerald-500">restaurant</span>
             </div>
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2">Selected: {selectedPreset.title}</h3>
+            <h3 className="font-bold text-slate-900 dark:text-white mb-2">{t('selected')}: {selectedPreset.title}</h3>
             <div className="flex items-center justify-center gap-3">
               <div className="text-center">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Calories</div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">{t('calories')}</div>
                 <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{targetCalories}</div>
               </div>
               <div className="w-px h-6 bg-slate-200 dark:bg-slate-700"></div>
               <div className="text-center">
-                <div className="text-[10px] uppercase font-bold text-slate-400">Meals</div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">{t('meals')}</div>
                 <div className="text-sm font-bold text-slate-700 dark:text-slate-200">{dailyStructure.split(' ')[0]}</div>
               </div>
             </div>
@@ -705,12 +705,12 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-5 shadow-sm min-h-[400px]">
             <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-4">
               <span className="material-symbols-outlined text-emerald-500">tune</span>
-              <h3 className="font-bold text-slate-900 dark:text-white">Plan Settings</h3>
+              <h3 className="font-bold text-slate-900 dark:text-white">{t('plan_settings')}</h3>
             </div>
             
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">Target Calories</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">{t('target_calories')}</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">local_fire_department</span>
                   <input 
@@ -724,7 +724,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">Daily Structure</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">{t('daily_structure')}</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">restaurant</span>
                   <select 
@@ -732,22 +732,22 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                     value={dailyStructure}
                     onChange={(e) => setDailyStructure(e.target.value)}
                   >
-                    <option value="3 Meals">3 Meals</option>
-                    <option value="3 Meals + 1 Snack">3 Meals + 1 Snack</option>
-                    <option value="3 Meals + 2 Snacks">3 Meals + 2 Snacks</option>
-                    <option value="3 Meals + 3 Snacks">3 Meals + 3 Snacks</option>
-                    <option value="4 Meals">4 Meals</option>
-                    <option value="4 Meals + 2 Snacks">4 Meals + 2 Snacks</option>
-                    <option value="5 Meals">5 Meals</option>
-                    <option value="5 Meals + 1 Snack">5 Meals + 1 Snack</option>
-                    <option value="6 Meals">6 Meals</option>
+                    <option value="3 Meals">{t('three_meals')}</option>
+                    <option value="3 Meals + 1 Snack">{t('three_meals_one_snack')}</option>
+                    <option value="3 Meals + 2 Snacks">{t('three_meals_two_snacks')}</option>
+                    <option value="3 Meals + 3 Snacks">{t('three_meals_three_snacks')}</option>
+                    <option value="4 Meals">{t('four_meals')}</option>
+                    <option value="4 Meals + 2 Snacks">{t('four_meals_two_snacks')}</option>
+                    <option value="5 Meals">{t('five_meals')}</option>
+                    <option value="5 Meals + 1 Snack">{t('five_meals_one_snack')}</option>
+                    <option value="6 Meals">{t('six_meals')}</option>
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
                 </div>
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">Macro Split</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">{t('macro_split')}</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">pie_chart</span>
                   <select 
@@ -774,7 +774,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group"
               >
                 <span className="material-symbols-outlined group-hover:scale-110 transition-transform">edit_document</span>
-                Create Draft Plan
+                {t('create_draft_plan')}
               </button>
             </div>
           </div>

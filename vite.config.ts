@@ -9,10 +9,23 @@ export default defineConfig(({mode}) => {
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      global: 'window',
+      require: 'undefined',
     },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+      },
+    },
+    optimizeDeps: {
+      include: ['recharts', 'motion', 'lucide-react'],
+    },
+    build: {
+      commonjsOptions: {
+        transformMixedEsModules: true,
+      },
+      rollupOptions: {
+        external: ['express', 'cors', 'dotenv', 'stripe', 'googleapis', '@google/genai'],
       },
     },
     server: {

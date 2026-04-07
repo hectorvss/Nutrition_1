@@ -19,6 +19,7 @@ import {
 import { useTask } from '../context/TaskContext';
 import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 import { CheckCircle2 } from 'lucide-react';
 
 interface DashboardProps {
@@ -29,6 +30,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { tasks } = useTask();
   const { getEventsForDate, updateEvent } = useCalendar();
   const { clients } = useClient();
+  const { t, language } = useLanguage();
   const [activity, setActivity] = useState<any[]>([]);
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
   const [activeCount, setActiveCount] = useState(0);
@@ -63,41 +65,32 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   ].sort((a,b) => (b.timeLabel || '').localeCompare(a.timeLabel || ''));
 
   const quickActions = [
-    { id: 'add-client', label: 'Add New Client', icon: UserPlus, color: 'bg-emerald-50 text-emerald-600' },
-    { id: 'schedule', label: 'Schedule Appointment', icon: Calendar, color: 'bg-blue-50 text-blue-600' },
-    { id: 'automations', label: 'Manage Automations', icon: Zap, color: 'bg-amber-50 text-amber-600' },
-    { id: 'broadcast', label: 'Broadcast Message', icon: Send, color: 'bg-purple-50 text-purple-600' },
+    { id: 'add-client', label: t('add_new_client'), icon: UserPlus, color: 'bg-emerald-50 text-emerald-600' },
+    { id: 'schedule', label: t('schedule_appointment'), icon: Calendar, color: 'bg-blue-50 text-blue-600' },
+    { id: 'automations', label: t('manage_automations'), icon: Zap, color: 'bg-amber-50 text-amber-600' },
+    { id: 'broadcast', label: t('broadcast_message'), icon: Send, color: 'bg-purple-50 text-purple-600' },
   ];
 
   const todayDateStr = new Date().toISOString().split('T')[0];
   const scheduleItems = getEventsForDate(todayDateStr).sort((a, b) => a.time.localeCompare(b.time));
 
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   return (
     <div className="p-6 md:p-8 lg:p-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
-          <p className="text-slate-500 text-sm font-medium mb-1">Today, {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric'})}</p>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Good Morning, Manager</h1>
-          <p className="text-slate-500 mt-2 text-sm max-w-xl">You have {combinedAttention.length} pending items requiring your attention.</p>
+          <p className="text-slate-500 text-sm font-medium mb-1">{t('today')}, {new Date().toLocaleDateString(locale, { month: 'long', day: 'numeric'})}</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('welcome_manager')}</h1>
+          <p className="text-slate-500 mt-2 text-sm max-w-xl">{t('pending_attention', { count: combinedAttention.length })}</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="relative hidden sm:block">
-            <Search className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" />
-            <input 
-              className="pl-10 pr-4 py-2.5 rounded-lg border-none bg-white shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none w-64 text-sm text-slate-700 placeholder-slate-400 transition-all" 
-              placeholder="Search clients, foods..." 
-              type="text"
-            />
-          </div>
-          <button className="p-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-            <Settings className="w-5 h-5" />
-          </button>
+          {/* Global Search and Settings buttons removed as requested */}
         </div>
       </header>
 
       <div className="mb-8">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-4">{t('quick_actions')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action) => (
             <button 
@@ -127,18 +120,18 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <div className="p-1.5 rounded bg-red-50 text-red-500">
                   <Bell className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-lg text-slate-900">Attention Required</h3>
+                <h3 className="font-bold text-lg text-slate-900">{t('attention_required')}</h3>
               </div>
-              <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-500">{combinedAttention.length} Items</span>
+              <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-500">{combinedAttention.length} {t('items')}</span>
             </div>
             <div className="divide-y divide-slate-100">
               {loading ? (
                 <div className="p-12 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Items...</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('loading_items')}</p>
                 </div>
               ) : combinedAttention.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 italic">No pending attention tasks! Great job.</div>
+                <div className="p-8 text-center text-slate-500 italic">{t('no_pending_items')}</div>
               ) : null}
               {!loading && combinedAttention.slice(0, 5).map((item) => (
                 <div 
@@ -170,30 +163,30 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-sm text-slate-900 truncate">{item.client} <span className="font-normal text-slate-500 ml-1">{item.title}</span></h4>
+                      <h4 className="font-bold text-sm text-slate-900 truncate">{item.client} <span className="font-normal text-slate-500 ml-1">{t(item.title)}</span></h4>
                       <span className="text-xs text-slate-400 shrink-0">{item.timeLabel}</span>
                     </div>
                     <p className="text-sm text-slate-500 truncate">{item.desc}</p>
                   </div>
                   <button className="text-emerald-600 opacity-0 group-hover:opacity-100 font-semibold text-sm transition-opacity capitalize">
-                    {item.type === 'CHECK_IN' ? 'Review' : 'Resolve'}
+                    {item.type === 'CHECK_IN' ? t('review') : t('resolve')}
                   </button>
                 </div>
               ))}
             </div>
             <div className="p-3 bg-slate-50 text-center border-t border-slate-100">
-              <button onClick={() => onNavigate('tasks')} className="text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">View All Items</button>
+              <button onClick={() => onNavigate('tasks')} className="text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">{t('view_all_items')}</button>
             </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900">Schedule Today</h3>
-              <button onClick={() => onNavigate('calendar')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">View Calendar</button>
+              <h3 className="text-lg font-bold text-slate-900">{t('schedule_today')}</h3>
+              <button onClick={() => onNavigate('calendar')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">{t('view_calendar')}</button>
             </div>
             <div className="space-y-4">
               {scheduleItems.length === 0 && (
-                <div className="text-slate-500 text-sm italic">No events scheduled for today.</div>
+                <div className="text-slate-500 text-sm italic">{t('no_events_today')}</div>
               )}
               {scheduleItems.map((item) => {
                 const info = getEventPresentationInfo(item.type);
@@ -210,7 +203,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       <div className="flex justify-between items-start">
                         <div className="min-w-0 flex-1">
                           <h4 className={`font-bold text-sm truncate mr-2 ${item.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'}`}>{item.title}</h4>
-                          <p className={`text-xs mt-1 truncate ${item.status === 'completed' ? 'text-slate-300' : 'text-slate-600'}`}>with {item.client || item.initials} • {item.type}</p>
+                          <p className={`text-xs mt-1 truncate ${item.status === 'completed' ? 'text-slate-300' : 'text-slate-600'}`}>{t('with')} {item.client || item.initials} • {t(item.type)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button 
@@ -244,7 +237,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-emerald-100 text-sm font-medium opacity-90">Active Clients</p>
+                  <p className="text-emerald-100 text-sm font-medium opacity-90">{t('active_clients')}</p>
                   <h3 className="text-3xl font-bold mt-1">{activeCount}</h3>
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
@@ -253,18 +246,18 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               </div>
               <div className="flex items-center gap-2 text-sm opacity-90">
                 <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold">+3</span>
-                <span>since last month</span>
+                <span>{t('since_last_month')}</span>
               </div>
             </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-[520px]">
-            <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">Latest Updates</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">{t('latest_updates')}</h3>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 py-2 relative">
               {loading ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fetching Updates...</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('fetching_updates')}</p>
                 </div>
               ) : (
                 <>
@@ -283,7 +276,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 pt-0.5">
-                          <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{update.title}</span> {update.sub}</p>
+                          <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{t(update.title)}</span> {update.sub}</p>
                           <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
                             <span className="w-1 h-1 rounded-full bg-slate-200"></span>
                             {update.time}
@@ -293,7 +286,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     );
                   })}
                   {activity.length === 0 && (
-                    <p className="text-sm text-slate-500 italic">No recent activity found.</p>
+                    <p className="text-sm text-slate-500 italic">{t('no_recent_activity')}</p>
                   )}
                 </>
               )}
@@ -302,7 +295,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               onClick={() => onNavigate('tasks')}
               className="w-full mt-6 py-2.5 text-sm font-bold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-[0.98] shrink-0"
             >
-              View Activity History
+              {t('view_activity_history')}
             </button>
           </div>
         </div>

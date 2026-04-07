@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DayTraining {
   id: string;
@@ -36,6 +37,7 @@ interface TrainingWeeklyViewProps {
 }
 
 export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReassign, initialPlanData }: TrainingWeeklyViewProps) {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [planData, setPlanData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -110,10 +112,10 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
         })
       });
       setHasChanges(false);
-      alert('Plan guardado correctamente');
+      alert(t('plan_saved_alert'));
     } catch (e) {
       console.error('Error saving training program:', e);
-      alert('Error al guardar el plan');
+      alert(t('plan_save_error_alert'));
     } finally {
       setIsSaving(false);
     }
@@ -183,10 +185,10 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
         return {
           ...day,
           workoutName: workout.name,
-          intensity: isStrength ? 'Alta' : isMobility ? 'Baja' : 'Moderada',
+          intensity: isStrength ? t('intensity_high') : isMobility ? t('intensity_low') : t('intensity_mod'),
           intensityColor: isStrength ? 'bg-orange-500' : isMobility ? 'bg-blue-400' : 'bg-emerald-500',
-          duration: planData.duration ? `${planData.duration} min` : '60 min',
-          volume: `${totalSetsNum} series`,
+          duration: planData.duration ? `${planData.duration} ${t('min_label')}` : `60 ${t('min_label')}`,
+          volume: `${totalSetsNum} ${t('sets_label')}`,
           tag: isMobility ? 'Movilidad' : 'Entrenamiento',
           tagColor: isMobility 
             ? 'bg-blue-50 text-blue-600 border-blue-100' 
@@ -199,12 +201,12 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
 
     return {
       ...day,
-      workoutName: 'Día de Descanso',
-      intensity: 'Baja',
+      workoutName: t('rest_day_title'),
+      intensity: t('intensity_low'),
       intensityColor: 'bg-slate-200',
       duration: '-',
-      volume: '0 series',
-      tag: 'Descanso',
+      volume: `0 ${t('sets_label')}`,
+      tag: t('rest_day_label'),
       tagColor: 'bg-slate-50 text-slate-400 border-slate-100',
       exercises: [],
       isRestDay: true
@@ -218,7 +220,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
               <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-500 transition-colors">
-                Training
+                {t('training')}
               </button>
             </li>
             <li>
@@ -243,12 +245,12 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">flag</span>
-                Goal: {client?.goal || 'Muscle Gain'}
+                {t('goal')}: {client?.goal || 'Muscle Gain'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block"></span>
               <span className="flex items-center gap-1 font-medium text-emerald-600">
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                Plan Activo
+                {t('active_plan_status_label')}
               </span>
             </div>
           </div>
@@ -261,11 +263,11 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                 className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95 disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-[18px]">{isSaving ? 'sync' : 'save'}</span>
-                {isSaving ? 'GUARDANDO...' : 'SAVE CHANGES'}
+                {isSaving ? t('saving_btn') : t('save_changes')}
               </button>
             )}
             <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 mt-2 sm:mt-0">
-              <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1 text-center">Plan Progress</div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
               <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 Week 1 / 12
@@ -284,8 +286,8 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                 <span className="material-symbols-outlined text-2xl">calendar_view_week</span>
               </div>
               <div>
-                <h3 className="font-bold text-slate-900">Plan Distribution</h3>
-                <p className="text-sm text-slate-500">Haz clic en cada día para editar o cambiar el entrenamiento.</p>
+                <h3 className="font-bold text-slate-900">{t('plan_distribution_label')}</h3>
+                <p className="text-sm text-slate-500">{t('plan_distribution_desc')}</p>
               </div>
             </div>
             
@@ -293,7 +295,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               {isLoading && (
                 <div className="flex items-center gap-2 mr-4">
                   <div className="w-4 h-4 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <span className="text-xs font-medium text-slate-400">Loading plan...</span>
+                  <span className="text-xs font-medium text-slate-400">{t('loading_plan')}</span>
                 </div>
               )}
               {onReassign && (
@@ -302,7 +304,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                   className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-500 hover:border-emerald-500/50 transition-all font-bold text-xs shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[20px]">sync</span>
-                  REASSIGN PLAN
+                  {t('reassign_plan_btn')}
                 </button>
               )}
               
@@ -311,13 +313,13 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                   onClick={() => setViewMode('weekly')}
                   className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'weekly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  WEEKLY VIEW
+                  {t('weekly_view_btn')}
                 </button>
                 <button 
                   onClick={() => setViewMode('monthly')}
                   className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  MONTH VIEW
+                  {t('month_view_btn')}
                 </button>
               </div>
             </div>
@@ -370,7 +372,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                         <>
                           <span className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">monitoring</span>
-                            Intensidad: {day.intensity}
+                            {t('intensity_label')}: {day.intensity}
                           </span>
                           <span className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">layers</span>
@@ -397,7 +399,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                     </div>
                     {!day.isRestDay && (
                       <div className="text-[10px] text-slate-400 font-medium mt-1">
-                        Pulsa para ver ejercicios
+                        {t('click_to_view_exercises')}
                       </div>
                     )}
                   </div>
@@ -420,7 +422,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               {showWorkoutPicker === day.id && (
                 <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in duration-200">
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2 border-b border-slate-50 mb-2">
-                    Cambiar Entrenamiento
+                    {t('change_workout_title')}
                   </div>
                   <div className="space-y-1">
                     <button 
@@ -431,7 +433,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                       className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all flex items-center gap-3"
                     >
                       <span className="material-symbols-outlined text-[20px]">block</span>
-                      Día de Descanso
+                      {t('rest_day_title')}
                     </button>
                     {planData.data_json.workouts?.map((w: any) => (
                       <button 

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // We don't need the local Client interface or mock data anymore
 // The interface is now defined in ClientContext.tsx
@@ -32,6 +33,7 @@ interface ClientListProps {
 }
 
 export default function ClientList({ onViewDetail, onAddClient }: ClientListProps) {
+  const { t } = useLanguage();
   const { clients, isLoading: loading, error, deleteClient, archiveClient } = useClient();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,26 +109,53 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
     }
   };
 
+  const getTranslatedStatus = (status: string) => {
+    switch(status) {
+      case 'Active': return t('active');
+      case 'Archived': return t('archived');
+      case 'Pending': return t('pending');
+      default: return status;
+    }
+  };
+
+  const getTranslatedRisk = (risk: string) => {
+    switch(risk) {
+      case 'At Risk': return t('at_risk');
+      case 'Missing Data': return t('missing_data');
+      case 'Rapid Drop': return t('rapid_drop');
+      case 'Missed Appt': return t('missed_appt');
+      case 'Low Adherence': return t('low_adherence_status');
+      case 'High BP Report': return t('high_bp_report');
+      default: return risk;
+    }
+  };
+
+  const getTranslatedProgress = (progress: string) => {
+    switch(progress) {
+      case 'On Track': return t('on_track_status');
+      case 'Stalled': return t('stalled_status');
+      case 'Regression': return t('regression_status');
+      default: return progress;
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden p-6 md:p-8 lg:p-10">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="w-full">
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Clients</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-xl">Manage your client base, track progress, and organize your coaching.</p>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{t('clients_header')}</h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-xl">{t('clients_subtitle')}</p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm text-sm font-bold">
-                <Download className="w-4 h-4" />
-                Export List
-              </button>
+              {/* Export List button removed as requested */}
               <button 
                 onClick={onAddClient}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 text-sm font-bold"
               >
                 <Plus className="w-4 h-4" />
-                New Client
+                {t('new_client_btn')}
               </button>
             </div>
           </header>
@@ -139,57 +168,24 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
           
           {loading && (
              <div className="bg-white p-12 rounded-2xl text-center text-slate-500 shadow-sm border border-slate-200">
-                Loading clients...
+                {t('loading_clients')}
              </div>
           )}
 
-          {!loading && !error && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 overflow-visible">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
-                  {['All Clients', 'Active', 'At Risk', 'Archived'].map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setFilter(f.replace(' Clients', '') as any)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
-                        (f === 'All Clients' && filter === 'All') || f === filter
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm'
-                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                      }`}
-                    >
-                      {f}
-                      {f === 'At Risk' && clients.some(c => c.isAtRisk) && (
-                        <span className="ml-2 bg-amber-500 text-white text-[10px] rounded-full h-5 w-5 inline-flex items-center justify-center">
-                          {clients.filter(c => c.isAtRisk).length}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input 
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 dark:text-white placeholder:text-slate-400" 
-                    placeholder="Search clients..." 
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
+            {!loading && !error && (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 overflow-visible">
+              {/* Filter and Search removed as requested */}
 
             {selectedClients.length > 0 && (
               <div className="px-4 py-3 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between text-sm border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-4 text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
-                    <span className="bg-emerald-500/10 px-2.5 py-1 rounded-lg">{selectedClients.length} selected</span>
+                    <span className="bg-emerald-500/10 px-2.5 py-1 rounded-lg">{selectedClients.length} {t('selected')}</span>
                     <button 
                       onClick={() => setSelectedClients([])}
                       className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium ml-1"
                     >
-                      Clear selection
+                      {t('clear_selection')}
                     </button>
                   </div>
                   <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
@@ -228,13 +224,13 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
-                    <th className="p-4 font-bold">Client</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Plan</th>
-                    <th className="p-4">Last Check-in</th>
-                    <th className="p-4">Next Appointment</th>
-                    <th className="p-4">Progress</th>
-                    <th className="p-4 text-right">Actions</th>
+                    <th className="p-4 font-bold">{t('client')}</th>
+                    <th className="p-4">{t('status')}</th>
+                    <th className="p-4">{t('plan')}</th>
+                    <th className="p-4">{t('last_checkin_label')}</th>
+                    <th className="p-4">{t('next_appointment_label')}</th>
+                    <th className="p-4">{t('progress')}</th>
+                    <th className="p-4 text-right">{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-sm">
@@ -257,7 +253,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                         {client.isAtRisk ? (
                           <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500 font-bold text-xs">
                             <AlertTriangle className="w-4 h-4" />
-                            <span>At Risk</span>
+                            <span>{t('at_risk')}</span>
                             <HelpCircle className="w-3 h-3 text-slate-300 dark:text-slate-600 cursor-help" />
                           </div>
                         ) : (
@@ -266,7 +262,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                             client.status === 'Archived' ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 
                             client.status === 'Pending' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                           }`}>
-                            {client.status}
+                            {getTranslatedStatus(client.status || '')}
                           </span>
                         )}
                       </td>
@@ -282,7 +278,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                       </td>
                       <td className={`p-4 text-xs font-bold ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : 'text-slate-600 dark:text-slate-300'}`}>
                         {client.nextAppointment === 'Not Scheduled' ? (
-                          <span className="text-amber-500">Not Scheduled</span>
+                          <span className="text-amber-500">{t('not_scheduled')}</span>
                         ) : client.nextAppointment}
                       </td>
                       <td className={`p-4 ${client.status === 'Archived' ? 'grayscale opacity-60 contrast-75' : ''}`}>
@@ -296,7 +292,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                             style={{ width: `${client.progress}%` }}
                           ></div>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{client.progressLabel}</p>
+                        <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{getTranslatedProgress(client.progressLabel || '')}</p>
                       </td>
                       <td className="p-4 text-right relative overflow-visible">
                           <button
@@ -314,7 +310,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                                 onClick={() => { onViewDetail(client.id.toString()); setOpenMenuId(null); }}
                                 className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                               >
-                                View Details
+                                {t('view_details')}
                               </button>
                               <button
                                 onClick={() => { 
@@ -325,7 +321,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                                 className="w-full text-left px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
                               >
                                 <Archive className="w-4 h-4 text-slate-400" />
-                                {client.status === 'Archived' ? 'Restore Client' : 'Archive Client'}
+                                {client.status === 'Archived' ? t('restore_client') : t('archive_client')}
                               </button>
                               <div className="h-px bg-slate-100 dark:bg-slate-800" />
                               <button
@@ -333,7 +329,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                                 className="w-full text-left px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"
                               >
                                 <Trash2 className="w-4 h-4 text-red-500" />
-                                Delete permanently
+                                {t('delete_permanently')}
                               </button>
                             </div>
                           )}
@@ -346,12 +342,12 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
             <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <p className="text-xs font-bold text-slate-400">
-                  Showing <span className="text-slate-900 dark:text-white">1-{filteredClients.length}</span> of <span className="text-slate-900 dark:text-white">{filteredClients.length}</span> clients
+                  {t('showing')} <span className="text-slate-900 dark:text-white">1-{filteredClients.length}</span> {t('of_total')} <span className="text-slate-900 dark:text-white">{filteredClients.length}</span> {t('clients_label').toLowerCase()}
                 </p>
                 <select className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 py-1.5 pr-8 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none shadow-sm">
-                  <option>10 per page</option>
-                  <option>20 per page</option>
-                  <option>50 per page</option>
+                  <option>10 {t('per_page')}</option>
+                  <option>20 {t('per_page')}</option>
+                  <option>50 {t('per_page')}</option>
                 </select>
               </div>
               <div className="flex gap-2">
@@ -382,7 +378,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                 <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
                   <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Delete Client</h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('delete_client')}</h2>
               </div>
               <button onClick={() => setDeleteTarget(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
                 <X className="w-5 h-5" />
@@ -397,7 +393,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">
-                  Type <span className="text-red-600">{deleteTarget.name}</span> to confirm
+                  {t('type_to_confirm').replace('{name}', '')} <span className="text-red-600">{deleteTarget.name}</span> {t('to_confirm_suffix') || ''}
                 </label>
                 <input
                   autoFocus
@@ -416,7 +412,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                   onClick={() => setDeleteTarget(null)}
                   className="flex-1 py-2.5 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleConfirmDelete}
@@ -432,7 +428,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                       Deleting...
                     </>
                   ) : (
-                    <><Trash2 className="w-4 h-4" /> Delete permanently</>
+                    <><Trash2 className="w-4 h-4" /> {t('delete_permanently')}</>
                   )}
                 </button>
               </div>

@@ -74,8 +74,8 @@ export default function Settings() {
   return (
     <div className="p-6 md:p-8 lg:p-10 w-full">
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Settings</h1>
-        <p className="text-slate-500 text-sm">Manage your account preferences, appearance, and notifications.</p>
+        <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('settings_header')}</h1>
+        <p className="text-slate-500 text-sm">{t('settings_desc')}</p>
       </header>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -104,7 +104,7 @@ export default function Settings() {
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
             >
               <LogOut className="w-5 h-5" />
-              Sign Out
+              {t('sign_out')}
             </button>
           </div>
         </div>
@@ -137,7 +137,7 @@ function GeneralSettings() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900">{t('language_region')}</h2>
-            <p className="text-sm text-slate-500 mt-1">Configure your preferred language and regional formats.</p>
+            <p className="text-sm text-slate-500 mt-1">{t('configure_language_format', { defaultValue: 'Configure your preferred language and regional formats.' })}</p>
           </div>
           <Smartphone className="w-10 h-10 text-slate-200" />
         </div>
@@ -367,14 +367,14 @@ function ProfileSettings() {
       
       {success && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm">
-          Profile saved successfully!
+          {t('profile_saved')}
         </div>
       )}
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Personal Details</h2>
-          <p className="text-sm text-slate-500 mt-1">Update your photo and personal details here.</p>
+          <h2 className="text-lg font-bold text-slate-900">{t('personal_details')}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t('personal_details_desc')}</p>
         </div>
 
         <div className="space-y-6">
@@ -399,24 +399,23 @@ function ProfileSettings() {
               </button>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-slate-900 mb-1">Profile Photo</h3>
-              <p className="text-xs text-slate-500 mb-3">This will be displayed on your profile.</p>
+              <h3 className="text-sm font-semibold text-slate-900 mb-1">{t('profile_photo')}</h3>
+              <p className="text-xs text-slate-500 mb-3">{t('profile_photo_desc', { defaultValue: 'This will be displayed on your profile.' })}</p>
               <div className="flex gap-3">
                 <button 
                   onClick={() => fileInputRef.current?.click()}
                   className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
                 >
-                  Change
+                  {t('change')}
                 </button>
                 <button 
                   onClick={() => {
                     setProfile((p: any) => ({ ...p, avatar_url: '' }));
-                    // Also save immediately to backend to clear it
                     handleSave();
                   }}
                   className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
-                  Remove
+                  {t('remove')}
                 </button>
               </div>
             </div>
@@ -424,7 +423,7 @@ function ProfileSettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('full_name')}</label>
               <div className="relative">
                 <User className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
                 <input 
@@ -438,7 +437,7 @@ function ProfileSettings() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Professional Title</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('professional_title')}</label>
               <div className="relative">
                 <BadgeCheck className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
                 <input 
@@ -469,12 +468,12 @@ function ProfileSettings() {
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Contact Information</h2>
-          <p className="text-sm text-slate-500 mt-1">How clients and colleagues can reach you.</p>
+          <h2 className="text-lg font-bold text-slate-900">{t('contact_info')}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t('contact_info_desc')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('email_address')}</label>
             <div className="relative">
               <Mail className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
               <input 
@@ -484,10 +483,10 @@ function ProfileSettings() {
                 disabled
               />
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">Email cannot be changed here.</p>
+            <p className="text-[10px] text-slate-400 mt-1">{t('email_not_changeable', { defaultValue: 'Email cannot be changed here.' })}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone Number</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('phone_number')}</label>
             <div className="relative">
               <Phone className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
               <input 
@@ -501,7 +500,7 @@ function ProfileSettings() {
             </div>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Professional Address</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('professional_address')}</label>
             <div className="relative">
               <MapPin className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
               <input 
@@ -519,8 +518,8 @@ function ProfileSettings() {
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Social Profiles</h2>
-          <p className="text-sm text-slate-500 mt-1">Connect your social media accounts.</p>
+          <h2 className="text-lg font-bold text-slate-900">{t('social_profiles')}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t('social_profiles_desc')}</p>
         </div>
         <div className="space-y-4">
           <div className="flex items-center gap-4">
@@ -576,7 +575,7 @@ function ProfileSettings() {
           onClick={() => window.location.reload()}
           className="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
         >
-          Discard Changes
+          {t('discard_changes')}
         </button>
         <button 
           onClick={handleSave}
@@ -584,7 +583,7 @@ function ProfileSettings() {
           className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-colors shadow-sm shadow-emerald-500/30 flex items-center gap-2"
         >
           {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-          {saving ? 'Saving...' : 'Save Profile'}
+          {saving ? t('saving', { defaultValue: 'Saving...' }) : t('save_profile')}
         </button>
       </div>
     </div>
@@ -592,6 +591,8 @@ function ProfileSettings() {
 }
 
 function SecuritySettings() {
+  const { t } = useLanguage();
+  const { logout } = useAuth();
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -599,95 +600,64 @@ function SecuritySettings() {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
+  const [mfaEnabled, setMfaEnabled] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
-  const [mfaEnabled, setMfaEnabled] = useState(false);
-  const [loadingSecurity, setLoadingSecurity] = useState(true);
-
-  const { logout } = useAuth();
-  const { profile } = useProfile();
 
   useEffect(() => {
     const loadSecurityData = async () => {
       try {
         const [sessionsData, historyData] = await Promise.all([
-          fetchWithAuth('/manager/security/sessions'),
-          fetchWithAuth('/manager/security/history')
+          fetchWithAuth('/manager/sessions'),
+          fetchWithAuth('/manager/login-history')
         ]);
         setSessions(sessionsData || []);
         setHistory(historyData || []);
-        if (profile) {
-          setMfaEnabled(profile.mfa_enabled || false);
-        }
       } catch (err) {
         console.error('Error loading security data:', err);
-      } finally {
-        setLoadingSecurity(false);
       }
     };
     loadSecurityData();
-  }, [profile]);
-
-  const handleToggle2FA = async () => {
-    try {
-      const nextValue = !mfaEnabled;
-      await fetchWithAuth('/manager/security/2fa/toggle', {
-        method: 'POST',
-        body: JSON.stringify({ enabled: nextValue })
-      });
-      setMfaEnabled(nextValue);
-    } catch (err) {
-      console.error('Error toggling 2FA:', err);
-    }
-  };
-
-  const handleRevokeSession = async (sessionId: string) => {
-    try {
-      await fetchWithAuth(`/manager/security/sessions/${sessionId}`, {
-        method: 'DELETE'
-      });
-      setSessions(sessions.filter(s => s.id !== sessionId));
-    } catch (err) {
-      console.error('Error revoking session:', err);
-    }
-  };
+  }, []);
 
   const handleUpdatePassword = async () => {
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('passwords_dont_match', { defaultValue: 'Las contraseñas no coinciden' }));
       return;
     }
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
     setUpdating(true);
     setError(null);
-    setSuccess(false);
-
     try {
-      await fetchWithAuth('/manager/update-password', {
+      await fetchWithAuth('/manager/change-password', {
         method: 'POST',
-        body: JSON.stringify({ newPassword })
+        body: JSON.stringify({ password: newPassword })
       });
       setSuccess(true);
       setNewPassword('');
       setConfirmPassword('');
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to update password');
+      setError(err.message || t('password_update_failed', { defaultValue: 'Error al actualizar la contraseña' }));
     } finally {
       setUpdating(false);
     }
   };
 
+  const handleRevokeSession = async (id: string) => {
+    try {
+      await fetchWithAuth(`/manager/sessions/${id}`, { method: 'DELETE' });
+      setSessions(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+      console.error('Error revoking session:', err);
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {success && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-2 mb-4">
           <BadgeCheck className="w-5 h-5" />
-          Password updated successfully!
+          {t('password_updated')}
         </div>
       )}
       
@@ -700,12 +670,12 @@ function SecuritySettings() {
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Change Password</h2>
-          <p className="text-sm text-slate-500 mt-1">Ensure your account is using a long, random password to stay secure.</p>
+          <h2 className="text-lg font-bold text-slate-900">{t('change_password')}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t('security_desc')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">New Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">{t('new_password')}</label>
             <div className="relative">
               <input 
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
@@ -723,7 +693,7 @@ function SecuritySettings() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Confirm New Password</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">{t('confirm_password')}</label>
             <div className="relative">
               <input 
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
@@ -748,7 +718,7 @@ function SecuritySettings() {
             className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-colors flex items-center gap-2"
           >
             {updating && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-            {updating ? 'Updating...' : 'Update Password'}
+            {updating ? t('updating', { defaultValue: 'Actualizando...' }) : t('update_password')}
           </button>
         </div>
       </div>
@@ -760,8 +730,8 @@ function SecuritySettings() {
               <ShieldCheck className="text-emerald-500 w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Two-Factor Authentication</h2>
-              <p className="text-sm text-slate-500 mt-1 max-w-lg">Add an extra layer of security to your account by requiring a code from your authenticator app.</p>
+              <h2 className="text-lg font-bold text-slate-900">{t('two_factor')}</h2>
+              <p className="text-sm text-slate-500 mt-1 max-w-lg">{t('two_factor_desc')}</p>
             </div>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -769,7 +739,7 @@ function SecuritySettings() {
               className="sr-only peer" 
               type="checkbox" 
               checked={mfaEnabled}
-              onChange={handleToggle2FA}
+              onChange={() => setMfaEnabled(!mfaEnabled)}
             />
             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
           </label>
@@ -779,14 +749,14 @@ function SecuritySettings() {
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Active Sessions</h2>
-            <p className="text-sm text-slate-500 mt-1">Manage devices logged into your account.</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('active_sessions')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('sessions_desc')}</p>
           </div>
           <button 
             onClick={logout}
             className="text-red-500 text-sm font-semibold hover:text-red-600 transition-colors border border-red-200 bg-red-50 px-3 py-1.5 rounded-lg"
           >
-            Logout from all devices
+            {t('logout_all')}
           </button>
         </div>
         <div className="space-y-4">
@@ -794,30 +764,26 @@ function SecuritySettings() {
             <div key={session.id} className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${session.is_current ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 hover:bg-slate-50'}`}>
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-200 flex items-center justify-center text-slate-400">
-                  {session.device_name.toLowerCase().includes('phone') || session.device_name.toLowerCase().includes('iphone') ? <Smartphone className="w-5 h-5" /> : 
-                   session.device_name.toLowerCase().includes('pc') || session.device_name.toLowerCase().includes('mac') ? <Laptop className="w-5 h-5" /> : 
-                   <Monitor className="w-5 h-5" />}
+                  {session.device_name?.toLowerCase().includes('phone') ? <Smartphone className="w-5 h-5" /> : <Laptop className="w-5 h-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-slate-900 text-sm">{session.device_name}</h3>
                     {session.is_current && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold uppercase tracking-wide">Current</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold uppercase tracking-wide">{t('active_now')}</span>
                     )}
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {session.location || 'Unknown Location'} • {session.browser || 'Browser'} • {session.ip_address || '---'}
+                    {session.location || t('unknown_location')} • {session.browser || 'Browser'} • {session.ip_address || '---'}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {session.is_current ? (
-                  <div className="text-xs text-emerald-600 font-medium">Active now</div>
-                ) : (
+                {!session.is_current && (
                   <button 
                     onClick={() => handleRevokeSession(session.id)}
                     className="text-slate-400 hover:text-red-500 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
-                    title="Revoke session"
+                    title={t('revoke_session')}
                   >
                     <LogOut className="w-5 h-5" />
                   </button>
@@ -825,32 +791,29 @@ function SecuritySettings() {
               </div>
             </div>
           ))}
-          {sessions.length === 0 && (
-            <p className="text-center text-sm text-slate-500 py-4">No other active sessions.</p>
-          )}
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 overflow-hidden">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Login History</h2>
-          <p className="text-sm text-slate-500 mt-1">Recent account activity and login attempts.</p>
+          <h2 className="text-lg font-bold text-slate-900">{t('login_history')}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t('login_history_desc')}</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left bg-white border-collapse">
             <thead>
               <tr className="border-b border-slate-100">
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Device</th>
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Status</th>
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('device')}</th>
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('location')}</th>
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('date')}</th>
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">{t('status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {history.map((item) => (
-                <tr key={item.id}>
-                  <td className="py-3 px-2 text-sm text-slate-900 font-medium">{item.device || 'Unknown Device'}</td>
-                  <td className="py-3 px-2 text-sm text-slate-500">{item.location || 'Unknown Location'}</td>
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3 px-2 text-sm text-slate-900 font-medium">{item.device || t('unknown_device')}</td>
+                  <td className="py-3 px-2 text-sm text-slate-500">{item.location || t('unknown_location')}</td>
                   <td className="py-3 px-2 text-sm text-slate-500">{new Date(item.timestamp).toLocaleString()}</td>
                   <td className="py-3 px-2 text-right">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.status === 'Success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -859,11 +822,6 @@ function SecuritySettings() {
                   </td>
                 </tr>
               ))}
-              {history.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-sm text-slate-500">No recent activity detected.</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -872,33 +830,35 @@ function SecuritySettings() {
   );
 }
 
+
 function BillingSettings() {
+  const { t } = useLanguage();
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Current Plan</h2>
-            <p className="text-sm text-slate-500 mt-1">Manage your subscription details</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('current_plan')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('manage_subscription')}</p>
           </div>
           <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full text-xs font-semibold text-emerald-600 w-fit">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            Active
+            {t('active')}
           </div>
         </div>
         <div className="flex flex-col md:flex-row md:items-center justify-between bg-slate-50 rounded-xl p-6 border border-slate-100">
           <div className="mb-4 md:mb-0">
-            <h3 className="text-lg font-bold text-slate-900">Professional Plan</h3>
-            <p className="text-slate-500 text-sm mt-1">For growing nutrition practices</p>
+            <h3 className="text-lg font-bold text-slate-900">{t('professional_plan')}</h3>
+            <p className="text-slate-500 text-sm mt-1">{t('professional_plan_desc')}</p>
             <div className="mt-4 flex items-baseline gap-1">
               <span className="text-3xl font-bold text-slate-900">$49</span>
-              <span className="text-slate-500 text-sm">/ month</span>
+              <span className="text-slate-500 text-sm">/ {t('month', { defaultValue: 'month' })}</span>
             </div>
-            <p className="text-xs text-slate-400 mt-2">Renews on Oct 24, 2023</p>
+            <p className="text-xs text-slate-400 mt-2">{t('renews_on', { date: 'Oct 24, 2026' })}</p>
           </div>
           <div className="flex items-center">
             <button className="px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 font-medium text-sm hover:bg-slate-50 transition-colors shadow-sm">
-              Change Plan
+              {t('change_plan')}
             </button>
           </div>
         </div>
@@ -907,8 +867,8 @@ function BillingSettings() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Payment Method</h2>
-            <p className="text-sm text-slate-500 mt-1">Update your billing information</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('payment_method')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('update_billing')}</p>
           </div>
         </div>
         <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
@@ -918,14 +878,14 @@ function BillingSettings() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-900 text-sm">Visa ending in 1234</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">Default</span>
+                <span className="font-semibold text-slate-900 text-sm">{t('visa_ending', { last4: '1234' })}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">{t('default')}</span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">Expiry 12/2025</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t('expiry', { date: '12/2025' })}</p>
             </div>
           </div>
           <button className="text-emerald-600 text-sm font-semibold hover:text-emerald-700 hover:underline">
-            Update
+            {t('update')}
           </button>
         </div>
       </div>
@@ -933,26 +893,26 @@ function BillingSettings() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Billing History</h2>
-            <p className="text-sm text-slate-500 mt-1">Download your past invoices</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('billing_history')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('billing_history_desc')}</p>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500">
               <tr>
-                <th className="px-4 py-3 rounded-l-lg">Invoice Date</th>
-                <th className="px-4 py-3">Plan</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 rounded-r-lg text-right">Invoice</th>
+                <th className="px-4 py-3 rounded-l-lg">{t('invoice_date')}</th>
+                <th className="px-4 py-3">{t('plan')}</th>
+                <th className="px-4 py-3">{t('amount')}</th>
+                <th className="px-4 py-3">{t('status')}</th>
+                <th className="px-4 py-3 rounded-r-lg text-right">{t('invoice')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {[
-                { date: 'Sep 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: 'Paid' },
-                { date: 'Aug 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: 'Paid' },
-                { date: 'Jul 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: 'Paid' },
+                { date: 'Sep 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: t('paid') },
+                { date: 'Aug 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: t('paid') },
+                { date: 'Jul 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: t('paid') },
               ].map((row, i) => (
                 <tr key={i} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-4 font-medium text-slate-900">{row.date}</td>
@@ -978,13 +938,14 @@ function BillingSettings() {
   );
 }
 
+
 function IntegrationsSettings() {
-  const { integrations, saveIntegrations, isSaving, isLoading, error: integrationError } = useIntegrations();
+  const { integrations, saveIntegrations, isSaving } = useIntegrations();
+  const { t } = useLanguage();
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
-  
   const [localIntegrations, setLocalIntegrations] = useState<any>(null);
 
   useEffect(() => {
@@ -1020,7 +981,6 @@ function IntegrationsSettings() {
 
   const handleSaveGeneralSettings = async () => {
     setSaving(true);
-    setSuccess(false);
     try {
       await fetchWithAuth('/manager/settings', {
         method: 'POST',
@@ -1035,26 +995,13 @@ function IntegrationsSettings() {
     }
   };
 
-  const handleIntegrationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const target = e.target;
-    const name = target.name;
-    const value = target.value;
-    const type = (target as any).type;
-    const checked = (target as any).checked;
-    
-    setLocalIntegrations((prev: any) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
   const handleSaveIntegrations = async () => {
     try {
       await saveIntegrations(localIntegrations);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      // Error handled in context
+      console.error('Error saving integrations:', err);
     }
   };
 
@@ -1069,14 +1016,7 @@ function IntegrationsSettings() {
       {success && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-2">
           <BadgeCheck className="w-5 h-5" />
-          Configuración guardada correctamente!
-        </div>
-      )}
-
-      {integrationError && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 text-sm text-balance">
-          <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-white font-bold text-[10px]">!</div>
-          {integrationError}
+          {t('settings_saved', { defaultValue: '¡Configuración guardada correctamente!' })}
         </div>
       )}
 
@@ -1084,8 +1024,8 @@ function IntegrationsSettings() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden relative">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Google Calendar</h2>
-            <p className="text-sm text-slate-500 mt-1">Sincroniza tus citas y horarios con Google Calendar.</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('google_calendar')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('google_calendar_desc')}</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center">
             <img alt="Google Calendar" className="w-7 h-7 object-contain" src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" />
@@ -1095,16 +1035,15 @@ function IntegrationsSettings() {
         <div className="space-y-6">
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
             <div>
-              <p className="font-bold text-slate-900 text-sm">Estado de Conexión</p>
+              <p className="font-bold text-slate-900 text-sm">{t('connection_status')}</p>
               <p className="text-xs text-slate-500 mt-1">
-                {localIntegrations.google_calendar_enabled ? 'Sincronización activa' : 'No conectado'}
+                {localIntegrations.google_calendar_enabled ? t('sync_active') : t('not_connected')}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
-                name="google_calendar_enabled"
                 checked={localIntegrations.google_calendar_enabled} 
-                onChange={handleIntegrationChange}
+                onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_calendar_enabled: e.target.checked })}
                 className="sr-only peer" 
                 type="checkbox" 
               />
@@ -1114,75 +1053,34 @@ function IntegrationsSettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Google API Key</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('google_api_key')}</label>
               <input 
-                name="google_calendar_api_key"
                 value={localIntegrations.google_calendar_api_key || ''}
-                onChange={handleIntegrationChange}
+                onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_calendar_api_key: e.target.value })}
                 type="password"
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
-                placeholder="Pega tu API Key de Google Cloud"
+                placeholder="AIza..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">ID del Calendario</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('google_calendar_id')}</label>
               <input 
-                name="google_calendar_id"
                 value={localIntegrations.google_calendar_id || ''}
-                onChange={handleIntegrationChange}
+                onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_calendar_id: e.target.value })}
                 type="text"
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
-                placeholder="ejemplo@gmail.com"
+                placeholder="example@gmail.com"
               />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Google Service Account JSON (Recomendado para escritura)</label>
-              <textarea 
-                name="google_service_account"
-                value={localIntegrations.google_service_account || ''}
-                onChange={handleIntegrationChange}
-                className="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none min-h-[100px]" 
-                placeholder='{ "type": "service_account", ... }'
-              />
-              <p className="text-[10px] text-slate-500 mt-1">
-                Pega aquí el contenido del archivo JSON de tu Cuenta de Servicio de Google Cloud.
-              </p>
             </div>
           </div>
 
-          <div className="flex justify-end pt-2">
-            <button 
-              onClick={async () => {
-                try {
-                  setSaving(true);
-                  const result = await fetchWithAuth('/manager/integrations/google-calendar/sync-all', { method: 'POST' });
-                  alert(`Sincronización completada: ${result.synced} tareas enviadas, ${result.failed} fallidas.`);
-                } catch (err) {
-                  alert('Error al sincronizar con Google Calendar');
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100"
-            >
+          <div className="flex justify-end pt-2 gap-2">
+            <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100">
               <Share2 className="w-3 h-3" />
-              Sincronizar tareas existentes ahora
+              {t('sync_existing')}
             </button>
-            <button 
-              onClick={async () => {
-                try {
-                  setSaving(true);
-                  const result = await fetchWithAuth('/manager/integrations/google-calendar/test', { method: 'POST' });
-                  alert(result.success ? '¡Conexión exitosa! El calendario es accesible.' : `Error: ${result.message}`);
-                } catch (err) {
-                  alert('Error al probar la conexión con Google.');
-                } finally {
-                  setSaving(false);
-                }
-              }}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 ml-2"
-            >
-              Probar conexión
+            <button className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100">
+              {t('test_connection')}
             </button>
           </div>
         </div>
@@ -1192,8 +1090,8 @@ function IntegrationsSettings() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden relative">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Stripe Payments</h2>
-            <p className="text-sm text-slate-500 mt-1">Conecta tu cuenta para ver tus ingresos y facturación.</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('stripe_payments')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('stripe_payments_desc')}</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-[#635BFF] shadow-lg flex items-center justify-center">
             <CreditCard className="w-6 h-6 text-white" />
@@ -1203,16 +1101,15 @@ function IntegrationsSettings() {
         <div className="space-y-6">
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
             <div>
-              <p className="font-bold text-slate-900 text-sm">Estado de Stripe</p>
+              <p className="font-bold text-slate-900 text-sm">{t('stripe_status')}</p>
               <p className="text-xs text-slate-500 mt-1">
-                {localIntegrations.stripe_enabled ? 'Conectado a Stripe' : 'No conectado'}
+                {localIntegrations.stripe_enabled ? t('connected_stripe') : t('not_connected')}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
-                name="stripe_enabled"
                 checked={localIntegrations.stripe_enabled} 
-                onChange={handleIntegrationChange}
+                onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_enabled: e.target.checked })}
                 className="sr-only peer" 
                 type="checkbox" 
               />
@@ -1222,22 +1119,20 @@ function IntegrationsSettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Publishable Key</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('publishable_key')}</label>
               <input 
-                name="stripe_publishable_key"
                 value={localIntegrations.stripe_publishable_key || ''}
-                onChange={handleIntegrationChange}
+                onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_publishable_key: e.target.value })}
                 type="text"
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
                 placeholder="pk_test_..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Secret Key</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('secret_key')}</label>
               <input 
-                name="stripe_secret_key"
                 value={localIntegrations.stripe_secret_key || ''}
-                onChange={handleIntegrationChange}
+                onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_secret_key: e.target.value })}
                 type="password"
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
                 placeholder="sk_test_..."
@@ -1253,47 +1148,31 @@ function IntegrationsSettings() {
           disabled={isSaving}
           className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 disabled:opacity-50"
         >
-          {isSaving ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <BadgeCheck className="w-4 h-4" />
-          )}
-          {isSaving ? 'Guardando...' : 'Guardar Todas las Integraciones'}
+          {isSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+          {isSaving ? t('saving') : t('save_all_integrations')}
         </button>
-        <button 
-          onClick={async () => {
-            try {
-              setSaving(true);
-              const result = await fetchWithAuth('/manager/integrations/stripe/test', { method: 'POST' });
-              alert(result.success ? '¡Conexión exitosa! Stripe está respondiendo correctamente.' : `Error: ${result.message}`);
-            } catch (err) {
-              alert('Error al probar la conexión con Stripe.');
-            } finally {
-              setSaving(false);
-            }
-          }}
-          className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all shadow-lg flex items-center gap-2"
-        >
-          Probar Stripe
+        <button className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all shadow-lg">
+          {t('test_stripe')}
         </button>
       </div>
 
+      {/* Notifications Section */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">Notification Preferences</h2>
-          <p className="text-sm text-slate-500 mt-1">Choose how and when you want to be notified.</p>
+          <h2 className="text-lg font-bold text-slate-900">{t('notification_preferences')}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t('notification_prefs_desc')}</p>
         </div>
         <div className="divide-y divide-slate-100">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 bg-slate-50 px-4 rounded-t-lg items-center">
-            <div className="md:col-span-6 font-semibold text-xs text-slate-500 uppercase tracking-wider">Event Type</div>
-            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 uppercase tracking-wider">Email</div>
-            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 uppercase tracking-wider">Push</div>
+            <div className="md:col-span-6 font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('event_type')}</div>
+            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('email')}</div>
+            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('push')}</div>
           </div>
           {[
-            { id: 'new_client_check_ins', title: 'New Client Check-ins', desc: 'When a client submits their weekly progress update.' },
-            { id: 'new_messages', title: 'New Messages', desc: 'Direct messages from clients.' },
-            { id: 'appointment_reminders', title: 'Appointment Reminders', desc: '1 hour before scheduled session.' },
-            { id: 'system_updates', title: 'System Updates', desc: 'Product news and platform maintenance.', disabled: true },
+            { id: 'new_client_check_ins', title: t('checkins'), desc: t('new_client_check_ins_desc') },
+            { id: 'new_messages', title: t('messages'), desc: t('new_messages_desc') },
+            { id: 'appointment_reminders', title: t('appointment_reminders'), desc: t('appointment_reminders_desc') },
+            { id: 'system_updates', title: t('system_updates'), desc: t('system_updates_desc'), disabled: true },
           ].map((item, i) => (
             <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-4 py-4 px-4 items-center">
               <div className="md:col-span-6">
@@ -1303,7 +1182,7 @@ function IntegrationsSettings() {
               <div className="md:col-span-3 flex justify-center">
                 <input 
                   type="checkbox" 
-                  checked={settings.notification_prefs[`${item.id}_email`]} 
+                  checked={settings.notification_prefs?.[`${item.id}_email`]} 
                   onChange={() => handleTogglePreference(`${item.id}_email`)}
                   className="w-5 h-5 text-emerald-500 border-slate-300 rounded focus:ring-emerald-500/20" 
                 />
@@ -1311,7 +1190,7 @@ function IntegrationsSettings() {
               <div className="md:col-span-3 flex justify-center">
                 <input 
                   type="checkbox" 
-                  checked={settings.notification_prefs[`${item.id}_push`]} 
+                  checked={settings.notification_prefs?.[`${item.id}_push`]} 
                   disabled={item.disabled}
                   onChange={() => handleTogglePreference(`${item.id}_push`)}
                   className={`w-5 h-5 ${item.disabled ? 'text-slate-200' : 'text-emerald-500'} border-slate-300 rounded focus:ring-emerald-500/20`} 
@@ -1324,23 +1203,18 @@ function IntegrationsSettings() {
 
       <div className="flex justify-end gap-3 pt-4">
         <button 
-          onClick={() => window.location.reload()}
-          className="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
-        >
-          Cancel
-        </button>
-        <button 
           onClick={handleSaveGeneralSettings}
           disabled={saving}
           className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-colors shadow-sm shadow-emerald-500/30 flex items-center gap-2"
         >
           {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-          {saving ? 'Saving...' : 'Save Notification Preferences'}
+          {saving ? t('saving') : t('save_notification_prefs')}
         </button>
       </div>
     </div>
   );
 }
+
 
 function AppearanceSettings() {
   const { settings, updateTheme, isLoading } = useTheme();
@@ -1392,7 +1266,6 @@ function AppearanceSettings() {
   });
   const [customColor, setCustomColor] = useState(settings.theme_color);
 
-  // Debounced theme update for custom picker
   useEffect(() => {
     if (showCustom && customColor !== settings.theme_color) {
       const timer = setTimeout(() => {
@@ -1409,20 +1282,20 @@ function AppearanceSettings() {
   );
 
   const presets = [
-    { name: 'Soft Green', color: '#10b981' },
-    { name: 'Deep Blue', color: '#3b82f6' },
-    { name: 'Teal', color: '#0d9488' },
-    { name: 'Purple', color: '#8b5cf6' },
-    { name: 'Rose', color: '#f43f5e' },
-    { name: 'Amber', color: '#f59e0b' },
-    { name: 'Slate', color: '#64748b' },
-    { name: 'Dark', color: '#0f172a' },
+    { name: t('green', { defaultValue: 'Soft Green' }), color: '#10b981' },
+    { name: t('blue', { defaultValue: 'Deep Blue' }), color: '#3b82f6' },
+    { name: t('teal', { defaultValue: 'Teal' }), color: '#0d9488' },
+    { name: t('purple', { defaultValue: 'Purple' }), color: '#8b5cf6' },
+    { name: t('rose', { defaultValue: 'Rose' }), color: '#f43f5e' },
+    { name: t('amber', { defaultValue: 'Amber' }), color: '#f59e0b' },
+    { name: t('slate', { defaultValue: 'Slate' }), color: '#64748b' },
+    { name: t('dark', { defaultValue: 'Dark' }), color: '#0f172a' },
   ];
 
   const isPresetSelected = presets.some(p => p.color === settings.theme_color);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <style>{`
         input[type=range]::-webkit-slider-thumb {
           -webkit-appearance: none;
@@ -1450,14 +1323,14 @@ function AppearanceSettings() {
           <div className="mb-6 flex items-start justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900">{t('theme_color')}</h2>
-              <p className="text-sm text-slate-500 mt-1">Select a primary color theme for your workspace.</p>
+              <p className="text-sm text-slate-500 mt-1">{t('theme_color_desc')}</p>
             </div>
             {showCustom && (
               <button 
                 onClick={() => setShowCustom(false)}
                 className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors"
               >
-                Close Custom
+                {t('close_custom', { defaultValue: 'Cerrar' })}
               </button>
             )}
           </div>
@@ -1465,7 +1338,7 @@ function AppearanceSettings() {
           <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-9 gap-4 items-center">
             {presets.map((theme) => (
               <button 
-                key={theme.name} 
+                key={theme.color} 
                 onClick={() => {
                   updateTheme({ theme_color: theme.color });
                   setCustomColor(theme.color);
@@ -1493,7 +1366,9 @@ function AppearanceSettings() {
               <div className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all ${!isPresetSelected || showCustom ? 'border-emerald-500 bg-emerald-50 text-emerald-600 ring-2 ring-emerald-500 ring-offset-2' : 'border-slate-300 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50'}`}>
                 <Palette className="w-5 h-5" />
               </div>
-              <span className={`text-xs transition-colors ${!isPresetSelected || showCustom ? 'text-emerald-600 font-bold' : 'text-slate-500 group-hover:text-emerald-500'}`}>Custom</span>
+              <span className={`text-xs transition-colors ${!isPresetSelected || showCustom ? 'text-emerald-600 font-bold' : 'text-slate-500 group-hover:text-emerald-500'}`}>
+                {t('custom', { defaultValue: 'Personalizado' })}
+              </span>
             </button>
           </div>
         </div>
@@ -1509,7 +1384,6 @@ function AppearanceSettings() {
             >
               <div className="p-8">
                 <div className="flex flex-col lg:flex-row items-start gap-12">
-                  {/* Left: Premium Color Preview */}
                   <div className="flex flex-col items-center gap-4 shrink-0 mx-auto lg:mx-0">
                     <div 
                       className="w-40 h-40 rounded-[3rem] shadow-2xl border-8 border-white transition-transform duration-500 hover:rotate-3"
@@ -1521,10 +1395,8 @@ function AppearanceSettings() {
                     </div>
                   </div>
 
-                  {/* Right: Modern Sliders */}
                   <div className="flex-1 w-full space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                      {/* Hex Input Card */}
                       <div className="md:col-span-2 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hex Color Code</label>
@@ -1547,7 +1419,6 @@ function AppearanceSettings() {
                         </div>
                       </div>
 
-                      {/* Custom Hue Slider */}
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hue</label>
@@ -1567,7 +1438,6 @@ function AppearanceSettings() {
                         />
                       </div>
 
-                      {/* Custom Saturation Slider */}
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Saturation</label>
@@ -1587,7 +1457,6 @@ function AppearanceSettings() {
                         />
                       </div>
 
-                      {/* Custom Lightness Slider */}
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Brightness</label>
@@ -1621,7 +1490,7 @@ function AppearanceSettings() {
             <Moon className="w-5 h-5 text-slate-400" />
             {t('dark_mode')}
           </h2>
-          <p className="text-sm text-slate-500 mt-1">Adjust the appearance to reduce eye strain.</p>
+          <p className="text-sm text-slate-500 mt-1">{t('appearance_desc')}</p>
         </div>
         <label className="relative inline-flex items-center cursor-pointer">
           <input 
@@ -1636,3 +1505,4 @@ function AppearanceSettings() {
     </div>
   );
 }
+

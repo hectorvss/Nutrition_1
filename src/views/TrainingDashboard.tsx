@@ -1,7 +1,9 @@
 import React from 'react';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string) => void }> = ({ onNavigate }) => {
+  const { t } = useLanguage();
   const { clients: globalClients } = useClient();
   
   const clients = globalClients.map((client, idx) => {
@@ -10,9 +12,9 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
       id: client.id,
       name: client.name,
       avatar: client.avatar,
-      status: hasPlan ? 'IN PROGRESS' : 'NO PLAN',
-      frequency: '4x / week',
-      phase: 'Phase 1: Hypertrophy',
+      status: hasPlan ? t('in_progress_status') : t('no_plan_status'),
+      frequency: `4${t('per_week')}`,
+      phase: `Phase 1: Hypertrophy`, // Keep placeholder for now as it comes from data
       lastSession: hasPlan ? 'Yesterday' : '-',
       online: idx === 0 || idx === 1,
       trainingPlanAssigned: hasPlan,
@@ -27,12 +29,12 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
           <div className="p-8 border-b border-slate-100 space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-3xl font-bold text-slate-900">Training Management</h2>
-                <p className="text-sm text-slate-500 mt-1 font-medium">Assign and monitor workout plans for your clients</p>
+                <h2 className="text-3xl font-bold text-slate-900">{t('training_management')}</h2>
+                <p className="text-sm text-slate-500 mt-1 font-medium">{t('training_mgmt_desc')}</p>
               </div>
               <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm">
                 <span className="material-symbols-outlined text-[20px]">add</span>
-                New Workout Plan
+                {t('new_workout_plan')}
               </button>
             </div>
 
@@ -41,22 +43,22 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                 <span className="material-symbols-outlined text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 text-[20px]">search</span>
                 <input 
                   className="w-full pl-12 pr-4 py-3 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all font-medium" 
-                  placeholder="Search client by name..." 
+                  placeholder={t('search_client_placeholder')} 
                   type="text"
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full sm:w-auto">
-                <button className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/10 text-sm font-bold transition-all whitespace-nowrap">All Clients</button>
+                <button className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/10 text-sm font-bold transition-all whitespace-nowrap">{t('all_clients')}</button>
                 <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  In Progress
+                  {t('in_progress_status')}
                   <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-black">8</span>
                 </button>
                 <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  Needs Update
+                  {t('needs_update_label')}
                   <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-lg font-black">4</span>
                 </button>
                 <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  Drafts
+                  {t('drafts_label')}
                   <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-lg font-black">2</span>
                 </button>
               </div>
@@ -89,10 +91,10 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                         <div className="flex items-center gap-3 mb-1.5">
                           <h3 className="font-bold text-lg text-slate-900">{client.name}</h3>
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
-                            client.status === 'IN PROGRESS' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            client.status === 'NEEDS UPDATE' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                            client.status === 'DRAFT' ? 'bg-slate-100 text-slate-500 border-slate-200' :
-                            client.status === 'NO PLAN' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                            client.status === t('in_progress_status') ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                            client.status === t('needs_update_status') ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                            client.status === t('draft_status_label') ? 'bg-slate-100 text-slate-500 border-slate-200' :
+                            client.status === t('no_plan_status') ? 'bg-amber-50 text-amber-600 border-amber-100' :
                             'bg-red-50 text-red-600 border-red-100'
                           }`}>
                             {client.status}
@@ -113,7 +115,7 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
 
                     <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end pl-[5.25rem] md:pl-0">
                       <div className="flex flex-col items-end text-right">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Last Session</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('last_session_label')}</span>
                         <span className="text-xs font-bold text-slate-600">{client.lastSession}</span>
                       </div>
                       
@@ -139,15 +141,15 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                         }`}
                       >
                         <span className="material-symbols-outlined text-[18px]">
-                          {client.status === 'NO PLAN' ? 'assignment_add' :
-                           client.status === 'NEEDS UPDATE' ? 'refresh' : 
-                           client.status === 'DRAFT' ? 'edit_note' : 
-                           client.status === 'ENDED' ? 'history' : 'calendar_month'}
+                          {client.status === t('no_plan_status') ? 'assignment_add' :
+                           client.status === t('needs_update_status') ? 'refresh' : 
+                           client.status === t('draft_status_label') ? 'edit_note' : 
+                           client.status === t('ended_status') ? 'history' : 'calendar_month'}
                         </span>
-                        {client.status === 'NO PLAN' ? 'Assign Program' :
-                         client.status === 'NEEDS UPDATE' ? 'Update Plan' : 
-                         client.status === 'DRAFT' ? 'Continue Draft' : 
-                         client.status === 'ENDED' ? 'Renew Program' : 'Manage Program'}
+                        {client.status === t('no_plan_status') ? t('assign_program') :
+                         client.status === t('needs_update_status') ? t('update_plan_btn') : 
+                         client.status === t('draft_status_label') ? t('continue_draft_btn') : 
+                         client.status === t('ended_status') ? t('renew_program_btn') : t('manage_program_btn')}
                       </button>
                     </div>
                   </div>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DayPlan {
   id: string;
   name: string;
-  nameEn: string;
   calories: number;
   protein: number;
   carbs: number;
@@ -16,99 +16,7 @@ interface DayPlan {
   tagColor: string;
 }
 
-const WEEK_DAYS: DayPlan[] = [
-  {
-    id: 'monday',
-    name: 'Lunes',
-    nameEn: 'Monday',
-    calories: 2200,
-    protein: 30,
-    carbs: 50,
-    fats: 20,
-    weekViewLabel: '3+2',
-    tag: 'Entrenamiento',
-    tagColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    bars: [80, 90, 70, 60, 50, {h: 40, p: true}, {h: 30, p: true}]
-  },
-  {
-    id: 'tuesday',
-    name: 'Martes',
-    nameEn: 'Tuesday',
-    calories: 2200,
-    protein: 30,
-    carbs: 50,
-    fats: 20,
-    weekViewLabel: '3+2',
-    tag: 'Entrenamiento',
-    tagColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    bars: [85, 85, 85, 70, 70, {h: 50, p: true}, {h: 40, p: true}]
-  },
-  {
-    id: 'wednesday',
-    name: 'Miércoles',
-    nameEn: 'Wednesday',
-    calories: 1800,
-    protein: 35,
-    carbs: 40,
-    fats: 25,
-    weekViewLabel: '4 meals',
-    tag: 'Descanso Activo',
-    tagColor: 'bg-blue-50 text-blue-600 border-blue-100',
-    bars: [70, 70, 70, 80, 80, {h: 60, p: true}, {h: 60, p: true}]
-  },
-  {
-    id: 'thursday',
-    name: 'Jueves',
-    nameEn: 'Thursday',
-    calories: 2200,
-    protein: 30,
-    carbs: 50,
-    fats: 20,
-    weekViewLabel: '3+2',
-    tag: 'Entrenamiento',
-    tagColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    bars: [90, 90, 90, 90, 90, 90, {h: 70, p: true}]
-  },
-  {
-    id: 'friday',
-    name: 'Viernes',
-    nameEn: 'Friday',
-    calories: 2200,
-    protein: 30,
-    carbs: 50,
-    fats: 20,
-    weekViewLabel: '3+2',
-    tag: 'Entrenamiento',
-    tagColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 60, p: true}]
-  },
-  {
-    id: 'saturday',
-    name: 'Sábado',
-    nameEn: 'Saturday',
-    calories: 2500,
-    protein: 25,
-    carbs: 55,
-    fats: 20,
-    weekViewLabel: 'Libre Estructurado',
-    tag: 'Social / Refeed',
-    tagColor: 'bg-purple-50 text-purple-600 border-purple-100',
-    bars: [95, 95, 95, 95, 95, {h: 80, p: true}, {h: 80, p: true}]
-  },
-  {
-    id: 'sunday',
-    name: 'Domingo',
-    nameEn: 'Sunday',
-    calories: 1800,
-    protein: 35,
-    carbs: 40,
-    fats: 25,
-    weekViewLabel: 'Descanso',
-    tag: 'Reset',
-    tagColor: 'bg-slate-50 text-slate-600 border-slate-100',
-    bars: [60, 60, 60, 60, 60, 60, {h: 60, p: true}]
-  }
-];
+
 
 interface NutritionWeeklyViewProps {
   client: any;
@@ -119,6 +27,7 @@ interface NutritionWeeklyViewProps {
 }
 
 export default function NutritionWeeklyView({ client, onBack, onSelectDay, onReassign, initialPlanData }: NutritionWeeklyViewProps) {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [planData, setPlanData] = useState<any>(initialPlanData || null);
   const [isLoading, setIsLoading] = useState(false);
@@ -209,13 +118,13 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   };
 
   const daysConfig = [
-    { id: 'monday', name: 'Lunes', nameEn: 'Monday' },
-    { id: 'tuesday', name: 'Martes', nameEn: 'Tuesday' },
-    { id: 'wednesday', name: 'Miércoles', nameEn: 'Wednesday' },
-    { id: 'thursday', name: 'Jueves', nameEn: 'Thursday' },
-    { id: 'friday', name: 'Viernes', nameEn: 'Friday' },
-    { id: 'saturday', name: 'Sábado', nameEn: 'Saturday' },
-    { id: 'sunday', name: 'Domingo', nameEn: 'Sunday' },
+    { id: 'monday', name: t('monday') },
+    { id: 'tuesday', name: t('tuesday') },
+    { id: 'wednesday', name: t('wednesday') },
+    { id: 'thursday', name: t('thursday') },
+    { id: 'friday', name: t('friday') },
+    { id: 'saturday', name: t('saturday') },
+    { id: 'sunday', name: t('sunday') },
   ];
 
   const processedDays: DayPlan[] = daysConfig.map((day, dayIdx) => {
@@ -232,8 +141,8 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       return {
         ...day,
         calories: 0, protein: 0, carbs: 0, fats: 0,
-        weekViewLabel: 'Descanso',
-        tag: 'Descanso',
+        weekViewLabel: t('rest_day_label'),
+        tag: t('rest_day_label'),
         tagColor: 'bg-slate-50 text-slate-400 border-slate-100',
         bars: [20, 20, 20, 20, 20]
       };
@@ -279,13 +188,12 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
     return {
       id: day.id,
       name: day.name,
-      nameEn: day.nameEn,
       calories: Math.round(totalCals),
       protein: pPct,
       carbs: cPct,
       fats: fPct,
-      weekViewLabel: `${meals.length} comidas`,
-      tag: dayIdx % 3 === 0 ? 'Entrenamiento' : 'Descanso',
+      weekViewLabel: t('meals_count', { count: meals.length }),
+      tag: dayIdx % 3 === 0 ? t('training_day') : t('rest_day_label'),
       tagColor: dayIdx % 3 === 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100',
       bars
     };
@@ -298,7 +206,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
               <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-500 transition-colors">
-                Nutrition
+                {t('nutrition')}
               </button>
             </li>
             <li>
@@ -328,16 +236,16 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
               <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                {planData ? 'Plan Activo' : 'Borrador / No Asignado'}
+                {planData ? t('active_plan') : t('draft_not_assigned')}
               </span>
             </div>
           </div>
           
           <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
-            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">Plan Progress</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Week 1 / 12
+              {t('week')} 1 / 12
             </div>
           </div>
         </div>
@@ -352,8 +260,8 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
                 <span className="material-symbols-outlined text-2xl">calendar_view_week</span>
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white">Plan Distribution</h3>
-                <p className="text-sm text-slate-500">Arrastra para reorganizar los días o haz clic para editar cada uno.</p>
+                <h3 className="font-bold text-slate-900 dark:text-white">{t('plan_distribution')}</h3>
+                <p className="text-sm text-slate-500">{t('drag_to_reorganize')}</p>
               </div>
             </div>
             
@@ -361,7 +269,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               {(isLoading || isSaving) && (
                 <div className="flex items-center gap-2 mr-4">
                   <div className="w-4 h-4 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <span className="text-xs font-medium text-slate-400">{isSaving ? 'Guardando...' : 'Loading...'}</span>
+                  <span className="text-xs font-medium text-slate-400">{isSaving ? t('saving_dots') : 'Loading...'}</span>
                 </div>
               )}
               {onReassign && (
@@ -370,7 +278,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-900/20 dark:hover:text-rose-400 transition-all font-semibold text-sm"
           >
             <span className="material-symbols-outlined text-lg">rebase_edit</span>
-            Reasignar Plan
+            {t('reassign_plan')}
           </button>
               )}
               
@@ -379,13 +287,13 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
                   onClick={() => setViewMode('weekly')}
                   className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'weekly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  WEEKLY VIEW
+                  {t('weekly_view_btn')}
                 </button>
                 <button 
                   onClick={() => setViewMode('monthly')}
                   className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  MONTH VIEW
+                  {t('month_view_btn')}
                 </button>
               </div>
             </div>
@@ -394,7 +302,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
           {isLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
               <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-              <p className="text-sm font-medium">Cargando distribución semanal...</p>
+              <p className="text-sm font-medium">{t('loading_distribution')}</p>
             </div>
           ) : processedDays.map((day, dayIdx) => (
             <div 
@@ -448,7 +356,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
 
                 <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
                   <div>
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NUTRICIÓN</div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('nutrition_label')}</div>
                     <div className="flex items-center gap-2">
                        <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
                         {day.weekViewLabel.split(' ')[0]}

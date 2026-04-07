@@ -29,6 +29,7 @@ import {
 import { useFoodContext, FoodItem } from '../context/FoodContext';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface NutritionPlanDetailProps {
   client: any;
@@ -70,20 +71,6 @@ interface MealBlock {
 
 const MACRO_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500'];
 
-const defaultCategories = (): MacroCategory[] => [
-  { id: 'p', label: 'Lean Protein Source', example: 'e.g., Egg whites, Greek Yogurt, Whey', amount: 30, color: 'bg-blue-500' },
-  { id: 'c', label: 'Complex Carbohydrates', example: 'e.g., Oats, Whole grain toast, Berries', amount: 45, color: 'bg-emerald-500' },
-  { id: 'f', label: 'Healthy Fats', example: 'e.g., Almond butter, Chia seeds', amount: 15, color: 'bg-amber-500' },
-];
-
-const DEFAULT_MEALS: MealBlock[] = [
-  { id: 1, name: 'Breakfast', time: '08:00 AM', icon: Sunrise, iconColor: 'bg-orange-100 text-orange-600', items: [], categories: defaultCategories() },
-  { id: 2, name: 'Lunch', time: '12:30 PM', icon: Sun, iconColor: 'bg-yellow-100 text-yellow-600', items: [], categories: defaultCategories() },
-  { id: 3, name: 'Dinner', time: '07:30 PM', icon: Moon, iconColor: 'bg-blue-100 text-blue-600', items: [], categories: defaultCategories() }
-];
-
-// ─── Static generic items for General Mode library ────────────────────────────
-
 interface GeneralItem {
   id: string;
   label: string;
@@ -93,17 +80,33 @@ interface GeneralItem {
   defaultAmount: number;
 }
 
-const GENERAL_MACRO_ITEMS: GeneralItem[] = [
-  { id: 'lean-protein',   label: 'Lean Protein Source',     description: 'Chicken, turkey, eggs, Greek yogurt, whey',  color: 'bg-blue-500',    bgColor: 'bg-blue-50 text-blue-600',    defaultAmount: 30 },
-  { id: 'complex-carbs',  label: 'Complex Carbohydrates',   description: 'Oats, sweet potato, brown rice, berries',     color: 'bg-emerald-500', bgColor: 'bg-emerald-50 text-emerald-600', defaultAmount: 45 },
-  { id: 'healthy-fats',   label: 'Healthy Fats',            description: 'Avocado, olive oil, nuts, chia seeds',        color: 'bg-amber-500',   bgColor: 'bg-amber-50 text-amber-600',   defaultAmount: 15 },
-  { id: 'fibrous-veg',    label: 'Fibrous Vegetables',      description: 'Broccoli, spinach, peppers, zucchini',        color: 'bg-green-500',   bgColor: 'bg-green-50 text-green-600',   defaultAmount: 200 },
-  { id: 'starchy-carbs',  label: 'Starchy Carbohydrates',   description: 'Quinoa, whole grain pasta, lentils',           color: 'bg-purple-500',  bgColor: 'bg-purple-50 text-purple-600', defaultAmount: 60 },
-  { id: 'dairy-protein',  label: 'Dairy / Protein Shake',   description: 'Milk, cottage cheese, protein powder',        color: 'bg-sky-500',     bgColor: 'bg-sky-50 text-sky-600',       defaultAmount: 250 },
-  { id: 'fruit',          label: 'Fruit',                   description: 'Berries, banana, apple, melon',               color: 'bg-pink-500',    bgColor: 'bg-pink-50 text-pink-600',     defaultAmount: 100 },
-];
+
+
 
 export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData, onBack, selectedDay }: NutritionPlanDetailProps) {
+  const { t } = useLanguage();
+  
+  const defaultCategories = useCallback((): MacroCategory[] => [
+    { id: 'p', label: t('lean_protein_source'), example: 'e.g., Egg whites, Greek Yogurt, Whey', amount: 30, color: 'bg-blue-500' },
+    { id: 'c', label: t('complex_carbohydrates'), example: 'e.g., Oats, Whole grain toast, Berries', amount: 45, color: 'bg-emerald-500' },
+    { id: 'f', label: t('healthy_fats'), example: 'e.g., Almond butter, Chia seeds', amount: 15, color: 'bg-amber-500' },
+  ], [t]);
+
+  const DEFAULT_MEALS: MealBlock[] = [
+    { id: 1, name: t('breakfast'), time: '08:00 AM', icon: Sunrise, iconColor: 'bg-orange-100 text-orange-600', items: [], categories: defaultCategories() },
+    { id: 2, name: t('lunch'), time: '12:30 PM', icon: Sun, iconColor: 'bg-yellow-100 text-yellow-600', items: [], categories: defaultCategories() },
+    { id: 3, name: t('dinner'), time: '07:30 PM', icon: Moon, iconColor: 'bg-blue-100 text-blue-600', items: [], categories: defaultCategories() }
+  ];
+
+  const GENERAL_MACRO_ITEMS = [
+    { id: 'lean-protein',   label: t('lean_protein_source'),     description: 'Chicken, turkey, eggs, Greek yogurt, whey',  color: 'bg-blue-500',    bgColor: 'bg-blue-50 text-blue-600',    defaultAmount: 30 },
+    { id: 'complex-carbs',  label: t('complex_carbohydrates'),   description: 'Oats, sweet potato, brown rice, berries',     color: 'bg-emerald-500', bgColor: 'bg-emerald-50 text-emerald-600', defaultAmount: 45 },
+    { id: 'healthy-fats',   label: t('healthy_fats'),            description: 'Avocado, olive oil, nuts, chia seeds',        color: 'bg-amber-500',   bgColor: 'bg-amber-50 text-amber-600',   defaultAmount: 15 },
+    { id: 'fibrous-veg',    label: t('fibrous_vegetables'),      description: 'Broccoli, spinach, peppers, zucchini',        color: 'bg-green-500',   bgColor: 'bg-green-50 text-green-600',   defaultAmount: 200 },
+    { id: 'starchy-carbs',  label: t('starchy_carbohydrates'),   description: 'Quinoa, whole grain pasta, lentils',           color: 'bg-purple-500',  bgColor: 'bg-purple-50 text-purple-600', defaultAmount: 60 },
+    { id: 'dairy-protein',  label: t('dairy_protein_shake'),   description: 'Milk, cottage cheese, protein powder',        color: 'bg-sky-500',     bgColor: 'bg-sky-50 text-sky-600',       defaultAmount: 250 },
+    { id: 'fruit',          label: t('fruit'),                   description: 'Berries, banana, apple, melon',               color: 'bg-pink-500',    bgColor: 'bg-pink-50 text-pink-600',     defaultAmount: 100 },
+  ];
   const { foods } = useFoodContext();
   const { reloadClients } = useClient();
   const [meals, setMeals] = useState<MealBlock[]>([]);
@@ -188,10 +191,15 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
     if (!client?.id) return;
     setIsSaving(true);
     try {
+      const mNames: Record<string, string> = {
+        'Desayuno': 'Sunrise', 'Breakfast': 'Sunrise',
+        'Almuerzo': 'Sun', 'Lunch': 'Sun',
+        'Cena': 'Moon', 'Dinner': 'Moon'
+      };
       const mealsToSave = meals.map(m => ({
         ...m,
         icon: undefined,
-        iconName: m.name.includes('Breakfast') ? 'Sunrise' : m.name.includes('Lunch') ? 'Sun' : m.name.includes('Dinner') ? 'Moon' : 'Cookie'
+        iconName: mNames[m.name] || 'Cookie'
       }));
 
       let finalDataJson = { ...fullPlanData, mode };
@@ -209,17 +217,17 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {
         method: 'POST',
         body: JSON.stringify({
-          name: `Plan de Nutrición - ${client.name}`,
+          name: `${t('nutrition_header')} - ${client.name}`,
           data_json: finalDataJson
         })
       });
       
       setFullPlanData(finalDataJson);
       await reloadClients();
-      alert('Plan guardado correctamente');
+      alert(t('plan_saved_success'));
     } catch (err) {
       console.error('Error saving plan:', err);
-      alert('Error al guardar el plan');
+      alert(t('plan_save_error'));
     } finally {
       setIsSaving(false);
     }
@@ -267,7 +275,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       if (m.id !== mealId) return m;
       const newCat: MacroCategory = {
         id: `${Date.now()}`,
-        label: 'New Macro Category',
+        label: t('add_macro_category'),
         example: 'e.g., description',
         amount: 0,
         color: colors[m.categories.length % colors.length]
@@ -450,7 +458,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       ...prev,
       {
         id,
-        name: newBlockName.trim() || 'New Meal',
+        name: newBlockName.trim() || t('morning_snack'),
         time: newBlockTime.trim() || '12:00 PM',
         icon: icons[prev.length % icons.length],
         iconColor: colors[prev.length % colors.length],
@@ -500,7 +508,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
               <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-600 transition-colors">
-                Nutrition
+                {t('nutrition')}
               </button>
             </li>
             <li>
@@ -533,19 +541,19 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500">
               <span className="flex items-center gap-1">
                 <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
-                Goal: {client?.goal || 'Not Set'}
+                {t('goal')}: {client?.goal || 'Not Set'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">{client?.gender || 'Female'}, {client?.age || '28'}</span>
+              <span className="flex items-center gap-1">{client?.gender || 'Female'}, {t('age')}: {client?.age || '28'}</span>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">{client?.weight || '68'}kg</span>
+              <span className="flex items-center gap-1">{t('weight')}: {client?.weight || '68'}kg</span>
             </div>
           </div>
           <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
-            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1 text-center">Status</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1 text-center">{t('status')}</div>
             <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
               <span className={`w-2 h-2 rounded-full ${totalItems === 0 ? 'bg-slate-400' : 'bg-emerald-500'}`}></span>
-              {totalItems === 0 ? 'Empty Plan' : (client?.nutritionPlanAssigned ? 'Active Plan' : 'Drafting')}
+              {totalItems === 0 ? t('empty_plan') : (client?.nutritionPlanAssigned ? t('active_plan') : t('drafting'))}
             </div>
           </div>
         </div>
@@ -567,7 +575,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                General Mode
+                {t('general_mode')}
               </button>
               <button
                 onClick={() => setMode('example')}
@@ -577,7 +585,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                Example Mode
+                {t('example_mode')}
               </button>
             </div>
             <div className="flex gap-2 pr-2">
@@ -588,7 +596,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   isSaving ? 'bg-slate-100 text-slate-400' : 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600'
                 }`}
               >
-                {isSaving ? 'Guardando...' : <><Check className="w-4 h-4" /> Guardar Plan</>}
+                {isSaving ? t('saving_dots') : <><Check className="w-4 h-4" /> {t('save_plan')}</>}
               </button>
               <button className="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Plan">
                 <Printer className="w-5 h-5" />
@@ -604,12 +612,12 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  {mode === 'general' ? 'Daily Structure' : 'Daily Meal Plan'}
+                  {mode === 'general' ? t('daily_structure') : t('daily_meal_plan')}
                 </h2>
                 <p className="text-sm text-slate-500">
                   {mode === 'general'
-                    ? `${meals.length} meals · ${Math.round(totalCalories)} kcal target`
-                    : `${meals.length} meals · ${Math.round(totalCalories)} kcal planned · Drag foods from the library →`
+                    ? `${meals.length} ${t('meals').toLowerCase()} · ${Math.round(totalCalories)} kcal ${t('target').toLowerCase()}`
+                    : `${meals.length} ${t('meals').toLowerCase()} · ${Math.round(totalCalories)} kcal ${t('planned').toLowerCase()} · ${t('drag_foods_from_library')} →`
                   }
                 </p>
               </div>
@@ -617,7 +625,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 onClick={addMealBlock}
                 className="text-emerald-600 text-sm font-bold hover:underline flex items-center gap-1"
               >
-                <Plus className="w-4 h-4" /> Add Meal Block
+                <Plus className="w-4 h-4" /> {t('add_meal_block')}
               </button>
             </div>
 
@@ -625,12 +633,12 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               {isLoading ? (
                 <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
                   <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <p className="text-sm font-medium">Cargando plan...</p>
+                  <p className="text-sm font-medium">{t('loading_plan')}</p>
                 </div>
               ) : meals.length === 0 ? (
                 <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
                   <BookOpen className="w-12 h-12 opacity-20" />
-                  <p className="text-sm font-medium">No hay comidas en este plan</p>
+                  <p className="text-sm font-medium">{t('no_meals_in_plan')}</p>
                 </div>
               ) : (
                 meals.map((meal) => {
@@ -670,7 +678,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                                 onChange={e => setEditingBlockName(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') commitEditBlock(); if (e.key === 'Escape') setEditingBlockId(null); }}
                                 className="text-lg font-bold text-slate-900 border-b-2 border-emerald-400 bg-transparent outline-none w-40"
-                                placeholder="Meal name"
+                                placeholder={t('meal_name_placeholder')}
                               />
                               <div className="flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-slate-400" />
@@ -753,7 +761,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                           onClick={() => addCategory(meal.id)}
                           className="w-full p-2.5 border border-dashed border-slate-300 rounded-lg text-sm font-bold text-slate-400 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2"
                         >
-                          <Plus className="w-4 h-4" /> Add Macro Category
+                          <Plus className="w-4 h-4" /> {t('add_macro_category')}
                         </button>
                       </div>
                     )}
@@ -771,7 +779,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                         }`}>
                           <Grid className="w-4 h-4" />
                           <span className="text-sm font-medium">
-                            {isDropTarget ? 'Drop here to add food' : 'Drag foods from the library into this block'}
+                            {isDropTarget ? t('drop_here_to_add') : t('drag_foods_from_library_short')}
                           </span>
                         </div>
                       )}
@@ -862,7 +870,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   onClick={addMealBlock}
                   className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-xl font-bold hover:bg-emerald-100 transition-all border border-emerald-200"
                 >
-                  <Plus className="w-5 h-5" /> Adicionar Bloque de Comida
+                  <Plus className="w-5 h-5" /> {t('add_meal_block')}
                 </button>
               </div>
             )}
@@ -875,9 +883,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           {/* Live Macro Totals Card */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex-shrink-0">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-slate-900">Daily Macro Totals</h3>
+              <h3 className="font-bold text-slate-900">{t('daily_macro_totals')}</h3>
               <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-500 rounded-md uppercase tracking-widest">
-                {totalItems === 0 ? 'Empty Plan' : 'In Progress'}
+                {totalItems === 0 ? t('empty_plan') : t('drafting')}
               </span>
             </div>
             
@@ -922,16 +930,16 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
             <div className="space-y-4">
               {[
-                { label: 'Protein', value: totalProtein, color: totalItems === 0 ? 'bg-slate-300' : 'bg-blue-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
-                { label: 'Carbs', value: totalCarbs, color: totalItems === 0 ? 'bg-slate-300' : 'bg-emerald-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
-                { label: 'Fats', value: totalFats, color: totalItems === 0 ? 'bg-slate-300' : 'bg-amber-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
+                { label: t('protein'), value: totalProtein, color: totalItems === 0 ? 'bg-slate-300' : 'bg-blue-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
+                { label: t('carbs'), value: totalCarbs, color: totalItems === 0 ? 'bg-slate-300' : 'bg-emerald-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
+                { label: t('fats'), value: totalFats, color: totalItems === 0 ? 'bg-slate-300' : 'bg-amber-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
               ].map((macro) => (
                 <div key={macro.label} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${macro.color}`}></div>
                     <div>
                       <p className={`text-sm font-bold ${macro.textColor}`}>{macro.label}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">of total calories</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{t('of_total_calories')}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -954,11 +962,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     <BookOpen className="w-5 h-5" />
                   </div>
                   <h3 className="font-bold text-slate-900">
-                    {mode === 'general' ? 'General Food Library' : 'Food Library'}
+                    {mode === 'general' ? t('general_mode') : t('food_library')}
                   </h3>
                 </div>
                 <span className="text-[10px] text-slate-400 font-bold">
-                  {mode === 'general' ? `${GENERAL_MACRO_ITEMS.length} items` : `${filteredLibraryFoods.length} items`}
+                  {mode === 'general' ? `${GENERAL_MACRO_ITEMS.length} ${t('items').toLowerCase()}` : `${filteredLibraryFoods.length} ${t('items').toLowerCase()}`}
                 </span>
               </div>
 
@@ -969,20 +977,20 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <input 
                       className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none text-slate-700 placeholder:text-slate-400 transition-all" 
-                      placeholder="Search foods..."
+                      placeholder={t('search_foods_placeholder')}
                       value={librarySearch}
                       onChange={e => setLibrarySearch(e.target.value)}
                       type="text"
                     />
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium mt-2 flex items-center gap-1">
-                    <GripVertical className="w-3 h-3" /> Drag foods into meal blocks
+                    <GripVertical className="w-3 h-3" /> {t('drag_foods_from_library_short')}
                   </p>
                 </>
               )}
               {mode === 'general' && (
                 <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                  <GripVertical className="w-3 h-3" /> Drag categories into meal blocks
+                  <GripVertical className="w-3 h-3" /> {t('drag_categories_into_meal')}
                 </p>
               )}
             </div>
@@ -1057,7 +1065,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
             <div className="p-4 bg-slate-50 border-t border-slate-100">
               <button className="w-full py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center justify-center gap-2">
-                View Full Library
+                {t('view_full_library')}
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1067,7 +1075,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex-shrink-0">
             <div className="flex items-center gap-3 mb-4">
               <Droplets className="w-5 h-5 text-blue-500" />
-              <h3 className="font-bold text-slate-900">Water Intake</h3>
+              <h3 className="font-bold text-slate-900">{t('water_intake')}</h3>
             </div>
             <div className="flex items-end gap-1 h-12 mb-2">
               {[100, 80, 60, 0, 0].map((h, i) => (
@@ -1079,8 +1087,8 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               ))}
             </div>
             <div className="flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-              <span>Current: 1.5L</span>
-              <span>Goal: 2.5L</span>
+              <span>{t('current')}: 1.5L</span>
+              <span>{t('goal_short')}: 2.5L</span>
             </div>
           </div>
         </div>
@@ -1092,14 +1100,14 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">New Meal Block</h2>
+              <h2 className="text-lg font-bold text-slate-900">{t('new_meal_block')}</h2>
               <button onClick={() => setShowNewBlockModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Block Name</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('block_name')}</label>
                 <input
                   autoFocus
                   value={newBlockName}
@@ -1110,7 +1118,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Time</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('time_short')}</label>
                 <input
                   value={newBlockTime}
                   onChange={e => setNewBlockTime(e.target.value)}
@@ -1124,13 +1132,13 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   onClick={() => setShowNewBlockModal(false)}
                   className="flex-1 py-2.5 font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors border border-slate-200"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={confirmAddMealBlock}
                   className="flex-1 py-2.5 font-bold bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors"
                 >
-                  Add Block
+                  {t('add_block')}
                 </button>
               </div>
             </div>

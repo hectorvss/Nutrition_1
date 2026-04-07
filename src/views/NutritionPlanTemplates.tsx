@@ -2,7 +2,6 @@ import React from 'react';
 import { 
   ArrowLeft, 
   Grid, 
-  Filter, 
   Plus, 
   ArrowRight, 
   Flame, 
@@ -12,6 +11,7 @@ import {
   Utensils,
   PieChart
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface NutritionPlanTemplatesProps {
   client?: any;
@@ -20,6 +20,7 @@ interface NutritionPlanTemplatesProps {
 }
 
 export default function NutritionPlanTemplates({ client, onBack, onSelect }: NutritionPlanTemplatesProps) {
+  const { t } = useLanguage();
   const [templates, setTemplates] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -41,7 +42,7 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
             typeColor: t.name.includes('Bulk') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600',
             macros: t.data_json?.macros || { p: 30, c: 40, f: 30 },
             weekView: [80, 80, 80, 80, 80, 80, 80], // placeholder for list icon
-            stats: `${t.data_json?.meals?.length || 3} meals`
+            stats: `${t.data_json?.meals?.length || 3} ${t('meals')}`
           }));
           setTemplates(formatted);
         }
@@ -68,18 +69,14 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Grid className="w-5 h-5 text-emerald-500" />
-              Start from a Template
+              {t('start_from_template')}
             </h2>
-            <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
-              <Filter className="w-5 h-5" />
-            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
-            {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
                 <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                <p className="text-sm font-medium">Loading templates...</p>
+                <p className="text-sm font-medium">{t('loading_templates')}</p>
               </div>
             ) : (
               <>
@@ -92,8 +89,8 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                       <Plus className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div className="text-left">
-                      <h3 className="font-bold text-lg text-slate-700">Create New Plan</h3>
-                      <p className="text-sm text-slate-500">Start from scratch with custom macros</p>
+                      <h3 className="font-bold text-lg text-slate-700">{t('create_new_plan')}</h3>
+                      <p className="text-sm text-slate-500">{t('create_new_plan_desc')}</p>
                     </div>
                   </div>
                   <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
@@ -116,7 +113,7 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                     {client?.recommendedNutritionId === template.id && (
                       <div className="absolute top-3 right-3 sm:right-auto sm:left-3 flex items-center gap-1.5 px-2 py-1 bg-blue-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-blue-500/20 z-10 animate-bounce-subtle">
                         <Flame className="w-3 h-3 fill-current" />
-                        Recommended
+                        {t('recommended')}
                       </div>
                     )}
                     
@@ -152,7 +149,7 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                     {/* Week View Chart */}
                     <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Week View</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('week_view_label')}</span>
                         <span className="text-[10px] font-bold text-slate-500">{template.stats}</span>
                       </div>
                       <div className="flex gap-1 h-8 items-end justify-between">
@@ -178,16 +175,16 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
               <Eye className="w-8 h-8 text-slate-300" />
             </div>
-            <h3 className="font-bold text-slate-900 mb-2">Template Preview</h3>
+            <h3 className="font-bold text-slate-900 mb-2">{t('template_preview')}</h3>
             <p className="text-sm text-slate-500">
-              Select a template on the left to see detailed meal distribution and macro breakdowns here.
+              {t('template_preview_desc')}
             </p>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-5 shadow-sm h-full">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
               <Settings2 className="w-5 h-5 text-emerald-500" />
-              <h3 className="font-bold text-slate-900">Plan Settings</h3>
+              <h3 className="font-bold text-slate-900">{t('plan_settings')}</h3>
             </div>
             
             <div className="space-y-4">
@@ -220,14 +217,14 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Macro Split</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">{t('macro_split')}</label>
                 <div className="relative">
                   <PieChart className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <select className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer">
-                    <option>Balanced (40/30/30)</option>
-                    <option>Low Carb (40/40/20)</option>
-                    <option selected>High Carb (25/50/25)</option>
-                    <option>Ketogenic (20/5/75)</option>
+                    <option>{t('balanced_option')}</option>
+                    <option>{t('low_carb_option')}</option>
+                    <option selected>{t('high_carb_option')}</option>
+                    <option>{t('ketogenic_option')}</option>
                   </select>
                   <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
                 </div>
@@ -245,7 +242,7 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                 }`}
               >
                 <CheckCircle2 className="w-5 h-5 group-hover:animate-pulse" />
-                Create Draft Plan
+                {t('create_draft_plan')}
               </button>
             </div>
           </div>

@@ -80,9 +80,11 @@ const defaultEvents: CalendarEvent[] = [
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
+import { useAuth } from './AuthContext';
 import { fetchWithAuth } from '../api';
 
 export const CalendarProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth(); // Track user for cleanup
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -98,15 +100,21 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       type: t.type,
       desc: t.description || t.desc || '',
       client: clientName,
-      avatar: t.avatar || (t.users?.email ? `https://ui-avatars.com/api/?name=${t.users.email}&background=random` : null),
-      initials: t.initials || (clientName !== 'General' ? clientName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'GT'),
-      clientId: t.client_id || t.clientId,
-      status: t.status || 'pending',
-      linkUrl: t.link_url || t.linkUrl || ''
+      avatar: t.users?.profiles?.[0]?.avatar_url,
+      initials: !t.users?.profiles?.[0]?.avatar_url ? (t.users?.profiles?.[0]?.full_name?.[0] || t.users?.email?.[0] || 'G') : undefined,
+      clientId: t.client_id,
+      status: t.status as any || 'pending',
+      linkUrl: t.link_url || t.linkUrl
     };
   };
 
   const fetchTasks = async () => {
+    if (!user) {
+      setEvents([]);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       const data = await fetchWithAuth('/manager/tasks');
@@ -120,7 +128,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [user]);
 
   const addEvent = async (event: Omit<CalendarEvent, 'id'>) => {
     try {

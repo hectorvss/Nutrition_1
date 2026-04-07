@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import { useClient, ClientData } from './ClientContext';
+import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
 
 export interface AutomationRule {
   id: string;
@@ -71,13 +73,20 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const [completedAutomatedIds, setCompletedAutomatedIds] = useState<Record<string, string>>({}); // { id: dateStr }
   const [isLoading, setIsLoading] = useState(true);
   const { clients } = useClient();
+  const { user } = useAuth();
+  const { t } = useLanguage();
 
   const fetchManualTasks = async () => {
+    if (!user) {
+      setManualTasks([]);
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       const data = await fetchWithAuth('/manager/tasks');
-      // Filter out tasks that are also being handled by Calendar if necessary, 
-      // but for now, we just map them to TaskItem structure.
+      // ... mapping logic remains the same ...
       const formatted: TaskItem[] = (data || []).map((t: any) => ({
         id: t.id,
         title: t.title,
@@ -128,7 +137,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     }
 
     fetchManualTasks();
-  }, []);
+  }, [user]); // Re-run when user changes
 
   const updateRule = (id: string, updates: Partial<AutomationRule>) => {
     setRules(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
@@ -208,14 +217,14 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
           generated.push({
             id: taskIdCounter++,
             type: 'WEEKLY CHECK-IN',
-            label: 'OVERDUE CHECK-IN',
-            title: `Review ${client.name}'s Status`,
-            desc: `Client has missed check-in windows. Last check-in recorded: ${client.lastCheckIn}.`,
+            label: t('OVERDUE CHECK-IN'),
+            title: t("Review {name}'s Status", { name: client.name }),
+            desc: t('Client has missed check-in windows. Last check-in recorded: {date}.', { date: client.lastCheckIn }),
             client: client.name,
             program: client.plan,
             avatar: client.avatar,
             status: checkinRule.priority === 'High' ? 'overdue' : 'today',
-            timeLabel: 'Overdue 2d',
+            timeLabel: t('Overdue 2d'),
             priority: checkinRule.priority.toLowerCase() as any,
             clientId: client.id
           });
@@ -228,14 +237,14 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
         generated.push({
           id: taskIdCounter++,
           type: 'AUTOMATIC ALERT',
-          label: 'LOW ADHERENCE',
-          title: `Investigate drop in tracking`,
-          desc: `Client's overall progress is at ${client.progress}%. May need intervention.`,
+          label: t('LOW ADHERENCE'),
+          title: t('Investigate drop in tracking'),
+          desc: t('Client\'s overall progress is at {progress}%. May need intervention.', { progress: client.progress }),
           client: client.name,
           program: client.plan,
           avatar: client.avatar,
           status: adherenceRule.priority === 'High' ? 'overdue' : 'pending',
-          timeLabel: 'Alert',
+          timeLabel: t('Alert'),
           priority: adherenceRule.priority.toLowerCase() as any,
           clientId: client.id
         });
@@ -247,14 +256,14 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
          generated.push({
           id: taskIdCounter++,
           type: 'PLAN UPDATE',
-          label: 'MISSING PLAN',
-          title: `Assign Plan to ${client.name}`,
-          desc: `Client has no active training or nutrition plan assigned.`,
+          label: t('MISSING PLAN'),
+          title: t('Assign Plan to {name}', { name: client.name }),
+          desc: t('Client has no active training or nutrition plan assigned.'),
           client: client.name,
           program: 'None',
           avatar: client.avatar,
           status: 'today',
-          timeLabel: 'Due Today',
+          timeLabel: t('Due Today'),
           priority: planRule.priority.toLowerCase() as any,
           clientId: client.id
         });

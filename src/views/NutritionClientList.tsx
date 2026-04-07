@@ -8,17 +8,24 @@ import {
 } from 'lucide-react';
 
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface NutritionClientListProps {
   onNavigate: (view: 'plan-templates' | 'plan-detail' | 'food-library', client?: any) => void;
 }
 
 export default function NutritionClientList({ onNavigate }: NutritionClientListProps) {
+  const { t } = useLanguage();
   const { clients: globalClients } = useClient();
 
   const clients = globalClients.map((client, idx) => {
     const hasPlan = client.nutritionPlanAssigned;
-    const goalLabel = client.goal !== 'Not Set' ? client.goal : 'Not Set';
+    const goalRaw = client.goal || 'Not Set';
+    const goalLabel = goalRaw === 'Weight Loss' ? t('weight_loss_goal') :
+                     goalRaw === 'Muscle Gain' ? t('muscle_gain_goal') :
+                     goalRaw === 'Maintenance' ? t('maintenance_goal') :
+                     goalRaw === 'Keto Diet' ? t('keto_diet_goal') :
+                     goalRaw;
     
     return {
       id: client.id,
@@ -26,12 +33,12 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
       avatar: client.avatar,
       initials: client.name.substring(0, 2).toUpperCase(),
       goal: goalLabel,
-      target: hasPlan ? (goalLabel === 'Weight Loss' ? '-0.5kg/week' : '+0.2kg/week') : 'Pending setup',
+      target: hasPlan ? (goalRaw === 'Weight Loss' ? '-0.5kg/week' : '+0.2kg/week') : t('pending_setup'),
       macros: hasPlan ? { p: 40, c: 35, f: 25 } : null,
       macroValues: hasPlan ? { p: '150g', c: '130g', f: '40g' } : null,
       adherence: hasPlan ? Math.floor(Math.random() * 30 + 70) : null,
-      streak: hasPlan ? 'High' : null,
-      status: hasPlan ? 'Active Plan' : 'New Client',
+      streak: hasPlan ? t('high_streak') : null,
+      status: hasPlan ? t('active_plan_status') : t('new_client_status'),
       statusType: hasPlan ? 'normal' : 'warning',
       online: idx === 0 || idx === 2,
       nutritionPlanAssigned: hasPlan,
@@ -45,44 +52,25 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
         <div className="p-6 border-b border-slate-100 space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Nutrition</h2>
-              <p className="text-sm text-slate-500 mt-1">Assign plans and monitor client dietary adherence</p>
+              <h2 className="text-2xl font-bold text-slate-900">{t('nutrition')}</h2>
+              <p className="text-sm text-slate-500 mt-1">{t('nutrition_subtitle')}</p>
             </div>
             <button 
               onClick={() => onNavigate('plan-templates')}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-semibold"
             >
               <ClipboardList className="w-5 h-5" />
-              <span>Plan Templates</span>
+              <span>{t('plan_templates_btn')}</span>
             </button>
-          </div>
-
-          <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
-            <div className="relative w-full lg:w-96">
-              <Search className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" />
-              <input 
-                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all" 
-                placeholder="Search clients..." 
-                type="text"
-              />
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full lg:w-auto">
-              <button className="px-4 py-2 rounded-2xl bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ring-1 ring-amber-100">
-                <AlertCircle className="w-4 h-4 animate-pulse" />
-                Priority Updates
-              </button>
-              <button className="px-4 py-2 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors whitespace-nowrap">Active Plans</button>
-              <button className="px-4 py-2 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors whitespace-nowrap">Archived</button>
-            </div>
           </div>
         </div>
 
         {/* Table Header */}
         <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          <div className="col-span-4">Client</div>
-          <div className="col-span-3">Goal</div>
-          <div className="col-span-3">Daily Macros</div>
-          <div className="col-span-2 text-right">Adherence</div>
+          <div className="col-span-4">{t('client_label')}</div>
+          <div className="col-span-3">{t('goal_short')}</div>
+          <div className="col-span-3">{t('daily_macros_label')}</div>
+          <div className="col-span-2 text-right">{t('adherence')}</div>
         </div>
 
         {/* Client List */}
@@ -158,7 +146,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                       </div>
                     </div>
                   ) : (
-                    <span className="text-xs text-slate-400 italic">No active plan assigned</span>
+                    <span className="text-xs text-slate-400 italic">{t('no_active_plan_assigned')}</span>
                   )}
                 </div>
 
@@ -174,10 +162,10 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                         {client.adherence}%
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter leading-none">Streak</span>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter leading-none">{t('streak_label')}</span>
                         <span className={`text-[11px] font-bold ${
-                          client.streak === 'Perfect' || client.streak === 'High' ? 'text-emerald-600' :
-                          client.streak === 'Avg' ? 'text-slate-600' :
+                          client.streak === t('perfect_streak') || client.streak === t('high_streak') ? 'text-emerald-600' :
+                          client.streak === t('avg_streak') ? 'text-slate-600' :
                           'text-red-500'
                         }`}>{client.streak}</span>
                       </div>

@@ -249,6 +249,7 @@ router.get('/clients', async (req: any, res) => {
       `)
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
+      .eq('tasks.manager_id', req.user.id) // Filter joined tasks by manager_id too
       .order('date', { foreignTable: 'check_ins', ascending: false })
       .order('submitted_at', { foreignTable: 'client_checkin_submissions', ascending: false })
       .order('logged_at', { foreignTable: 'workout_logs', ascending: false });
@@ -2944,6 +2945,20 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
 router.post('/tasks', async (req: any, res) => {
   console.log('POST /tasks: Received payload:', JSON.stringify(req.body, null, 2));
   try {
+    // Optional: Verify that client_id belongs to this manager if provided
+    if (req.body.client_id) {
+       const { data: clientCheck } = await supabaseAdmin
+         .from('users')
+         .select('id')
+         .eq('id', req.body.client_id)
+         .eq('manager_id', req.user.id)
+         .single();
+         
+       if (!clientCheck) {
+         return res.status(403).json({ error: 'Forbidden. Client does not belong to you.' });
+       }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('tasks')
       .insert({
@@ -2964,8 +2979,8 @@ router.post('/tasks', async (req: any, res) => {
 
     if (error) throw error;
 
-    // Trigger Google Calendar Sync (non-blocking)
-    syncToGoogleCalendar(req.user.id, data);
+    // Trigger Google Calendar Sync (non-blocking) - fire and forget
+    syncToGoogleCalendar(req.user.id, data).catch(e => console.error('GCal Sync Error:', e));
 
     res.json(data);
   } catch (error: any) {
@@ -3307,9 +3322,20 @@ router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
 // Nutrition Templates Routes
 router.get('/nutrition-templates', async (req: any, res: any) => {
   try {
+    // 1. Get manager language from profiles
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('language')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    
+    const language = profile?.language || 'es';
+
+    // 2. Fetch templates for that language
     const { data, error } = await supabaseAdmin
       .from('nutrition_templates')
-      .select('id, key, name, description, target_calories, data_json');
+      .select('id, key, name, description, target_calories, data_json')
+      .eq('language', language);
 
     if (error) throw error;
     res.json(data);
@@ -3322,6 +3348,8 @@ router.get('/nutrition-templates', async (req: any, res: any) => {
 router.get('/nutrition-templates/:id', async (req: any, res: any) => {
   const { id } = req.params;
   try {
+    // We prioritize the exact ID/Key match, but still verify language if needed
+    // Usually, if they have the ID, they want THAT specifically.
     const { data, error } = await supabaseAdmin
       .from('nutrition_templates')
       .select('*')
@@ -3341,9 +3369,20 @@ router.get('/nutrition-templates/:id', async (req: any, res: any) => {
 // Training Templates Routes
 router.get('/training-templates', async (req: any, res: any) => {
   try {
+    // 1. Get manager language from profiles
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('language')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    
+    const language = profile?.language || 'es';
+
+    // 2. Fetch templates for that language
     const { data, error } = await supabaseAdmin
       .from('training_templates')
-      .select('id, key, name, description, level, type, weekly_frequency, data_json');
+      .select('id, key, name, description, level, type, weekly_frequency, data_json')
+      .eq('language', language);
 
     if (error) throw error;
     res.json(data);

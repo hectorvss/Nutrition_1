@@ -46,8 +46,10 @@ interface TasksProps {
 }
 
 import { useTask, TaskItem } from '../context/TaskContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Tasks({ onNavigate }: TasksProps) {
+  const { t } = useLanguage();
   const { tasks, completedTasks, markTaskAsDone } = useTask();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
@@ -59,7 +61,7 @@ export default function Tasks({ onNavigate }: TasksProps) {
 
   const PRIORITY_CONFIG = {
     high: {
-      label: 'High Priority (Urgent)',
+      label: t('high_priority'),
       borderActive: 'border-l-red-500 ring-2 ring-red-500/10',
       borderInactive: 'border-l-red-500/50 hover:border-l-red-500',
       dotCircle: 'border-red-200 group-hover:border-red-500',
@@ -69,7 +71,7 @@ export default function Tasks({ onNavigate }: TasksProps) {
       badgeBg: 'bg-red-50',
     },
     medium: {
-      label: 'Medium Priority (Focus)',
+      label: t('medium_priority'),
       borderActive: 'border-l-orange-500 ring-2 ring-orange-500/10',
       borderInactive: 'border-l-orange-500/50 hover:border-l-orange-500',
       dotCircle: 'border-orange-200 group-hover:border-orange-500',
@@ -79,7 +81,7 @@ export default function Tasks({ onNavigate }: TasksProps) {
       badgeBg: 'bg-orange-50',
     },
     low: {
-      label: 'Low Priority (Routine)',
+      label: t('low_priority'),
       borderActive: 'border-l-slate-400 ring-2 ring-slate-400/10',
       borderInactive: 'border-l-slate-400/50 hover:border-l-slate-400',
       dotCircle: 'border-slate-200 group-hover:border-slate-400',
@@ -98,31 +100,19 @@ export default function Tasks({ onNavigate }: TasksProps) {
           <header className="mb-8 sm:mb-10">
             <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-8">
               <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight mb-2">Daily Focus</h1>
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight mb-2">{t('daily_focus')}</h1>
                 <p className="text-slate-500 max-w-md leading-relaxed text-sm sm:text-base">
-                  Prioritize your client interactions for maximum impact.
+                  {t('daily_focus_desc')}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <div className="relative flex-1 sm:flex-none min-w-[160px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input 
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none sm:w-64 text-slate-900 placeholder:text-slate-400 shadow-sm" 
-                    placeholder="Search tasks..." 
-                    type="text" 
-                  />
-                </div>
-                <button className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-                  <Filter className="w-4 h-4" />
-                  <span className="hidden sm:inline">Filters</span>
-                </button>
                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <button 
                     onClick={() => onNavigate('task-intelligence')}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
                   >
                     <Zap className="w-4 h-4 text-emerald-500" />
-                    <span>Configure</span>
+                    <span>{t('configure')}</span>
                   </button>
                 </div>
               </div>
@@ -131,10 +121,10 @@ export default function Tasks({ onNavigate }: TasksProps) {
             {/* Stat Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { label: 'OVERDUE', value: `${overdueCount} Tasks`, icon: AlertTriangle, color: 'text-red-500 bg-red-50' },
-                { label: 'DUE TODAY', value: `${todayCount} Tasks`, icon: Calendar, color: 'text-emerald-500 bg-emerald-50' },
-                { label: 'COMPLETED', value: `${completedTasks.length} Done`, icon: CheckCircle2, color: 'text-purple-500 bg-purple-50' },
-                { label: 'INBOX', value: '12 New', icon: Mail, color: 'text-blue-500 bg-blue-50' },
+                { label: t('overdue_label'), value: `${overdueCount} ${t('tasks_unit')}`, icon: AlertTriangle, color: 'text-red-500 bg-red-50' },
+                { label: t('due_today_label'), value: `${todayCount} ${t('tasks_unit')}`, icon: Calendar, color: 'text-emerald-500 bg-emerald-50' },
+                { label: t('completed_label'), value: `${completedTasks.length} ${t('done_unit')}`, icon: CheckCircle2, color: 'text-purple-500 bg-purple-50' },
+                { label: t('inbox_label'), value: t('new_messages_unit', { count: 12 }), icon: Mail, color: 'text-blue-500 bg-blue-50' },
               ].map((stat, idx) => (
                 <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -154,13 +144,13 @@ export default function Tasks({ onNavigate }: TasksProps) {
               onClick={() => setActiveTab('pending')}
               className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Active ({tasks.length})
+              {t('active_tab')} ({tasks.length})
             </button>
             <button 
               onClick={() => setActiveTab('completed')}
               className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'completed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Completed ({completedTasks.length})
+              {t('completed_tab')} ({completedTasks.length})
             </button>
           </div>
 
@@ -219,7 +209,7 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                       {task.type === 'MISSING PLAN' && <FileText className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
                                       {task.type !== 'AUTOMATIC ALERT' && task.type !== 'WEEKLY CHECK-IN' && task.type !== 'MISSING PLAN' && <MessageSquare className={`w-3 h-3 shrink-0 ${config.textIcon}`} />}
                                       <span className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate ${config.textIcon}`}>
-                                        {task.type}: {task.label}
+                                        {t(task.type)}: {task.label}
                                       </span>
                                     </div>
                                   </div>
@@ -239,7 +229,7 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                           markTaskAsDone(task.id);
                                         }}
                                         className={`w-12 h-12 ${config.dotFill} text-white rounded-full flex items-center justify-center hover:scale-110 hover:brightness-110 transition-all shadow-lg active:scale-95 cursor-pointer group/btn`}
-                                        title="Mark as complete"
+                                        title={t('mark_as_complete')}
                                       >
                                         <CheckCircle2 className="w-6 h-6 group-hover/btn:scale-110 transition-transform" />
                                       </button>
@@ -263,8 +253,8 @@ export default function Tasks({ onNavigate }: TasksProps) {
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle2 className="w-8 h-8 text-slate-300" />
                   </div>
-                  <h3 className="text-slate-900 font-bold">No tasks completed yet today</h3>
-                  <p className="text-slate-500 text-sm mt-1">Check off some tasks to see your daily progress here.</p>
+                  <h3 className="text-slate-900 font-bold">{t('no_tasks_completed')}</h3>
+                  <p className="text-slate-500 text-sm mt-1">{t('no_tasks_completed_desc')}</p>
                 </div>
               ) : (
                 completedTasks.map((task) => (
@@ -282,12 +272,12 @@ export default function Tasks({ onNavigate }: TasksProps) {
                         <div className="flex justify-between items-start mb-2 gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate text-slate-500">
-                              {task.type}: COMPLETED
+                              {t(task.type)}: {t('completed_status')}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 bg-slate-100 text-slate-500">
-                            <CheckCircle2 className="w-3 h-3" />
-                            Done today
+                             <CheckCircle2 className="w-3 h-3" />
+                             {t('done_today')}
                           </div>
                         </div>
                         <h3 className="text-base sm:text-lg font-bold text-slate-400 mb-1 truncate line-through">{task.title}</h3>

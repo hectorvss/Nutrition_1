@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { 
+  ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, 
+  Tooltip as RechartTooltip, ReferenceLine, ReferenceArea 
+} from 'recharts';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 
@@ -1217,11 +1221,8 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
               );
             };
 
-            // Recharts imports used here (already available in the project via ClientDetail)
-            const {
-              ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid,
-              Tooltip: RechartTooltip, ReferenceLine, ReferenceArea
-            } = require('recharts');
+            // Recharts components (imported at the top)
+
 
             return (
               <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
