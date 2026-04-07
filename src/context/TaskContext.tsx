@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { useClient, ClientData } from './ClientContext';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
+import { fetchWithAuth } from '../api';
 
 export interface AutomationRule {
   id: string;
@@ -65,7 +66,7 @@ const defaultRules: AutomationRule[] = [
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
-import { fetchWithAuth } from '../api';
+
 
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const [rules, setRules] = useState<AutomationRule[]>(defaultRules);

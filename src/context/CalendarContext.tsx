@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Utensils, Dumbbell, ClipboardCheck, Video, MapPin, User, LucideIcon } from 'lucide-react';
+import { useAuth } from './AuthContext';
+import { fetchWithAuth } from '../api';
 
 export type EventType = 'Video Call' | 'In-Person' | 'Training' | 'Nutrition' | 'Internal' | 'Training Analysis';
 
@@ -80,8 +82,6 @@ const defaultEvents: CalendarEvent[] = [
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
 
-import { useAuth } from './AuthContext';
-import { fetchWithAuth } from '../api';
 
 export const CalendarProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth(); // Track user for cleanup

@@ -15,6 +15,18 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { IntegrationsProvider } from './context/IntegrationsContext';
 
+// --- Production Diagnostic Logging ---
+if (typeof window !== 'undefined') {
+  window.onerror = (message, source, lineno, colno, error) => {
+    console.group('CRITICAL RUNTIME ERROR');
+    console.error('Message:', message);
+    console.error('Source:', source);
+    console.error('Position:', `${lineno}:${colno}`);
+    console.error('StackTrace:', error?.stack);
+    console.groupEnd();
+  };
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
