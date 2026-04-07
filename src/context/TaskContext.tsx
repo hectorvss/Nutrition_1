@@ -87,21 +87,21 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(true);
       const data = await fetchWithAuth('/manager/tasks');
       // ... mapping logic remains the same ...
-      const formatted: TaskItem[] = (data || []).map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        desc: t.description || '',
-        client: t.users?.name || 'General',
+      const formatted: TaskItem[] = (data || []).map((taskData: any) => ({
+        id: taskData.id,
+        title: taskData.title,
+        desc: taskData.description || '',
+        client: taskData.users?.name || 'General',
         program: 'Custom',
         avatar: '',
-        status: t.status as any || 'today',
-        timeLabel: t.time,
-        endTime: t.end_time || t.endTime,
-        duration: t.duration,
-        date: t.date,
-        priority: t.priority || 'medium',
-        type: t.type,
-        clientId: t.client_id || t.clientId
+        status: taskData.status as any || 'today',
+        timeLabel: taskData.time,
+        endTime: taskData.end_time || taskData.endTime,
+        duration: taskData.duration,
+        date: taskData.date,
+        priority: taskData.priority || 'medium',
+        type: taskData.type,
+        clientId: taskData.client_id || taskData.clientId
       }));
       setManualTasks(formatted);
     } catch (error) {

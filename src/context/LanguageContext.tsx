@@ -1153,10 +1153,13 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const t = (key: string, params?: Record<string, string | number>) => {
-    let text = translations[language][key] || key;
-    if (params) {
+    // Ensure we don't crash if translations or language object is missing
+    const langDict = translations[language] || translations['es'];
+    let text = langDict[key] || key;
+    
+    if (params && typeof text === 'string') {
       Object.entries(params).forEach(([k, v]) => {
-        text = text.replace(`{${k}}`, v.toString());
+        text = text.replace(`{${k}}`, v?.toString() || '');
       });
     }
     return text;
