@@ -74,6 +74,7 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
+            {isLoading ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
                 <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
                 <p className="text-sm font-medium">{t('loading_templates')}</p>

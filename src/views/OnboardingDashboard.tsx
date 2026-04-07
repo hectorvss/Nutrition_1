@@ -10,9 +10,10 @@ export type OnboardingViewMode = 'list' | 'history' | 'review' | 'templates' | '
 interface OnboardingDashboardProps {
   initialClientId?: string;
   initialSubmissionId?: string;
+  onNavigate?: (view: string, data?: any) => void;
 }
 
-export default function OnboardingDashboard({ initialClientId, initialSubmissionId }: OnboardingDashboardProps) {
+export default function OnboardingDashboard({ initialClientId, initialSubmissionId, onNavigate }: OnboardingDashboardProps) {
   const [viewMode, setViewMode] = useState<OnboardingViewMode>(
     initialSubmissionId ? 'review' : (initialClientId ? 'history' : 'list')
   );
