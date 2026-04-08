@@ -170,7 +170,7 @@ export default function OnboardingSubmissions() {
                 {s.status === 'completed' ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="text-slate-400 uppercase tracking-widest">Completed On</span>
+                        <span className="text-slate-400 uppercase tracking-widest">{t('completed_on_label')}</span>
                         <span className="text-slate-900">{new Date(s.lastSubmission.submitted_at).toLocaleDateString(locale)}</span>
                     </div>
                     <button 
