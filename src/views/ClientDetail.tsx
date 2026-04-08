@@ -826,10 +826,10 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Avg. Session RPE', value: stats?.training?.avgRPE || '--', unit: '/ 10', change: 'Session Avg', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Workouts', value: stats?.training?.workoutCount || '0', unit: 'sessions', change: 'This Week', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Fatigue Level', value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? 'High' : 'Normal', icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
+          { label: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('avg_session_rpe'), value: stats?.training?.avgRPE || '--', unit: '/ 10', change: t('session_avg'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('workouts'), value: stats?.training?.workoutCount || '0', unit: t('sessions'), change: t('this_week'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('fatigue_level'), value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? t('high') : t('normal'), icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
@@ -886,13 +886,13 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 onChange={(e) => setStrengthRange(e.target.value)}
                 className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 shadow-sm transition-all outline-none"
               >
-                <option value="1W">Last 7 Days</option>
-                <option value="14D">Last 14 Days</option>
-                <option value="30D">Last 30 Days</option>
-                <option value="3M">Latest 90 Days</option>
-                <option value="6M">Last 6 Months</option>
-                <option value="YTD">Year to Date</option>
-                <option value="ALL">All History</option>
+                <option value="1W">{t('last_7_days')}</option>
+                <option value="14D">{t('last_14_days')}</option>
+                <option value="30D">{t('last_30_days')}</option>
+                <option value="3M">{t('latest_90_days')}</option>
+                <option value="6M">{t('last_6_months')}</option>
+                <option value="YTD">{t('year_to_date')}</option>
+                <option value="ALL">{t('all_history')}</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none transition-transform group-hover:translate-y-[-40%]" />
             </div>
@@ -1076,7 +1076,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Personal Records</h3>
-            <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">History</button>
+            <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">{t('history')}</button>
           </div>
           <div className="h-[400px] flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-hide no-scrollbar">
@@ -1421,24 +1421,24 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Latest Measurements */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900">Latest Measurements</h3>
-          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">View All</button>
+          <h3 className="text-lg font-bold text-slate-900">{t('latest_measurements')}</h3>
+          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">{t('view_all')}</button>
         </div>
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 text-[10px] text-slate-500 uppercase font-bold tracking-wider">
               <tr>
-                <th className="px-6 py-4">Metric</th>
-                <th className="px-6 py-4">Value</th>
-                <th className="px-6 py-4 text-right">Change</th>
+                <th className="px-6 py-4">{t('metric')}</th>
+                <th className="px-6 py-4">{t('value')}</th>
+                <th className="px-6 py-4 text-right">{t('change')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 text-sm">
               {[
-                { metric: 'Waist', value: stats?.measurements?.waist ? `${stats.measurements.waist} cm` : '--', change: stats?.measurements?.waistChange || '0', icon: '' },
-                { metric: 'Hip', value: stats?.measurements?.hip ? `${stats.measurements.hip} cm` : '--', change: stats?.measurements?.hipChange || '0', icon: '' },
-                { metric: 'Thigh (R)', value: stats?.measurements?.thigh_r ? `${stats.measurements.thigh_r} cm` : '--', change: stats?.measurements?.thighChange || '0', icon: '' },
-                { metric: 'Arm (R)', value: stats?.measurements?.arm_r ? `${stats.measurements.arm_r} cm` : '--', change: stats?.measurements?.armChange || '0', icon: '' },
+                { metric: t('waist'), value: stats?.measurements?.waist ? `${stats.measurements.waist} cm` : '--', change: stats?.measurements?.waistChange || '0', icon: '' },
+                { metric: t('hip'), value: stats?.measurements?.hip ? `${stats.measurements.hip} cm` : '--', change: stats?.measurements?.hipChange || '0', icon: '' },
+                { metric: t('thigh_r'), value: stats?.measurements?.thigh_r ? `${stats.measurements.thigh_r} cm` : '--', change: stats?.measurements?.thighChange || '0', icon: '' },
+                { metric: t('arm_r'), value: stats?.measurements?.arm_r ? `${stats.measurements.arm_r} cm` : '--', change: stats?.measurements?.armChange || '0', icon: '' },
               ].map((row, idx) => {
                 const numericChange = parseFloat(row.change);
                 const colorClass = numericChange < 0 ? 'text-emerald-600' : numericChange > 0 ? 'text-red-500' : 'text-slate-400';
@@ -1463,8 +1463,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Recent Activity */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
-          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">History</button>
+          <h3 className="text-lg font-bold text-slate-900">{t('recent_activity')}</h3>
+          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">{t('history')}</button>
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
