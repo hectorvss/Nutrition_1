@@ -13,12 +13,14 @@ import {
   ChevronRight,
   Plus
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface RecipeDetailProps {
   onBack: () => void;
 }
 
 export default function RecipeDetail({ onBack }: RecipeDetailProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
       <div className="flex-1 h-full overflow-y-auto scrollbar-hide">
@@ -44,15 +46,15 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">Healthy Choice</span>
-                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">Vegan</span>
-                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">Gluten Free</span>
+                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">{t('healthy_choice')}</span>
+                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">{t('vegan')}</span>
+                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">{t('gluten_free')}</span>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">Mediterranean Quinoa Bowl</h1>
+                <h1 className="text-4xl md:text-6xl font-bold text-white tracking-tight">{t('recipe_sample_title')}</h1>
                 <div className="flex items-center gap-8 text-white/90 text-sm font-bold">
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-emerald-400" />
-                    25 min prep
+                    {t('recipe_prep_time_sample')}
                   </div>
                   <div className="flex items-center gap-2">
                     <Flame className="w-5 h-5 text-orange-400" />
@@ -60,14 +62,14 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="w-5 h-5 text-blue-400" />
-                    2 Servings
+                    {t('recipe_servings_sample')}
                   </div>
                 </div>
               </div>
               <div className="flex gap-4">
                 <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-6 py-4 rounded-2xl border border-white/30 transition-all flex items-center gap-2 font-bold">
                   <Bookmark className="w-5 h-5" />
-                  Save
+                  {t('save')}
                 </button>
               </div>
             </div>
@@ -83,7 +85,7 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
                   <Zap className="w-6 h-6 text-emerald-500" />
-                  Ingredients
+                  {t('ingredients_section')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[
@@ -109,7 +111,7 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
                 <h2 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">
                   <Edit3 className="w-6 h-6 text-emerald-500" />
-                  Preparation
+                  {t('preparation_guide')}
                 </h2>
                 <div className="space-y-8">
                   {[
@@ -139,12 +141,12 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                       <Zap className="w-5 h-5 text-emerald-500" />
-                      Portion Automation
+                      {t('portion_automation')}
                     </h2>
-                    <span className="bg-emerald-500/10 text-emerald-600 text-[10px] font-bold uppercase px-2 py-1 rounded-lg border border-emerald-500/20">Active</span>
+                    <span className="bg-emerald-500/10 text-emerald-600 text-[10px] font-bold uppercase px-2 py-1 rounded-lg border border-emerald-500/20">{t('active')}</span>
                   </div>
                   <p className="text-xs text-slate-500 mb-8 font-medium leading-relaxed">
-                    This recipe automatically scales ingredients based on your client's assigned meal plan goals.
+                    {t('recipe_scale_auto_desc')}
                   </p>
                   <div className="space-y-4">
                     <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex items-center justify-between">
@@ -153,8 +155,8 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
                           <Zap className="w-5 h-5" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-900">Muscle Gain</span>
-                          <span className="text-[10px] text-slate-400 font-bold tracking-tight">+20% Protein</span>
+                          <span className="text-xs font-bold text-slate-900">{t('muscle_gain_goal')}</span>
+                          <span className="text-[10px] text-slate-400 font-bold tracking-tight">{t('protein_plus_20')}</span>
                         </div>
                       </div>
                       <span className="text-sm font-bold text-emerald-600">540 kcal</span>
@@ -165,8 +167,8 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
                           <Weight className="w-5 h-5" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-900">Weight Loss</span>
-                          <span className="text-[10px] text-slate-400 font-bold tracking-tight">-15% Carbs</span>
+                          <span className="text-xs font-bold text-slate-900">{t('weight_loss_goal')}</span>
+                          <span className="text-[10px] text-slate-400 font-bold tracking-tight">{t('carbs_minus_15')}</span>
                         </div>
                       </div>
                       <span className="text-sm font-bold text-slate-400">380 kcal</span>
@@ -174,18 +176,18 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
                   </div>
                   <div className="mt-8 pt-6 border-t border-slate-100">
                     <div className="flex items-center gap-2 mb-4">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Preview for:</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('preview_for')}</span>
                     </div>
                     <div className="flex items-center gap-3 bg-slate-100 p-3 rounded-2xl">
                       <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden">
                         <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD_vMvwpXoLlTvndeGwZKVEVR9LnlKTY7x4v283aQEkHNrFvOf2FkhHnA2XWrpxhHT4mMLcSoItEUxba42nxgxqNNuJvTyVHzS5fD0_swZBoYKN7-CW08PkSgsQQgyX3byp77LYkuTbJDioLGOyeHyuZ54ihPXcsmArA7syTYH1qzDcJmdVBUe6fK_UZWms6dpr23NkxWlBZfBKtVbuDmMxducfpVG6A6mF7ZwEgsfEuv-6bD2fA_NmTqRSu1WbFh9EoRTlr3G3qzI" alt="Mike" className="w-full h-full object-cover" />
                       </div>
                       <span className="text-xs font-bold text-slate-900">Mike Ross</span>
-                      <span className="ml-auto text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded-lg font-bold">Muscle Gain</span>
+                      <span className="ml-auto text-[10px] bg-purple-100 text-purple-700 px-2 py-1 rounded-lg font-bold">{t('muscle_gain_goal')}</span>
                     </div>
                     <div className="mt-4 flex items-center gap-2 text-[10px] text-slate-500 font-bold">
                       <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      Quinoa scaled to 1.5 cups (+0.5)
+                      {t('quinoa_scaled_example')}
                     </div>
                   </div>
                 </div>
@@ -193,10 +195,10 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
 
               {/* Macronutrients */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Macronutrients</h3>
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">{t('macronutrients')}</h3>
                 <div className="flex justify-between items-end mb-4">
                   <div className="text-4xl font-bold text-slate-900 tracking-tight">450 <span className="text-sm font-bold text-slate-400">kcal</span></div>
-                  <div className="text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">+ High Protein</div>
+                  <div className="text-xs text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">{t('high_protein_tag')}</div>
                 </div>
                 <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex mb-6">
                   <div className="h-full bg-emerald-500 w-[35%]"></div>
@@ -205,22 +207,22 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Protein</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('protein')}</div>
                     <div className="text-sm font-bold text-emerald-600">24g</div>
                   </div>
                   <div className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Carbs</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('carbs')}</div>
                     <div className="text-sm font-bold text-blue-500">58g</div>
                   </div>
                   <div className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Fat</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('fats')}</div>
                     <div className="text-sm font-bold text-amber-500">16g</div>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {['Lunch', 'Quick', 'Summer'].map((tag) => (
+                {[t('lunch_tag'), t('quick_tag'), t('summer_tag')].map((tag) => (
                   <span key={tag} className="px-4 py-2 rounded-2xl text-xs font-bold bg-white text-slate-600 border border-slate-200 shadow-sm">#{tag}</span>
                 ))}
               </div>
@@ -235,7 +237,7 @@ export default function RecipeDetail({ onBack }: RecipeDetailProps) {
           <div className="bg-white/20 p-1.5 rounded-full group-hover:rotate-90 transition-transform duration-500">
             <Plus className="w-6 h-6" />
           </div>
-          Edit Recipe
+          {t('edit_recipe')}
         </button>
       </div>
     </div>

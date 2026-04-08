@@ -13,6 +13,7 @@ import {
   Zap,
   Target
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface PlanningTemplate {
   id: string;
@@ -38,6 +39,7 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 );
 
 export default function PlanningTemplateSelector({ client, onBack, onSelect }: PlanningTemplateSelectorProps) {
+  const { t } = useLanguage();
   const templates: PlanningTemplate[] = [
     {
       id: 'pt1',
@@ -102,11 +104,22 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
   // Settings state
   const [settings, setSettings] = useState({
     duration: 12,
-    trainingFreq: '4 days/week',
+    trainingFreq: '4',
     nutritionApproach: 'High Protein',
-    intensityLevel: 'Moderate',
-    primaryGoal: 'Fat Loss'
+    intensityLevel: 'moderate',
+    primaryGoal: 'fat_loss'
   });
+
+  const getTemplateText = (template: PlanningTemplate) => {
+    const map: Record<string, { name: string; description: string; badge?: string; preview: string }> = {
+      pt1: { name: t('fat_loss_foundation'), description: t('fat_loss_foundation_desc'), badge: t('balanced'), preview: t('planning_preview_pt1') },
+      pt2: { name: t('recomposition_starter'), description: t('recomposition_desc'), badge: t('high_carb'), preview: t('planning_preview_pt2') },
+      pt3: { name: t('muscle_gain_base'), description: t('muscle_gain_desc'), badge: t('high_protein'), preview: t('planning_preview_pt3') },
+      pt4: { name: t('performance_build'), description: t('performance_desc'), badge: t('standard'), preview: t('planning_preview_pt4') },
+      pt5: { name: t('lifestyle_reset'), description: t('lifestyle_desc'), badge: t('balanced_plus'), preview: t('planning_preview_pt5') }
+    };
+    return map[template.id] || { name: template.name, description: template.description, badge: template.badge, preview: template.roadmapPreview };
+  };
 
   const handleCreateDraft = () => {
     if (!selectedTemplateId) return;
@@ -121,7 +134,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
               <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-600 transition-colors">
-                Planning
+                {t('planning_management')}
               </button>
             </li>
             <li>
@@ -134,7 +147,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
         </nav>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 px-4 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-xl shadow-sm">Setup Required</div>
+          <div className="absolute top-0 right-0 px-4 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-xl shadow-sm">{t('setup_required')}</div>
           
           <div className="relative flex-shrink-0">
             <div 
@@ -148,19 +161,17 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 font-medium">
               <span className="flex items-center gap-1">
                 <Icon name="target" className="text-slate-400" />
-                No Strategic Plan Set
+                {t('no_strategic_plan')}
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
-              <span className="flex items-center gap-1 uppercase tracking-widest text-[10px] font-bold">
-                Female, 28
-              </span>
+              <span className="flex items-center gap-1 uppercase tracking-widest text-[10px] font-bold">{t('planning_profile_placeholder')}</span>
             </div>
           </div>
           <div className="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200">
-            <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1 text-center">Status</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1 text-center">{t('status')}</div>
             <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-              Ready to Program
+              {t('planning_ready_to_program')}
             </div>
           </div>
         </div>
@@ -173,7 +184,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
               <Grid className="w-5 h-5 text-emerald-500" />
-              Strategic Roadmap Templates
+              {t('strategic_templates')}
             </h2>
             <button className="p-2 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-600 transition-all">
               <Filter className="w-5 h-5" />
@@ -190,8 +201,8 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   <Plus className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div className="text-left leading-tight">
-                  <h3 className="font-bold text-lg text-slate-700 uppercase tracking-tight">Custom Strategy</h3>
-                  <p className="text-sm text-slate-500 font-medium">Build a roadmap from scratch with manual phases</p>
+                  <h3 className="font-bold text-lg text-slate-700 uppercase tracking-tight">{t('custom_strategy')}</h3>
+                  <p className="text-sm text-slate-500 font-medium">{t('custom_strategy_desc')}</p>
                 </div>
               </div>
               <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
@@ -216,26 +227,26 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                 <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-6">
                   <div className="flex items-center gap-1.5 justify-center sm:justify-start text-emerald-600 font-bold text-xl mb-1">
                     <Calendar className="w-5 h-5" />
-                    {template.duration} Weeks
+                    {template.duration} {t('weeks_label')}
                   </div>
-                  <h3 className="font-bold text-lg text-slate-900 leading-tight uppercase tracking-tight">{template.name}</h3>
-                  <p className="text-[10px] text-slate-500 mt-1.5 font-bold uppercase tracking-widest">{template.description}</p>
+                  <h3 className="font-bold text-lg text-slate-900 leading-tight uppercase tracking-tight">{getTemplateText(template).name}</h3>
+                  <p className="text-[10px] text-slate-500 mt-1.5 font-bold uppercase tracking-widest">{getTemplateText(template).description}</p>
                 </div>
 
                 {/* Strategy Summary Info (Mirroring Macros Bar) */}
                 <div className="flex-1 w-full space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2.5 py-1 rounded-xl uppercase tracking-widest border border-emerald-100">
-                      {template.badge || 'Standard'}
+                      {getTemplateText(template).badge || t('standard')}
                     </span>
                     <div className="flex gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                       <span className="flex items-center gap-1.5">
                         <Layers className="w-3 h-3 text-emerald-400" />
-                        {template.phases} Phases
+                        {template.phases} {t('phases_label')}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Zap className="w-3 h-3 text-amber-500" />
-                        {template.intensity} Intensity
+                        {t(`planning_intensity_${template.intensity}`)} {t('intensity_level')}
                       </span>
                     </div>
                   </div>
@@ -255,14 +266,14 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   </div>
                   <p className="text-[11px] font-bold text-slate-600 italic tracking-tight flex items-center gap-2">
                     <Icon name="route" className="text-slate-400" />
-                    {template.roadmapPreview}
+                    {getTemplateText(template).preview}
                   </p>
                 </div>
 
                 {/* Small Visual Chart (Mirroring Week View Chart) */}
                 <div className="hidden sm:flex w-full sm:w-1/5 flex-shrink-0 flex-col pl-6 border-l border-slate-100 h-20 justify-center">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Load Projection</span>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{t('load_projection')}</span>
                   </div>
                   <div className="flex gap-1.5 h-10 items-end justify-between">
                     {[40, 60, 80, 70, 90, 100, 80, 60, 40].map((h, i) => (
@@ -286,11 +297,11 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-inner group-hover:scale-110 transition-transform">
               <Eye className="w-8 h-8 text-slate-300" />
             </div>
-            <h3 className="font-bold text-slate-900 mb-2 uppercase tracking-tight">Template Preview</h3>
+            <h3 className="font-bold text-slate-900 mb-2 uppercase tracking-tight">{t('template_preview')}</h3>
             <p className="text-sm text-slate-500 font-medium leading-relaxed">
               {selectedTemplate 
-                ? `You've selected ${selectedTemplate.name}. Initial block distribution: ${selectedTemplate.roadmapPreview}.`
-                : "Select a strategic template on the left to see the initial roadmap distribution and phase breakdown here."
+                ? t('planning_selected_template_summary', { name: getTemplateText(selectedTemplate).name, preview: getTemplateText(selectedTemplate).preview })
+                : t('select_template_preview')
               }
             </p>
           </div>
@@ -300,12 +311,12 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
                 <Settings2 className="w-5 h-5" />
               </div>
-              <h3 className="font-bold text-slate-900 uppercase tracking-tight">Planning Settings</h3>
+              <h3 className="font-bold text-slate-900 uppercase tracking-tight">{t('planning_settings')}</h3>
             </div>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Total Duration</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">{t('total_duration')}</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-emerald-500 transition-colors">
                     <Icon name="schedule" className="text-[20px]" />
@@ -315,18 +326,18 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     value={settings.duration}
                     onChange={(e) => setSettings({...settings, duration: Number(e.target.value)})}
                   >
-                    <option value={8}>8 Weeks</option>
-                    <option value={10}>10 Weeks</option>
-                    <option value={12}>12 Weeks</option>
-                    <option value={16}>16 Weeks</option>
-                    <option value={20}>20 Weeks</option>
+                    <option value={8}>8 {t('weeks_label')}</option>
+                    <option value={10}>10 {t('weeks_label')}</option>
+                    <option value={12}>12 {t('weeks_label')}</option>
+                    <option value={16}>16 {t('weeks_label')}</option>
+                    <option value={20}>20 {t('weeks_label')}</option>
                   </select>
                   <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Training Frequency</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">{t('training_frequency')}</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-amber-500 transition-colors">
                     <Icon name="fitness_center" className="text-[20px]" />
@@ -336,18 +347,18 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     value={settings.trainingFreq}
                     onChange={(e) => setSettings({...settings, trainingFreq: e.target.value})}
                   >
-                    <option>2 days/week</option>
-                    <option>3 days/week</option>
-                    <option>4 days/week</option>
-                    <option>5 days/week</option>
-                    <option>6 days/week</option>
+                    <option value="2">2 {t('days_week')}</option>
+                    <option value="3">3 {t('days_week')}</option>
+                    <option value="4">4 {t('days_week')}</option>
+                    <option value="5">5 {t('days_week')}</option>
+                    <option value="6">6 {t('days_week')}</option>
                   </select>
                   <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Intensity Level</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">{t('intensity_level')}</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-rose-500 transition-colors">
                     <Icon name="speed" className="text-[20px]" />
@@ -357,17 +368,17 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     value={settings.intensityLevel}
                     onChange={(e) => setSettings({...settings, intensityLevel: e.target.value})}
                   >
-                    <option>Low</option>
-                    <option>Moderate</option>
-                    <option>Aggressive</option>
-                    <option>Elite (Peaking)</option>
+                    <option value="low">{t('planning_intensity_low')}</option>
+                    <option value="moderate">{t('planning_intensity_moderate')}</option>
+                    <option value="aggressive">{t('planning_intensity_aggressive')}</option>
+                    <option value="elite">{t('planning_intensity_elite')}</option>
                   </select>
                   <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">Primary Goal Override</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest pl-1 leading-none">{t('primary_goal_override')}</label>
                 <div className="relative group">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors">
                     <Icon name="target" className="text-[20px]" />
@@ -377,11 +388,11 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     value={settings.primaryGoal}
                     onChange={(e) => setSettings({...settings, primaryGoal: e.target.value})}
                   >
-                    <option>Fat Loss</option>
-                    <option>Muscle Gain</option>
-                    <option>Body Recomposition</option>
-                    <option>Metabolic Reset</option>
-                    <option>Endurance Focus</option>
+                    <option value="fat_loss">{t('analytics_fat_loss')}</option>
+                    <option value="muscle_gain">{t('analytics_muscle_gain')}</option>
+                    <option value="body_recomposition">{t('body_recomposition')}</option>
+                    <option value="metabolic_reset">{t('metabolic_reset')}</option>
+                    <option value="endurance_focus">{t('endurance_focus')}</option>
                   </select>
                   <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
                 </div>
@@ -395,7 +406,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed border border-transparent active:scale-95 text-sm"
               >
                 <CheckCircle2 className="w-5 h-5 group-hover:animate-pulse" />
-                Create Draft Planning
+                {t('create_draft_planning')}
               </button>
             </div>
           </div>

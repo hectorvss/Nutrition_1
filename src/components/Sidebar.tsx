@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useProfile } from '../context/ProfileContext';
+import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 
 import { 
@@ -25,6 +26,7 @@ interface SidebarProps {
 
 export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: SidebarProps & { isOpen?: boolean, onClose?: () => void }) {
   const { profile } = useProfile();
+  const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -53,48 +55,48 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
 
   const menuGroups = [
     {
-      title: 'Core',
+      title: t('sidebar_core'),
       items: [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'tasks', label: 'Tasks', icon: CheckCircle2 },
-        { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
+        { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
+        { id: 'tasks', label: t('tasks'), icon: CheckCircle2 },
+        { id: 'calendar', label: t('calendar'), icon: CalendarIcon },
       ]
     },
     {
-      title: 'Automation',
+      title: t('sidebar_automation'),
       items: [
-        { id: 'automations', label: 'Automations', icon: Zap },
+        { id: 'automations', label: t('automations'), icon: Zap },
       ]
     },
     {
-      title: 'Work',
+      title: t('sidebar_work'),
       items: [
-        { id: 'clients', label: 'Clients', icon: Users },
-        { id: 'check-ins', label: 'Check-ins', icon: ClipboardCheck },
-        { id: 'onboarding', label: 'Onboarding', icon: ShieldCheck },
-        { id: 'messages', label: 'Messages', icon: MessageSquare },
+        { id: 'clients', label: t('clients'), icon: Users },
+        { id: 'check-ins', label: t('checkins'), icon: ClipboardCheck },
+        { id: 'onboarding', label: t('onboarding'), icon: ShieldCheck },
+        { id: 'messages', label: t('messages'), icon: MessageSquare },
       ]
     },
     {
-      title: 'Programming',
+      title: t('sidebar_programming'),
       items: [
-        { id: 'planning', label: 'Planning', icon: Zap },
-        { id: 'nutrition', label: 'Nutrition', icon: UtensilsCrossed },
-        { id: 'training', label: 'Training', icon: Dumbbell },
+        { id: 'planning', label: t('planning'), icon: Zap },
+        { id: 'nutrition', label: t('nutrition'), icon: UtensilsCrossed },
+        { id: 'training', label: t('training'), icon: Dumbbell },
       ]
     },
     {
-      title: 'Library',
+      title: t('sidebar_library'),
       items: [
-        { id: 'library', label: 'Foods & Recipes', icon: BookOpen },
-        { id: 'exercises', label: 'Exercises', icon: Dumbbell },
+        { id: 'library', label: t('foods'), icon: BookOpen },
+        { id: 'exercises', label: t('exercises'), icon: Dumbbell },
       ]
     },
     {
-      title: 'Insights',
+      title: t('sidebar_insights'),
       items: [
-        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'analytics', label: t('analytics'), icon: BarChart3 },
+        { id: 'settings', label: t('settings'), icon: Settings },
       ]
     }
   ];

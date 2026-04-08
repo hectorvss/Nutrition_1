@@ -328,7 +328,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
           {isLoading ? (
             <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
               <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-              <p className="text-sm font-medium">Cargando distribución semanal...</p>
+              <p className="text-sm font-medium">{t('loading_weekly_distribution')}</p>
             </div>
           ) : processedDays.map((day) => (
             <div 
@@ -391,7 +391,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                   <div>
                     <div className="flex justify-between items-center mb-2">
                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">ENTRENAMIENTO</span>
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{t('training')}</span>
                        </div>
                     </div>
                     <div className={`text-sm font-bold truncate ${day.isRestDay ? 'text-slate-400' : 'text-slate-900'}`}>

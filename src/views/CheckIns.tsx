@@ -4,6 +4,7 @@ import CheckInHistory from './CheckInHistory';
 import CheckInReview from './CheckInReview';
 import CheckInTemplates from './CheckInTemplates';
 import CheckInTemplateEditor from './CheckInTemplateEditor';
+import { useLanguage } from '../context/LanguageContext';
 
 export type CheckInViewMode = 'list' | 'history' | 'review' | 'templates' | 'editor';
 
@@ -14,6 +15,7 @@ interface CheckInsProps {
 }
 
 export default function CheckIns({ initialClientId, initialCheckInId, onViewChange }: CheckInsProps) {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<CheckInViewMode>(
     initialCheckInId ? 'review' : (initialClientId ? 'history' : 'list')
   );
@@ -81,7 +83,7 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
         <div className="p-6 md:p-8">
           <button onClick={handleBackToList} className="mb-4 text-emerald-600 font-bold flex items-center gap-2">
             <span className="material-symbols-outlined">arrow_back</span>
-            Back to Check-ins
+            {t('back_to_checkins')}
           </button>
           <CheckInTemplates onEdit={handleEditTemplate} />
         </div>

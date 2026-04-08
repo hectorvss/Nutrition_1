@@ -287,7 +287,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
         {/* Header Breadcrumb & Status */}
         <div className="flex flex-col gap-6 mb-6">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <button onClick={onBack} className="hover:text-emerald-500 cursor-pointer transition-colors">Training</button>
+            <button onClick={onBack} className="hover:text-emerald-500 cursor-pointer transition-colors">{t('training')}</button>
             <span className="material-symbols-outlined text-[16px]">chevron_right</span>
             <span className="font-medium text-slate-900 dark:text-white">{client?.name}</span>
           </div>
@@ -495,10 +495,10 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                     value={selectedPreset.focusValue}
                     onChange={() => {}}
                   >
-                    <option value="Full Body Strength">Full Body Strength</option>
-                    <option value="Hypertrophy">Hypertrophy</option>
-                    <option value="Endurance">Endurance</option>
-                    <option value="Mobility">Mobility</option>
+                    <option value="Full Body Strength">{t('training_focus_full_body_strength')}</option>
+                    <option value="Hypertrophy">{t('training_focus_hypertrophy')}</option>
+                    <option value="Endurance">{t('training_focus_endurance')}</option>
+                    <option value="Mobility">{t('training_focus_mobility')}</option>
                   </select>
                 </div>
 
@@ -511,7 +511,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                       </div>
                       <div>
                         <div className="font-semibold text-slate-900 dark:text-white">{selectedPreset.title}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Selected Template</div>
+	                        <div className="text-xs text-slate-500 dark:text-slate-400">{t('selected_template')}</div>
                       </div>
                     </div>
                     <div className="h-px bg-slate-200 dark:border-slate-700 w-full"></div>

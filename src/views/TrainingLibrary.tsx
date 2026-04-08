@@ -135,7 +135,7 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
                   
                   <div className="col-span-8 w-full grid grid-cols-2 md:grid-cols-6 gap-4 items-center border-t md:border-t-0 border-slate-50 pt-4 md:pt-0 mt-2 md:mt-0">
                     <div className="col-span-2 flex flex-col md:flex-row md:items-center text-left md:pl-4">
-                      <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">Target</span>
+                      <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('target_label')}</span>
                       <div className="flex flex-wrap gap-1">
                         {exercise.muscleGroups.map(m => (
                           <span key={m} className="px-2 py-1 rounded-lg bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-tight">{m}</span>
@@ -147,7 +147,7 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
                     </div>
                     
                     <div className="col-span-2 flex flex-col md:block text-left">
-                      <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">Tools</span>
+                      <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('tools_label')}</span>
                       <span className="text-sm font-bold text-slate-500">{exercise.tools.join(', ')}</span>
                     </div>
                     
@@ -165,7 +165,7 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
                     </div>
                     
                     <div className="flex md:justify-center items-center gap-2">
-                      <button className="text-emerald-500 hover:bg-emerald-50 p-2 rounded-xl transition-all" title="Add to Program">
+                      <button className="text-emerald-500 hover:bg-emerald-50 p-2 rounded-xl transition-all" title={t('add_to_program')}>
                         <span className="material-symbols-outlined text-[24px]">add_circle</span>
                       </button>
                     </div>

@@ -358,7 +358,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                         );
                       })}
                       {dayEvents.length > 3 && (
-                        <div className="text-[10px] text-slate-500 font-bold px-1.5">+ {dayEvents.length - 3} more</div>
+                        <div className="text-[10px] text-slate-500 font-bold px-1.5">{t('more_count', { count: dayEvents.length - 3 })}</div>
                       )}
                     </div>
                   </>

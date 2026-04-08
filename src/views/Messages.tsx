@@ -34,6 +34,7 @@ import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
 import { fetchWithAuth, getAuthToken } from '../api';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Message {
   id: string;
@@ -54,6 +55,7 @@ interface MessagesProps {
 export default function Messages({ onNavigate }: MessagesProps) {
   const { user } = useAuth();
   const { clients } = useClient();
+  const { t } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [latestMessages, setLatestMessages] = useState<Record<string, Message>>({});
   const [newMessage, setNewMessage] = useState('');
@@ -326,7 +328,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
       setAudioBlob(null);
     } catch (err: any) {
       console.error('Failed to send message:', err);
-      setErrorStatus(err.message || 'Error al enviar el mensaje');
+      setErrorStatus(err.message || t('send_message_error'));
     } finally {
       setIsSending(false);
       setUploading(false);
@@ -374,7 +376,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
       alert(`Mensaje enviado a ${selectedRecipients.length} destinatarios.`);
     } catch (err: any) {
       console.error('Failed to send broadcast:', err);
-      alert('Error al enviar mensajes masivos');
+      alert(t('bulk_send_error'));
     } finally {
       setIsSending(false);
       setUploading(false);
@@ -383,7 +385,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
 
   const handleClearChat = async () => {
     if (!activeRecipient) return;
-    if (!window.confirm(`¿Estás seguro de que quieres vaciar la conversación con ${activeRecipient.name}?`)) return;
+    if (!window.confirm(t('confirm_clear_chat', { name: activeRecipient.name }))) return;
 
     try {
       await fetchWithAuth(`/messages/${activeRecipient.id}`, {
@@ -393,7 +395,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
       loadLatestMessages();
     } catch (err) {
       console.error('Failed to clear chat:', err);
-      alert('Error al vaciar el chat');
+      alert(t('clear_chat_error'));
     }
   };
 
@@ -428,15 +430,15 @@ export default function Messages({ onNavigate }: MessagesProps) {
           <div className="p-6 border-b border-slate-100 space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">Messages</h2>
-                <p className="text-sm text-slate-500">Manage client communications</p>
+                <h2 className="text-2xl font-bold text-slate-900">{t('messages_title')}</h2>
+                <p className="text-sm text-slate-500">{t('messages_subtitle')}</p>
               </div>
               <button 
                 onClick={() => setIsComposing(true)}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-semibold"
               >
                 <MessageSquareDiff className="w-5 h-5" />
-                New Message
+                {t('new_message')}
               </button>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center pt-2">
@@ -444,7 +446,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 <Search className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" />
                 <input 
                   className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all" 
-                  placeholder="Search clients or messages..." 
+                  placeholder={t('search_clients_messages')} 
                   type="text"
                 />
               </div>
@@ -457,7 +459,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                       : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  All Chats
+                  {t('all_chats')}
                 </button>
                 <button 
                   onClick={() => setFilterType('unread')}
@@ -467,7 +469,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                       : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  Unread 
+                  {t('unread_label')} 
                   {unreadChatsCount > 0 && (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
                       filterType === 'unread' ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'
@@ -485,7 +487,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${filterType === 'needs_reply' ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`}></span>
-                  Needs Reply
+                  {t('needs_reply')}
                 </button>
               </div>
             </div>
@@ -516,7 +518,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-base text-slate-900">{client.name}</h3>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-500 uppercase tracking-wide">
-                            {latest ? 'Plan Review' : 'Active'}
+                            {latest ? t('plan_review') : t('active')}
                           </span>
                         </div>
                         {latest && (
@@ -529,10 +531,10 @@ export default function Messages({ onNavigate }: MessagesProps) {
                         <p className="text-sm text-slate-600 font-medium truncate pr-4 leading-relaxed">
                           {latest ? (
                             <>
-                              <span className="font-bold">{latest.sender_id === user.id ? 'Tú' : client.name.split(' ')[0]}:</span> {latest.content}
+                              <span className="font-bold">{latest.sender_id === user.id ? t('you_label') : client.name.split(' ')[0]}:</span> {latest.content}
                             </>
                           ) : (
-                            <span className="text-slate-400 italic">No hay mensajes todavía</span>
+                            <span className="text-slate-400 italic">{t('no_messages_yet')}</span>
                           )}
                         </p>
                         <div className="flex-shrink-0 flex items-center gap-3">
@@ -567,7 +569,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
              {/* Composition Area */}
              <div className="flex-1 flex flex-col border-r border-slate-100 overflow-hidden">
                 <header className="p-6 border-b border-slate-100 flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-slate-900">New Message</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">{t('new_message')}</h2>
                   <button 
                     onClick={() => {
                       setIsComposing(false);
@@ -580,7 +582,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 </header>
 
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/30">
-                  <label className="text-sm font-bold text-slate-500 min-w-8">To:</label>
+                  <label className="text-sm font-bold text-slate-500 min-w-8">{t('to_label')}</label>
                   <div className="flex-1 flex flex-wrap items-center gap-2">
                     {selectedRecipients.map(r => (
                       <div key={r.id} className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-full pl-1 pr-2 py-0.5 shadow-sm">
@@ -597,7 +599,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                     <div className="relative flex-1 min-w-[150px]">
                       <input 
                         className="w-full bg-transparent border-none focus:ring-0 text-sm py-1 placeholder-slate-400 outline-none focus:outline-none ring-0 shadow-none" 
-                        placeholder="Type a name..." 
+                        placeholder={t('type_name_placeholder')} 
                         value={recipientSearch}
                         onChange={(e) => {
                           setRecipientSearch(e.target.value);
@@ -636,7 +638,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 <div className="flex-1 flex flex-col p-6 bg-white relative">
                   <textarea 
                     className="w-full h-full resize-none border-none focus:ring-0 p-0 text-lg text-slate-700 placeholder-slate-300 leading-relaxed font-['Manrope']" 
-                    placeholder="Write your first message here..."
+                    placeholder={t('write_first_message')}
                     value={composingContent}
                     onChange={(e) => setComposingContent(e.target.value)}
                   />
@@ -645,7 +647,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                   {(selectedFile || audioBlob) && (
                     <div className="mb-4 flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl w-fit">
                       <Paperclip className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm font-semibold">{selectedFile?.file.name || 'Audio Recording'}</span>
+                      <span className="text-sm font-semibold">{selectedFile?.file.name || t('audio_recording')}</span>
                       <button onClick={() => { setSelectedFile(null); setAudioBlob(null); }} className="text-slate-400 hover:text-red-500">
                         <XCircle className="w-4 h-4" />
                       </button>
@@ -669,13 +671,13 @@ export default function Messages({ onNavigate }: MessagesProps) {
                       </button>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest hidden sm:block">Press Enter to send</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest hidden sm:block">{t('press_enter_send')}</span>
                       <button 
                         onClick={handleSendBroadcast}
                         disabled={(!composingContent.trim() && !selectedFile && !audioBlob) || selectedRecipients.length === 0 || isSending}
                         className="flex items-center gap-3 bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold transition-all shadow-xl shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isSending ? 'Sending...' : 'Send Message'}
+                        {isSending ? t('sending') : t('send_message')}
                         <Send className="w-5 h-5" />
                       </button>
                     </div>
@@ -686,8 +688,8 @@ export default function Messages({ onNavigate }: MessagesProps) {
              {/* Sidebar: Suggested Groups & Clients */}
              <div className="hidden md:flex w-80 lg:w-96 bg-slate-50/50 flex-col h-full border-l border-slate-100 overflow-y-auto custom-scrollbar">
                 <div className="p-6 border-b border-slate-100">
-                  <h3 className="font-bold text-slate-900">Suggested Clients</h3>
-                  <p className="text-xs text-slate-500 mt-1 font-semibold">Recently active or assigned to you</p>
+                  <h3 className="font-bold text-slate-900">{t('suggested_clients')}</h3>
+                  <p className="text-xs text-slate-500 mt-1 font-semibold">{t('recently_active_assigned')}</p>
                 </div>
                 <div className="flex-1 p-4 space-y-3">
                   {clients.slice(0, 8).map(client => (
@@ -717,15 +719,15 @@ export default function Messages({ onNavigate }: MessagesProps) {
                   ))}
 
                   <div className="pt-6 pb-2">
-                    <h4 className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[2px]">Quick Groups</h4>
+                    <h4 className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[2px]">{t('quick_groups')}</h4>
                   </div>
                   <div className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                     <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
                       <GroupsIcon className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-slate-900">All Active Clients</h4>
-                      <p className="text-xs text-slate-500 font-medium">{clients.length} Members</p>
+                      <h4 className="text-sm font-bold text-slate-900">{t('all_active_clients')}</h4>
+                      <p className="text-xs text-slate-500 font-medium">{t('members_count', { count: clients.length })}</p>
                     </div>
                     <button 
                       onClick={() => setSelectedRecipients(clients)}
@@ -739,8 +741,8 @@ export default function Messages({ onNavigate }: MessagesProps) {
                       <GroupsIcon className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-slate-900">Nutrition Plans</h4>
-                      <p className="text-xs text-slate-500 font-medium">8 Members</p>
+                      <h4 className="text-sm font-bold text-slate-900">{t('nutrition_plans_group')}</h4>
+                      <p className="text-xs text-slate-500 font-medium">{t('members_count', { count: 8 })}</p>
                     </div>
                     <button className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-400 group-hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all">
                       <UserPlus className="w-4 h-4" />
@@ -775,7 +777,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
           </div>
           <div>
             <div className="flex items-center space-x-1">
-              <h2 className="font-bold text-slate-900">{activeRecipient?.name || 'Loading...'}</h2>
+              <h2 className="font-bold text-slate-900">{activeRecipient?.name || t('loading')}</h2>
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             </div>
           </div>
@@ -785,23 +787,23 @@ export default function Messages({ onNavigate }: MessagesProps) {
              <>
                <button className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center space-x-2">
                  <User className="w-4 h-4" />
-                 <span>View Coach Profile</span>
+                 <span>{t('view_coach_profile')}</span>
                </button>
                <button className="px-4 py-2 bg-[#F0FDF4] text-[#22C55E] rounded-xl text-sm font-bold hover:bg-[#DCFCE7] transition-colors flex items-center space-x-2">
                  <Calendar className="w-4 h-4" />
-                 <span>Book Check-in</span>
+                 <span>{t('book_checkin')}</span>
                </button>
              </>
            ) : (
              <button className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center space-x-2">
                <User className="w-4 h-4" />
-               <span>Client Details</span>
+               <span>{t('client_details')}</span>
              </button>
            )}
            <button 
              onClick={handleClearChat}
              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-             title="Vaciar Chat"
+             title={t('clear_chat')}
            >
              <Trash2 className="w-5 h-5" />
            </button>
@@ -811,7 +813,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
       {/* Messages Scroll Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
         <div className="flex justify-center">
-          <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[11px] font-bold uppercase rounded-full tracking-wider">Today</span>
+          <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[11px] font-bold uppercase rounded-full tracking-wider">{t('today')}</span>
         </div>
 
         {messages.map((msg) => {
@@ -866,8 +868,8 @@ export default function Messages({ onNavigate }: MessagesProps) {
                             <FileText className={`w-5 h-5 ${isOwn ? 'text-green-600' : 'text-slate-500'}`} />
                           </div>
                           <div className="flex-1 min-w-0 text-left">
-                            <p className={`text-sm font-bold truncate ${isOwn ? 'text-green-800' : 'text-slate-900'}`}>{msg.attachment_name || 'Document'}</p>
-                            <p className={`text-[10px] ${isOwn ? 'text-green-600/70' : 'text-slate-500'}`}>Click to view</p>
+                            <p className={`text-sm font-bold truncate ${isOwn ? 'text-green-800' : 'text-slate-900'}`}>{msg.attachment_name || t('document_label')}</p>
+                            <p className={`text-[10px] ${isOwn ? 'text-green-600/70' : 'text-slate-500'}`}>{t('click_to_view')}</p>
                           </div>
                           <Download className={`w-4 h-4 ${isOwn ? 'text-green-600/70' : 'text-slate-400'}`} />
                         </a>
@@ -876,7 +878,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                         <div className={`flex items-center gap-2 p-2 rounded-xl ${isOwn ? 'bg-green-50/50' : 'bg-slate-200/50'}`}>
                           <audio controls className="h-10 w-full max-w-[240px] mix-blend-multiply opacity-80">
                             <source src={msg.attachment_url} type="audio/webm" />
-                            Your browser does not support the audio element.
+                            {t('audio_not_supported')}
                           </audio>
                         </div>
                       )}
@@ -891,8 +893,8 @@ export default function Messages({ onNavigate }: MessagesProps) {
                               <CheckCircle2 className="w-6 h-6" />
                             </div>
                             <div className="flex-1 min-w-0">
-                               <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900' : 'text-slate-900'}`}>Weekly Check-in Assessment</p>
-                               <p className="text-[11px] text-slate-500 font-medium">Review your progress and feedback</p>
+                               <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900' : 'text-slate-900'}`}>{t('weekly_checkin_assessment')}</p>
+                               <p className="text-[11px] text-slate-500 font-medium">{t('review_progress_feedback')}</p>
                             </div>
                           </div>
                           
@@ -911,7 +913,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                             }`}
                           >
                             <FileText className="w-4 h-4" />
-                            View Check-in Details
+                            {t('view_checkin_details')}
                           </button>
                         </div>
                       )}
@@ -943,13 +945,13 @@ export default function Messages({ onNavigate }: MessagesProps) {
       {/* Quick Actions */}
       <div className="px-6 py-2 flex space-x-2 overflow-x-auto no-scrollbar">
         <button className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
-          <span>👋 Weekly Check-in</span>
+          <span>{t('quick_weekly_checkin')}</span>
         </button>
         <button className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
-          <span>🥗 Ask About Meal</span>
+          <span>{t('quick_ask_meal')}</span>
         </button>
         <button className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
-          <span>📋 Request Plan Change</span>
+          <span>{t('quick_request_plan_change')}</span>
         </button>
       </div>
 
@@ -987,13 +989,13 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 <span className="text-xs font-bold font-mono">
                   {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider">Recording Audio...</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">{t('recording_audio')}</span>
               </div>
             )}
             {audioBlob && !isRecording && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm">
                 <Mic className="w-4 h-4 text-purple-500" />
-                <span className="text-xs font-semibold text-slate-700">Audio Recording</span>
+                <span className="text-xs font-semibold text-slate-700">{t('audio_recording')}</span>
                 <button onClick={() => setAudioBlob(null)} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
                   <Plus className="w-3.5 h-3.5 rotate-45 text-slate-400" />
                 </button>
@@ -1005,7 +1007,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
               onClick={stopRecording}
               className="px-4 py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
             >
-              Stop & Save
+              {t('stop_and_save')}
             </button>
           )}
         </div>
@@ -1058,7 +1060,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
             disabled={isRecording || uploading}
             onChange={(e) => setNewMessage(e.target.value)}
             className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm py-2 text-slate-700 placeholder-slate-400 disabled:opacity-50" 
-            placeholder={isRecording ? 'Recording audio...' : `Type your message...`}
+          placeholder={isRecording ? t('recording_audio_input') : t('type_your_message')}
             type="text"
           />
           <button 
@@ -1080,3 +1082,4 @@ export default function Messages({ onNavigate }: MessagesProps) {
     </div>
   );
 }
+

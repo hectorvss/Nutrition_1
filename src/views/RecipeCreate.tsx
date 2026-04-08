@@ -1,10 +1,12 @@
 import React from 'react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface RecipeCreateProps {
   onBack: () => void;
 }
 
 export default function RecipeCreate({ onBack }: RecipeCreateProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
       <div className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
@@ -17,17 +19,17 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                 className="flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition-colors mb-2"
               >
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                Back to Library
+                {t('back_to_library')}
               </button>
-              <h2 className="text-3xl font-bold text-slate-900">Create New Recipe</h2>
+              <h2 className="text-3xl font-bold text-slate-900">{t('create_recipe')}</h2>
             </div>
             <div className="flex gap-3">
               <button className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all font-bold">
-                Save Draft
+                {t('save_draft')}
               </button>
               <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-bold">
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Save Recipe
+                {t('save_recipe')}
               </button>
             </div>
           </div>
@@ -39,28 +41,28 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
                 <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                   <span className="material-symbols-outlined text-emerald-500">info</span>
-                  Basic Information
+                  {t('basic_information')}
                 </h3>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Recipe Title</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('recipe_title')}</label>
                     <input 
                       type="text" 
                       className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all"
-                      placeholder="e.g. Mediterranean Quinoa Bowl"
+                      placeholder={t('recipe_title_placeholder')}
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Category</label>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">{t('category_label')}</label>
                       <select className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all appearance-none">
-                        <option>Lunch/Dinner</option>
-                        <option>Breakfast</option>
-                        <option>Snack</option>
+                        <option>{t('lunch_dinner_option')}</option>
+                        <option>{t('breakfast_option')}</option>
+                        <option>{t('snack_option')}</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">Prep Time (min)</label>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">{t('prep_time')}</label>
                       <input 
                         type="number" 
                         className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all"
@@ -69,13 +71,13 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Recipe Image</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('recipe_image')}</label>
                     <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-all cursor-pointer group">
                       <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <span className="material-symbols-outlined text-[28px] text-emerald-500">add</span>
                       </div>
-                      <span className="text-sm font-bold text-slate-600">Click to upload or drag and drop</span>
-                      <span className="text-xs text-slate-400 mt-1">SVG, PNG, JPG or GIF (max. 800x400px)</span>
+                      <span className="text-sm font-bold text-slate-600">{t('click_upload')}</span>
+                      <span className="text-xs text-slate-400 mt-1">{t('image_upload_specs')}</span>
                     </div>
                   </div>
                 </div>
@@ -86,11 +88,11 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-500">shopping_basket</span>
-                    Ingredients
+                    {t('ingredients_section')}
                   </h3>
                   <button className="text-sm text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1">
                     <span className="material-symbols-outlined text-[18px]">add</span>
-                    Add Item
+                    {t('add_item')}
                   </button>
                 </div>
                 <div className="space-y-4">
@@ -136,11 +138,11 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-500">menu_book</span>
-                    Preparation Guide
+                    {t('preparation_guide')}
                   </h3>
                   <button className="text-sm text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1">
                     <span className="material-symbols-outlined text-[18px]">add</span>
-                    Add Step
+                    {t('add_step')}
                   </button>
                 </div>
                 <div className="space-y-6">
@@ -185,8 +187,8 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
               {/* Nutrition Stats */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <h3 className="font-bold text-slate-900">Nutrition per Serving</h3>
-                  <span className="text-[10px] font-bold px-2 py-1 bg-white rounded-lg border border-slate-200 text-slate-400 uppercase tracking-widest">Base Recipe</span>
+                  <h3 className="font-bold text-slate-900">{t('nutrition_per_serving')}</h3>
+                    <span className="text-[10px] font-bold px-2 py-1 bg-white rounded-lg border border-slate-200 text-slate-400 uppercase tracking-widest">{t('base_recipe')}</span>
                 </div>
                 <div className="p-8">
                   <div className="flex justify-center mb-8">
@@ -197,15 +199,15 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                         <span className="text-4xl font-bold text-slate-900 tracking-tight">485</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kcal</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('kcal_short')}</span>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-5">
                     {[
-                      { label: 'Protein', value: '38g', color: 'bg-emerald-500', percent: 75 },
-                      { label: 'Carbs', value: '45g', color: 'bg-blue-500', percent: 60 },
-                      { label: 'Fats', value: '14g', color: 'bg-amber-400', percent: 30 }
+                      { label: t('protein'), value: '38g', color: 'bg-emerald-500', percent: 75 },
+                      { label: t('carbs'), value: '45g', color: 'bg-blue-500', percent: 60 },
+                      { label: t('fats'), value: '14g', color: 'bg-amber-400', percent: 30 }
                     ].map((macro, idx) => (
                       <div key={idx}>
                         <div className="flex justify-between text-sm font-bold mb-2">
@@ -226,20 +228,20 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                 <div className="p-6 border-b border-slate-100 bg-emerald-50/50">
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-500">science</span>
-                    Client Scale Preview
+                    {t('client_scale_preview')}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1 font-medium">Simulate portion adjustments for clients</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">{t('scale_preview_desc')}</p>
                 </div>
                 <div className="p-8 space-y-6">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Select Client</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('select_client')}</label>
                     <div className="flex items-center gap-3 p-4 rounded-2xl border border-emerald-500 bg-white shadow-sm cursor-pointer">
                       <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
                         <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf0Q3uAjHC8p014ZEXi-XOqgXIRaqRf0R1dawNQFMSEqrtIhBl997C3o6iGILTMLcGdyoP1VfSeZrtgvvQQ-hVjchh-eGdHuWGvBVI19wQvtu4SMW4Qwy809bw1FKZjwadQQ6pkJb5CaIrmomnOXQiloCBpKeBZ00l53VC9TijpiLDgjqcQ_pAw7psb_m0b-dpBrXlwCrZvjZFOJ4BwSxnkeFTJ4H9_DddUPYVgWypgllSmAkHkI6pkuxMW3pn8MYu5aXBRPDKxWoH" alt="Sarah" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1">
                         <div className="text-sm font-bold text-slate-900">Sarah Jenkins</div>
-                        <div className="text-[10px] font-bold text-slate-400">Target: 1,500 kcal / day</div>
+                        <div className="text-[10px] font-bold text-slate-400">{t('target_kcal_day')}</div>
                       </div>
                       <span className="material-symbols-outlined text-emerald-500">expand_more</span>
                     </div>
@@ -247,8 +249,8 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
 
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scaled Values</span>
-                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg">x0.85 Ratio</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('scaled_values')}</span>
+                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg">{t('scale_ratio_sample')}</span>
                     </div>
                     <div className="space-y-4">
                       {[
@@ -268,7 +270,7 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                   </div>
 
                   <button className="w-full py-4 rounded-2xl border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all text-sm font-bold">
-                    Apply Scale to Client Plan
+                    {t('apply_scale')}
                   </button>
                 </div>
               </div>

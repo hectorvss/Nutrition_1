@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useExerciseContext } from '../context/ExerciseContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ExerciseCreateProps {
   onBack: () => void;
@@ -7,6 +8,7 @@ interface ExerciseCreateProps {
 
 export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
   const { addExercise } = useExerciseContext();
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<'Strength'|'Mobility'|'Warm-up'|'Cardio'|'Rehab'>('Strength');
   const [type, setType] = useState<'Compound'|'Isolation'>('Compound');
@@ -41,21 +43,21 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                 className="text-slate-400 hover:text-emerald-600 transition-colors flex items-center gap-2 text-sm font-bold mb-3"
               >
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                Training Library
+                {t('training_library_title')}
               </button>
-              <h2 className="text-3xl font-bold text-slate-900">Create Custom Exercise</h2>
-              <p className="text-slate-500 text-sm mt-2 font-medium">Add a new exercise to your personal or client database.</p>
+              <h2 className="text-3xl font-bold text-slate-900">{t('create_exercise')}</h2>
+              <p className="text-slate-500 text-sm mt-2 font-medium">{t('exercise_form_desc')}</p>
             </div>
             <div className="flex items-center gap-4">
               <button 
                 onClick={onBack}
                 className="px-6 py-3 rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button onClick={handleSave} disabled={!name.trim()} className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/25 flex items-center gap-2 font-bold text-sm">
                 <span className="material-symbols-outlined text-[20px]">save</span>
-                Add to Library
+                {t('add_to_library')}
               </button>
             </div>
           </div>
@@ -67,43 +69,43 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
                 <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">info</span>
-                  Basic Information
+                  {t('basic_information')}
                 </h3>
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Exercise Name</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_name')}</label>
                     <input 
                       type="text" 
                       value={name}
                       onChange={e => setName(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
-                      placeholder="e.g. Barbell Back Squat"
+                      placeholder={t('exercise_name_placeholder')}
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('category_label')}</label>
                       <select value={category} onChange={e => setCategory(e.target.value as any)} className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all appearance-none">
-                        <option value="Strength">Strength</option>
-                        <option value="Mobility">Mobility</option>
-                        <option value="Warm-up">Warm-up</option>
-                        <option value="Cardio">Cardio</option>
-                        <option value="Rehab">Rehab</option>
+                        <option value="Strength">{t('strength_cat')}</option>
+                        <option value="Mobility">{t('mobility_cat')}</option>
+                        <option value="Warm-up">{t('warmup_cat')}</option>
+                        <option value="Cardio">{t('cardio_cat')}</option>
+                        <option value="Rehab">{t('rehab_cat')}</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('type_label')}</label>
                       <select value={type} onChange={e => setType(e.target.value as any)} className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all appearance-none">
-                        <option value="Compound">Compound</option>
-                        <option value="Isolation">Isolation</option>
+                        <option value="Compound">{t('compound_type')}</option>
+                        <option value="Isolation">{t('isolation_type')}</option>
                       </select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Description & Instructions</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_instructions')}</label>
                     <textarea 
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
-                      placeholder="Add step-by-step instructions for this exercise..."
+                      placeholder={t('exercise_instructions_placeholder')}
                     ></textarea>
                   </div>
                 </div>
@@ -113,27 +115,27 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
                 <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">activity</span>
-                  Muscle Groups
+                  {t('muscle_groups')}
                 </h3>
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Primary Muscle Group</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('primary_muscle_group')}</label>
                     <input 
                       type="text" 
                       value={primaryMuscle}
                       onChange={e => setPrimaryMuscle(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
-                      placeholder="e.g. Quadriceps"
+                      placeholder={t('primary_muscle_placeholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Secondary Muscles</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('secondary_muscles')}</label>
                     <input 
                       type="text" 
                       value={secondaryMuscles}
                       onChange={e => setSecondaryMuscles(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
-                      placeholder="e.g. Glutes, Hamstrings"
+                      placeholder={t('secondary_muscles_placeholder')}
                     />
                   </div>
                 </div>
@@ -145,25 +147,25 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
                 <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">bolt</span>
-                  Technical Data
+                  {t('technical_data')}
                 </h3>
                 <div className="space-y-5">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Required Tools</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('required_tools')}</label>
                     <input 
                       type="text" 
                       value={tools}
                       onChange={e => setTools(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
-                      placeholder="e.g. Barbell, Rack"
+                      placeholder={t('required_tools_placeholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Difficulty Level</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('difficulty_level')}</label>
                     <select className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all appearance-none">
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
+                      <option value="Beginner">{t('beginner_level')}</option>
+                      <option value="Intermediate">{t('intermediate_level')}</option>
+                      <option value="Advanced">{t('advanced_level')}</option>
                     </select>
                   </div>
                 </div>
@@ -173,7 +175,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
                 <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">verified_user</span>
-                  Safety Rating
+                  {t('safety_rating')}
                 </h3>
                 <div className="flex flex-col items-center justify-center space-y-4 py-4">
                   <div className="flex items-center gap-2">
@@ -183,7 +185,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                       </button>
                     ))}
                   </div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">5 out of 5 stars</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('five_out_of_five')}</span>
                 </div>
               </div>
             </div>

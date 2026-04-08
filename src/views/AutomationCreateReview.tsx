@@ -25,6 +25,7 @@ import {
 import { useAutomation } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
 import { AutomationDeliveryRules } from '../context/AutomationContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface WizardData {
   triggerId: string;
@@ -59,6 +60,7 @@ function getPreviewText(text: string) {
 }
 
 export default function AutomationCreateReview({ wizardData, onBack, onActivate }: AutomationCreateReviewProps) {
+  const { t } = useLanguage();
   const { addAutomation, updateAutomation } = useAutomation();
   const { clients } = useClient();
   const [automationName, setAutomationName] = useState(wizardData.automationName);
@@ -99,7 +101,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
     stop_conditions = []
   } = wizardData.deliveryRules || {};
   
-  const frequencyLabel = frequency === 'Once' ? 'One-time message' : `Every ${frequencyValue} ${frequencyUnit}`;
+  const frequencyLabel = frequency === 'Once' ? t('one_time_message') : `${t('every')} ${frequencyValue} ${t(frequencyUnit.toLowerCase())}`;
 
   const selectedClients = clients.filter(c => selected_client_ids.includes(c.id));
 
@@ -112,10 +114,10 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
             <div className="flex items-center gap-2 mb-2">
               <button onClick={onBack} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors flex items-center gap-1 text-sm font-medium">
                 <ArrowLeft className="w-4 h-4" />
-                Back to Message
+                {t('back_to_message')}
               </button>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{wizardData.editingId ? 'Edit Automation' : 'Create New Automation'}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{wizardData.editingId ? t('edit_automation') : t('create_new_automation')}</h1>
           </div>
           {/* Step indicator */}
           <div className="flex items-center">
@@ -124,19 +126,19 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">
                   <Check className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">Trigger</span>
+                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('trigger_label')}</span>
               </div>
               <div className="w-16 md:w-24 h-1 bg-emerald-500 -ml-2 -mr-2 relative z-0"></div>
               <div className="flex flex-col items-center relative z-10">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">
                   <Check className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
-                <span className="text-xs font-medium mt-2 text-emerald-500">Message</span>
+                <span className="text-xs font-medium mt-2 text-emerald-500">{t('message_label')}</span>
               </div>
               <div className="w-16 md:w-24 h-1 bg-emerald-500 -ml-2 -mr-2 relative z-0"></div>
               <div className="flex flex-col items-center relative z-10">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">3</div>
-                <span className="text-xs font-bold mt-2 text-emerald-500">Review</span>
+                <span className="text-xs font-bold mt-2 text-emerald-500">{t('review')}</span>
               </div>
             </div>
           </div>
@@ -145,8 +147,8 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1 p-0">
           <div className="flex flex-col h-full">
             <div className="px-6 md:px-8 py-6 border-b border-slate-200 dark:border-slate-800">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Automation Summary</h2>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Review your workflow settings before activation.</p>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{t('automation_summary')}</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">{t('review_before_activation')}</p>
             </div>
 
             <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
@@ -155,7 +157,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                 <div className="flex flex-col gap-8">
                   {/* Name */}
                   <div className="group relative">
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider mb-2 block">Automation Name</label>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-500 uppercase tracking-wider mb-2 block">{t('automation_name')}</label>
                     {isEditingName ? (
                       <div className="flex items-center gap-3">
                         <input 
@@ -184,9 +186,9 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xs font-bold">1</div>
-                        Step 1: Trigger
+                        {t('step_1_trigger')}
                       </h4>
-                      <button onClick={onBack} className="text-xs font-medium text-emerald-500 hover:text-emerald-600">Edit</button>
+                      <button onClick={onBack} className="text-xs font-medium text-emerald-500 hover:text-emerald-600">{t('edit')}</button>
                     </div>
                     <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 flex items-start gap-4">
                       <div className={`w-10 h-10 rounded-lg ${wizardData.iconBg} ${wizardData.iconColor} flex items-center justify-center flex-shrink-0`}>
@@ -194,7 +196,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                       </div>
                       <div>
                         <p className="font-semibold text-slate-900 dark:text-white text-sm">{wizardData.triggerName}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Automation fires when this trigger occurs.</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{t('automation_fires_when_trigger')}</p>
                       </div>
                     </div>
                   </div>
@@ -204,37 +206,37 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xs font-bold">2</div>
-                        Step 2: Delivery Rules
+                        {t('step_2_delivery_rules')}
                       </h4>
-                      <button onClick={onBack} className="text-xs font-medium text-emerald-500 hover:text-emerald-600">Edit</button>
+                      <button onClick={onBack} className="text-xs font-medium text-emerald-500 hover:text-emerald-600">{t('edit')}</button>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                           <Clock className="w-4 h-4" />
-                          <span className="text-xs font-medium uppercase tracking-wide">Frequency</span>
+                          <span className="text-xs font-medium uppercase tracking-wide">{t('frequency')}</span>
                         </div>
                         <p className="font-semibold text-slate-900 dark:text-white text-sm">{frequencyLabel}</p>
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                           <Calendar className="w-4 h-4" />
-                          <span className="text-xs font-medium uppercase tracking-wide">Delivery Time</span>
+                          <span className="text-xs font-medium uppercase tracking-wide">{t('delivery_time')}</span>
                         </div>
                         <p className="font-semibold text-slate-900 dark:text-white text-sm">{deliveryTime}</p>
                       </div>
                       <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 sm:col-span-2">
                         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                           <Users className="w-4 h-4" />
-                          <span className="text-xs font-medium uppercase tracking-wide">Recipients</span>
+                          <span className="text-xs font-medium uppercase tracking-wide">{t('recipients')}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center rounded-md bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 ring-1 ring-inset ring-emerald-600/20">{audience}</span>
                           {audience === 'All Clients' && (
-                            <span className="text-xs text-slate-500 dark:text-slate-500">({activeClients.length} active clients)</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-500">({activeClients.length} {t('active_clients').toLowerCase()})</span>
                           )}
                           {audience === 'Specific Clients' && (
-                            <span className="text-xs text-slate-500 dark:text-slate-500">({selectedClients.length} users selected)</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-500">({t('selected_users_count', { count: selectedClients.length })})</span>
                           )}
                         </div>
                         
@@ -251,7 +253,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {activation_conditions.some(c => c.enabled) && (
                             <div className="flex flex-col gap-1.5">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Activation Triggers:</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('activation_triggers')}:</span>
                               <div className="flex flex-col gap-1">
                                 {activation_conditions.filter(c => c.enabled).map((c, i) => (
                                   <p key={i} className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1.5">
@@ -265,7 +267,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
 
                           {stop_conditions.some(c => c.enabled) && (
                             <div className="flex flex-col gap-1.5">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stop Conditions:</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('stop_conditions')}:</span>
                               <div className="flex flex-col gap-1">
                                 {stop_conditions.filter(c => c.enabled).map((c, i) => (
                                   <p key={i} className="text-xs text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1.5">
@@ -286,7 +288,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xs font-bold">3</div>
-                        Message
+                        {t('message_label')}
                       </h4>
                     </div>
                     <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
@@ -298,7 +300,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
 
               {/* Right: Phone preview */}
               <div className="lg:w-[400px] border-l border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-6 md:p-8 flex flex-col items-center justify-center relative">
-                <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Preview Mode</div>
+                <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{t('preview_mode')}</div>
                 <div className="w-[300px] bg-white dark:bg-slate-900 rounded-[3rem] border-8 border-slate-200 dark:border-slate-800 shadow-xl relative overflow-hidden flex flex-col transform scale-90 sm:scale-100 origin-top" style={{ height: 560 }}>
                   <div className="bg-slate-100 dark:bg-slate-800 h-14 flex items-center px-6 pt-2 justify-between shrink-0">
                     <span className="text-[10px] font-bold text-slate-800 dark:text-slate-300">{currentTime}</span>
@@ -309,7 +311,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                     </div>
                   </div>
                   <div className="w-full flex-1 bg-[#F4F6FA] dark:bg-slate-900 pt-4 flex flex-col overflow-hidden">
-                    <div className="text-[10px] text-center text-slate-400 font-medium mb-4">Today {currentTime}</div>
+                    <div className="text-[10px] text-center text-slate-400 font-medium mb-4">{t('today')} {currentTime}</div>
                     <div className="px-4 flex flex-col gap-3 flex-1 overflow-y-auto scrollbar-hide">
                       <div className="self-start max-w-[90%] bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none p-4 shadow-sm text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium whitespace-pre-wrap">
                         {getPreviewText(wizardData.message)}
@@ -317,7 +319,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                     </div>
                     <div className="p-4 mt-auto">
                       <div className="bg-white dark:bg-slate-800 h-12 rounded-full shadow-sm flex items-center px-4 justify-between border border-slate-200 dark:border-slate-700">
-                        <span className="text-slate-400 text-xs">Message...</span>
+                        <span className="text-slate-400 text-xs">{t('message_label')}...</span>
                         <Send className="w-5 h-5 text-emerald-500 cursor-pointer" />
                       </div>
                     </div>
@@ -330,16 +332,16 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
 
             <div className="px-6 md:px-8 py-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex justify-between items-center">
               <button onClick={onBack} className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-800 transition-colors">
-                Back
+                {t('back')}
               </button>
               <div className="flex items-center gap-4">
-                <span className="text-xs text-slate-500 dark:text-slate-500 hidden sm:inline-block">Ready to go live</span>
+                <span className="text-xs text-slate-500 dark:text-slate-500 hidden sm:inline-block">{t('ready_to_go_live')}</span>
                 <button 
                   onClick={handleActivate}
                   className="px-8 py-2.5 rounded-xl bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
                 >
                   <Rocket className="w-5 h-5" />
-                  {wizardData.editingId ? 'Save Changes' : 'Activate Automation'}
+                  {wizardData.editingId ? t('save_changes') : t('activate_automation')}
                 </button>
               </div>
             </div>

@@ -4,6 +4,7 @@ import OnboardingHistory from './OnboardingHistory';
 import OnboardingReview from './OnboardingReview';
 import OnboardingTemplates from './OnboardingTemplates';
 import OnboardingFlowEditor from './OnboardingFlowEditor';
+import { useLanguage } from '../context/LanguageContext';
 
 export type OnboardingViewMode = 'list' | 'history' | 'review' | 'templates' | 'editor';
 
@@ -14,10 +15,10 @@ interface OnboardingDashboardProps {
 }
 
 export default function OnboardingDashboard({ initialClientId, initialSubmissionId, onNavigate }: OnboardingDashboardProps) {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<OnboardingViewMode>(
     initialSubmissionId ? 'review' : (initialClientId ? 'history' : 'list')
   );
-  console.log('DEBUG: OnboardingDashboard mounting/rendering in mode:', viewMode, { initialClientId, initialSubmissionId });
   const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(initialSubmissionId || null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -84,7 +85,7 @@ export default function OnboardingDashboard({ initialClientId, initialSubmission
             className="mb-4 text-emerald-600 font-bold flex items-center gap-2 hover:translate-x-[-4px] transition-transform"
           >
             <span className="material-symbols-outlined">arrow_back</span>
-            Back to Onboarding
+            {t('back_to_onboarding')}
           </button>
           <OnboardingTemplates onEdit={handleEditTemplate} />
         </div>

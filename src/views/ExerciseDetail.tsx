@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useExerciseContext } from '../context/ExerciseContext';
 import { TrainingCategory } from '../types/training';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ExerciseDetailProps {
   exerciseName?: string;
@@ -8,6 +9,7 @@ interface ExerciseDetailProps {
 }
 
 export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailProps) {
+  const { t } = useLanguage();
   const { exercises, updateExercise } = useExerciseContext();
   const exercise = exercises.find(e => e.name === exerciseName);
 
@@ -72,8 +74,8 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
-          <p className="text-slate-500 mb-4">Exercise not found</p>
-          <button onClick={onBack} className="bg-emerald-500 text-white px-4 py-2 rounded-xl">Go Back</button>
+          <p className="text-slate-500 mb-4">{t('exercise_not_found')}</p>
+          <button onClick={onBack} className="bg-emerald-500 text-white px-4 py-2 rounded-xl">{t('back')}</button>
         </div>
       </div>
     );
@@ -90,7 +92,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
             </button>
             <div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                {isEditing ? "Edit Activity" : "See Activity"}
+                {isEditing ? t('edit_activity') : t('view_activity')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">{exercise.name}</p>
             </div>
@@ -103,11 +105,11 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2 text-sm"
                 >
                   <span className="material-symbols-outlined text-[18px]">edit</span>
-                  Edit
+                  {t('edit')}
                 </button>
                 <button onClick={onBack} className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-semibold text-sm">
                   <span className="material-symbols-outlined text-[20px]">check</span>
-                  Done
+                  {t('done_label')}
                 </button>
               </>
             ) : (
@@ -116,14 +118,14 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   onClick={handleCancel} 
                   className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button 
                   onClick={handleSave} 
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-semibold text-sm"
                 >
                   <span className="material-symbols-outlined text-[20px]">save</span>
-                  Save Changes
+                  {t('save_changes')}
                 </button>
               </>
             )}
@@ -136,11 +138,11 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
             <section>
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">info</span>
-                General Information
+                {t('general_information')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="md:col-span-2 lg:col-span-3">
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Activity Name</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('activity_name')}</label>
                   <div className="relative">
                     {isEditing ? (
                       <input 
@@ -160,18 +162,18 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 
                 {/* Category Fields */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Category</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('category_label')}</label>
                   {isEditing ? (
                     <select 
                       value={category} 
                       onChange={(e) => setCategory(e.target.value as any)}
                       className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all cursor-pointer font-medium"
                     >
-                      <option value="Strength">Strength</option>
-                      <option value="Mobility">Mobility</option>
-                      <option value="Warm-up">Warm-up</option>
-                      <option value="Cardio">Cardio</option>
-                      <option value="Rehab">Rehab</option>
+                      <option value="Strength">{t('strength_cat')}</option>
+                      <option value="Mobility">{t('mobility_cat')}</option>
+                      <option value="Warm-up">{t('warmup_cat')}</option>
+                      <option value="Cardio">{t('cardio_cat')}</option>
+                      <option value="Rehab">{t('rehab_cat')}</option>
                     </select>
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
@@ -181,34 +183,34 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Subcategory</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('subcategory_label')}</label>
                   {isEditing ? (
                     <input 
                       type="text" 
                       value={subcategory} 
                       onChange={(e) => setSubcategory(e.target.value)}
-                      placeholder="e.g. Empuje horizontal"
+                      placeholder={t('subcategory_placeholder')}
                       className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
                     />
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {subcategory || "None"}
+                      {subcategory || t('none')}
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Type</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('type_label')}</label>
                   {isEditing ? (
                     <select 
                       value={type} 
                       onChange={(e) => setType(e.target.value as any)}
                       className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all cursor-pointer font-medium"
                     >
-                      <option value="Compound">Compound</option>
-                      <option value="Isolation">Isolation</option>
-                      <option value="Stretch">Stretch</option>
-                      <option value="Hold">Hold</option>
+                      <option value="Compound">{t('compound_type')}</option>
+                      <option value="Isolation">{t('isolation_type')}</option>
+                      <option value="Stretch">{t('stretch_type')}</option>
+                      <option value="Hold">{t('hold_type')}</option>
                     </select>
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
@@ -219,7 +221,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
 
                 {/* Body and Gear Fields */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Primary Muscle Groups (comma separated)</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('primary_muscle_groups_csv')}</label>
                   {isEditing ? (
                     <input 
                       type="text" 
@@ -229,13 +231,13 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                     />
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {musclesStr || "None"}
+                      {musclesStr || t('none')}
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Secondary Muscles (comma separated)</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('secondary_muscles_csv')}</label>
                   {isEditing ? (
                     <input 
                       type="text" 
@@ -245,13 +247,13 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                     />
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {secondaryMusclesStr || "None"}
+                      {secondaryMusclesStr || t('none')}
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Equipment / Tools (comma separated)</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('equipment_tools_csv')}</label>
                   {isEditing ? (
                     <input 
                       type="text" 
@@ -261,22 +263,22 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                     />
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {equipmentStr || "None"}
+                      {equipmentStr || t('none')}
                     </div>
                   )}
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-2">Difficulty Level</label>
+                  <label className="block text-xs font-semibold text-slate-500 mb-2">{t('difficulty_level')}</label>
                   {isEditing ? (
                     <select 
                       value={difficultyLevel} 
                       onChange={(e) => setDifficultyLevel(e.target.value as any)}
                       className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all cursor-pointer font-medium"
                     >
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
+                      <option value="Beginner">{t('beginner_level')}</option>
+                      <option value="Intermediate">{t('intermediate_level')}</option>
+                      <option value="Advanced">{t('advanced_level')}</option>
                     </select>
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
@@ -294,7 +296,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
             <section>
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">video_library</span>
-                Video & Media
+                {t('video_media')}
               </h3>
               <div className="space-y-4">
                 <div className="flex gap-3">
@@ -304,12 +306,12 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                         type="text" 
                         value={videoUrl} 
                         onChange={(e) => setVideoUrl(e.target.value)}
-                        placeholder="Paste YouTube or Vimeo link"
+                        placeholder={t('paste_video_link')}
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
                       />
                     ) : (
                       <div className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                        {videoUrl || "No video link available"}
+                        {videoUrl || t('no_video_link')}
                       </div>
                     )}
                     <span className="material-symbols-outlined absolute left-3 top-3.5 text-slate-400">link</span>
@@ -321,7 +323,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                       <iframe 
                         className="w-full h-full"
                         src={videoUrl.replace('watch?v=', 'embed/').split('?')[0].replace('shorts/', 'embed/')}
-                        title="Exercise Video"
+                        title={t('exercise_video')}
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
@@ -332,7 +334,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   <div className="relative w-full aspect-video rounded-2xl bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center border border-slate-200 dark:border-slate-700">
                     <div className="text-center">
                       <span className="material-symbols-outlined text-4xl text-slate-300">videocam_off</span>
-                      <p className="text-slate-500 font-medium mt-2">No video available</p>
+                      <p className="text-slate-500 font-medium mt-2">{t('no_video_available')}</p>
                     </div>
                   </div>
                 )}
@@ -346,7 +348,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">tune</span>
-                  Default Prescription Preview
+                  {t('default_prescription_preview')}
                 </h3>
               </div>
               
@@ -355,15 +357,15 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   <div className="absolute top-2 right-2 text-emerald-500">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
                   </div>
-                  <span className="font-bold text-base mb-1">Hypertrophy</span>
+                  <span className="font-bold text-base mb-1">{t('hypertrophy')}</span>
                   <span className="text-xs opacity-80 font-medium bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">3 x 10-12</span>
                 </div>
                 <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-60">
-                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">Strength</span>
+                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('strength_label')}</span>
                   <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">5 x 5</span>
                 </div>
                 <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-60">
-                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">Endurance</span>
+                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('endurance')}</span>
                   <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">3 x 15+</span>
                 </div>
               </div>
@@ -376,7 +378,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">edit_note</span>
-                  Exercise details & Description
+                  {t('exercise_details_description')}
                 </h3>
               </div>
               <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
@@ -385,12 +387,12 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                     value={notes} 
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
-                    placeholder="Add specific instructions, form cues, or progression strategies for this exercise..."
+                    placeholder={t('exercise_details_placeholder')}
                   />
                 ) : (
                   <div className="p-5 min-h-[160px]">
                     <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                      {notes || "No description provided."}
+                      {notes || t('no_description_provided')}
                     </p>
                   </div>
                 )}

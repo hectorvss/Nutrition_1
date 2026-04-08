@@ -190,7 +190,7 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
             
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Target Calories</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">{t('target_calories')}</label>
                 <div className="relative">
                   <Flame className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input 
@@ -203,15 +203,15 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Daily Structure</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">{t('daily_structure')}</label>
                 <div className="relative">
                   <Utensils className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <select className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer">
-                    <option>3 Meals</option>
-                    <option selected>3 Meals + 1 Snack</option>
-                    <option>3 Meals + 2 Snacks</option>
-                    <option>4 Meals</option>
-                    <option>5 Meals</option>
+                    <option>{t('three_meals')}</option>
+                    <option>{t('three_meals_one_snack')}</option>
+                    <option>{t('three_meals_two_snacks')}</option>
+                    <option>{t('four_meals')}</option>
+                    <option>{t('five_meals')}</option>
                   </select>
                   <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
                 </div>

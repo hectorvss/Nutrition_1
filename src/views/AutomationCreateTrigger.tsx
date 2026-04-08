@@ -11,6 +11,7 @@ import {
   Cake, 
   Plus 
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Trigger {
   id: string;
@@ -116,12 +117,20 @@ interface AutomationCreateTriggerProps {
 }
 
 export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCreateTriggerProps) {
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
 
+  const getTriggerName = (id: string, fallback: string) => t(`trigger_${id}_name`, { defaultValue: fallback });
+  const getTriggerDesc = (id: string, fallback: string) => t(`trigger_${id}_desc`, { defaultValue: fallback });
+  const getTriggerCategory = (category: string) => t(`trigger_category_${category.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, { defaultValue: category });
+
   const filtered = triggers.filter(t => {
-    const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.desc.toLowerCase().includes(search.toLowerCase());
-    const matchCat = activeCategory === 'All' || (activeCategory === 'Recommended' && t.recommended) || t.category === activeCategory;
+    const localizedName = getTriggerName(t.id, t.name);
+    const localizedDesc = getTriggerDesc(t.id, t.desc);
+    const localizedCategory = getTriggerCategory(t.category);
+    const matchSearch = localizedName.toLowerCase().includes(search.toLowerCase()) || localizedDesc.toLowerCase().includes(search.toLowerCase());
+    const matchCat = activeCategory === 'All' || (activeCategory === 'Recommended' && t.recommended) || localizedCategory === activeCategory || t.category === activeCategory;
     return matchSearch && matchCat;
   });
 
@@ -133,10 +142,10 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
             <div className="flex items-center gap-2 mb-2">
               <button onClick={onBack} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors flex items-center gap-1 text-sm font-medium">
                 <ArrowLeft className="w-4 h-4" />
-                Back to Automations
+                {t('back_to_automations')}
               </button>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create New Automation</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('create_new_automation')}</h1>
           </div>
           
           {/* Step Indicator */}
@@ -144,17 +153,17 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
             <div className="flex items-center relative">
               <div className="flex flex-col items-center relative z-10">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">1</div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">Trigger</span>
+                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('trigger_label')}</span>
               </div>
               <div className="w-16 md:w-24 h-1 bg-slate-200 dark:bg-slate-800 -ml-2 -mr-2 relative z-0"></div>
               <div className="flex flex-col items-center relative z-10">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center font-semibold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">2</div>
-                <span className="text-xs font-medium mt-2 text-slate-400">Message</span>
+                <span className="text-xs font-medium mt-2 text-slate-400">{t('message_label')}</span>
               </div>
               <div className="w-16 md:w-24 h-1 bg-slate-200 dark:bg-slate-800 -ml-2 -mr-2 relative z-0"></div>
               <div className="flex flex-col items-center relative z-10">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center font-semibold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">3</div>
-                <span className="text-xs font-medium mt-2 text-slate-400">Review</span>
+                <span className="text-xs font-medium mt-2 text-slate-400">{t('review')}</span>
               </div>
             </div>
           </div>
@@ -164,8 +173,8 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
           <div className="flex flex-col gap-6 mb-6">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Step 1: Choose a Trigger</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-sm">Select the event that will start this automation sequence.</p>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{t('step_choose_trigger')}</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">{t('select_trigger_event')}</p>
               </div>
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -173,7 +182,7 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400 outline-none" 
-                  placeholder="Search triggers..." 
+                  placeholder={t('search_triggers')} 
                   type="text" 
                 />
               </div>
@@ -189,7 +198,7 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
                       : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
-                  {cat}
+                  {cat === 'All' ? t('all') : cat === 'Recommended' ? t('recommended') : getTriggerCategory(cat)}
                 </button>
               ))}
             </div>
@@ -199,25 +208,25 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
             {filtered.map((trigger) => (
               <button 
                 key={trigger.id}
-                onClick={() => onNext(trigger.id, trigger.name, trigger.iconName, trigger.iconBg, trigger.iconColor)}
+                onClick={() => onNext(trigger.id, getTriggerName(trigger.id, trigger.name), trigger.iconName, trigger.iconBg, trigger.iconColor)}
                 className="group relative flex flex-col items-start p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-500/5 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800 transition-all text-left"
               >
                 {trigger.recommended && (
                   <div className="absolute top-4 right-4 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide">
-                    Recommended
+                    {t('recommended')}
                   </div>
                 )}
                 <div className={`w-12 h-12 rounded-xl ${trigger.iconBg} ${trigger.iconColor} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform`}>
                   <trigger.icon className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-base">{trigger.name}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{trigger.desc}</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-base">{getTriggerName(trigger.id, trigger.name)}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{getTriggerDesc(trigger.id, trigger.desc)}</p>
               </button>
             ))}
           </div>
 
           <div className="mt-auto pt-6 flex justify-end border-t border-slate-100 dark:border-slate-800">
-            <span className="text-xs text-slate-500 dark:text-slate-400 italic">Select a trigger to proceed to step 2.</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 italic">{t('select_trigger_to_continue')}</span>
           </div>
         </div>
       </div>

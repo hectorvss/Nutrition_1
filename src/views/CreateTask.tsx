@@ -18,6 +18,7 @@ import { useClient } from '../context/ClientContext';
 import { useTask } from '../context/TaskContext';
 import { useCalendar } from '../context/CalendarContext';
 import { supabase } from '../supabase';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CreateTaskProps {
   onNavigate: (view: string, data?: any) => void;
@@ -26,6 +27,7 @@ interface CreateTaskProps {
 }
 
 export default function CreateTask({ onNavigate, editId, initialDate }: CreateTaskProps) {
+  const { t } = useLanguage();
   const { clients } = useClient();
   const { refreshTasks } = useTask();
   const { addEvent, updateEvent, deleteEvent, refreshEvents, events } = useCalendar();
@@ -102,7 +104,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return alert("Task title is required");
+    if (!title.trim()) return alert(t('task_title_required'));
     setLoading(true);
 
     const client = clients.find(c => c.id === selectedClientId);
@@ -150,7 +152,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       endTime: endTime, // Correct property name for Context
       duration: calculateDuration(),
       clientId: selectedClientId,
-      client: client?.name || 'General Task',
+      client: client?.name || t('general_task'),
       avatar: client?.avatar || null,
       initials: client ? client.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'GT',
       priority: priority.toLowerCase(),
@@ -169,7 +171,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       onNavigate('calendar');
     } catch (error) {
       console.error("Failed to save task", error);
-      alert("An error occurred while saving the task.");
+      alert(t('task_save_error'));
     } finally {
       setLoading(false);
     }
@@ -177,7 +179,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
 
   const handleDelete = async () => {
     if (!editId) return;
-    if (!window.confirm("Are you sure you want to delete this task? This will also remove it from Google Calendar if synced.")) return;
+    if (!window.confirm(t('confirm_delete_task'))) return;
     
     setIsDeleting(true);
     try {
@@ -186,7 +188,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       onNavigate('calendar');
     } catch (error) {
       console.error("Failed to delete task", error);
-      alert("An error occurred while deleting the task.");
+      alert(t('task_delete_error'));
     } finally {
       setIsDeleting(false);
     }
@@ -198,8 +200,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
         <div className="w-full mx-auto flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
           <header className="flex items-center justify-between p-6 md:px-8 border-b border-slate-200 bg-white sticky top-0 z-10">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">{editId ? 'Edit Event' : 'Create New Event'}</h1>
-              <p className="text-sm text-slate-500">{editId ? 'Modify event details or delete it' : 'Add a new event or appointment to the schedule'}</p>
+              <h1 className="text-xl font-bold text-slate-900">{editId ? t('edit_event') : t('create_event')}</h1>
+              <p className="text-sm text-slate-500">{editId ? t('edit_event_desc') : t('create_event_desc')}</p>
             </div>
             <div className="flex items-center gap-3">
               {editId && (
@@ -210,7 +212,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                   className="px-5 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-200 flex items-center gap-2"
                 >
                   <Trash2 className="w-[18px] h-[18px]" />
-                  {isDeleting ? 'Deleting...' : 'Delete'}
+                  {isDeleting ? t('deleting') : t('delete_btn')}
                 </button>
               )}
               <button 
@@ -218,7 +220,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 onClick={() => onNavigate('calendar')}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button 
                 type="button"
@@ -227,7 +229,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
               >
                 {loading ? <div className="w-[18px] h-[18px] border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-[18px] h-[18px]" />}
-                {editId ? 'Update Event' : 'Save Event'}
+                {editId ? t('update_event') : t('save_event')}
               </button>
             </div>
           </header>
@@ -237,28 +239,28 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
               {/* General Details */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">General Details</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">Basic information about the task. Be specific for client clarity.</p>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('general_details')}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{t('general_details_note')}</p>
                 </div>
                 <div className="md:col-span-10 space-y-5 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Task Title</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('task_title')}</label>
                     <input 
                       required
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
-                      placeholder="e.g., Monthly Progress Review" 
+                      placeholder={t('task_title_placeholder')} 
                       type="text" 
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Description</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('task_description')}</label>
                     <textarea 
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                       className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
-                      placeholder="Add detailed instructions, meeting links, or objectives..." 
+                      placeholder={t('task_description_placeholder')} 
                       rows={4}
                     />
                   </div>
@@ -270,18 +272,18 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
               {/* Assignment */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">Assignment</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">Assign this task to a specific client, or leave blank for a general task.</p>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('assignment_section')}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{t('assignment_note')}</p>
                 </div>
                 <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
-                  <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Assign To</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">{t('assign_to')}</label>
                   <div className="relative mb-3">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                     <input 
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 placeholder:text-slate-400" 
-                      placeholder="Search clients..." 
+                      placeholder={t('search_clients')} 
                       type="text" 
                     />
                   </div>
@@ -295,7 +297,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                       }`}
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      General Task
+                      {t('general_task')}
                     </div>
                     {filteredClients.map((client) => {
                       const isSelected = selectedClientId === client.id;
@@ -327,17 +329,17 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
               {/* Activity Category */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">Activity Category</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">Select the type of activity to categorize this task correctly.</p>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('activity_category')}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{t('activity_category_note')}</p>
                 </div>
                 <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
                     {[
-                      { id: 'Training', icon: Dumbbell, activeClass: 'peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 hover:border-emerald-200', iconClass: 'peer-checked:text-emerald-600 group-hover:text-emerald-500' },
-                      { id: 'Nutrition', icon: Utensils, activeClass: 'peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 hover:border-orange-200', iconClass: 'peer-checked:text-orange-600 group-hover:text-orange-500' },
-                      { id: 'Check-in', icon: ClipboardCheck, activeClass: 'peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 hover:border-blue-200', iconClass: 'peer-checked:text-blue-600 group-hover:text-blue-500' },
-                      { id: 'Call', icon: Phone, activeClass: 'peer-checked:bg-purple-50 peer-checked:border-purple-500 peer-checked:text-purple-700 hover:border-purple-200', iconClass: 'peer-checked:text-purple-600 group-hover:text-purple-500' },
-                      { id: 'Admin', icon: ShieldCheck, activeClass: 'peer-checked:bg-slate-200 peer-checked:border-slate-500 peer-checked:text-slate-800 hover:border-slate-300', iconClass: 'peer-checked:text-slate-600 group-hover:text-slate-500' },
+                      { id: 'Training', label: t('category_training'), icon: Dumbbell, activeClass: 'peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 hover:border-emerald-200', iconClass: 'peer-checked:text-emerald-600 group-hover:text-emerald-500' },
+                      { id: 'Nutrition', label: t('category_nutrition'), icon: Utensils, activeClass: 'peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 hover:border-orange-200', iconClass: 'peer-checked:text-orange-600 group-hover:text-orange-500' },
+                      { id: 'Check-in', label: t('category_checkin'), icon: ClipboardCheck, activeClass: 'peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 hover:border-blue-200', iconClass: 'peer-checked:text-blue-600 group-hover:text-blue-500' },
+                      { id: 'Call', label: t('category_call'), icon: Phone, activeClass: 'peer-checked:bg-purple-50 peer-checked:border-purple-500 peer-checked:text-purple-700 hover:border-purple-200', iconClass: 'peer-checked:text-purple-600 group-hover:text-purple-500' },
+                      { id: 'Admin', label: t('category_admin'), icon: ShieldCheck, activeClass: 'peer-checked:bg-slate-200 peer-checked:border-slate-500 peer-checked:text-slate-800 hover:border-slate-300', iconClass: 'peer-checked:text-slate-600 group-hover:text-slate-500' },
                     ].map((cat) => (
                       <label key={cat.id} className="cursor-pointer group">
                         <input 
@@ -360,7 +362,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                         />
                         <div className={`flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 bg-slate-50 transition-all h-24 ${cat.activeClass}`}>
                           <cat.icon className={`w-6 h-6 mb-2 text-slate-400 transition-colors ${cat.iconClass}`} />
-                          <span className="text-xs font-semibold text-slate-600 peer-checked:text-current">{cat.id}</span>
+                          <span className="text-xs font-semibold text-slate-600 peer-checked:text-current">{cat.label}</span>
                         </div>
                       </label>
                     ))}
@@ -369,14 +371,14 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                   {category !== 'Admin' && (
                     <div className="pt-4 border-t border-slate-100">
                       <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                        {category === 'Call' ? 'Meeting URL' : `${category} Resource (Assigned)`}
+                        {category === 'Call' ? t('meeting_url') : t('resource_assigned')}
                       </label>
                       <div className="flex items-center gap-2">
                         {category === 'Call' ? (
                           <input 
                             value={linkUrl}
                             onChange={e => setLinkUrl(e.target.value)}
-                            placeholder="e.g., https://zoom.us/j/..."
+                            placeholder={t('meeting_url_placeholder')}
                             className="w-full rounded-lg border-slate-200 bg-slate-50 text-sm py-2.5 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         ) : (
@@ -392,8 +394,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                             }`} />
                             <span className="text-sm font-bold truncate">
                               {selectedClientId 
-                                ? `${category} with ${clients.find(c => c.id === selectedClientId)?.name || 'Client'}`
-                                : `Assign a client to generate ${category} link`}
+                                ? `${category} ${t('with')} ${clients.find(c => c.id === selectedClientId)?.name || t('client_label')}`
+                                : t('assign_client_link')}
                             </span>
                           </div>
                         )}
@@ -408,13 +410,13 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
               {/* Schedule */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">Schedule & Frequency</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">Set when this task needs to be completed.</p>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('schedule_frequency')}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{t('schedule_note')}</p>
                 </div>
                 <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Date</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('date')}</label>
                       <div className="relative">
                         <input 
                           className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
@@ -426,7 +428,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                     </div>
                     <div className="flex gap-3">
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Start Time</label>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('start_time')}</label>
                         <input 
                           className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
                           type="time" 
@@ -435,7 +437,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">End Time</label>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('end_time')}</label>
                         <input 
                           className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
                           type="time" 
@@ -446,17 +448,17 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">Repeat</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('repeat_label')}</label>
                     <select 
                       value={repeat}
                       onChange={e => setRepeat(e.target.value)}
                       className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5"
                     >
-                      <option>Does not repeat</option>
-                      <option>Daily</option>
-                      <option>Weekly</option>
-                      <option>Monthly</option>
-                      <option>Custom...</option>
+                      <option>{t('does_not_repeat')}</option>
+                      <option>{t('daily')}</option>
+                      <option>{t('weekly')}</option>
+                      <option>{t('monthly')}</option>
+                      <option>{t('custom')}</option>
                     </select>
                   </div>
                 </div>
@@ -467,8 +469,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
               {/* Priority */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12 pb-8">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">Priority</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">Indicate the urgency level of this task.</p>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('priority_label')}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{t('priority_note')}</p>
                 </div>
                 <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
                   {[
@@ -485,7 +487,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                         onChange={() => setPriority(p.level as any)}
                       />
                       <span className={`px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold transition-all block text-center ${p.activeClass}`}>
-                        {p.level}
+                        {p.level === 'Low' ? t('low') : p.level === 'Medium' ? t('medium') : t('high')}
                       </span>
                     </label>
                   ))}
@@ -495,7 +497,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-700 leading-relaxed">
-                  <strong>Info:</strong> All scheduled tasks are automatically synchronized with both your internal task list and calendar. If you have the Google Calendar integration enabled, this task will also be synced there automatically.
+                  <strong>{t('info_label')}</strong> {t('sync_info')}
                 </p>
               </div>
 

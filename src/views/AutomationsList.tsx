@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAutomation, Automation } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const iconMap: Record<string, React.ElementType> = {
   Hand, Repeat, AlertTriangle, PartyPopper, Cake, FileText, ClipboardCheck, UserPlus, Smartphone, TrendingUp
@@ -28,6 +29,7 @@ interface AutomationsListProps {
 }
 
 export default function AutomationsList({ onCreateNew, onEdit }: AutomationsListProps) {
+  const { t } = useLanguage();
   const { automations, toggleAutomation, deleteAutomation } = useAutomation();
   const { clients } = useClient();
   const [search, setSearch] = useState('');
@@ -43,10 +45,10 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
       <div className="w-full flex flex-col h-full">
         <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Automate Messages</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('automate_messages')}</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1">
-              Manage your automated workflows — 
-              <span className="font-semibold text-emerald-600"> {activeCount} of {automations.length}</span> active
+              {t('manage_automations_desc')}
+              <span className="font-semibold text-emerald-600"> {activeCount} {t('of_total', { defaultValue: 'of' })} {automations.length}</span> {t('active')}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -57,7 +59,7 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 className="pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none w-56 placeholder-slate-400"
-                placeholder="Search automations..."
+                placeholder={t('search_automations')}
                 type="text"
               />
             </div>
@@ -66,24 +68,24 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
               className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-sm transition-all transform active:scale-95"
             >
               <Plus className="w-5 h-5" />
-              New Automation
+              {t('new_automation')}
             </button>
           </div>
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1">
           <div className="grid grid-cols-12 gap-4 p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-xs font-bold text-slate-500 uppercase tracking-wider">
-            <div className="col-span-4">Automation Name</div>
-            <div className="col-span-3 hidden md:block">Trigger</div>
-            <div className="col-span-3 hidden sm:block">Message Preview</div>
-            <div className="col-span-2 text-right md:col-span-2">Status</div>
+            <div className="col-span-4">{t('automation_name')}</div>
+            <div className="col-span-3 hidden md:block">{t('trigger_label')}</div>
+            <div className="col-span-3 hidden sm:block">{t('message_preview')}</div>
+            <div className="col-span-2 text-right md:col-span-2">{t('status')}</div>
           </div>
 
           <div className="overflow-y-auto flex-1">
             {filtered.length === 0 && (
               <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                No automations found.{' '}
-                <button onClick={onCreateNew} className="text-emerald-500 font-semibold hover:underline">Create one!</button>
+                {t('no_automations_found')}{' '}
+                <button onClick={onCreateNew} className="text-emerald-500 font-semibold hover:underline">{t('create_one')}</button>
               </div>
             )}
             {filtered.map((auto) => {
@@ -113,14 +115,14 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
                       <button 
                         onClick={() => onEdit(auto)}
                         className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 opacity-0 group-hover:opacity-100 transition-all"
-                        title="Edit"
+                        title={t('edit')}
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => deleteAutomation(auto.id)}
                         className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                        title="Delete"
+                        title={t('delete_label')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -141,8 +143,8 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
           </div>
 
           <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-            <span>Showing {filtered.length} of {automations.length} automations.</span>
-            <span className="text-xs">{clients.length} clients will receive active messages.</span>
+            <span>{t('showing_automations', { shown: filtered.length, total: automations.length })}</span>
+            <span className="text-xs">{t('clients_receive_active_messages', { count: clients.length })}</span>
           </div>
         </div>
       </div>

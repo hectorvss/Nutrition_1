@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 // --- TYPES ---
 
@@ -268,7 +269,8 @@ function getPhaseRates(block: RoadmapBlock): { weightRate: number; strengthRate:
 function computeTrajectory(
   roadmap: RoadmapData,
   checkInsByDate: { date: string; weight: number }[],
-  goals: TrajectoryGoals
+  goals: TrajectoryGoals,
+  locale: string
 ): { chartData: any[]; currentWeekIndex: number } {
   const totalWeeks = goals.totalWeeks || roadmap.totalWeeks || 12;
   const startW = goals.startWeight || 0;
@@ -293,7 +295,7 @@ function computeTrajectory(
   for (let w = 0; w < totalWeeks; w++) {
     const weekNum = w + 1; // 1-based to match block startWeek / endWeek
     const weekDate = new Date(programStart.getTime() + w * msPerWeek);
-    const weekLabel = weekDate.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+    const weekLabel = weekDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 
     // Projection: derive rates from active blocks this week
     const activeBlocks = allBlocks.filter(b => weekNum >= b.startWeek && weekNum <= b.endWeek);
@@ -333,6 +335,7 @@ function computeTrajectory(
 }
 
 export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
+  const { t, language } = useLanguage();
   const { clients, reloadClients } = useClient();
   const client = clients.find(c => c.id === clientId);
 
@@ -735,7 +738,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                 {/* Nutrition Lane */}
                 <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
-                  <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Nutrition</h4>
+                  <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">{t('nutrition')}</h4>
                   <div className="flex gap-1 h-12 relative">
                     {roadmap.nutrition.map((block) => (
                       <div 
@@ -766,7 +769,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                 {/* Training Lane */}
                 <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
-                  <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Training</h4>
+                  <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">{t('training')}</h4>
                   <div className="flex gap-1 h-12">
                     {roadmap.training.map((block) => (
                       <div 
@@ -803,14 +806,14 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <Icon name="psychology" className="font-variation-fill" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Block Strategic Details</h3>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('planning_block_strategic_details')}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     Strategy Roadmap • Week {roadmap.currentWeek} Intelligence
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-widest">Active Phase</span>
+                <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-widest">{t('planning_active_phase')}</span>
                 <button className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><Icon name="settings" /></button>
               </div>
             </div>
@@ -827,7 +830,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                     {/* Header with Title & Save */}
                     <div className="flex items-center justify-between -mb-6">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Active Phase Selection</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{t('planning_active_phase_selection')}</span>
                         <h4 className="text-xl font-bold text-slate-900 dark:text-white">{selectedBlock.title}</h4>
                       </div>
                       <div className="flex items-center gap-2">
@@ -864,7 +867,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2"
                         >
                           <Icon name="save" className="text-[16px]" />
-                          Save Details
+                          {t('planning_save_details')}
                         </button>
                       </div>
                     </div>
@@ -875,14 +878,14 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
                         <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
                           <Icon name="restaurant" className="text-[20px]" />
-                          <h4 className="font-semibold text-xs uppercase tracking-widest">Nutrition Strategy</h4>
+                          <h4 className="font-semibold text-xs uppercase tracking-widest">{t('planning_nutrition_strategy')}</h4>
                         </div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">(W{selectedBlock.startWeek}-{selectedBlock.endWeek})</span>
                       </div>
                       
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Daily Calories</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('planning_daily_calories')}</p>
                           <div className="flex items-center gap-1.5 font-bold">
                             <input 
                               className="text-xl bg-transparent border-none p-0 focus:ring-0 w-full outline-none text-slate-900 dark:text-white"
@@ -893,7 +896,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Macro Split</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('planning_macro_split')}</p>
                           <div className="flex flex-col">
                             <input 
                               className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
@@ -904,7 +907,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           </div>
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Meal Freq</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('planning_meal_freq')}</p>
                           <input 
                             className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={draftStratData?.freq || ''}
@@ -912,7 +915,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           />
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Hydration</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('hydration_goal')}</p>
                           <input 
                             className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={draftStratData?.water || ''}
@@ -970,14 +973,14 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
                         <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
                           <Icon name="fitness_center" className="text-[20px]" />
-                          <h4 className="font-semibold text-xs uppercase tracking-widest">Training Strategy</h4>
+                          <h4 className="font-semibold text-xs uppercase tracking-widest">{t('planning_training_strategy')}</h4>
                         </div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">(W{selectedBlock.startWeek}-{selectedBlock.endWeek})</span>
                       </div>
 
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Block Focus</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('planning_block_focus')}</p>
                           <input 
                             className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={draftStratData?.trainingFocus || ''}
@@ -985,7 +988,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           />
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Volume (Sets)</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('planning_volume_sets')}</p>
                           <input 
                             className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white w-full"
                             value={draftStratData?.trainingVolume || ''}
@@ -993,7 +996,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           />
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Intensity</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('intensity_level')}</p>
                           <input 
                             className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={draftStratData?.trainingIntensity || ''}
@@ -1001,7 +1004,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                           />
                         </div>
                         <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Cardio</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('planning_cardio')}</p>
                           <input 
                             className="text-xl font-bold bg-transparent border-none p-0 focus:ring-0 outline-none text-slate-900 dark:text-white"
                             value={draftStratData?.cardio || ''}
@@ -1152,7 +1155,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 ) : (
                   <div className="p-20 text-center text-slate-400 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
                     <Icon name="touch_app" className="mb-2 text-3xl opacity-20" />
-                    <p className="font-bold uppercase tracking-widest text-[11px]">Select a roadmap phase to inspect strategic intelligence</p>
+	                    <p className="font-bold uppercase tracking-widest text-[11px]">{t('planning_select_phase_hint')}</p>
                   </div>
                 )}
               </AnimatePresence>
@@ -1176,7 +1179,12 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
             const totalWeeks = tGoals.totalWeeks || 12;
 
-            const { chartData, currentWeekIndex } = computeTrajectory(roadmap, checkInsHistory, tGoals);
+            const { chartData, currentWeekIndex } = computeTrajectory(
+              roadmap,
+              checkInsHistory,
+              tGoals,
+              language === 'es' ? 'es-ES' : 'en-US'
+            );
 
             // KPIs
             const finalProjected = chartData[chartData.length - 1]?.projected ?? tGoals.startWeight;
@@ -1207,13 +1215,13 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <div className="text-emerald-400 mb-1.5 uppercase tracking-widest">{label}</div>
                   {actual?.value != null && (
                     <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />Actual</span>
+	                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />{t('planning_actual')}</span>
                       <span>{actual.value} kg</span>
                     </div>
                   )}
                   {proj?.value != null && (
                     <div className="flex items-center justify-between gap-3 mt-0.5">
-                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />Proj</span>
+	                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />{t('planning_projected_short')}</span>
                       <span>{proj.value} kg</span>
                     </div>
                   )}
@@ -1230,16 +1238,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Icon name="analytics" className="text-emerald-500" />
-                    Goal Trajectory & Predictions
+                    {t('planning_goal_trajectory_predictions')}
                   </h3>
                   <div className="flex items-center gap-5">
                     <div className="flex items-center gap-1.5">
                       <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" /></svg>
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Actual</span>
+	                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_actual')}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#10b981" strokeWidth="3" strokeDasharray="5 3" strokeLinecap="round" /></svg>
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Projected</span>
+	                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_projected')}</span>
                     </div>
                   </div>
                 </div>
@@ -1250,7 +1258,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Program Start Date */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Program Start Date</p>
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('planning_program_start_date')}</p>
                       <input
                         type="date"
                         className="text-sm font-bold text-slate-900 dark:text-white bg-transparent border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 w-full focus:ring-2 focus:ring-emerald-500 outline-none"
@@ -1261,7 +1269,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Total Weeks */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Duration</p>
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('total_duration')}</p>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
@@ -1273,16 +1281,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                             if (!isNaN(v) && v > 0) updateGoals({ totalWeeks: v });
                           }}
                         />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">weeks</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{t('weeks_label')}</span>
                       </div>
                       <p className="text-[9px] text-slate-400 mt-1">
-                        Week {Math.min(currentWeekIndex + 1, totalWeeks)} of {totalWeeks} &mdash; {currentWeekIndex >= totalWeeks - 1 ? 'Finished' : `${totalWeeks - currentWeekIndex - 1}w remaining`}
+                        {t('planning_week_of', { current: Math.min(currentWeekIndex + 1, totalWeeks), total: totalWeeks })} &mdash; {currentWeekIndex >= totalWeeks - 1 ? t('planning_finished') : t('planning_weeks_remaining', { count: totalWeeks - currentWeekIndex - 1 })}
                       </p>
                     </div>
 
                     {/* Target Weight */}
                     <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
-                      <p className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">Target Weight</p>
+	                      <p className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">{t('target_weight')}</p>
                       <div className="flex items-baseline gap-1.5">
                         <input
                           type="number" step="0.5"
@@ -1300,7 +1308,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Start Weight */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Starting Weight</p>
+	                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('start_weight')}</p>
                       <div className="flex items-baseline gap-1">
                         <input
                           type="number" step="0.5"
@@ -1319,7 +1327,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Strength Target */}
                     <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
-                      <p className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">Strength Target</p>
+	                      <p className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">{t('planning_strength_target')}</p>
                       <div className="flex items-baseline gap-1.5">
                         <input
                           type="number" step="2.5"
@@ -1333,11 +1341,11 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Reference Lift */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">Reference Lift</p>
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('planning_reference_lift')}</p>
                       <input
                         className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-full focus:ring-0 outline-none"
                         value={tGoals.exerciseName || ''}
-                        placeholder="e.g. Deadlift"
+                        placeholder={t('planning_reference_lift_placeholder')}
                         onChange={e => updateGoals({ exerciseName: e.target.value })}
                       />
                     </div>
@@ -1457,7 +1465,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                     {/* No data banner inside chart area */}
                     {!hasActualData && (
                       <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-1">
-                        No check-in weight data yet — showing projection only
+                        {t('planning_no_checkin_projection')}
                       </p>
                     )}
                   </div>
@@ -1471,7 +1479,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Icon name="flag" className="text-emerald-500" />
-                Goals & Targets
+                {t('goals_targets')}
               </h3>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1509,9 +1517,9 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-[11px] font-semibold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">
                   <Icon name="timeline" className="text-slate-400" />
-                  Key Milestones
+                  {t('key_milestones')}
                 </h3>
-                <button className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ Add Milestone</button>
+                <button className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ {t('planning_add_milestone')}</button>
               </div>
               <div className="space-y-3">
                 {roadmap.milestones.map((m) => (
@@ -1525,7 +1533,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                     </div>
                     {m.status !== 'done' && (
                       <button className="px-3 py-1.5 text-[9px] font-semibold bg-white dark:bg-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 uppercase tracking-widest shadow-sm">
-                        <Icon name="task" className="text-[14px]" /> Connect
+                        <Icon name="task" className="text-[14px]" /> {t('planning_connect')}
                       </button>
                     )}
                   </div>
@@ -1537,11 +1545,11 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
               <h3 className="text-[11px] font-semibold text-slate-900 dark:text-white mb-6 flex items-center gap-2 uppercase tracking-widest">
                 <Icon name="rule" className="text-slate-400" />
-                Strategic Assumptions
+                {t('strategic_assumptions')}
               </h3>
               <div className="space-y-5">
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Daily Steps Target</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('daily_steps_target')}</label>
                   <input 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
@@ -1550,7 +1558,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Sleep Hygiene</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('sleep_hygiene')}</label>
                   <input 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
@@ -1559,7 +1567,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">Primary Constraints</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('primary_constraints')}</label>
                   <textarea 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all resize-none font-medium leading-relaxed h-20" 
                     value={roadmap.assumptions.constraints}
@@ -1595,7 +1603,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
                   <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Icon name="edit" className="text-emerald-500" />
-                    Edit {draftBlockValues.type === 'nutrition' ? 'Nutrition' : 'Training'} Block
+                    {t('planning_edit_block', { type: draftBlockValues.type === 'nutrition' ? t('nutrition') : t('training') })}
                   </h3>
                   <button onClick={() => { setEditingBlockId(null); setDraftBlockValues(null); }} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-400">
                     <Icon name="close" />
@@ -1611,7 +1619,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   )}
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Block Title</label>
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('planning_block_title')}</label>
                     <input 
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                       value={draftBlockValues.title || ''}
@@ -1621,7 +1629,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Start Week</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('planning_start_week')}</label>
                       <select 
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={draftBlockValues.startWeek}
@@ -1636,12 +1644,12 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                         }}
                       >
                         {Array.from({ length: 12 }).map((_, i) => (
-                          <option key={i + 1} value={i + 1}>Week {i + 1}</option>
+                          <option key={i + 1} value={i + 1}>{t('planning_week_label', { week: i + 1 })}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Duration</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('total_duration')}</label>
                       <select 
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={(draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1) + 1}
@@ -1654,26 +1662,26 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                         }}
                       >
                         {Array.from({ length: 12 }).map((_, i) => (
-                          <option key={i + 1} value={i + 1}>{i + 1} Weeks</option>
+                          <option key={i + 1} value={i + 1}>{i + 1} {t('weeks_label')}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">End Week</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('planning_end_week')}</label>
                       <select 
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={draftBlockValues.endWeek}
                         onChange={(e) => setDraftBlockValues({ ...draftBlockValues, endWeek: parseInt(e.target.value) })}
                       >
                         {Array.from({ length: 12 }).map((_, i) => (
-                          <option key={i + 1} disabled={i + 1 < (draftBlockValues.startWeek || 1)} value={i + 1}>Week {i + 1}</option>
+                          <option key={i + 1} disabled={i + 1 < (draftBlockValues.startWeek || 1)} value={i + 1}>{t('planning_week_label', { week: i + 1 })}</option>
                         ))}
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">Block Color</label>
+	                    <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('planning_block_color')}</label>
                     <div className="flex gap-2">
                       {[
                         'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',

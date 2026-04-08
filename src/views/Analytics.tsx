@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../api';
 import { motion, AnimatePresence } from 'motion/react';
+import { useLanguage } from '../context/LanguageContext';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -37,6 +38,7 @@ import {
 type AnalyticsTab = 'business' | 'nutrition' | 'training';
 
 export default function Analytics() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('business');
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +63,7 @@ export default function Analytics() {
       <div className="p-10 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-500 font-medium">Loading analytics...</p>
+          <p className="text-slate-500 font-medium">{t('loading_analytics')}</p>
         </div>
       </div>
     );
@@ -71,15 +73,15 @@ export default function Analytics() {
     <div className="p-6 md:p-8 lg:p-10 space-y-6">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Analytics</h1>
-          <p className="text-slate-500 text-sm">Business performance and client metrics overview.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('analytics_title')}</h1>
+          <p className="text-slate-500 text-sm">{t('analytics_overview')}</p>
         </div>
         <div className="flex items-center gap-3 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-          <button className="px-4 py-2 rounded-md bg-emerald-50 text-emerald-600 text-sm font-medium">Last 30 Days</button>
+          <button className="px-4 py-2 rounded-md bg-emerald-50 text-emerald-600 text-sm font-medium">{t('last_30_days')}</button>
           <div className="w-px h-6 bg-slate-200"></div>
           <div className="flex items-center gap-2 px-3">
             <Calendar className="w-5 h-5 text-slate-400" />
-            <span className="text-sm text-slate-600 font-medium">Aug 1, 2023 - Aug 30, 2023</span>
+            <span className="text-sm text-slate-600 font-medium">{t('analytics_sample_date_range')}</span>
             <ChevronDown className="w-5 h-5 text-slate-400 cursor-pointer" />
           </div>
         </div>
@@ -96,7 +98,7 @@ export default function Analytics() {
             }`}
           >
             <TrendingUp className="w-5 h-5" />
-            Business
+            {t('analytics_business_tab')}
           </button>
           <button 
             onClick={() => setActiveTab('nutrition')}
@@ -107,7 +109,7 @@ export default function Analytics() {
             }`}
           >
             <Utensils className="w-5 h-5" />
-            Nutrition
+            {t('analytics_nutrition_tab')}
           </button>
           <button 
             onClick={() => setActiveTab('training')}
@@ -118,7 +120,7 @@ export default function Analytics() {
             }`}
           >
             <Dumbbell className="w-5 h-5" />
-            Training
+            {t('analytics_training_tab')}
           </button>
         </div>
       </div>
@@ -143,11 +145,16 @@ export default function Analytics() {
 }
 
 function BusinessAnalytics({ data }: any) {
+  const { t, language } = useLanguage();
+  const monthLabels = Array.from({ length: 12 }, (_, i) =>
+    new Date(2026, i, 1).toLocaleString(language === 'es' ? 'es-ES' : 'en-US', { month: 'short' })
+  );
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 pt-2">
         <StatCard 
-          title="Total Clients" 
+          title={t('analytics_total_clients')} 
           value={data?.totalClients || "0"} 
           change="+12%" 
           isPositive={true} 
@@ -156,7 +163,7 @@ function BusinessAnalytics({ data }: any) {
           iconColor="text-blue-600" 
         />
         <StatCard 
-          title="Monthly Rev" 
+          title={t('analytics_monthly_rev')} 
           value={data?.revenue >= 1000 ? `$${(data.revenue / 1000).toFixed(1)}k` : `$${data?.revenue || '0'}`} 
           change="+8.5%" 
           isPositive={true} 
@@ -166,7 +173,7 @@ function BusinessAnalytics({ data }: any) {
           showChart={true}
         />
         <StatCard 
-          title="Retention" 
+          title={t('analytics_retention')} 
           value={`${data?.retention || "0"}%`} 
           change={`${data?.retention >= 90 ? '+0.0%' : '-1.2%'}`} 
           isPositive={data?.retention >= 90} 
@@ -175,7 +182,7 @@ function BusinessAnalytics({ data }: any) {
           iconColor="text-purple-600" 
         />
         <StatCard 
-          title="Avg LTV" 
+          title={t('analytics_avg_ltv')} 
           value={`$${data?.ltv || "0"}`} 
           change="+5.4%" 
           isPositive={true} 
@@ -184,7 +191,7 @@ function BusinessAnalytics({ data }: any) {
           iconColor="text-amber-600" 
         />
         <StatCard 
-          title="Churn Rate" 
+          title={t('analytics_churn_rate')} 
           value={`${data?.churnRate || "0"}%`} 
           change={data?.churnRate > 5 ? "+1.1%" : "-0.5%"} 
           isPositive={data?.churnRate <= 5} 
@@ -193,7 +200,7 @@ function BusinessAnalytics({ data }: any) {
           iconColor="text-red-600" 
         />
         <StatCard 
-          title="New Leads" 
+          title={t('analytics_new_leads')} 
           value={data?.newLeads || "0"} 
           change="+15%" 
           isPositive={true} 
@@ -207,23 +214,23 @@ function BusinessAnalytics({ data }: any) {
         <div className="xl:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Revenue vs Renewals</h2>
-              <p className="text-sm text-slate-500">Monthly financial performance against client retention.</p>
+              <h2 className="text-lg font-bold text-slate-900">{t('revenue_renewals')}</h2>
+              <p className="text-sm text-slate-500">{t('revenue_renewals_desc')}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-xs">
                 <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                <span className="text-slate-600">Revenue</span>
+                <span className="text-slate-600">{t('revenue_label')}</span>
               </div>
               <div className="flex items-center gap-2 text-xs">
                 <span className="w-3 h-3 rounded-full bg-slate-200"></span>
-                <span className="text-slate-600">Renewals</span>
+                <span className="text-slate-600">{t('renewals_label')}</span>
               </div>
             </div>
           </div>
           <div className="h-[300px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => {
+              <AreaChart data={monthLabels.map((m, i) => {
                 const now = new Date();
                 const currentMonth = now.getMonth();
                 return {
@@ -253,7 +260,7 @@ function BusinessAnalytics({ data }: any) {
                 />
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: any) => [`$${value}`, 'Revenue']}
+                  formatter={(value: any) => [`$${value}`, t('revenue_label')]}
                 />
                 <Area 
                   type="monotone" 
@@ -273,8 +280,8 @@ function BusinessAnalytics({ data }: any) {
         <div className="xl:col-span-1 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Protocol Compliance</h3>
-              <p className="text-xs text-slate-500">Overall coaching delivery quality</p>
+              <h3 className="text-lg font-bold text-slate-900">{t('protocol_compliance')}</h3>
+              <p className="text-xs text-slate-500">{t('compliance_desc')}</p>
             </div>
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg ${
               (data?.complianceScore || 0) > 80 ? 'bg-emerald-50 text-emerald-600' : 
@@ -284,12 +291,12 @@ function BusinessAnalytics({ data }: any) {
             </div>
           </div>
           <div className="flex flex-col gap-6 flex-1 justify-center">
-            <ProgressBar label="Workout Adherence" value={`${data?.training?.avgCompletion || 0}%`} percentage={data?.training?.avgCompletion || 0} color="bg-emerald-500" />
-            <ProgressBar label="Nutrition Consistency" value={`${data?.nutrition?.avgHydration || 0}%`} percentage={data?.nutrition?.avgHydration || 0} color="bg-blue-500" />
-            <ProgressBar label="Check-in Reliability" value={`${data?.retention || 0}%`} percentage={data?.retention || 0} color="bg-purple-500" />
+            <ProgressBar label={t('workout_adherence')} value={`${data?.training?.avgCompletion || 0}%`} percentage={data?.training?.avgCompletion || 0} color="bg-emerald-500" />
+            <ProgressBar label={t('nutrition_consistency')} value={`${data?.nutrition?.avgHydration || 0}%`} percentage={data?.nutrition?.avgHydration || 0} color="bg-blue-500" />
+            <ProgressBar label={t('checkin_reliability')} value={`${data?.retention || 0}%`} percentage={data?.retention || 0} color="bg-purple-500" />
           </div>
           <p className="mt-6 text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
-            Composite index of client protocol compliance (last 30 days).
+            {t('compliance_note')}
           </p>
         </div>
       </div>
@@ -297,31 +304,31 @@ function BusinessAnalytics({ data }: any) {
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h3 className="text-lg font-bold text-slate-900">Retention by Cohort</h3>
-            <p className="text-sm text-slate-500">Percentage of clients retained over months since signup.</p>
+            <h3 className="text-lg font-bold text-slate-900">{t('retention_by_cohort')}</h3>
+            <p className="text-sm text-slate-500">{t('retention_subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Less</span>
+            <span className="text-xs font-medium text-slate-500">{t('less_label')}</span>
             <div className="flex gap-1">
               <div className="w-3 h-3 rounded-sm bg-emerald-50"></div>
               <div className="w-3 h-3 rounded-sm bg-emerald-200"></div>
               <div className="w-3 h-3 rounded-sm bg-emerald-400"></div>
               <div className="w-3 h-3 rounded-sm bg-emerald-600"></div>
             </div>
-            <span className="text-xs font-medium text-slate-500">More</span>
+            <span className="text-xs font-medium text-slate-500">{t('more_label')}</span>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-center">
             <thead>
               <tr className="text-xs text-slate-500 font-medium border-b border-slate-100">
-                <th className="pb-3 text-left pl-4 font-normal">Cohort</th>
-                <th className="pb-3 font-normal">Month 1</th>
-                <th className="pb-3 font-normal">Month 2</th>
-                <th className="pb-3 font-normal">Month 3</th>
-                <th className="pb-3 font-normal">Month 4</th>
-                <th className="pb-3 font-normal">Month 5</th>
-                <th className="pb-3 font-normal">Month 6</th>
+                <th className="pb-3 text-left pl-4 font-normal">{t('cohort_label')}</th>
+                <th className="pb-3 font-normal">{t('analytics_month_1')}</th>
+                <th className="pb-3 font-normal">{t('analytics_month_2')}</th>
+                <th className="pb-3 font-normal">{t('analytics_month_3')}</th>
+                <th className="pb-3 font-normal">{t('analytics_month_4')}</th>
+                <th className="pb-3 font-normal">{t('analytics_month_5')}</th>
+                <th className="pb-3 font-normal">{t('analytics_month_6')}</th>
               </tr>
             </thead>
             <tbody className="text-slate-600">
@@ -330,7 +337,7 @@ function BusinessAnalytics({ data }: any) {
                   <CohortRow key={i} cohort={c.cohort} data={c.data} />
                 ))
               ) : (
-                <CohortRow cohort="No data" data={[null, null, null, null, null, null]} />
+                <CohortRow cohort={t('no_data')} data={[null, null, null, null, null, null]} />
               )}
             </tbody>
           </table>
@@ -341,13 +348,15 @@ function BusinessAnalytics({ data }: any) {
 }
 
 function NutritionAnalytics({ data }: any) {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
         <StatCard 
-          title="Avg. Fruit & Veg" 
+          title={t('avg_fruit_veg')} 
           value={data?.avgFruitVeg || "0"} 
-          unit="serv/day"
+          unit={t('serv_day')}
           change="+0.8" 
           isPositive={true} 
           icon={<Utensils className="w-6 h-6" />} 
@@ -355,7 +364,7 @@ function NutritionAnalytics({ data }: any) {
           iconColor="text-green-600" 
         />
         <StatCard 
-          title="Hydration Goal" 
+          title={t('hydration_goal')} 
           value={`${data?.avgHydration || "0"}%`} 
           change="+5%" 
           isPositive={true} 
@@ -364,42 +373,42 @@ function NutritionAnalytics({ data }: any) {
           iconColor="text-blue-600" 
         />
         <StatCard 
-          title="Alcohol Frequency" 
+          title={t('alcohol_frequency')} 
           value={data?.alcoholAlerts || "0"} 
-          unit="alerts"
-          change={data?.alcoholAlerts > 5 ? "High" : "Low"} 
+          unit={t('analytics_alerts_unit')}
+          change={data?.alcoholAlerts > 5 ? t('analytics_high') : t('analytics_low')} 
           isPositive={data?.alcoholAlerts <= 5} 
           icon={<AlertTriangle className="w-6 h-6" />} 
           iconBg="bg-red-50" 
           iconColor="text-red-600" 
-          changeLabel={data?.alcoholAlerts > 0 ? `${data.alcoholAlerts} reports this month` : "No alerts"}
+          changeLabel={data?.alcoholAlerts > 0 ? t('analytics_reports_this_month', { count: data.alcoholAlerts }) : t('analytics_no_alerts')}
         />
         <StatCard 
-          title="Supplements Logged" 
+          title={t('supplements_logged')} 
           value={`${data?.supplementAdherence || "0"}%`} 
           change="+12%" 
           isPositive={true} 
           icon={<Pill className="w-6 h-6" />} 
           iconBg="bg-purple-50" 
           iconColor="text-purple-600" 
-          changeLabel="Adherence rate"
+          changeLabel={t('analytics_adherence_rate')}
         />
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Calorie Intake vs. Goal</h2>
-            <p className="text-sm text-slate-500">Average daily calorie consumption across all clients vs target goals.</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('calorie_intake_goal')}</h2>
+            <p className="text-sm text-slate-500">{t('calorie_intake_desc')}</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs">
               <span className="w-3 h-3 rounded-full bg-emerald-100 border border-emerald-500"></span>
-              <span className="text-slate-600">Intake</span>
+              <span className="text-slate-600">{t('intake_label')}</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <span className="w-3 h-3 rounded-full bg-slate-200 border border-slate-400"></span>
-              <span className="text-slate-600">Goal</span>
+              <span className="text-slate-600">{t('goal_label')}</span>
             </div>
           </div>
         </div>
@@ -432,7 +441,7 @@ function NutritionAnalytics({ data }: any) {
             </defs>
           </svg>
           <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-slate-400 font-medium px-2">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+            {[t('analytics_day_mon'), t('analytics_day_tue'), t('analytics_day_wed'), t('analytics_day_thu'), t('analytics_day_fri'), t('analytics_day_sat'), t('analytics_day_sun')].map(day => (
               <span key={day}>{day}</span>
             ))}
           </div>
@@ -443,13 +452,13 @@ function NutritionAnalytics({ data }: any) {
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Micro-nutrient Adequacy</h3>
-              <p className="text-sm text-slate-500">Compliance trends for key deficiencies.</p>
+              <h3 className="text-lg font-bold text-slate-900">{t('micronutrient_adequacy')}</h3>
+              <p className="text-sm text-slate-500">{t('micronutrient_desc')}</p>
             </div>
             <div className="flex items-center gap-4 mt-2 sm:mt-0">
-              <LegendItem color="bg-amber-500" label="Iron" />
-              <LegendItem color="bg-blue-500" label="Vit D" />
-              <LegendItem color="bg-purple-500" label="Magnesium" />
+              <LegendItem color="bg-amber-500" label={t('iron')} />
+              <LegendItem color="bg-blue-500" label={t('vit_d')} />
+              <LegendItem color="bg-purple-500" label={t('magnesium')} />
             </div>
           </div>
           <div className="flex-1 relative min-h-[220px]">
@@ -471,10 +480,10 @@ function NutritionAnalytics({ data }: any) {
               />
             </svg>
             <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-slate-400 font-medium px-1">
-              <span>Week 1</span>
-              <span>Week 2</span>
-              <span>Week 3</span>
-              <span>Week 4</span>
+              <span>{t('analytics_week_1')}</span>
+              <span>{t('analytics_week_2')}</span>
+              <span>{t('analytics_week_3')}</span>
+              <span>{t('analytics_week_4')}</span>
             </div>
             <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-xs text-slate-400 font-medium pr-2">
               <span>100%</span>
@@ -485,8 +494,8 @@ function NutritionAnalytics({ data }: any) {
         </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-slate-900">Top Deficit Clients</h3>
-            <button className="text-emerald-600 text-xs font-semibold hover:underline">View All</button>
+            <h3 className="text-lg font-bold text-slate-900">{t('top_deficit_clients')}</h3>
+            <button className="text-emerald-600 text-xs font-semibold hover:underline">{t('view_all')}</button>
           </div>
           <div className="flex flex-col gap-4 overflow-y-auto">
             {data?.nutrition?.topDeficits && data.nutrition.topDeficits.length > 0 ? (
@@ -500,7 +509,7 @@ function NutritionAnalytics({ data }: any) {
                 />
               ))
             ) : (
-              <p className="text-sm text-slate-500 italic text-center py-8">No deficit data yet</p>
+              <p className="text-sm text-slate-500 italic text-center py-8">{t('no_deficit_data')}</p>
             )}
           </div>
         </div>
@@ -510,11 +519,13 @@ function NutritionAnalytics({ data }: any) {
 }
 
 function TrainingAnalytics({ data }: any) {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
         <StatCard 
-          title="Avg. Workout Completion %" 
+          title={t('workout_completion')} 
           value={`${data?.avgCompletion || "0"}%`} 
           change="+4%" 
           isPositive={true} 
@@ -523,7 +534,7 @@ function TrainingAnalytics({ data }: any) {
           iconColor="text-blue-600" 
         />
         <StatCard 
-          title="Total Volume Lifted (Weekly)" 
+          title={t('volume_lifted')} 
           value={`${(data?.totalVolume / 1000).toFixed(1)}k`} 
           unit="kg"
           change="+12.5%" 
@@ -535,17 +546,17 @@ function TrainingAnalytics({ data }: any) {
           chartColor="text-orange-500"
         />
         <StatCard 
-          title="Total Active Programs" 
+          title={t('active_programs')} 
           value="68" 
-          change="+5 New" 
+          change={t('analytics_new_programs_change')} 
           isPositive={true} 
           icon={<ListChecks className="w-6 h-6" />} 
           iconBg="bg-purple-50" 
           iconColor="text-purple-600" 
-          changeLabel="this month"
+          changeLabel={t('analytics_this_month')}
         />
         <StatCard 
-          title="Avg. RPE Score" 
+          title={t('rpe_score')} 
           value={data?.avgRPE || "0"} 
           change="0.0" 
           isNeutral={true}
@@ -558,17 +569,17 @@ function TrainingAnalytics({ data }: any) {
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Volume vs. Intensity Trends</h2>
-            <p className="text-sm text-slate-500">Tracking total volume lifted against average intensity over time.</p>
+            <h2 className="text-lg font-bold text-slate-900">{t('volume_intensity_trends')}</h2>
+            <p className="text-sm text-slate-500">{t('volume_intensity_desc')}</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-xs">
               <span className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white ring-1 ring-emerald-500"></span>
-              <span className="text-slate-600">Volume (kg)</span>
+              <span className="text-slate-600">{t('volume_kg')}</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <span className="w-3 h-3 rounded-full bg-blue-500 border-2 border-white ring-1 ring-blue-500"></span>
-              <span className="text-slate-600">Intensity (RPE)</span>
+              <span className="text-slate-600">{t('intensity_rpe')}</span>
             </div>
           </div>
         </div>
@@ -619,7 +630,7 @@ function TrainingAnalytics({ data }: any) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900">Training Type Distribution</h3>
+            <h3 className="text-lg font-bold text-slate-900">{t('training_distribution')}</h3>
             <button className="text-slate-400 hover:text-slate-600">
               <MoreHorizontal className="w-5 h-5" />
             </button>
@@ -647,7 +658,7 @@ function TrainingAnalytics({ data }: any) {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold text-slate-900">100%</span>
-                <span className="text-[10px] text-slate-500 uppercase tracking-wide">Breakdown</span>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wide">{t('breakdown_label')}</span>
               </div>
             </div>
             <div className="flex-1 space-y-3">
@@ -662,7 +673,7 @@ function TrainingAnalytics({ data }: any) {
         </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900">Muscle Group Frequency</h3>
+            <h3 className="text-lg font-bold text-slate-900">{t('muscle_frequency')}</h3>
             <button className="text-slate-400 hover:text-slate-600">
               <MoreHorizontal className="w-5 h-5" />
             </button>
@@ -682,7 +693,10 @@ function TrainingAnalytics({ data }: any) {
 }
 
 // Helper Components
-function StatCard({ title, value, unit, change, isPositive, isNeutral, icon, iconBg, iconColor, showChart, chartColor = "text-emerald-500", changeLabel = "vs last month" }: any) {
+function StatCard({ title, value, unit, change, isPositive, isNeutral, icon, iconBg, iconColor, showChart, chartColor = "text-emerald-500", changeLabel = "" }: any) {
+  const { t } = useLanguage();
+  const resolvedChangeLabel = changeLabel || t('vs_last_month');
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between h-40 group hover:border-emerald-500/30 transition-all relative overflow-hidden">
       <div className="flex justify-between items-start relative z-10">
@@ -711,7 +725,7 @@ function StatCard({ title, value, unit, change, isPositive, isNeutral, icon, ico
           {!isNeutral && (isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />)}
           {change}
         </span>
-        <span className="text-xs text-slate-400">{changeLabel}</span>
+        <span className="text-xs text-slate-400">{resolvedChangeLabel}</span>
       </div>
     </div>
   );
@@ -764,6 +778,7 @@ function LegendItem({ color, label }: any) {
 }
 
 function DeficitClient({ name, deficit, severity, image }: any) {
+  const { t } = useLanguage();
   const severityStyles = {
     high: 'bg-red-50 border-red-100 text-red-500',
     med: 'bg-amber-50 border-amber-100 text-amber-500',
@@ -782,7 +797,7 @@ function DeficitClient({ name, deficit, severity, image }: any) {
           <AlertTriangle className="w-5 h-5 text-red-500" />
         ) : (
           <span className={`text-xs font-bold px-2 py-1 rounded-md ${severity === 'med' ? 'bg-amber-50 text-amber-500' : 'bg-slate-100 text-slate-500'}`}>
-            {severity === 'med' ? 'Med' : 'Low'}
+            {severity === 'med' ? t('analytics_med') : t('analytics_low')}
           </span>
         )}
       </div>

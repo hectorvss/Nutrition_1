@@ -158,7 +158,7 @@ function GeneralSettings() {
                   <span className="text-2xl">🇪🇸</span>
                   <div className="text-left">
                     <p className={`font-bold text-sm ${language === 'es' ? 'text-emerald-700' : 'text-slate-900'}`}>{t('spanish')}</p>
-                    <p className="text-xs text-slate-500">Español de España</p>
+                    <p className="text-xs text-slate-500">{t('spanish_spain')}</p>
                   </div>
                 </div>
                 {language === 'es' && (
@@ -180,7 +180,7 @@ function GeneralSettings() {
                   <span className="text-2xl">🇺🇸</span>
                   <div className="text-left">
                     <p className={`font-bold text-sm ${language === 'en' ? 'text-emerald-700' : 'text-slate-900'}`}>{t('english')}</p>
-                    <p className="text-xs text-slate-500">English (US/UK)</p>
+                    <p className="text-xs text-slate-500">{t('english_us_uk')}</p>
                   </div>
                 </div>
                 {language === 'en' && (
@@ -202,7 +202,7 @@ function GeneralSettings() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('date_format')}</label>
               <select className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed" disabled>
-                <option>DD/MM/YYYY</option>
+                <option>{t('date_format_ddmmyyyy')}</option>
               </select>
             </div>
           </div>
@@ -431,7 +431,7 @@ function ProfileSettings() {
                   value={profile.full_name}
                   onChange={handleChange}
                   className="w-full pl-10 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
-                  placeholder="e.g. Dr. Sarah Smith" 
+                  placeholder={t('full_name_placeholder')} 
                   type="text" 
                 />
               </div>
@@ -445,7 +445,7 @@ function ProfileSettings() {
                   value={profile.professional_title}
                   onChange={handleChange}
                   className="w-full pl-10 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
-                  placeholder="e.g. Registered Dietitian" 
+                  placeholder={t('professional_title_placeholder')} 
                   type="text" 
                 />
               </div>
@@ -459,9 +459,9 @@ function ProfileSettings() {
               value={profile.bio}
               onChange={handleChange}
               className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow min-h-[100px]" 
-              placeholder="Write a short bio about yourself..."
+              placeholder={t('bio_placeholder')}
             />
-            <p className="text-xs text-slate-500 mt-1.5 text-right">{Math.max(0, 500 - (profile.bio?.length || 0))} characters left</p>
+            <p className="text-xs text-slate-500 mt-1.5 text-right">{Math.max(0, 500 - (profile.bio?.length || 0))} {t('characters_left')}</p>
           </div>
         </div>
       </div>
@@ -509,7 +509,7 @@ function ProfileSettings() {
                 onChange={handleChange}
                 className="w-full pl-10 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
                 type="text" 
-                placeholder="Business Street, City, Country"
+                placeholder={t('address_placeholder')}
               />
             </div>
           </div>
@@ -532,7 +532,7 @@ function ProfileSettings() {
                 value={profile.linkedin_url}
                 onChange={handleChange}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
-                placeholder="LinkedIn Profile URL" 
+                placeholder={t('linkedin_placeholder')} 
                 type="text" 
               />
             </div>
@@ -547,7 +547,7 @@ function ProfileSettings() {
                 value={profile.twitter_url}
                 onChange={handleChange}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
-                placeholder="Twitter Profile URL" 
+                placeholder={t('twitter_placeholder')} 
                 type="text" 
               />
             </div>
@@ -562,7 +562,7 @@ function ProfileSettings() {
                 value={profile.instagram_url}
                 onChange={handleChange}
                 className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
-                placeholder="Instagram Profile URL" 
+                placeholder={t('instagram_placeholder')} 
                 type="text" 
               />
             </div>
@@ -1391,7 +1391,7 @@ function AppearanceSettings() {
                     />
                     <div className="flex flex-col items-center">
                       <span className="text-xl font-mono font-black text-slate-800 uppercase tracking-tighter">{customColor}</span>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Live Preview</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('live_preview')}</span>
                     </div>
                   </div>
 
@@ -1399,7 +1399,7 @@ function AppearanceSettings() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                       <div className="md:col-span-2 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
-                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hex Color Code</label>
+                          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('hex_color_code')}</label>
                           <div className="w-8 h-8 rounded-lg shadow-inner border border-slate-100" style={{ backgroundColor: customColor }} />
                         </div>
                         <div className="relative">
@@ -1421,7 +1421,7 @@ function AppearanceSettings() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hue</label>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('hue_label')}</label>
                           <span className="text-xs font-mono font-bold text-slate-400">{Math.round(hexToHSL(customColor).h)}°</span>
                         </div>
                         <input 
@@ -1440,7 +1440,7 @@ function AppearanceSettings() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Saturation</label>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('saturation_label')}</label>
                           <span className="text-xs font-mono font-bold text-slate-400">{Math.round(hexToHSL(customColor).s)}%</span>
                         </div>
                         <input 
@@ -1459,7 +1459,7 @@ function AppearanceSettings() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Brightness</label>
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('brightness_label')}</label>
                           <span className="text-xs font-mono font-bold text-slate-400">{Math.round(hexToHSL(customColor).l)}%</span>
                         </div>
                         <input 
@@ -1505,4 +1505,5 @@ function AppearanceSettings() {
     </div>
   );
 }
+
 

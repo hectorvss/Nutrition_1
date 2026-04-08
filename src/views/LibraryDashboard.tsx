@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { recipes, supplements } from '../constants/library';
 import { useFoodContext } from '../context/FoodContext';
+import { useLanguage } from '../context/LanguageContext';
 
 type Tab = 'recipes' | 'food' | 'supplements';
 
@@ -23,6 +24,7 @@ interface LibraryDashboardProps {
 }
 
 export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>('recipes');
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -54,9 +56,9 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
         <div>
           <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
             <BookOpen className="w-8 h-8 text-emerald-500" />
-            Library
+            {t('library_title')}
           </h2>
-          <p className="text-slate-500 font-medium mt-1">Manage your nutrition resources</p>
+          <p className="text-slate-500 font-medium mt-1">{t('library_subtitle')}</p>
         </div>
         <button 
           onClick={() => {
@@ -67,7 +69,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
           className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/25 flex items-center gap-2 font-bold"
         >
           <Plus className="w-5 h-5" />
-          {activeTab === 'recipes' ? 'New Recipe' : activeTab === 'food' ? 'Add New Food' : 'Add New Supplement'}
+          {activeTab === 'recipes' ? t('new_recipe') : activeTab === 'food' ? t('add_food') : t('add_supplement')}
         </button>
       </div>
 
@@ -88,7 +90,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               activeTab === tab ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            {tab === 'recipes' ? 'Recipes' : tab === 'food' ? 'Food Database' : 'Supplements'}
+            {tab === 'recipes' ? t('recipes_tab') : tab === 'food' ? t('food_database') : t('supplements_tab')}
           </button>
         ))}
       </div>
@@ -104,13 +106,13 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 setVisibleCount(30); // reset visible count on new search
             }}
             className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm font-bold text-slate-700"
-            placeholder={`Search ${activeTab}...`}
+            placeholder={activeTab === 'recipes' ? t('search_recipes') : activeTab === 'food' ? t('search_food') : t('search_supplements')}
             type="text"
           />
         </div>
         <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
           <Filter className="w-5 h-5" />
-          Show Filters
+          {t('show_filters')}
           <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">2</span>
         </button>
       </div>
@@ -120,7 +122,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
         {isLoading ? (
           <div className="w-full h-64 flex flex-col items-center justify-center gap-4 text-slate-400">
              <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-             <span className="font-bold">Loading Library...</span>
+             <span className="font-bold">{t('loading_library')}</span>
           </div>
         ) : activeTab === 'recipes' && (
           <div className="flex flex-col gap-6">
@@ -148,9 +150,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                       <h3 className="font-bold text-2xl text-slate-900 tracking-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
                       <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">{recipe.category}</span>
                     </div>
-                    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4">
-                      A nutritious bowl packed with omega-3 fatty acids, fiber, and fresh greens. Perfect for post-workout recovery and sustained energy throughout the day.
-                    </p>
+                    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4">{t('recipe_card_sample_desc')}</p>
                     <div className="flex flex-wrap gap-2">
                       {recipe.tags.map(tag => (
                         <span key={tag} className="px-3 py-1 rounded-lg bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{tag}</span>
@@ -188,7 +188,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
             >
               <div className="flex items-center gap-3 text-slate-400 group-hover:text-emerald-500 transition-all">
                 <Plus className="w-6 h-6" />
-                <span className="font-bold text-xl">Create Custom Recipe</span>
+                <span className="font-bold text-xl">{t('create_custom_recipe')}</span>
               </div>
             </div>
           </div>
@@ -197,13 +197,13 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
         {activeTab === 'food' && (
           <div className="flex flex-col gap-6">
             <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-3 bg-slate-50 sticky top-0 z-10 shadow-sm border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-              <div className="col-span-5">Food Item</div>
+              <div className="col-span-5">{t('food_item')}</div>
               <div className="col-span-7 grid grid-cols-5 gap-4 text-center">
-                <div>Kcal</div>
-                <div>Protein</div>
-                <div>Carbs</div>
-                <div>Fat</div>
-                <div>Actions</div>
+                <div>{t('kcal')}</div>
+                <div>{t('protein')}</div>
+                <div>{t('carbs')}</div>
+                <div>{t('fats')}</div>
+                <div>{t('actions')}</div>
               </div>
             </div>
             
@@ -211,7 +211,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               {isCtxLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                   <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
-                  <p className="text-slate-500 font-bold text-lg">Loading Food Library...</p>
+                  <p className="text-slate-500 font-bold text-lg">{t('loading_library')}</p>
                 </div>
               ) : foodItems
                 .filter(food => !search || food.name.toLowerCase().includes(search.toLowerCase()))
@@ -226,28 +226,28 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                       <div className="min-w-0">
                         <h3 className="font-bold text-xl text-slate-900 leading-tight truncate group-hover:text-emerald-600 transition-colors">{food.name}</h3>
                         <p className="text-sm text-slate-400 font-bold mt-1">{food.servingSize}</p>
-                        {food.custom && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Custom</span>}
+                        {food.custom && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">{t('custom_label')}</span>}
                       </div>
                     </div>
                     <div className="col-span-7 w-full grid grid-cols-4 md:grid-cols-5 gap-4 items-center border-t md:border-t-0 border-slate-50 pt-4 md:pt-0 mt-2 md:mt-0">
                       <div className="flex flex-col md:block text-center">
-                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">Kcal</span>
+                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('kcal_short')}</span>
                         <span className="text-lg font-bold text-slate-700">{food.calories}</span>
                       </div>
                       <div className="flex flex-col md:block text-center">
-                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">Prot</span>
+                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('protein_short')}</span>
                         <span className="text-lg font-bold text-blue-600">{food.protein}g</span>
                       </div>
                       <div className="flex flex-col md:block text-center">
-                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">Carb</span>
+                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('carbs_short')}</span>
                         <span className="text-lg font-bold text-emerald-600">{food.carbs}g</span>
                       </div>
                       <div className="flex flex-col md:block text-center">
-                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">Fat</span>
+                        <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('fat_short')}</span>
                         <span className="text-lg font-bold text-amber-600">{food.fats}g</span>
                       </div>
                       <div className="hidden md:flex justify-center gap-2">
-                        <button onClick={() => deleteFood(food.id)} className="p-3 rounded-2xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all" title="Delete">
+                        <button onClick={() => deleteFood(food.id)} className="p-3 rounded-2xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all" title={t('delete_label')}>
                           <Trash2 className="w-5 h-5" />
                         </button>
                         <button className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all">
@@ -264,8 +264,8 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                   <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <BookOpen className="w-10 h-10 text-slate-300" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">No foods found</h3>
-                  <p className="text-slate-500">Your library is currently empty. Wait for the population script or start by adding a new food.</p>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{t('no_foods_found')}</h3>
+                  <p className="text-slate-500">{t('library_empty_msg')}</p>
                 </div>
               )}
               
@@ -283,7 +283,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                   <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
                     <Plus className="text-slate-400 group-hover:text-emerald-500 w-6 h-6" />
                   </div>
-                  <span className="font-bold text-lg text-slate-500 group-hover:text-emerald-600 transition-colors">Create Custom Food Item</span>
+                  <span className="font-bold text-lg text-slate-500 group-hover:text-emerald-600 transition-colors">{t('create_custom_food')}</span>
                 </div>
               </div>
             </div>
@@ -293,11 +293,11 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
         {activeTab === 'supplements' && (
           <div className="flex flex-col gap-6">
             <div className="hidden md:grid grid-cols-12 gap-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-              <div className="col-span-5">Supplement</div>
-              <div className="col-span-2">Serving</div>
-              <div className="col-span-2">Primary Ingredient</div>
-              <div className="col-span-2">Best Time</div>
-              <div className="col-span-1 text-right">Score</div>
+              <div className="col-span-5">{t('supplement_col')}</div>
+              <div className="col-span-2">{t('serving_col')}</div>
+              <div className="col-span-2">{t('primary_ingredient')}</div>
+              <div className="col-span-2">{t('best_time')}</div>
+              <div className="col-span-1 text-right">{t('score_col')}</div>
             </div>
             
             <div className="flex flex-col gap-4">
@@ -318,19 +318,19 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                     </div>
                     
                     <div className="md:col-span-2 flex flex-col md:block">
-                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Serving</span>
+                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('serving_col')}</span>
                       <div className="text-sm font-bold text-slate-700">{supp.serving}</div>
-                      <div className="text-xs text-slate-400 font-bold">Daily</div>
+                      <div className="text-xs text-slate-400 font-bold">{t('daily_label')}</div>
                     </div>
                     
                     <div className="md:col-span-2 flex flex-col md:block">
-                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Primary Ingredient</span>
+                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('primary_ingredient')}</span>
                       <div className="text-sm font-bold text-slate-700">{supp.primaryIngredient}</div>
-                      <div className="text-xs text-slate-400 font-bold">Micronized</div>
+                      <div className="text-xs text-slate-400 font-bold">{t('micronized_label')}</div>
                     </div>
                     
                     <div className="md:col-span-2 flex flex-col md:block">
-                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">Best Time</span>
+                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('best_time')}</span>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-slate-400" />
                         <span className="text-sm font-bold text-slate-700">{supp.bestTime}</span>
@@ -338,7 +338,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                     </div>
                     
                     <div className="md:col-span-1 flex items-center justify-between md:justify-end">
-                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase">Score</span>
+                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase">{t('score_col')}</span>
                       <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
                         <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                         <span className="text-sm font-bold text-slate-700">{supp.score}</span>
@@ -354,7 +354,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               >
                 <div className="flex items-center gap-3">
                   <Plus className="text-slate-400 group-hover:text-emerald-500 w-6 h-6" />
-                  <span className="font-bold text-lg text-slate-500 group-hover:text-emerald-600 transition-colors">Add Custom Supplement</span>
+                  <span className="font-bold text-lg text-slate-500 group-hover:text-emerald-600 transition-colors">{t('add_custom_supplement')}</span>
                 </div>
               </div>
             </div>

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { AutomationDeliveryRules, AutomationCondition } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface AutomationCreateMessageProps {
   triggerName: string;
@@ -70,6 +71,7 @@ export default function AutomationCreateMessage({
   onBack,
   onNext,
 }: AutomationCreateMessageProps) {
+  const { t } = useLanguage();
   const { clients } = useClient();
   const [message, setMessage] = useState(initialMessage);
   const [rules, setRules] = useState<AutomationDeliveryRules>(initialRules || {
@@ -146,15 +148,15 @@ export default function AutomationCreateMessage({
             <div className="flex items-center gap-2 mb-2">
               <button onClick={onBack} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors flex items-center gap-1 text-sm font-medium">
                 <ArrowLeft className="w-4 h-4" />
-                {isEditing ? 'Back to Automations' : 'Back to Trigger'}
+                {isEditing ? t('back_to_automations') : t('back_to_trigger')}
               </button>
             </div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-              {isEditing ? 'Edit Automation' : 'Create New Automation'}
+              {isEditing ? t('edit_automation') : t('create_new_automation')}
             </h1>
             {triggerName && (
               <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mt-1">
-                Trigger: {triggerName}
+                {t('trigger_label')}: {triggerName}
               </p>
             )}
           </div>
@@ -166,17 +168,17 @@ export default function AutomationCreateMessage({
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">
                   <Check className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">Trigger</span>
+                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('trigger_label')}</span>
               </div>
               <div className="w-16 md:w-24 h-1 bg-emerald-500 -ml-2 -mr-2 relative z-0"></div>
               <div className="flex flex-col items-center relative z-10">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">2</div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">Message</span>
+                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('message_label')}</span>
               </div>
               <div className="w-16 md:w-24 h-1 bg-slate-200 dark:bg-slate-800 -ml-2 -mr-2 relative z-0"></div>
               <div className="flex flex-col items-center relative z-10">
                 <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center font-semibold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">3</div>
-                <span className="text-xs font-medium mt-2 text-slate-400">Review</span>
+                <span className="text-xs font-medium mt-2 text-slate-400">{t('review')}</span>
               </div>
             </div>
           </div>
@@ -189,15 +191,15 @@ export default function AutomationCreateMessage({
               <div className="p-6 md:p-8 flex flex-col gap-8">
                 {/* Step header */}
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Step {isEditing ? 'Edit' : '2'}: Configure Message</h2>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">Click variables to insert them at your cursor position in the message.</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{t('step_configure_message', { step: isEditing ? t('edit') : '2' })}</h2>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">{t('click_variables_to_insert')}</p>
                 </div>
 
                 {/* Variables */}
                 <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Smart Variables</h3>
-                    <span className="text-[10px] text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">Click to insert</span>
+                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('smart_variables')}</h3>
+                    <span className="text-[10px] text-slate-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">{t('click_to_insert')}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {VARIABLES.map(v => (
@@ -227,7 +229,7 @@ export default function AutomationCreateMessage({
                     </div>
                     <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-sm transition-all text-xs font-semibold">
                       <Sparkles className="w-3.5 h-3.5" />
-                      Generate with AI
+                      {t('generate_with_ai')}
                     </button>
                   </div>
                   <textarea 
@@ -235,32 +237,32 @@ export default function AutomationCreateMessage({
                     value={message}
                     onChange={e => setMessage(e.target.value)}
                     className="w-full h-48 p-4 bg-white dark:bg-slate-900 resize-none focus:outline-none text-slate-900 dark:text-slate-200 text-sm leading-relaxed" 
-                    placeholder={`Hi {Client Name}, a message will be sent when "${triggerName || 'your trigger'}" occurs...`}
+                    placeholder={t('automation_message_placeholder', { trigger: triggerName || t('your_trigger') })}
                   />
                 </div>
 
                 {/* Delivery Rules */}
                 <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
                   <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-between">
-                    <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-emerald-500" />
-                      Delivery Rules
-                    </h3>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-800 font-medium">Auto-save on</span>
+                      <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-emerald-500" />
+                        {t('delivery_rules')}
+                      </h3>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-800 font-medium">{t('auto_save_on')}</span>
                   </div>
                   <div className="p-5 flex flex-col gap-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Frequency */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Repeat Frequency</label>
+                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('repeat_frequency')}</label>
                         <div className="flex gap-2">
                           <select 
                             value={rules.frequency}
                             onChange={e => updateRule('frequency', e.target.value as any)}
                             className="w-24 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
                           >
-                            <option>Every</option>
-                            <option>Once</option>
+                            <option>{t('every')}</option>
+                            <option>{t('once')}</option>
                           </select>
                           {rules.frequency === 'Every' && (
                             <div className="flex-1 flex items-center gap-2">
@@ -276,9 +278,9 @@ export default function AutomationCreateMessage({
                                 onChange={e => updateRule('frequencyUnit', e.target.value as any)}
                                 className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
                               >
-                                <option>Days</option>
-                                <option>Weeks</option>
-                                <option>Months</option>
+                                <option>{t('days')}</option>
+                                <option>{t('weeks')}</option>
+                                <option>{t('months')}</option>
                               </select>
                             </div>
                           )}
@@ -286,7 +288,7 @@ export default function AutomationCreateMessage({
                       </div>
                       {/* Target */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Target Audience</label>
+                        <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('target_audience')}</label>
                         <div className="flex rounded-xl bg-slate-100 dark:bg-slate-900/50 p-1 border border-slate-200 dark:border-slate-800">
                           {(['All Clients', 'Specific Clients'] as const).map(opt => (
                             <button
@@ -301,7 +303,7 @@ export default function AutomationCreateMessage({
                                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                               }`}
                             >
-                              {opt}
+                              {opt === 'All Clients' ? t('all_clients') : t('specific_clients')}
                             </button>
                           ))}
                         </div>
@@ -314,7 +316,7 @@ export default function AutomationCreateMessage({
                                 const client = clients.find(c => c.id === id);
                                 return (
                                   <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-500/20">
-                                    {client?.name || 'Unknown'}
+                                    {client?.name || t('unknown')}
                                     <button onClick={() => removeClient(id)} className="hover:text-emerald-800 dark:hover:text-emerald-200 flex shrink-0">
                                       <X className="w-3 h-3" />
                                     </button>
@@ -322,7 +324,7 @@ export default function AutomationCreateMessage({
                                 );
                               })}
                               {(!rules.selected_client_ids || rules.selected_client_ids.length === 0) && (
-                                <span className="text-[10px] text-slate-400 italic font-medium">No clients selected yet</span>
+                                <span className="text-[10px] text-slate-400 italic font-medium">{t('no_clients_selected')}</span>
                               )}
                             </div>
                             
@@ -331,7 +333,7 @@ export default function AutomationCreateMessage({
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                                 <input 
                                   type="text"
-                                  placeholder="Search and add client..."
+                                  placeholder={t('search_add_client')}
                                   value={clientSearch}
                                   onFocus={() => setShowClientSelector(true)}
                                   onChange={e => setClientSearch(e.target.value)}
@@ -358,7 +360,7 @@ export default function AutomationCreateMessage({
                                       </button>
                                     ))
                                   ) : (
-                                    <div className="px-4 py-3 text-xs text-slate-400 italic">No matching clients found</div>
+                                    <div className="px-4 py-3 text-xs text-slate-400 italic">{t('no_matching_clients')}</div>
                                   )}
                                 </div>
                               )}
@@ -370,7 +372,7 @@ export default function AutomationCreateMessage({
 
                     {/* Delivery Time */}
                     <div className="flex flex-col gap-3">
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Preferred Delivery Time</label>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('preferred_delivery_time')}</label>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {[
                           { label: 'Morning', time: '8AM - 11AM', icon: Sunrise, color: 'text-orange-400' },
@@ -409,8 +411,8 @@ export default function AutomationCreateMessage({
                       {/* Activation Conditions */}
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col">
-                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">Activation Triggers</label>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">The message is sent ONLY if these conditions are met.</p>
+                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">{t('activation_triggers')}</label>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{t('activation_triggers_desc')}</p>
                         </div>
                         
                         <div className="flex flex-wrap gap-2">
@@ -480,8 +482,8 @@ export default function AutomationCreateMessage({
                       {/* Stop Conditions */}
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col">
-                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">Stop Conditions</label>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">The automation will STOP sending if any of these are met.</p>
+                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">{t('stop_conditions')}</label>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{t('stop_conditions_desc')}</p>
                         </div>
                         
                         <div className="flex flex-wrap gap-2">
@@ -533,14 +535,14 @@ export default function AutomationCreateMessage({
                     onClick={onBack}
                     className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-300 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >
-                    Back
+                    {t('back')}
                   </button>
                   <button 
                     onClick={() => onNext(message, rules)}
                     disabled={!message.trim()}
                     className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm shadow-emerald-500/25 transition-colors flex items-center gap-2"
                   >
-                    Continue to Review
+                    {t('continue_to_review')}
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -549,7 +551,7 @@ export default function AutomationCreateMessage({
 
             {/* Right Column: Live Preview */}
             <div className="w-full md:w-[380px] bg-slate-50 dark:bg-slate-900/50 p-6 md:p-8 flex flex-col items-center justify-center relative border-l border-slate-200 dark:border-slate-800">
-              <h3 className="absolute top-6 left-8 text-xs font-bold text-slate-400 uppercase tracking-wider">Live Preview</h3>
+              <h3 className="absolute top-6 left-8 text-xs font-bold text-slate-400 uppercase tracking-wider">{t('live_preview')}</h3>
               <div className="w-[300px] bg-white dark:bg-slate-900 rounded-[3rem] border-8 border-slate-200 dark:border-slate-800 shadow-xl relative overflow-hidden flex flex-col sticky top-10" style={{ height: 560 }}>
                 {/* Status bar */}
                 <div className="bg-slate-100 dark:bg-slate-800 h-14 flex items-center px-6 pt-2 justify-between shrink-0">
@@ -563,7 +565,7 @@ export default function AutomationCreateMessage({
                 {/* Chat body */}
                 <div className="flex-1 p-4 bg-[#f2f2f7] dark:bg-slate-900 flex flex-col gap-3 overflow-y-auto scrollbar-hide">
                   <div className="flex items-center justify-center py-2">
-                    <span className="text-[10px] text-slate-400 font-medium">Today {currentTime}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{t('today')} {currentTime}</span>
                   </div>
                   {message ? (
                     <div className="flex justify-start">
@@ -575,20 +577,20 @@ export default function AutomationCreateMessage({
                     </div>
                   ) : (
                     <div className="flex justify-center items-center flex-1">
-                      <span className="text-xs text-slate-400 italic text-center">Your message preview will appear here as you type…</span>
+                      <span className="text-xs text-slate-400 italic text-center">{t('message_preview_placeholder')}</span>
                     </div>
                   )}
                 </div>
                 {/* Input */}
                 <div className="mt-auto bg-white dark:bg-slate-800 rounded-full mx-3 mb-3 px-4 py-2 flex items-center justify-between border border-slate-200 dark:border-slate-700">
-                  <span className="text-xs text-slate-400">Message...</span>
+                  <span className="text-xs text-slate-400">{t('message_label')}...</span>
                   <Send className="w-4 h-4 text-emerald-500" />
                 </div>
                 {/* Notch */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-200 dark:bg-slate-800 rounded-b-2xl z-20"></div>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-500 mt-6 text-center max-w-[240px]">
-                Variables like <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded text-[10px] font-medium">{'{Client Name}'}</span> are highlighted in green and replaced with real data on delivery.
+                {t('variables_help_prefix')} <span className="bg-emerald-500/10 text-emerald-500 px-1 rounded text-[10px] font-medium">{'{Client Name}'}</span> {t('variables_help_suffix')}
               </p>
             </div>
           </div>

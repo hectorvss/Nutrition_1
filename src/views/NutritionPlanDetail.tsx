@@ -1023,7 +1023,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
             {mode === 'example' && (
               <div className="p-2 space-y-1 max-h-[420px] overflow-y-auto scrollbar-hide">
                 {filteredLibraryFoods.length === 0 && (
-                  <div className="p-6 text-center text-sm text-slate-400">No foods match your search.</div>
+                  <div className="p-6 text-center text-sm text-slate-400">{t('no_foods_match_search')}</div>
                 )}
                 {filteredLibraryFoods.map((food) => (
                   <div

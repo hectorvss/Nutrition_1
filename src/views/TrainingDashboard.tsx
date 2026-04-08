@@ -14,10 +14,10 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
       avatar: client.avatar,
       status: hasPlan ? t('in_progress_status') : t('no_plan_status'),
       frequency: `4${t('per_week')}`,
-      phase: `Phase 1: Hypertrophy`, // Keep placeholder for now as it comes from data
-      lastSession: hasPlan ? 'Yesterday' : '-',
+      phase: `${t('phase_label')} 1: ${t('training_phase_hypertrophy')}`, // Placeholder until backend sends real phase
+      lastSession: hasPlan ? t('yesterday') : '-',
       online: idx === 0 || idx === 1,
-      trainingPlanAssigned: hasPlan,
+      trainingPlanAssigned: hasPlan
     };
   });
 
@@ -107,7 +107,7 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">bolt</span>
-                            <span>Focus: {client.phase.split(': ')[1] || client.phase}</span>
+                            <span>{t('focus_label')}: {client.phase.split(': ')[1] || client.phase}</span>
                           </div>
                         </div>
                       </div>
@@ -122,34 +122,22 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (client.status === 'NO PLAN') {
+                          if (!client.trainingPlanAssigned) {
                             onNavigate('assign-program', client.id);
                           } else {
                             onNavigate('workout-editor', client.id);
                           }
                         }}
                         className={`px-6 py-2.5 rounded-xl transition-all text-sm font-bold flex items-center gap-2 whitespace-nowrap border ${
-                          client.status === 'NO PLAN'
+                          !client.trainingPlanAssigned
                             ? 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20'
-                            : client.status === 'NEEDS UPDATE' 
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100' 
-                            : client.status === 'DRAFT'
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
-                            : client.status === 'ENDED'
-                            ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                             : 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
                         }`}
                       >
                         <span className="material-symbols-outlined text-[18px]">
-                          {client.status === t('no_plan_status') ? 'assignment_add' :
-                           client.status === t('needs_update_status') ? 'refresh' : 
-                           client.status === t('draft_status_label') ? 'edit_note' : 
-                           client.status === t('ended_status') ? 'history' : 'calendar_month'}
+                          {!client.trainingPlanAssigned ? 'assignment_add' : 'calendar_month'}
                         </span>
-                        {client.status === t('no_plan_status') ? t('assign_program') :
-                         client.status === t('needs_update_status') ? t('update_plan_btn') : 
-                         client.status === t('draft_status_label') ? t('continue_draft_btn') : 
-                         client.status === t('ended_status') ? t('renew_program_btn') : t('manage_program_btn')}
+                        {!client.trainingPlanAssigned ? t('assign_program') : t('manage_program_btn')}
                       </button>
                     </div>
                   </div>

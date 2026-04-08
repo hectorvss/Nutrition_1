@@ -755,12 +755,12 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                     value={macroSplitId}
                     onChange={(e) => setMacroSplitId(e.target.value)}
                   >
-                    <option value="Balanced (40/30/30)">Balanced (40/30/30)</option>
-                    <option value="Low Carb (40/40/20)">Low Carb (40/40/20)</option>
-                    <option value="High Carb (25/50/25)">High Carb (25/50/25)</option>
-                    <option value="High Carb (25/55/20)">High Carb (25/55/20)</option>
-                    <option value="High Carb (20/60/20)">High Carb (20/60/20)</option>
-                    <option value="Ketogenic (20/5/75)">Ketogenic (20/5/75)</option>
+                    <option value="Balanced (40/30/30)">{t('macro_balanced_403030')}</option>
+                    <option value="Low Carb (40/40/20)">{t('macro_low_carb_404020')}</option>
+                    <option value="High Carb (25/50/25)">{t('macro_high_carb_255025')}</option>
+                    <option value="High Carb (25/55/20)">{t('macro_high_carb_255520')}</option>
+                    <option value="High Carb (20/60/20)">{t('macro_high_carb_206020')}</option>
+                    <option value="Ketogenic (20/5/75)">{t('macro_ketogenic_20575')}</option>
                   </select>
                   <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
                 </div>
