@@ -41,6 +41,7 @@ import {
   Legend
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import CheckInHistory from '../CheckInHistory';
 import CheckInReview from '../CheckInReview';
 
@@ -52,6 +53,7 @@ interface WorkoutLogItemProps {
 }
 
 const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, onToggle, onUpdate }) => {
+  const { t } = useLanguage();
   const [exercises, setExercises] = useState(workout.exercises || []);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -113,19 +115,19 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
                   <span className="material-symbols-outlined text-slate-300 dark:text-slate-700">drag_handle</span>
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white">{ex.name}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{ex.muscle_group || 'Target muscles'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{ex.muscle_group || t('target_muscles')}</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-2 shadow-sm">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500">edit_note</span>
-                  Session Log
+                  {t('session_log')}
                 </span>
               </div>
 
               <div className="pl-11 grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
                   <div className="grid grid-cols-4 gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center px-1">
-                    <div>Set</div><div>Weight</div><div>Reps</div><div>RIR</div>
+                    <div>{t('set_label')}</div><div>{t('weight')}</div><div>{t('reps_label')}</div><div>{t('rir_label')}</div>
                   </div>
                   {ex.sets_logged?.map((s: any, sIdx: number) => (
                     <div key={sIdx} className="grid grid-cols-4 gap-2">
@@ -149,10 +151,10 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
                   ))}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block px-1">Notes & Sensations</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block px-1">{t('notes_sensations')}</label>
                   <textarea 
                     className="w-full p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 min-h-[100px] text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed shadow-sm italic outline-none focus:ring-1 focus:ring-emerald-500"
-                    placeholder="Notes..."
+                    placeholder={t('notes_placeholder')}
                     value={ex.notes || ""}
                     onChange={(e) => updateNotes(exIdx, e.target.value)}
                   />
@@ -172,7 +174,7 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
               ) : (
                 <span className="material-symbols-outlined text-[18px]">save</span>
               )}
-              {isSaving ? 'Saving...' : 'Update Session Log'}
+              {isSaving ? t('saving') : t('update_session_log')}
             </button>
           </div>
         </div>
@@ -184,11 +186,12 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
 type Tab = 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
 
 export default function ClientProgress() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('Nutrition');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
-  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Weekly Volume');
+  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState(t('weekly_volume'));
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
   const [strengthWeekOffset, setStrengthWeekOffset] = useState(0);
@@ -309,7 +312,7 @@ export default function ClientProgress() {
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Weight Progress</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('weight_progress')}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Goal: {stats?.goal || 'TBD'}</p>
             </div>
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
@@ -343,7 +346,7 @@ export default function ClientProgress() {
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Macro Adherence</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('macro_adherence')}</h3>
               <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">Avg. 7 Days</span>
             </div>
             <div className="space-y-6">
@@ -371,7 +374,7 @@ export default function ClientProgress() {
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Allergies</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('allergies')}</h3>
             </div>
             <div className="flex flex-wrap gap-2 mb-6">
               {stats?.allergies?.map((allergy: string, idx: number) => (
@@ -406,7 +409,7 @@ export default function ClientProgress() {
       <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: 'Avg. Session RPE', value: stats?.training?.avgRPE || '--', unit: '/ 10', change: 'Session Avg', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: 'Workouts', value: stats?.training?.workoutCount || '0', unit: 'sessions', change: 'This Week', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: 'Fatigue Level', value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? 'High' : 'Normal', icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
@@ -430,8 +433,8 @@ export default function ClientProgress() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Strength Progress Analysis</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Deep dive analytics for primary compound lifts</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('strength_progress_analysis')}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">{t('strength_progress_subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             {strengthRange === '1W' && (
@@ -481,7 +484,7 @@ export default function ClientProgress() {
 
         <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 no-scrollbar">
           {[
-            { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
+            { name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
             ...(stats?.training?.allExercises || []).map((ex: any) => ({
               name: ex.name,
               value: ex.pr || '--',
@@ -553,9 +556,9 @@ export default function ClientProgress() {
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '20px' }} />
               
               {(() => {
-                if (selectedAnalysisSubject === 'Weekly Volume') {
+                if (selectedAnalysisSubject === t('weekly_volume')) {
                   return (
-                    <Area name="Weekly Volume" type="natural" dataKey="volume" stroke="#10b981" strokeWidth={3} fill="url(#colorStrength1)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} connectNulls />
+                    <Area name={t('weekly_volume')} type="natural" dataKey="volume" stroke="#10b981" strokeWidth={3} fill="url(#colorStrength1)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} connectNulls />
                   );
                 }
                 const findExData = (logs: any) => {
@@ -585,7 +588,7 @@ export default function ClientProgress() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Personal Records</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('personal_records')}</h3>
           </div>
           <div className="h-[400px] flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 no-scrollbar">
@@ -604,7 +607,7 @@ export default function ClientProgress() {
                 </div>
               ))}
               {(stats?.training?.allExercises || []).length > visiblePRs && (
-                <button onClick={() => setVisiblePRs(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 transition-colors uppercase tracking-widest mt-2">Load More Records</button>
+                <button onClick={() => setVisiblePRs(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 transition-colors uppercase tracking-widest mt-2">{t('load_more_records')}</button>
               )}
             </div>
           </div>
@@ -612,7 +615,7 @@ export default function ClientProgress() {
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Recent Workout Activity</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('recent_workout_activity')}</h3>
           </div>
           <div className="h-[400px] flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 no-scrollbar">
@@ -620,7 +623,7 @@ export default function ClientProgress() {
                 <WorkoutLogItem key={workout.id} workout={workout} isExpanded={expandedWorkoutId === workout.id} onToggle={setExpandedWorkoutId} onUpdate={handleUpdateWorkoutLog} />
               ))}
               {(stats?.training?.recentWorkouts || []).length > visibleWorkouts && (
-                <button onClick={() => setVisibleWorkouts(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 transition-colors uppercase tracking-widest mt-2">Load More Activity</button>
+                <button onClick={() => setVisibleWorkouts(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 transition-colors uppercase tracking-widest mt-2">{t('load_more_activity')}</button>
               )}
             </div>
           </div>
@@ -658,7 +661,7 @@ export default function ClientProgress() {
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900">Adherence Snapshot (7-Day)</h3>
+            <h3 className="text-lg font-bold text-slate-900">{t('adherence_snapshot_7d')}</h3>
           </div>
           <div className="grid grid-cols-3 gap-4">
             {[
@@ -781,7 +784,7 @@ export default function ClientProgress() {
 
       <div className="space-y-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Today's State</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">{t('todays_state')}</h3>
           <div className="space-y-6">
             {[
               { label: 'Mood', value: stats?.mindset?.mood, color: 'bg-blue-500' },
@@ -809,7 +812,7 @@ export default function ClientProgress() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900">Recent Activity</h3>
+          <h3 className="text-lg font-bold text-slate-900">{t('recent_activity')}</h3>
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
@@ -828,7 +831,7 @@ export default function ClientProgress() {
               </div>
             ))}
             {(!stats?.activity || stats.activity.length === 0) && (
-              <p className="text-center text-slate-400 text-sm py-4">No recent activity</p>
+              <p className="text-center text-slate-400 text-sm py-4">{t('no_recent_activity')}</p>
             )}
           </div>
         </div>
