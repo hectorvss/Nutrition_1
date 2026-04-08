@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function ClientNutrition() {
+  const { t, language } = useLanguage();
   const [mode, setMode] = useState<'general' | 'example'>('general');
   const [viewState, setViewState] = useState<'weekly' | 'daily'>('weekly');
   const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [nutritionPlan, setNutritionPlan] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   useEffect(() => {
     const fetchMyPlans = async () => {
@@ -48,8 +51,8 @@ export default function ClientNutrition() {
         <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-400">
           <span className="material-symbols-outlined text-4xl">no_meals</span>
         </div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No tienes un plan de nutrición asignado</h2>
-        <p className="text-slate-500 max-w-sm">Tu coach aún no ha publicado tu plan. Una vez asignado, lo verás disponible aquí.</p>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('no_nutrition_plan_assigned')}</h2>
+        <p className="text-slate-500 max-w-sm">{t('coach_has_not_published_nutrition_plan')}</p>
       </div>
     );
   }
@@ -75,13 +78,13 @@ export default function ClientNutrition() {
   );
 
   const daysConfig = [
-    { id: 'monday', name: 'Lunes', nameEn: 'Monday' },
-    { id: 'tuesday', name: 'Martes', nameEn: 'Tuesday' },
-    { id: 'wednesday', name: 'Miércoles', nameEn: 'Wednesday' },
-    { id: 'thursday', name: 'Jueves', nameEn: 'Thursday' },
-    { id: 'friday', name: 'Viernes', nameEn: 'Friday' },
-    { id: 'saturday', name: 'Sábado', nameEn: 'Saturday' },
-    { id: 'sunday', name: 'Domingo', nameEn: 'Sunday' },
+    { id: 'monday', name: t('monday') },
+    { id: 'tuesday', name: t('tuesday') },
+    { id: 'wednesday', name: t('wednesday') },
+    { id: 'thursday', name: t('thursday') },
+    { id: 'friday', name: t('friday') },
+    { id: 'saturday', name: t('saturday') },
+    { id: 'sunday', name: t('sunday') },
   ];
 
   const renderWeeklyView = () => (
@@ -92,8 +95,8 @@ export default function ClientNutrition() {
             <span className="material-symbols-outlined text-2xl">calendar_view_week</span>
           </div>
           <div>
-            <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">Distribución Semanal</h3>
-            <p className="text-sm text-slate-500">Selecciona un día para ver tus comidas y macros específicos.</p>
+            <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">{t('weekly_distribution')}</h3>
+            <p className="text-sm text-slate-500">{t('select_day_to_view_meals_and_macros')}</p>
           </div>
         </div>
       </div>
@@ -145,14 +148,14 @@ export default function ClientNutrition() {
                 </div>
                 <div className={`flex items-center gap-1.5 font-black text-2xl ${dCals === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
                   <span className="material-symbols-outlined text-lg">{dCals === 0 ? 'bedtime' : 'local_fire_department'}</span>
-                  {Math.round(dCals).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
+                  {Math.round(dCals).toLocaleString(locale)} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
                 </div>
               </div>
 
               <div className="flex-1 w-full space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="bg-slate-50 dark:bg-slate-800 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border border-slate-100 dark:border-slate-700">
-                    {idx % 3 === 0 ? 'Entrenamiento' : 'Descanso'}
+                    {idx % 3 === 0 ? t('training') : t('rest_day')}
                   </span>
                   <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
                     <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{pPct}% P</span>
@@ -169,12 +172,12 @@ export default function ClientNutrition() {
 
               <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
                 <div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">NUTRICIÓN</div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('nutrition')}</div>
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
                       {dMeals.length}
                     </div>
-                    <span className="text-xs font-bold text-slate-500 uppercase">Ingestas</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase">{t('intakes')}</span>
                   </div>
                 </div>
                 <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
@@ -196,7 +199,7 @@ export default function ClientNutrition() {
           className="flex items-center gap-2 text-sm font-black text-slate-500 hover:text-emerald-500 transition-colors uppercase tracking-widest"
         >
           <span className="material-symbols-outlined text-lg">arrow_back</span>
-          WEEK VIEW
+          {t('week_view')}
         </button>
         <div className="flex overflow-x-auto scrollbar-hide gap-2 pb-2">
           {days.map(d => (
@@ -209,7 +212,7 @@ export default function ClientNutrition() {
                   : 'bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
               }`}
             >
-              {d.charAt(0).toUpperCase() + d.slice(1, 3)}
+              {t(d).slice(0, 3)}
             </button>
           ))}
         </div>
@@ -222,8 +225,8 @@ export default function ClientNutrition() {
       {/* Macro Totals */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Daily Macro Totals</h3>
-          <span className="text-[10px] font-black px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50">Plan Active</span>
+          <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('daily_macro_totals')}</h3>
+          <span className="text-[10px] font-black px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50">{t('plan_active')}</span>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-10">
           <div className="relative w-44 h-44 flex-shrink-0">
@@ -242,31 +245,31 @@ export default function ClientNutrition() {
             <div className="flex flex-col justify-between p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md group">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20 group-hover:scale-125 transition-transform"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protein</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('protein')}</p>
               </div>
               <div className="flex items-end justify-between">
                 <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalProtein)}g</p>
-                <p className="text-[10px] font-bold text-blue-500/60 uppercase">Target</p>
+                <p className="text-[10px] font-bold text-blue-500/60 uppercase">{t('target')}</p>
               </div>
             </div>
             <div className="flex flex-col justify-between p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md group">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20 group-hover:scale-125 transition-transform"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carbs</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('carbs')}</p>
               </div>
               <div className="flex items-end justify-between">
                 <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalCarbs)}g</p>
-                <p className="text-[10px] font-bold text-emerald-500/60 uppercase">Target</p>
+                <p className="text-[10px] font-bold text-emerald-500/60 uppercase">{t('target')}</p>
               </div>
             </div>
             <div className="flex flex-col justify-between p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md group">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20 group-hover:scale-125 transition-transform"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fats</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('fats')}</p>
               </div>
               <div className="flex items-end justify-between">
                 <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalFats)}g</p>
-                <p className="text-[10px] font-bold text-amber-500/60 uppercase">Target</p>
+                <p className="text-[10px] font-bold text-amber-500/60 uppercase">{t('target')}</p>
               </div>
             </div>
           </div>
@@ -277,8 +280,8 @@ export default function ClientNutrition() {
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
         <div className="p-8 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Daily Structure</h2>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{meals.length} meals • {Math.round(totalCalories)} kcal target</p>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('daily_structure')}</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{t('meals_count_kcal_target', { meals: meals.length, kcal: Math.round(totalCalories) })}</p>
           </div>
         </div>
         <div className="p-8 space-y-6">
@@ -296,6 +299,7 @@ export default function ClientNutrition() {
                 value: `${c.amount}g`,
                 color: c.color
               }))}
+              viewDetailsLabel={t('view_details')}
             />
           ))}
         </div>
@@ -309,8 +313,8 @@ export default function ClientNutrition() {
               <span className="material-symbols-outlined text-2xl">warning</span>
             </div>
             <div>
-              <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Foods to Avoid</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Strict Restrictions</p>
+              <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('foods_to_avoid')}</h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t('strict_restrictions')}</p>
             </div>
           </div>
         </div>
@@ -318,15 +322,15 @@ export default function ClientNutrition() {
           <div className="bg-white/80 dark:bg-slate-900/80 p-5 rounded-2xl border border-rose-100 dark:border-rose-900/30 flex items-center gap-4 shadow-sm">
             <span className="material-symbols-outlined text-rose-500">cancel</span>
             <div>
-              <p className="text-sm font-black text-slate-800 dark:text-slate-200">Deep Fried Foods</p>
-              <p className="text-xs text-slate-500 font-medium tracking-tight">High inflammatory oils and trans fats</p>
+              <p className="text-sm font-black text-slate-800 dark:text-slate-200">{t('deep_fried_foods')}</p>
+              <p className="text-xs text-slate-500 font-medium tracking-tight">{t('high_inflammatory_oils_and_trans_fats')}</p>
             </div>
           </div>
           <div className="bg-white/80 dark:bg-slate-900/80 p-5 rounded-2xl border border-rose-100 dark:border-rose-900/30 flex items-center gap-4 shadow-sm">
             <span className="material-symbols-outlined text-rose-500">cancel</span>
             <div>
-              <p className="text-sm font-black text-slate-800 dark:text-slate-200">Added Sugars {'>'} 25g</p>
-              <p className="text-xs text-slate-500 font-medium tracking-tight">Soda, processed sweets, and hidden sugars</p>
+              <p className="text-sm font-black text-slate-800 dark:text-slate-200">{t('added_sugars_over_25g')}</p>
+              <p className="text-xs text-slate-500 font-medium tracking-tight">{t('soda_processed_sweets_hidden_sugars')}</p>
             </div>
           </div>
         </div>
@@ -339,8 +343,8 @@ export default function ClientNutrition() {
       {/* Macro Totals (Same as General) */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 shadow-sm flex-shrink-0">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">Daily Macro Totals</h3>
-          <span className="text-[10px] font-black px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50">Plan Active</span>
+          <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('daily_macro_totals')}</h3>
+          <span className="text-[10px] font-black px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50">{t('plan_active')}</span>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-10">
           <div className="relative w-44 h-44 flex-shrink-0">
@@ -359,21 +363,21 @@ export default function ClientNutrition() {
             <div className="flex flex-col justify-between p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protein</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('protein')}</p>
               </div>
               <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalProtein)}g</p>
             </div>
             <div className="flex flex-col justify-between p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carbs</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('carbs')}</p>
               </div>
               <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalCarbs)}g</p>
             </div>
             <div className="flex flex-col justify-between p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Fats</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('fats')}</p>
               </div>
               <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalFats)}g</p>
             </div>
@@ -385,8 +389,8 @@ export default function ClientNutrition() {
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
         <div className="p-8 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Daily Structure</h2>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{meals.length} meals • Example Items</p>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('daily_structure')}</h2>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{t('meals_count_example_items', { meals: meals.length })}</p>
           </div>
         </div>
         <div className="p-8 space-y-6">
@@ -402,9 +406,10 @@ export default function ClientNutrition() {
                 name: i.name,
                 sub: `${i.servingSize} × ${i.quantity}`,
                 kcal: Math.round(i.calories * i.quantity),
-                amount: `${Math.round(i.quantity * 100) / 100} units`,
+                amount: `${Math.round(i.quantity * 100) / 100} ${t('units')}`,
                 img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200'
               }))}
+              servingLabel={t('serving')}
             />
           ))}
         </div>
@@ -418,7 +423,7 @@ export default function ClientNutrition() {
         <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 mb-4">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
-              <span className="text-slate-500">Nutrition</span>
+              <span className="text-slate-500">{t('nutrition')}</span>
             </li>
             <li>
               <div className="flex items-center">
@@ -439,18 +444,18 @@ export default function ClientNutrition() {
             <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{user?.email.split('@')[0]}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">flag</span> Goal: Fat Loss
+                <span className="material-symbols-outlined text-[16px]">flag</span> {t('goal')}: {t('fat_loss')}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">female</span> Client
+                <span className="material-symbols-outlined text-[16px]">female</span> {t('client')}
               </span>
             </div>
           </div>
           <div className="px-5 py-2.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
-            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase tracking-widest font-black mb-1 text-center">Plan Status</div>
+            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase tracking-widest font-black mb-1 text-center">{t('plan_status')}</div>
             <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Active Plan
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> {t('active_plan')}
             </div>
           </div>
         </div>
@@ -464,13 +469,13 @@ export default function ClientNutrition() {
               onClick={() => setMode('general')}
               className={`relative px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10 ${mode === 'general' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
             >
-              General Mode
+              {t('general_mode')}
             </button>
             <button 
               onClick={() => setMode('example')}
               className={`relative px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10 ${mode === 'example' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
             >
-              Example Mode
+              {t('example_mode')}
             </button>
           </div>
           <div className="flex gap-2 pr-2">
@@ -490,7 +495,7 @@ export default function ClientNutrition() {
   );
 }
 
-function MealBlock({ title, time, kcal, icon, iconBg, macros }: any) {
+function MealBlock({ title, time, kcal, icon, iconBg, macros, viewDetailsLabel }: any) {
   return (
     <div className="group border border-slate-100 dark:border-slate-800 rounded-3xl p-6 hover:border-emerald-500/50 transition-all bg-white dark:bg-slate-900 shadow-sm hover:shadow-lg">
       <div className="flex items-start justify-between mb-6">
@@ -509,7 +514,7 @@ function MealBlock({ title, time, kcal, icon, iconBg, macros }: any) {
         </div>
         <div className="flex items-center gap-2">
           <button className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:text-emerald-500 transition-all flex items-center gap-2">
-            <span className="material-symbols-outlined text-[16px] text-orange-500">local_fire_department</span> View Details
+            <span className="material-symbols-outlined text-[16px] text-orange-500">local_fire_department</span> {viewDetailsLabel}
           </button>
         </div>
       </div>
@@ -531,7 +536,7 @@ function MealBlock({ title, time, kcal, icon, iconBg, macros }: any) {
   );
 }
 
-function ExampleMealBlock({ title, time, kcal, icon, iconBg, items }: any) {
+function ExampleMealBlock({ title, time, kcal, icon, iconBg, items, servingLabel }: any) {
   return (
     <div className="group border border-slate-100 dark:border-slate-800 rounded-3xl p-6 hover:border-emerald-500/50 transition-all bg-white dark:bg-slate-900 shadow-sm hover:shadow-lg">
       <div className="flex items-start justify-between mb-6">
@@ -560,7 +565,7 @@ function ExampleMealBlock({ title, time, kcal, icon, iconBg, items }: any) {
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.sub}</p>
             </div>
             <div className="text-right">
-              <span className="text-sm font-black text-slate-900 dark:text-white tracking-tighter">{item.amount || 'Serving'}</span>
+              <span className="text-sm font-black text-slate-900 dark:text-white tracking-tighter">{item.amount || servingLabel}</span>
               <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.kcal} kcal</span>
             </div>
           </div>

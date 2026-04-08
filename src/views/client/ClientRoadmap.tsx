@@ -21,6 +21,7 @@ import {
   ChevronRight as ChevronIcon
 } from 'lucide-react';
 import { fetchWithAuth } from '../../api';
+import { useLanguage } from '../../context/LanguageContext';
 
 // --- TYPES ---
 
@@ -135,6 +136,7 @@ const getInitialData = (): RoadmapData => ({
 });
 
 export default function ClientRoadmap() {
+  const { t } = useLanguage();
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedNutritionId, setSelectedNutritionId] = useState<string | null>(null);
@@ -174,7 +176,7 @@ export default function ClientRoadmap() {
     <div className="p-10 flex items-center justify-center min-h-[400px]">
       <div className="flex flex-col items-center gap-4">
         <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-500 font-medium italic">Cargando tu planificación...</p>
+        <p className="text-slate-500 font-medium italic">{t('loading_your_planning')}</p>
       </div>
     </div>
   );
@@ -194,15 +196,15 @@ export default function ClientRoadmap() {
                 <Sparkles className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">Tu Estrategia Clínica</p>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight leading-none">Strategic Roadmap</h2>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">{t('your_clinical_strategy')}</p>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight leading-none">{t('strategic_roadmap')}</h2>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <div className="bg-[#17cf54] px-5 py-3 rounded-2xl text-white flex items-center gap-3 shadow-lg shadow-[#17cf54]/20 font-bold text-xs tracking-widest uppercase cursor-default">
                 <PlayIcon className="w-5 h-5 fill-white/20" />
-                <span>Estado: {roadmap.status}</span>
+                <span>{t('status')}: {roadmap.status}</span>
               </div>
             </div>
           </div>
@@ -213,7 +215,7 @@ export default function ClientRoadmap() {
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                 <MapIcon className="w-5 h-5" />
               </div>
-              <h3 className="text-xl font-bold tracking-tight">Timeline Architecture</h3>
+              <h3 className="text-xl font-bold tracking-tight">{t('timeline_architecture')}</h3>
             </div>
 
             <div className="overflow-x-auto pb-6 no-scrollbar relative">
@@ -229,12 +231,12 @@ export default function ClientRoadmap() {
                   className="absolute top-0 bottom-0 w-px bg-[#17cf54] z-20 pointer-events-none"
                   style={{ left: `${((roadmap.currentWeek - 0.5) / 12) * 100}%` }}
                 >
-                  <div className="absolute top-0 -translate-x-1/2 bg-[#17cf54] text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg shadow-emerald-500/20 tracking-tighter uppercase leading-none">TODAY</div>
+                  <div className="absolute top-0 -translate-x-1/2 bg-[#17cf54] text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg shadow-emerald-500/20 tracking-tighter uppercase leading-none">{t('today')}</div>
                 </div>
 
                 <div className="space-y-4 px-2">
                   <div className="flex items-center gap-8">
-                    <div className="w-20 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Nutrition</div>
+                    <div className="w-20 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{t('nutrition')}</div>
                     <div className="flex-1 flex gap-1 h-12 relative">
                       {roadmap.nutrition.map(block => (
                         <motion.div 
@@ -252,7 +254,7 @@ export default function ClientRoadmap() {
                   </div>
 
                   <div className="flex items-center gap-8">
-                    <div className="w-20 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Training</div>
+                    <div className="w-20 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{t('training')}</div>
                     <div className="flex-1 flex gap-1 h-12 relative">
                       {roadmap.training.map(block => (
                         <motion.div 
@@ -281,11 +283,11 @@ export default function ClientRoadmap() {
                   <MindsetIcon className="w-6 h-6" />
                 </div>
                 <div>
-                   <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">The Intelligence Board</h3>
-                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em] mt-1">Multi-Strategy Clinical Optimization</p>
+                   <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">{t('the_intelligence_board')}</h3>
+                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em] mt-1">{t('multi_strategy_clinical_optimization')}</p>
                 </div>
               </div>
-              <span className="px-4 py-1.5 rounded-full text-[10px] font-bold bg-[#17cf54]/10 text-[#17cf54] border border-[#17cf54]/20 uppercase tracking-widest">Active Strategy View</span>
+              <span className="px-4 py-1.5 rounded-full text-[10px] font-bold bg-[#17cf54]/10 text-[#17cf54] border border-[#17cf54]/20 uppercase tracking-widest">{t('active_strategy_view')}</span>
             </div>
 
             <div className="p-8 space-y-12">
@@ -293,7 +295,7 @@ export default function ClientRoadmap() {
               <section className="space-y-8">
                 <div className="flex items-center gap-3 text-amber-600">
                   <NutritionIcon className="w-5 h-5" />
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">Nutrition Strategy: {activeNutrition?.title}</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">{t('nutrition_strategy')}: {activeNutrition?.title}</h4>
                   <div className="flex-1 h-px bg-amber-100 dark:bg-amber-900/30"></div>
                 </div>
 
@@ -301,11 +303,11 @@ export default function ClientRoadmap() {
                   <div className="space-y-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Ingesta Diaria</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('daily_intake')}</p>
                     <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeNutrition.kcal} <span className="text-[10px] text-slate-400 font-bold tracking-widest">KCAL</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Macros</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('macros')}</p>
                     <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeNutrition.macros}</p>
                   </div>
                   <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-amber-500/20 group/card">
@@ -313,7 +315,7 @@ export default function ClientRoadmap() {
                     <p className="text-xl font-bold text-amber-600 tracking-tight leading-none">{activeNutrition.deficit} <span className="text-[10px] text-amber-500/50 font-bold tracking-widest">KCAL/D</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-blue-500/20 group/card">
-                    <p className="text-[10px] font-bold text-blue-600/60 uppercase tracking-widest mb-1 font-semibold italic">Agua</p>
+                    <p className="text-[10px] font-bold text-blue-600/60 uppercase tracking-widest mb-1 font-semibold italic">{t('water')}</p>
                     <p className="text-xl font-bold text-blue-500 tracking-tight leading-none">{activeNutrition.water} <span className="text-[10px] text-blue-400/50 font-bold tracking-widest">LITROS</span></p>
                   </div>
                 </div>
@@ -322,7 +324,7 @@ export default function ClientRoadmap() {
                       <div className="space-y-8">
                         <div>
                           <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                             Metabolic Rationale
+                             {t('metabolic_rationale')}
                           </h5>
                           <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 italic">
                              "{activeNutrition.rationale}"
@@ -330,7 +332,7 @@ export default function ClientRoadmap() {
                         </div>
                         <div>
                           <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">
-                             Nutrient Timing Matrix
+                              {t('nutrient_timing_matrix')}
                           </h5>
                            <ul className="space-y-3">
                             {activeNutrition.timing?.map((item: string, i: number) => (
@@ -344,7 +346,7 @@ export default function ClientRoadmap() {
                       </div>
                       <div>
                         <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">
-                           Micronutrient Optimization
+                           {t('micronutrient_optimization')}
                         </h5>
                         <div className="grid grid-cols-2 gap-4">
                           {activeNutrition.micros?.map((m: any, i: number) => (
@@ -358,7 +360,7 @@ export default function ClientRoadmap() {
                     </div>
                   </div>
                 ) : (
-                   <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest italic">Nutrition Phase Data Pending</div>
+                   <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest italic">{t('nutrition_phase_data_pending')}</div>
                 )}
               </section>
 
@@ -368,7 +370,7 @@ export default function ClientRoadmap() {
               <section className="space-y-8">
                   <div className="flex items-center gap-3 text-purple-600">
                   <TrainingIcon className="w-5 h-5" />
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">Training Strategy: {activeTraining?.title}</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">{t('training_strategy')}: {activeTraining?.title}</h4>
                   <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30"></div>
                 </div>
 
@@ -376,19 +378,19 @@ export default function ClientRoadmap() {
                    <div className="space-y-8">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Enfoque del Bloque</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('block_focus')}</p>
                           <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeTraining.focus}</p>
                         </div>
                         <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Sesiones / Sem</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('sessions_per_week')}</p>
                           <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeTraining.sessions}</p>
                         </div>
                         <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-purple-500/20 group/card">
-                          <p className="text-[10px] font-bold text-purple-600/60 uppercase tracking-widest mb-1 font-semibold italic">Intensidad</p>
+                          <p className="text-[10px] font-bold text-purple-600/60 uppercase tracking-widest mb-1 font-semibold italic">{t('intensity')}</p>
                           <p className="text-xl font-bold text-purple-600 tracking-tight leading-none">{activeTraining.intensity}</p>
                         </div>
                         <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">Protocolo Tempo</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('tempo_protocol')}</p>
                           <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight font-mono leading-none">{activeTraining.tempo}</p>
                         </div>
                       </div>
@@ -396,7 +398,7 @@ export default function ClientRoadmap() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
                           <h5 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                             Loading Strategy
+                             {t('loading_strategy')}
                           </h5>
                           <p className="text-sm text-slate-500 font-medium italic">
                             "{activeTraining.loading}"
@@ -404,7 +406,7 @@ export default function ClientRoadmap() {
                         </div>
                         <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
                           <h5 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                             Anatomical Context
+                             {t('anatomical_context')}
                           </h5>
                           <p className="text-sm text-slate-500 font-medium italic">
                             "{activeTraining.scope}"
@@ -412,7 +414,7 @@ export default function ClientRoadmap() {
                         </div>
                         <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
                           <h5 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                             Recovery Protocol
+                             {t('recovery_protocol')}
                           </h5>
                           <p className="text-sm text-slate-500 font-medium italic">
                             "{activeTraining.recovery}"
@@ -421,7 +423,7 @@ export default function ClientRoadmap() {
                       </div>
                     </div>
                 ) : (
-                  <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest italic">Training Block Data Pending</div>
+                  <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest italic">{t('training_block_data_pending')}</div>
                 )}
               </section>
             </div>
