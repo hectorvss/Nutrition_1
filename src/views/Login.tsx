@@ -14,6 +14,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
   const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
+  const isSuccessMessage = error === t('login_account_created');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +104,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className={`p-3 rounded-2xl mb-6 text-xs font-bold text-center border ${
-                  error.includes('successfully') 
+                  isSuccessMessage
                   ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
                   : 'bg-red-50 text-red-600 border-red-100'
                 }`}

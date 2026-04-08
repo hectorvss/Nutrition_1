@@ -281,16 +281,16 @@ export default function ClientProgress() {
       {isLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
           <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium">Cargando estadísticas...</p>
+          <p className="text-sm font-medium">{t('loading_statistics')}</p>
         </div>
       ) : (
       <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Weight', value: stats?.latestWeight || '--', unit: 'kg', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Loss goal', value: stats?.goal || 'TBD', unit: '', change: 'Target', icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Body Fat', value: stats?.bodyFat || '--', unit: '%', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Active', value: stats?.activeDays || '0', unit: 'days', change: `${stats?.adherenceRate || 0}% rate`, icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('weight'), value: stats?.latestWeight || '--', unit: 'kg', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('loss_goal'), value: stats?.goal || t('tbd'), unit: '', change: t('target'), icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('body_fat'), value: stats?.bodyFat || '--', unit: '%', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('active'), value: stats?.activeDays || '0', unit: t('days'), change: `${stats?.adherenceRate || 0}% ${t('rate')}`, icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
@@ -313,7 +313,7 @@ export default function ClientProgress() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('weight_progress')}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Goal: {stats?.goal || 'TBD'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">{t('goal')}: {stats?.goal || t('tbd')}</p>
             </div>
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
               {['3M', '6M', '1Y'].map(p => (
@@ -347,7 +347,7 @@ export default function ClientProgress() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('macro_adherence')}</h3>
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">Avg. 7 Days</span>
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">{t('avg_7_days')}</span>
             </div>
             <div className="space-y-6">
               {[
@@ -367,7 +367,7 @@ export default function ClientProgress() {
               ))}
             </div>
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Daily Caloric Avg</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('daily_caloric_avg')}</span>
               <span className="text-sm font-bold text-slate-900 dark:text-white">{stats?.macros?.calories || 0} kcal</span>
             </div>
           </div>
@@ -382,12 +382,12 @@ export default function ClientProgress() {
                   {allergy}
                 </span>
               ))}
-              {(!stats?.allergies || stats.allergies.length === 0) && <p className="text-xs text-slate-400 italic">No allergies listed</p>}
+              {(!stats?.allergies || stats.allergies.length === 0) && <p className="text-xs text-slate-400 italic">{t('no_allergies_listed')}</p>}
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">DIETARY PREFERENCE</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('dietary_preference')}</p>
               <div className="flex gap-2">
-                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">Custom Plan</span>
+                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{t('custom_plan')}</span>
               </div>
             </div>
           </div>
@@ -403,16 +403,16 @@ export default function ClientProgress() {
       {isLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
           <div className="w-10 h-10 border-4 border-[#17cf54]/20 border-t-[#17cf54] rounded-full animate-spin"></div>
-          <p className="text-sm font-medium">Cargando entrenamiento...</p>
+          <p className="text-sm font-medium">{t('loading_training')}</p>
         </div>
       ) : (
       <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Avg. Session RPE', value: stats?.training?.avgRPE || '--', unit: '/ 10', change: 'Session Avg', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Workouts', value: stats?.training?.workoutCount || '0', unit: 'sessions', change: 'This Week', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Fatigue Level', value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? 'High' : 'Normal', icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
+          { label: t('avg_session_rpe'), value: stats?.training?.avgRPE || '--', unit: '/ 10', change: t('session_avg'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('workouts'), value: stats?.training?.workoutCount || '0', unit: t('sessions'), change: t('this_week'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('fatigue_level'), value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? t('high') : t('normal'), icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
@@ -446,7 +446,7 @@ export default function ClientProgress() {
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
                 <div className="px-3 py-1 flex flex-col items-center min-w-[120px]">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Week</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">{t('week')}</span>
                   <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                     {(() => {
                       const { monday, sunday } = getWeekRange(strengthWeekOffset);
@@ -469,13 +469,13 @@ export default function ClientProgress() {
                 onChange={(e) => setStrengthRange(e.target.value)}
                 className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 outline-none shadow-sm transition-all"
               >
-                <option value="1W">Last 7 Days</option>
-                <option value="14D">Last 14 Days</option>
-                <option value="30D">Last 30 Days</option>
-                <option value="3M">Latest 90 Days</option>
-                <option value="6M">Last 6 Months</option>
-                <option value="YTD">Year to Date</option>
-                <option value="ALL">All History</option>
+                <option value="1W">{t('last_7_days')}</option>
+                <option value="14D">{t('last_14_days')}</option>
+                <option value="30D">{t('last_30_days')}</option>
+                <option value="3M">{t('latest_90_days')}</option>
+                <option value="6M">{t('last_6_months')}</option>
+                <option value="YTD">{t('year_to_date')}</option>
+                <option value="ALL">{t('all_history')}</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
             </div>
@@ -683,36 +683,36 @@ export default function ClientProgress() {
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-slate-900">Master Roadmap</h3>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase">Status: In Progress</span>
+            <h3 className="text-lg font-bold text-slate-900">{t('master_roadmap')}</h3>
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase">{t('status')}: {t('in_progress')}</span>
           </div>
           <div className="space-y-8">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Nutrition Focus</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">{t('nutrition_focus')}</p>
               <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
                 <div className="w-1/3 bg-red-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-red-700">Deficit</span>
+                  <span className="text-[10px] font-bold text-red-700">{t('deficit')}</span>
                   <span className="text-[8px] font-bold text-red-400 uppercase">Wk 1-4</span>
                 </div>
                 <div className="w-1/3 bg-blue-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-blue-700">Maintenance</span>
+                  <span className="text-[10px] font-bold text-blue-700">{t('maintenance')}</span>
                   <span className="text-[8px] font-bold text-blue-400 uppercase">Wk 5-8</span>
                 </div>
                 <div className="w-1/3 bg-emerald-50 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-emerald-700">Surplus</span>
+                  <span className="text-[10px] font-bold text-emerald-700">{t('surplus')}</span>
                   <span className="text-[8px] font-bold text-emerald-400 uppercase">Wk 9-12</span>
                 </div>
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Training Block</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">{t('training_block')}</p>
               <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
                 <div className="w-1/4 bg-purple-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-purple-700">Metabolic</span>
+                  <span className="text-[10px] font-bold text-purple-700">{t('metabolic')}</span>
                   <span className="text-[8px] font-bold text-purple-400 uppercase">Wk 1-3</span>
                 </div>
                 <div className="w-[41.6%] bg-indigo-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-indigo-700">Strength Base</span>
+                  <span className="text-[10px] font-bold text-indigo-700">{t('strength_base')}</span>
                   <span className="text-[8px] font-bold text-indigo-400 uppercase">Wk 4-8</span>
                 </div>
                 <div className="w-[33.3%] bg-amber-50 flex flex-col items-center justify-center">
@@ -727,11 +727,11 @@ export default function ClientProgress() {
 
       <div className="space-y-6">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-md font-bold text-slate-900 mb-6">Upcoming Tasks</h3>
+          <h3 className="text-md font-bold text-slate-900 mb-6">{t('upcoming_tasks')}</h3>
           <div className="space-y-3">
-            {[
-              { title: 'Weekly Check-in', time: 'Tomorrow, 9:00 AM', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { title: 'Progress Photos', time: 'Friday, EOD', icon: Camera, color: 'text-purple-600', bg: 'bg-purple-50' },
+          {[
+              { title: t('weekly_checkin'), time: t('tomorrow_9am'), icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { title: t('progress_photos'), time: t('friday_eod'), icon: Camera, color: 'text-purple-600', bg: 'bg-purple-50' },
             ].map((item, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                 <div className="flex items-center gap-3">
@@ -755,10 +755,10 @@ export default function ClientProgress() {
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[
-          { label: 'MOOD', value: stats?.mindset?.mood || '--', status: stats?.mindset?.mood > 7 ? 'Good' : 'Avg', icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
-          { label: 'STRESS', value: stats?.mindset?.stress || '--', status: stats?.mindset?.stress > 7 ? 'High' : 'Normal', icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
-          { label: 'MOTIVATION', value: stats?.mindset?.motivation || '--', status: stats?.mindset?.motivation > 7 ? 'High' : 'Low', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
-          { label: 'ENERGY', value: stats?.mindset?.energy || '--', status: stats?.mindset?.energy > 7 ? 'High' : 'Low', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
+          { label: t('mood_upper'), value: stats?.mindset?.mood || '--', status: stats?.mindset?.mood > 7 ? t('good') : t('avg'), icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
+          { label: t('stress_upper'), value: stats?.mindset?.stress || '--', status: stats?.mindset?.stress > 7 ? t('high') : t('normal'), icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
+          { label: t('motivation_upper'), value: stats?.mindset?.motivation || '--', status: stats?.mindset?.motivation > 7 ? t('high') : t('low'), icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
+          { label: t('energy_upper'), value: stats?.mindset?.energy || '--', status: stats?.mindset?.energy > 7 ? t('high') : t('low'), icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
             <div className="flex justify-between items-start mb-4">
@@ -787,10 +787,10 @@ export default function ClientProgress() {
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">{t('todays_state')}</h3>
           <div className="space-y-6">
             {[
-              { label: 'Mood', value: stats?.mindset?.mood, color: 'bg-blue-500' },
-              { label: 'Stress', value: stats?.mindset?.stress, color: 'bg-red-400' },
-              { label: 'Energy', value: stats?.mindset?.energy, color: 'bg-amber-400' },
-              { label: 'Motivation', value: stats?.mindset?.motivation, color: 'bg-purple-500' },
+              { label: t('mood'), value: stats?.mindset?.mood, color: 'bg-blue-500' },
+              { label: t('stress'), value: stats?.mindset?.stress, color: 'bg-red-400' },
+              { label: t('energy'), value: stats?.mindset?.energy, color: 'bg-amber-400' },
+              { label: t('motivation'), value: stats?.mindset?.motivation, color: 'bg-purple-500' },
             ].map((item, idx) => (
               <div key={idx}>
                 <div className="flex justify-between items-center mb-2">
@@ -848,16 +848,16 @@ export default function ClientProgress() {
               <div className="w-24 h-24 rounded-2xl bg-cover bg-center ring-4 ring-emerald-50 dark:ring-emerald-900/20 shadow-sm" style={{ backgroundImage: `url(${user?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200'})` }}></div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{user?.user_metadata?.full_name || 'My Progress'}</h1>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200">Active</span>
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{user?.user_metadata?.full_name || t('my_progress')}</h1>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200">{t('active')}</span>
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium capitalize">
-                  {stats?.goal || 'In Progress'} Plan • Active since {new Date(user?.created_at).toLocaleDateString([], { month: 'short', year: 'numeric' })}
+                  {stats?.goal || t('in_progress')} {t('plan')} • {t('active_since')} {new Date(user?.created_at).toLocaleDateString([], { month: 'short', year: 'numeric' })}
                 </p>
                 <div className="flex gap-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                   <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100">
                     <Dumbbell className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Active Training</span>
+                    <span>{t('active_training')}</span>
                   </div>
                 </div>
               </div>
@@ -866,7 +866,7 @@ export default function ClientProgress() {
               <div className="flex items-center gap-3">
                 <button className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 text-sm font-bold">
                   <Edit className="w-4 h-4" />
-                  Edit Profile
+                  {t('edit_profile')}
                 </button>
               </div>
               <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100">
@@ -887,7 +887,7 @@ export default function ClientProgress() {
                     : 'text-slate-400 dark:text-slate-500 hover:text-slate-600'
                 }`}
               >
-                {tab}
+                {tab === 'Nutrition' ? t('nutrition') : tab === 'Training' ? t('training') : tab === 'Planning' ? t('planning') : tab === 'Mindset' ? t('mindset') : t('checkins')}
                 {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full"></div>
                 )}

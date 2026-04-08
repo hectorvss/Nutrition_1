@@ -65,9 +65,9 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       const workoutId = dataJson.weeklySchedule[todayName];
       if (!workoutId || workoutId === 'rest') return { name: null, blocks: [] };
       const workout = (dataJson.workouts || []).find((w: any) => w.id === workoutId);
-      return { name: workout?.name || 'Workout', blocks: workout?.blocks || [] };
+      return { name: workout?.name || t('workout'), blocks: workout?.blocks || [] };
     }
-    return { name: dataJson.name || 'Training', blocks: dataJson.blocks || [] };
+    return { name: dataJson.name || t('training'), blocks: dataJson.blocks || [] };
   };
 
   const todayTraining = getTodayTraining();
@@ -281,7 +281,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                           </div>
                         ))}
                         {(meal.items || []).length > 3 && (
-                          <p className="text-[10px] text-slate-400 pl-3">+ {(meal.items.length - 3)} more items</p>
+                          <p className="text-[10px] text-slate-400 pl-3">{t('more_items_count', { count: meal.items.length - 3 })}</p>
                         )}
                       </div>
                     </div>

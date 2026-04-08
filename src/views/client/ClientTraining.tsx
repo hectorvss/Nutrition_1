@@ -27,7 +27,7 @@ interface ExerciseLog {
 type ExerciseLogs = Record<string, ExerciseLog>;
 
 export default function ClientTraining({ onViewExercise }: ClientTrainingProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { exercises, isLoading: exercisesLoading, refreshExercises } = useExerciseContext();
   const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -37,6 +37,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { user } = useAuth();
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
   const [allLogs, setAllLogs] = useState<Record<string, { exerciseLogs: ExerciseLogs; rpe: string; notes: string }>>(() => {
     try {
       const saved = typeof window !== 'undefined' ? localStorage.getItem(`workout_draft_${user?.id}`) : null;
@@ -268,7 +269,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         method: 'POST',
         body: JSON.stringify({
           plan_id: trainingProgram.id,
-          workout_name: currentWorkoutName || `${selectedDay} session`,
+          workout_name: currentWorkoutName || `${t(selectedDay)} ${t('session')}`,
           day_key: selectedDay,
           exercises: exercisesToSave,
           notes: sessionNotes,
@@ -303,8 +304,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-400">
           <span className="material-symbols-outlined text-4xl">fitness_center</span>
         </div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No tienes un plan de entrenamiento asignado</h2>
-        <p className="text-slate-500 max-w-sm">Tu coach aún no ha publicado tu rutina. Una vez asignada, la verás aquí.</p>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('no_training_plan_assigned')}</h2>
+        <p className="text-slate-500 max-w-sm">{t('coach_has_not_published_training_plan')}</p>
       </div>
     );
   }
@@ -320,7 +321,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     const workouts = dataJson.workouts || [];
     const workout = workouts.find((w: any) => w.id === workoutId);
     blocks = workout?.blocks || [];
-    currentWorkoutName = workout?.name || 'Día de Descanso';
+    currentWorkoutName = workout?.name || t('rest_day');
   } else {
     blocks = dataJson.blocks || [];
   }
@@ -346,7 +347,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                   : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700'
               }`}
             >
-              <span>{d.charAt(0).toUpperCase() + d.slice(1)}</span>
+              <span>{t(d)}</span>
               <div className={`w-1.5 h-1.5 rounded-full mt-1 ${hasWorkout ? (isSelected ? 'bg-white' : 'bg-[#17cf54]') : 'bg-transparent'}`}></div>
             </button>
           );
@@ -392,12 +393,12 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">female</span> Client
+                <span className="material-symbols-outlined text-[16px]">female</span> {t('client')}
               </span>
             </div>
           </div>
           <div className="px-4 py-2 bg-[#17cf54]/10 dark:bg-[#17cf54]/20 rounded-xl border border-[#17cf54]/20 dark:border-[#17cf54]/30">
-            <div className="text-xs text-[#17cf54] dark:text-[#17cf54] uppercase tracking-wide font-semibold mb-1 text-center">Status</div>
+            <div className="text-xs text-[#17cf54] dark:text-[#17cf54] uppercase tracking-wide font-semibold mb-1 text-center">{t('status')}</div>
             <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium text-sm">
               <span className="w-2 h-2 rounded-full bg-[#17cf54]"></span> {t('active_plan')}
             </div>
@@ -416,11 +417,11 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
               <span className="material-symbols-outlined text-lg">chevron_left</span>
             </button>
             <div className="px-4 py-2 flex flex-col items-center min-w-[140px]">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">Semana</span>
+              <span className="text-[10px] uppercase tracking-widest font-bold text-slate-400">{t('week')}</span>
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                 {(() => {
                   const { monday, sunday } = getWeekRange(weekOffset);
-                  return `${monday.toLocaleDateString([], { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
+                  return `${monday.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
                 })()}
               </span>
             </div>
@@ -518,8 +519,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-600 mb-4">
                   <span className="material-symbols-outlined text-3xl">self_improvement</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Día de Descanso</h3>
-                <p className="text-sm text-slate-500 mt-1 max-w-sm">Tómate un respiro, recupérate y prepárate para la próxima sesión.</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('rest_day')}</h3>
+                <p className="text-sm text-slate-500 mt-1 max-w-sm">{t('rest_day_training_hint')}</p>
               </div>
             ) : (
               blocks.map((block: any, bIdx: number) => (
@@ -608,6 +609,7 @@ interface DetailedExerciseRowProps {
 }
 
 const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes, explanation }) => {
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -631,7 +633,7 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
             <div className="flex items-center gap-2">
               <p className="text-xs text-slate-400 truncate">{type}</p>
               <button className="text-[10px] font-medium text-[#17cf54] hover:text-[#15b84a] flex items-center gap-1 px-1.5 py-0.5 bg-[#17cf54]/5 rounded transition-colors">
-                <span className="material-symbols-outlined text-[12px]">videocam</span> Video
+                <span className="material-symbols-outlined text-[12px]">videocam</span> {t('video')}
               </button>
             </div>
           </div>
@@ -658,7 +660,7 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
             <div className="mb-6 mx-2 p-4 bg-emerald-50/30 dark:bg-emerald-500/5 rounded-2xl border border-emerald-500/10 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-[18px] text-[#17cf54]">description</span>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Coach's Notes</span>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">{t('coach_notes')}</span>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                 {explanation}
@@ -669,13 +671,13 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
             <div className="md:col-span-4 flex items-center justify-end md:justify-start">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-2">
                 <span className="material-symbols-outlined text-[16px] text-[#17cf54]">edit_note</span>
-                Client Log
+                {t('client_log')}
               </span>
             </div>
             <div className="md:col-span-8 flex flex-col gap-3">
               {/* Set headers */}
               <div className="grid grid-cols-4 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center pb-1">
-                <div>Set</div><div>Weight (kg)</div><div>Reps</div><div>RIR</div>
+                <div>{t('set_label')}</div><div>{t('weight_kg')}</div><div>{t('reps_label')}</div><div>{t('rir_label')}</div>
               </div>
               {/* Set rows */}
               {setsLogged.map((s, i) => (
@@ -714,7 +716,7 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
                 onClick={() => onAddSet(exKey)}
                 className="self-start text-xs font-bold text-[#17cf54] hover:text-[#15b84a] flex items-center gap-1 px-2 py-1 bg-[#17cf54]/5 rounded-lg transition-colors"
               >
-                <span className="material-symbols-outlined text-[14px]">add</span> Add Set
+                <span className="material-symbols-outlined text-[14px]">add</span> {t('add_set')}
               </button>
               {/* Notes */}
               <div className="relative">

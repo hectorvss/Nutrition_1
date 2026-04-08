@@ -16,6 +16,7 @@ import { fetchWithAuth } from './api';
 import ClientProgress from './views/client/ClientProgress';
 import WeeklyCheckinFlow from './views/client/WeeklyCheckinFlow';
 import ClientActionFAB from './components/client/ClientActionFAB';
+import { useLanguage } from './context/LanguageContext';
 
 export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'settings' | 'activity-editor' | 'none';
 
@@ -26,6 +27,7 @@ export default function ClientApp() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [onboardingData, setOnboardingData] = useState<any>(null);
 
   React.useEffect(() => {
@@ -84,13 +86,13 @@ export default function ClientApp() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Screen Under Development</h2>
-            <p className="text-center max-w-md dark:text-slate-400">This client screen is currently being built. Navigation is connected, but the content will be added soon.</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('screen_under_development')}</h2>
+            <p className="text-center max-w-md dark:text-slate-400">{t('client_screen_under_development_desc')}</p>
             <button 
               onClick={() => setCurrentView('dashboard')}
               className="mt-6 px-4 py-2 bg-[#17cf54] text-white rounded-lg font-bold shadow-md shadow-[#17cf54]/20 hover:bg-[#15b84a] transition-all"
             >
-              Back to Dashboard
+              {t('back_to_dashboard')}
             </button>
           </div>
         );

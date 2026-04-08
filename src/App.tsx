@@ -40,6 +40,7 @@ import ClientApp from './ClientApp';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
 import LandingPage from './views/LandingPage';
+import { useLanguage } from './context/LanguageContext';
 
 type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
 
@@ -56,6 +57,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [draftPlanning, setDraftPlanning] = useState<any>(null);
   const { clients: globalClients, assignPlanningDraft } = useClient();
+  const { t } = useLanguage();
   
   const { user, isLoading } = useAuth();
   const { profile } = useProfile();
@@ -68,7 +70,7 @@ export default function App() {
   }, [user, currentView]);
   
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">Cargando aplicación...</div>;
+    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">{t('loading_application')}</div>;
   }
   
   if (!user && currentView === 'landing') {
@@ -158,41 +160,41 @@ export default function App() {
                 totalWeeks: settings.duration,
                 nutrition: [
                   { 
-                    id: 'n1', title: 'Phase 1: ' + settings.nutritionApproach, startWeek: 1, endWeek: 4, type: 'nutrition', 
+                    id: 'n1', title: `${t('planning_phase_label', { phase: 1 })}: ${settings.nutritionApproach}`, startWeek: 1, endWeek: 4, type: 'nutrition',
                     duration: 4, order: 1,
                     colorToken: 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400',
-                    kcal: '2000', macros: '40/30/30', freq: '4 Meals', water: '3.0 L',
+                    kcal: '2000', macros: '40/30/30', freq: t('planning_default_meals_frequency'), water: '3.0 L',
                     stratData: { 
-                      summary: 'Initial phase adapted from ' + templateId,
+                      summary: `${t('planning_initial_phase_summary')} ${templateId}`,
                       primaryObjective: settings.primaryGoal,
                       secondaryObjectives: [], kpis: [], successCriteria: [], coachNotes: '', risksAndConstraints: [],
-                      kcal: '2000', macros: '40/30/30', freq: '4 Meals', water: '3.0 L'
+                      kcal: '2000', macros: '40/30/30', freq: t('planning_default_meals_frequency'), water: '3.0 L'
                     }
                   }
                 ],
                 training: [
                   { 
-                    id: 't1', title: 'Phase 1: Foundation', startWeek: 1, endWeek: 4, type: 'training', 
+                    id: 't1', title: `${t('planning_phase_label', { phase: 1 })}: ${t('planning_foundation')}`, startWeek: 1, endWeek: 4, type: 'training',
                     duration: 4, order: 1,
                     colorToken: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
-                    focus: 'Hypertrophy', sessions: settings.trainingFreq, deload: 'Active',
+                    focus: t('planning_hypertrophy'), sessions: settings.trainingFreq, deload: t('active'),
                     stratData: { 
-                      summary: 'Foundation building.',
-                      primaryObjective: 'Hypertrophy',
+                      summary: t('planning_foundation_building'),
+                      primaryObjective: t('planning_hypertrophy'),
                       secondaryObjectives: [], kpis: [], successCriteria: [], coachNotes: '', risksAndConstraints: [],
-                      trainingFocus: 'Hypertrophy', sessions: settings.trainingFreq, deload: 'Active',
-                      intensityTargets: ['RPE 7-8']
+                      trainingFocus: t('planning_hypertrophy'), sessions: settings.trainingFreq, deload: t('active'),
+                      intensityTargets: [t('planning_rpe_7_8')]
                     }
                   }
                 ],
                 goals: [],
                 milestones: [
-                  { id: 'm1', label: 'Program Start', week: 'Week 1', status: 'next' }
+                  { id: 'm1', label: t('planning_program_start'), week: t('planning_week_number', { week: 1 }), status: 'next' }
                 ],
                 assumptions: {
                   steps: '10,000',
                   sleep: '8h',
-                  constraints: 'None'
+                  constraints: t('none')
                 }
               };
               setDraftPlanning(generatedDraft);
@@ -277,13 +279,13 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 mb-2">Screen Under Development</h2>
-            <p className="text-center max-w-md">This screen is currently being built. Navigation is connected, but the content will be added in the next update.</p>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">{t('screen_under_development')}</h2>
+            <p className="text-center max-w-md">{t('screen_under_development_desc')}</p>
             <button 
               onClick={() => setCurrentView('dashboard')}
               className="mt-6 px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold shadow-md shadow-emerald-500/20 hover:bg-emerald-600 transition-all"
             >
-              Back to Dashboard
+              {t('back_to_dashboard')}
             </button>
           </div>
         );
