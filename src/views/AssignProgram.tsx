@@ -3,6 +3,7 @@ import { trainingPrograms } from '../constants/training';
 import { PROGRAM_TEMPLATES } from '../constants/training_presets';
 import { useClient } from '../context/ClientContext';
 import { fetchWithAuth } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface AssignProgramProps {
   clientId: string;
@@ -12,11 +13,12 @@ interface AssignProgramProps {
 }
 
 const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssign, onCreateScratch }) => {
+  const { t } = useLanguage();
   const { clients } = useClient();
   const client = clients.find(c => c.id === clientId as any) || {
-    name: 'Unknown Client',
+    name: t('unknown_client'),
     avatar: '',
-    phase: 'No phase'
+    phase: t('no_phase')
   };
   const [selectedProgramId, setSelectedProgramId] = useState<string>(trainingPrograms[0].id);
   const selectedProgram = trainingPrograms.find(p => p.id === selectedProgramId) || trainingPrograms[0];
@@ -50,7 +52,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
           {/* Breadcrumbs & Header */}
           <div className="flex flex-col gap-6 mb-8">
             <div className="flex items-center gap-2 text-sm text-slate-500">
-              <span onClick={onBack} className="hover:text-emerald-500 cursor-pointer transition-colors">Training</span>
+              <span onClick={onBack} className="hover:text-emerald-500 cursor-pointer transition-colors">{t('training')}</span>
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
               <span className="font-medium text-slate-900">{client.name}</span>
             </div>
@@ -69,7 +71,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                   <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
                     <div className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-[16px] text-emerald-500">flag</span>
-                      Goal: {client.phase === 'Not Assigned' ? 'Muscle Gain' : client.phase}
+                      {t('goal')}: {client.phase === 'Not Assigned' ? t('muscle_gain') : client.phase}
                     </div>
                     <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
                     <div className="text-slate-400">32 yrs</div>
@@ -79,7 +81,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
               <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-100">
                 <span className="material-symbols-outlined text-slate-400">info</span>
                 <span className="text-sm font-bold text-slate-600">
-                  Status: <span className="text-amber-500">No Plan Yet</span>
+                  {t('status')}: <span className="text-amber-500">{t('no_plan_yet')}</span>
                 </span>
               </div>
             </div>
@@ -90,7 +92,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
             <div className="w-full lg:w-[70%] space-y-6">
               <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3 mb-2">
                 <span className="material-symbols-outlined text-emerald-500 bg-emerald-50 p-1.5 rounded-xl">library_add</span>
-                Assign Training Program
+                {t('assign_training_program')}
               </h2>
 
               <div className="flex flex-col gap-4">
@@ -104,7 +106,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">Create from Scratch</h3>
-                    <p className="text-sm text-slate-500 font-medium">Build a fully custom program tailored to specific needs.</p>
+                    <p className="text-sm text-slate-500 font-medium">{t('create_scratch_program_desc')}</p>
                   </div>
                 </div>
 
@@ -135,7 +137,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                           
                           {client?.recommendedTrainingId === program.id && (
                             <div className="absolute top-0 right-0 left-0 bg-blue-500 text-white py-0.5 px-1 text-[8px] font-black uppercase text-center tracking-tighter">
-                              Recommended
+                              {t('recommended')}
                             </div>
                           )}
                         </div>
@@ -162,8 +164,8 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                         <div className="grid grid-cols-2 gap-6 mb-6">
                           <div>
                             <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                              <span>Intensity</span>
-                              <span className="text-slate-900">{program.level === 'Beginner' ? 'Low' : program.level === 'Intermediate' ? 'Moderate' : 'High'}</span>
+                              <span>{t('intensity')}</span>
+                              <span className="text-slate-900">{program.level === 'Beginner' ? t('low') : program.level === 'Intermediate' ? t('moderate') : t('high')}</span>
                             </div>
                             <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                               <div className={`h-full rounded-full transition-all duration-500 ${
@@ -174,8 +176,8 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                           </div>
                           <div>
                             <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
-                              <span>Volume</span>
-                              <span className="text-slate-900">Medium</span>
+                              <span>{t('volume')}</span>
+                              <span className="text-slate-900">{t('medium')}</span>
                             </div>
                             <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                               <div className="h-full bg-blue-400 w-[50%] rounded-full"></div>
@@ -192,7 +194,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
 
                       {/* Right: Schedule */}
                       <div className="md:w-48 pt-4 md:pt-0 md:border-l border-slate-100 md:pl-8 flex flex-col justify-center">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Schedule</div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('schedule')}</div>
                         <div className="flex justify-between items-center relative">
                           <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-100 -z-10 rounded-full"></div>
                           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => {
@@ -211,7 +213,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                           })}
                         </div>
                         <div className="mt-4 text-[10px] text-center font-bold text-slate-400 uppercase tracking-widest">
-                          {program.frequency} days active
+                          {t('days_active_count', { count: program.frequency })}
                         </div>
                       </div>
                     </div>
@@ -223,11 +225,11 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
             {/* Right Sidebar: Settings & Preview */}
             <div className="w-full lg:w-[30%] flex flex-col gap-6">
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 sticky top-8">
-                <h2 className="text-xl font-bold text-slate-900 mb-8">Program Settings</h2>
+                <h2 className="text-xl font-bold text-slate-900 mb-8">{t('program_settings')}</h2>
                 
                 <div className="space-y-8">
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Weekly Frequency</label>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('weekly_frequency')}</label>
                     <div className="grid grid-cols-4 gap-2">
                       {[2, 3, 4, 5].map(freq => (
                         <button 
@@ -245,20 +247,20 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Primary Focus</label>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('primary_focus')}</label>
                     <div className="relative">
                       <select className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3.5 pl-4 pr-10 text-sm font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 appearance-none outline-none transition-all">
                         <option>{selectedProgram.focus}</option>
-                        <option>Hypertrophy</option>
-                        <option>Endurance</option>
-                        <option>Mobility</option>
+                        <option>{t('training_phase_hypertrophy')}</option>
+                        <option>{t('training_focus_endurance')}</option>
+                        <option>{t('training_focus_mobility')}</option>
                       </select>
                       <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
                     </div>
                   </div>
 
                   <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Program Preview</h3>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('program_preview')}</h3>
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
@@ -266,7 +268,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                         </div>
                         <div>
                           <div className="font-bold text-slate-900">{selectedProgram.name}</div>
-                          <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Selected Template</div>
+                          <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{t('selected_template')}</div>
                         </div>
                       </div>
                       <div className="h-px bg-slate-200 w-full"></div>
@@ -281,7 +283,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                     className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-2xl font-bold shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-3 mt-4"
                   >
                     <span className="material-symbols-outlined text-[22px]">assignment_add</span>
-                    Assign Program
+                    {t('assign_program')}
                   </button>
                 </div>
               </div>

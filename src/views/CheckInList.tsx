@@ -7,6 +7,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CheckInListProps {
   onViewHistory: (clientId: string) => void;
@@ -15,6 +16,7 @@ interface CheckInListProps {
 
 export default function CheckInList({ onViewHistory, onManageTemplates }: CheckInListProps) {
   const { clients, isLoading: isClientsLoading } = useClient();
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<'All' | 'Unreviewed' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -80,9 +82,9 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
   const isLoading = isClientsLoading || isAssignmentsLoading;
 
   const categories = [
-    { id: 'All', label: 'All Clients', count: clients.length },
-    { id: 'Unreviewed', label: 'Unreviewed', count: clients.filter(c => c.isUnreviewed).length },
-    { id: 'Completed', label: 'Completed', count: clients.filter(c => !c.isUnreviewed && c.lastCheckInDate).length },
+    { id: 'All', label: t('filter_all'), count: clients.length },
+    { id: 'Unreviewed', label: t('filter_unreviewed'), count: clients.filter(c => c.isUnreviewed).length },
+    { id: 'Completed', label: t('filter_completed'), count: clients.filter(c => !c.isUnreviewed && c.lastCheckInDate).length },
   ];
 
   const enrichedClients = clients.map((c) => {
@@ -94,7 +96,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
       nutritionAdherence: c.plan_name || '--',
       submitted: c.lastCheckInDate
         ? new Date(c.lastCheckInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        : 'No check-ins',
+        : t('no_checkins_label'),
       avatar: c.avatar,
       initials: c.name.substring(0, 2).toUpperCase(),
       unreviewed: c.isUnreviewed,
@@ -114,16 +116,16 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     <div className="p-6 md:p-8 lg:p-10 w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Client Check-ins</h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">Review weekly progress and adherence</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('checkin_list_title')}</h1>
+          <p className="text-sm text-slate-500 font-medium mt-1">{t('checkin_list_subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={onManageTemplates}
             className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-700 bg-white rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
-            Check-in Templates
+            {t('checkin_templates_btn')}
           </button>
         </div>
       </div>
@@ -133,7 +135,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search clients..."
+            placeholder={t('search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
@@ -167,7 +169,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
         <div className="space-y-4">
           {filteredClients.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <p className="text-slate-400 font-medium text-sm">No clients match this filter.</p>
+              <p className="text-slate-400 font-medium text-sm">{t('no_clients_match')}</p>
             </div>
           ) : filteredClients.map((client) => (
             <div
@@ -202,25 +204,25 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                       <h3 className="text-lg font-bold text-slate-900 truncate">{client.name}</h3>
                       {client.unreviewed && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider text-amber-600 bg-amber-50 border-amber-200">
-                          Pending Review
+                          {t('pending_review')}
                         </span>
                       )}
                       {!client.hasCheckIns && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider text-slate-400 bg-slate-50 border-slate-200">
-                          No check-ins
+                          {t('no_checkins_label')}
                         </span>
                       )}
-                      <button 
+                      <button
                         onClick={(e) => handleOpenAssign(e, client)}
                         className="ml-auto px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-100 flex items-center gap-1.5 shadow-sm"
                       >
                          <span className="material-symbols-outlined text-[14px]">assignment_add</span>
-                         {assignments[client.id] || 'Assign Template'}
+                         {assignments[client.id] || t('assign_template')}
                       </button>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        <span>Adherence Score</span>
+                        <span>{t('adherence_score')}</span>
                         <span className="text-slate-900">{client.adherence}%</span>
                       </div>
                       <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -238,13 +240,13 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
 
                 <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
                   <div className="text-right hidden sm:block">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Last Check-in</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('last_checkin')}</p>
                     <p className="text-xs font-bold text-slate-600">{client.submitted}</p>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-center min-w-[60px]">
                       <p className="text-lg font-bold text-slate-900">{client.weight}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Weight</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">{t('weight')}</p>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-all">
                       <ChevronRight className="w-5 h-5" />
@@ -263,8 +265,8 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Assign Check-in</h3>
-                <p className="text-xs text-slate-500 font-medium tracking-tight">Select a template for {selectedClient?.name}</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('assign_checkin_modal')}</h3>
+                <p className="text-xs text-slate-500 font-medium tracking-tight">{t('assign_checkin_for', { name: selectedClient?.name })}</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
                 <span className="material-symbols-outlined text-slate-400">close</span>
@@ -274,8 +276,8 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
               {availableTemplates.length === 0 ? (
                 <div className="text-center py-12">
                   <ClipboardList className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                  <p className="text-sm text-slate-400 font-medium">No templates available.</p>
-                  <button onClick={() => { setIsModalOpen(false); onManageTemplates(); }} className="mt-4 text-emerald-500 text-xs font-bold uppercase tracking-widest hover:underline">Go to Library</button>
+                  <p className="text-sm text-slate-400 font-medium">{t('no_templates_available')}</p>
+                  <button onClick={() => { setIsModalOpen(false); onManageTemplates(); }} className="mt-4 text-emerald-500 text-xs font-bold uppercase tracking-widest hover:underline">{t('go_to_library')}</button>
                 </div>
               ) : (
                 availableTemplates.map(t => (
@@ -293,7 +295,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                       <p className={`text-sm font-bold ${assignments[selectedClient?.id] === t.name ? 'text-emerald-900 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
                         {t.name}
                       </p>
-                      {t.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Recommended</span>}
+                      {t.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">{t('recommended')}</span>}
                     </div>
                     {isAssigning === t.id ? (
                       <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />

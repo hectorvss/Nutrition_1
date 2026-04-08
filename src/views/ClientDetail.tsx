@@ -850,8 +850,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Strength Progress Analysis</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Deep dive analytics for primary compound lifts</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('strength_progress_analysis')}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">{t('strength_progress_subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             {strengthRange === '1W' && (
@@ -901,7 +901,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
         <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 scrollbar-hide no-scrollbar">
           {[
-            { name: 'Weekly Volume', value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
+            { name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
             ...(stats?.training?.allExercises || []).map((ex: any) => ({
               name: ex.name,
               value: ex.pr || '--',
@@ -921,7 +921,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   </div>
                   {isSelected && (
                     <span className="flex items-center gap-1 text-[8px] font-black tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-lg uppercase">
-                      <CheckCircle2 className="w-2.5 h-2.5" /> Selected
+                      <CheckCircle2 className="w-2.5 h-2.5" /> {t('selected')}
                     </span>
                   )}
                 </div>
@@ -977,10 +977,10 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '20px' }} />
               
               {(() => {
-                if (selectedAnalysisSubject === 'Weekly Volume') {
+                if (selectedAnalysisSubject === t('weekly_volume')) {
                   return (
                     <Area 
-                      name="Weekly Volume" 
+                      name={t('weekly_volume')}
                       type="natural" 
                       dataKey="volume" 
                       stroke="#10b981" 
@@ -1014,7 +1014,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 return sortedReps.map((reps, i) => (
                   <Area 
                     key={reps}
-                    name={`${reps} Reps`}
+                    name={`${reps} ${t('reps_label')}`}
                     type="natural" 
                     dataKey={(row: any) => {
                       const exData = findExData(row.logs);
@@ -1037,7 +1037,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-emerald-500">edit_note</span>
-            Latest Exercise Sensations
+            {t('latest_exercise_sensations')}
           </h3>
         </div>
         <div className="space-y-4">
@@ -1045,12 +1045,12 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             const allSensations = stats?.training?.sensations || [];
             
             // Filter by selected lift if it's not "Weekly Volume"
-            const filtered = selectedAnalysisSubject === 'Weekly Volume' 
+            const filtered = selectedAnalysisSubject === t('weekly_volume')
               ? allSensations 
               : allSensations.filter((s: any) => s.exercise.toLowerCase().includes(selectedAnalysisSubject.toLowerCase()));
             
             if (filtered.length === 0) {
-              return <p className="text-center text-slate-400 text-sm py-4 italic">No specific sensations logged for this lift yet.</p>;
+              return <p className="text-center text-slate-400 text-sm py-4 italic">{t('no_sensations_for_lift')}</p>;
             }
 
             return filtered.map((item: any, idx: number) => (
@@ -1075,7 +1075,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Personal Records</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('personal_records')}</h3>
             <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">{t('history')}</button>
           </div>
           <div className="h-[400px] flex flex-col">
@@ -1099,12 +1099,12 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   onClick={() => setVisiblePRs(prev => prev + 4)}
                   className="w-full py-2.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors uppercase tracking-widest mt-2"
                 >
-                  Load More Records
+                  {t('load_more_records')}
                 </button>
               )}
               {(!stats?.training?.allExercises || stats.training.allExercises.length === 0) && (
                 <p className="text-center text-slate-400 text-sm py-8 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
-                  No records found.
+                  {t('no_records_found')}
                 </p>
               )}
             </div>
@@ -1113,8 +1113,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Recent Workout Activity</h3>
-            <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">View Log</button>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('recent_workout_activity')}</h3>
+            <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">{t('view_log')}</button>
           </div>
           <div className="h-[400px] flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-hide no-scrollbar">
@@ -1132,12 +1132,12 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   onClick={() => setVisibleWorkouts(prev => prev + 4)}
                   className="w-full py-2.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors uppercase tracking-widest mt-2"
                 >
-                  Load More Activity
+                  {t('load_more_activity')}
                 </button>
               )}
               {(!stats?.training?.recentWorkouts || stats.training.recentWorkouts.length === 0) && (
                 <p className="text-center text-slate-400 text-sm py-8 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
-                  No recent workouts logged yet.
+                  {t('no_recent_workouts')}
                 </p>
               )}
             </div>
@@ -1372,13 +1372,13 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
 
       <div className="space-y-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Today's State</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">{t('todays_state')}</h3>
           <div className="space-y-6">
             {[
-              { label: 'Mood', value: stats?.mindset?.mood, color: 'bg-blue-500' },
-              { label: 'Stress', value: stats?.mindset?.stress, color: 'bg-red-400' },
-              { label: 'Energy', value: stats?.mindset?.energy, color: 'bg-amber-400' },
-              { label: 'Motivation', value: stats?.mindset?.motivation, color: 'bg-purple-500' },
+              { label: t('mood'), value: stats?.mindset?.mood, color: 'bg-blue-500' },
+              { label: t('stress'), value: stats?.mindset?.stress, color: 'bg-red-400' },
+              { label: t('energy'), value: stats?.mindset?.energy, color: 'bg-amber-400' },
+              { label: t('motivation'), value: stats?.mindset?.motivation, color: 'bg-purple-500' },
             ].map((item, idx) => (
               <div key={idx}>
                 <div className="flex justify-between items-center mb-2">
@@ -1392,7 +1392,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             ))}
           </div>
           <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">CLIENT NOTE</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('client_note')}</p>
             <p className="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">
               {stats?.activity?.find((a: any) => a.type === 'CHECK_IN' && a.sub)?.sub || t('no_client_notes_period')}
             </p>
@@ -1400,11 +1400,11 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Adherence Snapshot</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">{t('adherence_snapshot')}</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('nutrition')}</span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.macros?.protein ? 'High' : (stats?.adherenceRate || 0) + '%'}</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.macros?.protein ? t('high') : (stats?.adherenceRate || 0) + '%'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('training')}</span>

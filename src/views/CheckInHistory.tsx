@@ -12,6 +12,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CheckInHistoryProps {
   clientId: string;
