@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useClient } from '../context/ClientContext';
 import { useExerciseContext, Exercise } from '../context/ExerciseContext';
 import { fetchWithAuth } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 interface WorkoutEditorProps {
   onBack: () => void;
@@ -41,33 +42,35 @@ interface WorkoutLogExpansionProps {
 }
 
 const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onUpdateExplanation }) => {
+  const { t } = useLanguage();
   return (
     <div className="px-6 py-6 bg-slate-50/50 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 px-1">
           <span className="material-symbols-outlined text-[18px] text-emerald-500">description</span>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Explicación del ejercicio</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{t('exercise_explanation')}</span>
         </div>
         <textarea 
           className="w-full p-4 rounded-2xl bg-white border border-slate-200 min-h-[100px] text-sm text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500/50 resize-none font-medium placeholder:text-slate-300 transition-all shadow-sm"
-          placeholder="Añade aquí una explicación o notas para el cliente..."
+          placeholder={t('exercise_explanation_placeholder')}
           value={exercise.explanation || ""}
           onChange={(e) => onUpdateExplanation(e.target.value)}
         />
-        <p className="text-[9px] text-slate-400 px-1 italic">Este bloque aparecerá en el móvil del cliente cuando abra el ejercicio.</p>
+        <p className="text-[9px] text-slate-400 px-1 italic">{t('exercise_explanation_mobile_hint')}</p>
       </div>
     </div>
   );
 };
 
 export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId, mode = 'default', initialPlanData }: WorkoutEditorProps) {
+  const { t } = useLanguage();
   const { clients } = useClient();
   const { exercises } = useExerciseContext();
   const client = clients.find(c => c.id === clientId as any) || {
-    name: 'Unknown Client',
+    name: t('unknown_client'),
     avatar: '',
     online: false,
-    phase: 'No phase'
+    phase: t('no_phase')
   };
   const isBlank = mode === 'blank';
 
@@ -201,10 +204,10 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
         })
       });
       setFullPlanData(newDataJson);
-      alert('Programa guardado correctamente');
+      alert(t('program_saved_success'));
     } catch (err) {
       console.error('Error saving training program:', err);
-      alert('Error al guardar el programa');
+      alert(t('save_program_error'));
     } finally {
       setIsSaving(false);
     }
@@ -359,16 +362,16 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             <div>
               <h2 className="text-base font-bold text-slate-900 leading-tight">{client.name}</h2>
               <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                <span>Training</span>
+                <span>{t('training')}</span>
                 <span className="material-symbols-outlined text-[12px]">chevron_right</span>
-                <span>{isBlank ? 'New Workout Plan' : client.phase}</span>
+                <span>{isBlank ? t('new_workout_plan') : client.phase}</span>
               </div>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline-block">
-            {isBlank ? 'Draft - Not saved' : 'Last autosave: 2 min ago'}
+            {isBlank ? t('draft_not_saved') : t('last_autosave_2_min')}
           </span>
           <button className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-50 transition-colors">
             <span className="material-symbols-outlined">more_horiz</span>
@@ -379,7 +382,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm"
           >
             <span className="material-symbols-outlined text-[18px]">{isSaving ? 'sync' : 'save'}</span>
-            {isSaving ? 'Guardando...' : 'Save'}
+            {isSaving ? t('saving') : t('save')}
           </button>
         </div>
       </header>
@@ -428,7 +431,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                           </h3>
                         )}
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                          {block.exercises.length} Exercises • {block.subtitle}
+                          {t('exercise_count_with_subtitle', { count: block.exercises.length, subtitle: block.subtitle })}
                         </p>
                       </div>
                     </div>
@@ -440,9 +443,9 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                   </div>
                   
                   <div className="px-6 py-2 bg-slate-50/50 border-b border-slate-100 grid grid-cols-12 gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-[4.5rem] hidden md:grid">
-                    <div className="col-span-4">Exercise</div>
+                    <div className="col-span-4">{t('exercise')}</div>
                     <div className="col-span-8 grid grid-cols-5 gap-2 text-center pr-24">
-                      <div>Weight</div><div>Sets</div><div>Reps</div><div>RIR</div><div>Rest</div>
+                      <div>{t('weight')}</div><div>{t('sets')}</div><div>{t('reps_label')}</div><div>{t('rir_label')}</div><div>{t('rest')}</div>
                     </div>
                   </div>
 
@@ -458,7 +461,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                           <span className="material-symbols-outlined text-[24px]">assignment_add</span>
                         </div>
                         <p className={`text-sm font-bold uppercase tracking-widest ${isDropTarget ? 'text-emerald-600' : 'text-slate-400'}`}>
-                          {isDropTarget ? 'Drop exercise here' : 'Drag exercises from the library here'}
+                          {isDropTarget ? t('drop_exercise_here') : t('drag_exercise_here')}
                         </p>
                       </div>
                     ) : (
@@ -483,7 +486,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{ex.type}</p>
                                         <button className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                          <span className="material-symbols-outlined text-[12px]">videocam</span> Video
+                                          <span className="material-symbols-outlined text-[12px]">videocam</span> {t('video')}
                                         </button>
                                       </div>
                                     </div>
@@ -524,7 +527,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             })}
 
             <button onClick={addBlock} className="w-full py-6 rounded-3xl border-2 border-dashed border-slate-300 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 transition-all flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs shrink-0">
-              <span className="material-symbols-outlined">add_circle</span> Add Training Block
+              <span className="material-symbols-outlined">add_circle</span> {t('add_training_block')}
             </button>
           </div>
 
@@ -533,7 +536,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             {/* Workout Summary */}
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm p-8 shrink-0">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-slate-900">Workout Summary</h3>
+                <h3 className="font-bold text-slate-900">{t('workout_summary')}</h3>
                 <button className="text-slate-300 hover:text-slate-500">
                   <span className="material-symbols-outlined text-[20px]">info</span>
                 </button>
@@ -552,12 +555,12 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center flex-col">
                     <span className={`text-3xl font-black leading-none ${totalExercises === 0 ? 'text-slate-400' : 'text-slate-900'}`}>{totalExercises}</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Exercises</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
                   </div>
                 </div>
                 <div className="mt-8 w-full text-center">
                   {totalExercises === 0 ? (
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Add exercises to see breakdown</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t('add_exercises_for_breakdown')}</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-x-8 gap-y-3 w-full">
                       <div className="flex items-center justify-between text-xs font-bold">
@@ -591,7 +594,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col relative sticky top-6">
               <div className="px-6 py-6 border-b border-slate-100 flex flex-col gap-4 shrink-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-lg text-slate-900">Exercise Library</h3>
+                  <h3 className="font-bold text-lg text-slate-900">{t('exercise_library')}</h3>
                   <button className="text-slate-300 hover:text-slate-500">
                     <span className="material-symbols-outlined">more_horiz</span>
                   </button>
@@ -600,7 +603,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">search</span>
                   <input 
                     className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium placeholder:text-slate-400" 
-                    placeholder="Search for exercises..." 
+                    placeholder={t('search_exercises')}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -609,7 +612,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                 <button className="w-full flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-2xl hover:border-emerald-500/50 hover:bg-slate-50 transition-all group">
                   <div className="flex items-center gap-2 text-slate-600">
                     <span className="material-symbols-outlined text-[20px] text-emerald-500">filter_list</span>
-                    <span className="text-xs font-bold uppercase tracking-widest group-hover:text-emerald-600 transition-colors">Filter by Category</span>
+                      <span className="text-xs font-bold uppercase tracking-widest group-hover:text-emerald-600 transition-colors">{t('filter_by_category')}</span>
                   </div>
                   <span className="material-symbols-outlined text-slate-400 text-[20px]">expand_more</span>
                 </button>
@@ -617,7 +620,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
               
               <div className="p-4 bg-slate-50/20 max-h-[600px] overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col gap-2">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-2 mt-2">Master List</h4>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-2 mt-2">{t('master_list')}</h4>
                   {filteredExercises.map((ex, idx) => (
                     <div 
                       key={idx} 
@@ -636,14 +639,14 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                            <span className="text-sm font-bold text-slate-900 truncate pr-2">{ex.name}</span>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-tight">{ex.muscleGroups?.[0] || 'VARIOUS'}</span>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">• {ex.type || 'EXERCISE'}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">• {ex.type || t('exercise')}</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   ))}
                   {filteredExercises.length === 0 && (
-                     <div className="text-center p-8 text-slate-400 text-sm">No exercises found</div>
+                     <div className="text-center p-8 text-slate-400 text-sm">{t('no_exercises_found')}</div>
                   )}
                 </div>
               </div>
