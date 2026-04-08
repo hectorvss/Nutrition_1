@@ -181,7 +181,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
       {/* Breadcrumb & Header */}
       <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
         <div className="flex items-center gap-2">
-          <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Check-ins</button>
+          <button onClick={onBack} className="hover:text-emerald-600 transition-colors">{t('checkins')}</button>
           <ChevronRight className="w-4 h-4" />
           <span className="font-medium text-slate-900">{client.name}</span>
         </div>
@@ -249,7 +249,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
               <InfoField label={t('overall_week')} value={dj.overallWeek} />
               <InfoField label={t('primary_context')} value={dj.contextChips} />
               <InfoField label={t('plan_alignment')} value={dj.matchPlan} />
-              <InfoField label="Consistency" value={dj.consistency} />
+              <InfoField label={t('consistency_label')} value={dj.consistency} />
               <InfoField label={t('mental_health')} value={dj.mentalHealth} />
               <InfoField label={t('weekly_notes')} value={dj.weekNotes} />
               {dj.reviewNotes && <InfoField label={t('review_request')} value={dj.reviewNotes} />}
@@ -264,11 +264,11 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                 <InfoField label={t('hips')} value={dj.hips ? `${dj.hips}cm` : null} />
                 <InfoField label={t('chest')} value={dj.chest ? `${dj.chest}cm` : null} />
               </div>
-              <InfoField label="Visible Changes" value={dj.visibleChanges} />
-              <InfoField label="Body Perception" value={dj.bodyPerception} />
-              <InfoField label="Satisfaction" value={dj.satisfaction} />
-              <InfoField label="Menstrual Impact" value={dj.menstrualImpact} />
-              <InfoField label="Biggest Change" value={dj.biggestChangeArea} />
+              <InfoField label={t('visible_changes')} value={dj.visibleChanges} />
+              <InfoField label={t('body_perception')} value={dj.bodyPerception} />
+              <InfoField label={t('satisfaction_label')} value={dj.satisfaction} />
+              <InfoField label={t('menstrual_impact')} value={dj.menstrualImpact} />
+              <InfoField label={t('biggest_change')} value={dj.biggestChangeArea} />
 
               {/* Progress Photos */}
               <div className="w-full mt-4">
@@ -296,93 +296,93 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
 
             {/* Section 3: Nutrition Compliance */}
             <Section title={t('nutrition_compliance')} subtitle={t('tracking_dietary')} icon="restaurant">
-              <InfoField label="Adherence Level" value={dj.nutritionAdherence} />
-              <InfoField label="Calorie Target" value={dj.hitCalories} />
-              <InfoField label="Protein Target" value={dj.hitProtein} />
-              <InfoField label="Hardest Meal" value={dj.hardestMeal} />
-              <InfoField label="Obstacles" value={dj.adherenceObstacles} />
-              <InfoField label="Off-Plan Frequency" value={dj.offPlanCount} />
-              <InfoField label="Eat Out Count" value={dj.eatOutCount} />
+              <InfoField label={t('adherence_level')} value={dj.nutritionAdherence} />
+              <InfoField label={t('calorie_target')} value={dj.hitCalories} />
+              <InfoField label={t('protein_target')} value={dj.hitProtein} />
+              <InfoField label={t('hardest_meal')} value={dj.hardestMeal} />
+              <InfoField label={t('obstacles_label')} value={dj.adherenceObstacles} />
+              <InfoField label={t('off_plan_frequency')} value={dj.offPlanCount} />
+              <InfoField label={t('eat_out_count')} value={dj.eatOutCount} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InfoField label="Tracking Accuracy" value={dj.trackingAccuracy} />
-                <InfoField label="Meals Followed" value={dj.mealsFollowed} />
+                <InfoField label={t('tracking_accuracy')} value={dj.trackingAccuracy} />
+                <InfoField label={t('meals_followed')} value={dj.mealsFollowed} />
               </div>
-              <InfoField label="Nutrition Notes" value={dj.foodNotes || dj.digestiveIssues} />
+              <InfoField label={t('nutrition_notes')} value={dj.foodNotes || dj.digestiveIssues} />
             </Section>
 
             {/* Section 4: Digestion & Biofeedback */}
             <Section title={t('digestion_biofeedback')} icon="health_and_safety">
-              <InfoField label="Digestion Quality" value={dj.digestionQuality} />
-              <InfoField label="Stool Consistency" value={dj.bowelRegularity} />
-              <InfoField label="Symptoms" value={dj.digestiveSymptoms} />
-              <InfoField label="Energy Post-Meal" value={dj.energyResponse} />
-              <InfoField label="Hunger Level" value={dj.hunger} />
-              <InfoField label="Cravings Intensity" value={dj.cravings} />
-              <InfoField label="Cravings Timing" value={dj.cravingsTime} />
-              <InfoField label="Fullness Response" value={dj.fullnessResponse} />
-              <InfoField label="Bloating Level" value={dj.bloatingLevel} />
-              <InfoField label="Digestion Notes" value={dj.foodNotes} />
+              <InfoField label={t('digestion_quality')} value={dj.digestionQuality} />
+              <InfoField label={t('stool_consistency')} value={dj.bowelRegularity} />
+              <InfoField label={t('symptoms_label')} value={dj.digestiveSymptoms} />
+              <InfoField label={t('energy_post_meal')} value={dj.energyResponse} />
+              <InfoField label={t('hunger_level')} value={dj.hunger} />
+              <InfoField label={t('cravings_intensity')} value={dj.cravings} />
+              <InfoField label={t('cravings_timing')} value={dj.cravingsTime} />
+              <InfoField label={t('fullness_response')} value={dj.fullnessResponse} />
+              <InfoField label={t('bloating_level')} value={dj.bloatingLevel} />
+              <InfoField label={t('digestion_notes')} value={dj.foodNotes} />
             </Section>
 
             {/* Section 5: Habits */}
             <Section title={t('daily_habits')} icon="task_alt">
-               <InfoField label="Water Amount" value={dj.waterAmount} />
-               <InfoField label="Water Consistency" value={dj.waterIntake} />
-               <InfoField label="Alcohol Intake" value={dj.alcoholIntake} />
-               <InfoField label="Snacking Frequency" value={dj.snackingFrequency} />
-               <InfoField label="Routine Structure" value={dj.routineStructure} />
-               <InfoField label="Meal Timing" value={dj.mealTimingConsistency} />
-               <InfoField label="Supplements" value={dj.supplements} />
-               <InfoField label="Habit Notes" value={dj.habitNotes} />
+               <InfoField label={t('water_amount')} value={dj.waterAmount} />
+               <InfoField label={t('water_consistency')} value={dj.waterIntake} />
+               <InfoField label={t('alcohol_intake')} value={dj.alcoholIntake} />
+               <InfoField label={t('snacking_frequency')} value={dj.snackingFrequency} />
+               <InfoField label={t('routine_structure')} value={dj.routineStructure} />
+               <InfoField label={t('meal_timing')} value={dj.mealTimingConsistency} />
+               <InfoField label={t('supplements_label')} value={dj.supplements} />
+               <InfoField label={t('habit_notes')} value={dj.habitNotes} />
             </Section>
 
             {/* Section 6: Training */}
             <Section title={t('training_performance')} icon="fitness_center">
-               <InfoField label="Training Adherence" value={dj.trainingAdherence} />
-               <InfoField label="Strength Levels" value={dj.strength} />
-               <InfoField label="Overall Energy" value={dj.trainingEnergy} />
-               <InfoField label="Training Quality" value={dj.trainingQuality} />
-               <InfoField label="Intensity" value={dj.trainingIntensity} />
-               <InfoField label="Recovery" value={dj.trainingRecovery} />
-               <InfoField label="Performance Trend" value={dj.performance} />
-               <InfoField label="Performance Drop" value={dj.performanceDropReasons} />
-               <InfoField label="Exercise Wins" value={dj.prWins} />
-               <InfoField label="Training Notes" value={dj.trainingNotes || dj.awkwardExerciseNotes} />
+               <InfoField label={t('training_adherence')} value={dj.trainingAdherence} />
+               <InfoField label={t('strength_levels')} value={dj.strength} />
+               <InfoField label={t('overall_energy')} value={dj.trainingEnergy} />
+               <InfoField label={t('training_quality')} value={dj.trainingQuality} />
+               <InfoField label={t('intensity_label')} value={dj.trainingIntensity} />
+               <InfoField label={t('recovery_label')} value={dj.trainingRecovery} />
+               <InfoField label={t('performance_trend')} value={dj.performance} />
+               <InfoField label={t('performance_drop')} value={dj.performanceDropReasons} />
+               <InfoField label={t('exercise_wins')} value={dj.prWins} />
+               <InfoField label={t('training_notes')} value={dj.trainingNotes || dj.awkwardExerciseNotes} />
             </Section>
 
             {/* Section 7: Recovery */}
             <Section title={t('recovery_sleep')} icon="bedtime">
-               <InfoField label="Average Sleep" value={dj.sleepQuantity} />
-               <InfoField label="Sleep Quality" value={dj.sleepQuality} />
-               <InfoField label="Interruptions" value={dj.sleepInterruptions} />
-               <InfoField label="Consistency" value={dj.sleepScheduleConsistency} />
-               <InfoField label="Stress Levels" value={dj.stress} />
-               <InfoField label="General Fatigue" value={dj.generalFatigue} />
-               <InfoField label="Motivation" value={dj.motivation} />
-               <InfoField label="Recovery Impacts" value={dj.recoveryImpacts} />
-               <InfoField label="Recovery Notes" value={dj.recoveryNotes} />
+               <InfoField label={t('average_sleep')} value={dj.sleepQuantity} />
+               <InfoField label={t('sleep_quality')} value={dj.sleepQuality} />
+               <InfoField label={t('sleep_interruptions')} value={dj.sleepInterruptions} />
+               <InfoField label={t('sleep_consistency')} value={dj.sleepScheduleConsistency} />
+               <InfoField label={t('stress_levels')} value={dj.stress} />
+               <InfoField label={t('general_fatigue')} value={dj.generalFatigue} />
+               <InfoField label={t('motivation_label')} value={dj.motivation} />
+               <InfoField label={t('recovery_impacts')} value={dj.recoveryImpacts} />
+               <InfoField label={t('recovery_notes')} value={dj.recoveryNotes} />
             </Section>
 
             {/* Section 8: Activity & Pain */}
             <Section title={t('activity_pain')} icon="healing">
-               <InfoField label="Step Range" value={dj.stepRange} />
-               <InfoField label="Steps Adherence" value={dj.stepsAdherence} />
-               <InfoField label="Cardio Adherence" value={dj.cardioAdherence} />
-               <InfoField label="Activity Level" value={dj.activityLevel} />
-               <InfoField label="Pain Level" value={dj.painLevel} />
-               <InfoField label="Affected Area" value={dj.affectedArea} />
-               <InfoField label="Modified Training?" value={dj.modifiedTraining} />
-               <InfoField label="Activity Notes" value={dj.activityNotes} />
-               <InfoField label="Pain Notes" value={dj.painNotes} />
+               <InfoField label={t('step_range')} value={dj.stepRange} />
+               <InfoField label={t('steps_adherence')} value={dj.stepsAdherence} />
+               <InfoField label={t('cardio_adherence')} value={dj.cardioAdherence} />
+               <InfoField label={t('activity_level')} value={dj.activityLevel} />
+               <InfoField label={t('pain_level')} value={dj.painLevel} />
+               <InfoField label={t('affected_area')} value={dj.affectedArea} />
+               <InfoField label={t('modified_training')} value={dj.modifiedTraining} />
+               <InfoField label={t('activity_notes')} value={dj.activityNotes} />
+               <InfoField label={t('pain_notes')} value={dj.painNotes} />
             </Section>
 
             {/* Section 9: Looking Ahead */}
             <Section title={t('looking_ahead')} icon="flag">
-               <InfoField label="Improvement Focus" value={dj.improvementGoals} />
-               <InfoField label="Next Week Readiness" value={dj.readiness} />
-               <InfoField label="Non-negotiables" value={dj.nonNegotiables} />
-               <InfoField label="Coach Support Request" value={dj.supportNeeded} />
-               <InfoField label="Final Thoughts" value={dj.extraNotes} />
+               <InfoField label={t('improvement_focus')} value={dj.improvementGoals} />
+               <InfoField label={t('next_week_readiness')} value={dj.readiness} />
+               <InfoField label={t('non_negotiables')} value={dj.nonNegotiables} />
+               <InfoField label={t('coach_support_request')} value={dj.supportNeeded} />
+               <InfoField label={t('final_thoughts')} value={dj.extraNotes} />
             </Section>
           </>
         )}
