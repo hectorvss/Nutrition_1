@@ -20,6 +20,7 @@ import {
 import { fetchWithAuth } from '../api';
 import { CheckInTemplate } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface OnboardingTemplatesProps {
   onEdit?: (templateId: string) => void;
@@ -27,6 +28,7 @@ interface OnboardingTemplatesProps {
 
 export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps) {
   const { settings } = useTheme();
+  const { t, language } = useLanguage();
   const [templates, setTemplates] = useState<CheckInTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
       }));
       setTemplates(normalized);
     } catch (err: any) {
-      setError(err.message || 'Failed to load templates');
+      setError(err.message || t('failed_to_load_templates'));
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +65,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
     try {
       const newTemplate = {
         name: 'New Onboarding Flow',
-        description: 'Complete this flow to help us personalize your experience.',
+        description: t('new_onboarding_flow_description'),
         template_schema: [],
         is_default: templates.length === 0
       };
@@ -74,7 +76,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
       if (data?.id) onEdit?.(data.id);
       loadTemplates();
     } catch (err: any) {
-      alert('Error creating template: ' + err.message);
+      alert(t('error_creating_template') + ': ' + err.message);
     }
   };
 
@@ -101,7 +103,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
       });
       loadTemplates();
     } catch (err: any) {
-      alert('Error duplicating template: ' + err.message);
+      alert(t('error_duplicating_template') + ': ' + err.message);
     }
   };
 
@@ -113,7 +115,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
       });
       loadTemplates();
     } catch (err: any) {
-      alert('Error setting default: ' + err.message);
+      alert(t('error_setting_default') + ': ' + err.message);
     }
   };
 
@@ -128,19 +130,19 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
       setNewName('');
       loadTemplates();
     } catch (err: any) {
-      alert('Error renaming template: ' + err.message);
+      alert(t('error_renaming_template') + ': ' + err.message);
     }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+    if (!confirm(t('confirm_delete_template', { name }))) return;
     try {
       await fetchWithAuth(`/onboarding/manager/templates/${id}`, {
         method: 'DELETE'
       });
       loadTemplates();
     } catch (err: any) {
-      alert('Error deleting template: ' + err.message);
+      alert(t('error_deleting_template') + ': ' + err.message);
     }
   };
 
@@ -170,11 +172,11 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
           })
         })
       ));
-      alert('Onboarding assigned successfully!');
+      alert(t('onboarding_assigned_successfully'));
       setAssigningTemplateId(null);
       setSelectedClients([]);
     } catch (err: any) {
-      alert('Error assigning onboarding: ' + err.message);
+      alert(t('error_assigning_onboarding') + ': ' + err.message);
     } finally {
       setIsAssigning(false);
     }
@@ -189,8 +191,8 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Onboarding Flow Library</h2>
-          <p className="text-sm text-slate-500 font-medium mt-1">Design and manage onboarding questionnaires for your clients</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t('onboarding_flow_library')}</h2>
+          <p className="text-sm text-slate-500 font-medium mt-1">{t('design_manage_onboarding_questionnaires')}</p>
         </div>
         <button 
           onClick={handleCreate}
@@ -198,7 +200,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
           className="flex items-center gap-2 px-5 py-2.5 text-white rounded-xl text-sm font-bold shadow-lg hover:opacity-90 transition-all"
         >
           <Plus className="w-4 h-4" />
-          Create Template
+          {t('create_template')}
         </button>
       </div>
 
@@ -207,7 +209,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
           <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input 
             type="text" 
-            placeholder="Search onboarding flows..."
+            placeholder={t('search_onboarding_flows')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-2.5 rounded-xl border-none bg-slate-50 ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 font-medium transition-all"
@@ -218,22 +220,22 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm border-dashed">
           <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-slate-500 font-medium">Loading library...</p>
+          <p className="mt-4 text-slate-500 font-medium">{t('loading_library')}</p>
         </div>
       ) : error ? (
         <div className="p-8 bg-red-50 rounded-3xl border border-red-100 text-center">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-          <h3 className="text-red-900 font-bold">Error Loading Library</h3>
+          <h3 className="text-red-900 font-bold">{t('error_loading_library')}</h3>
           <p className="text-red-600 text-sm mt-1">{error}</p>
-          <button onClick={loadTemplates} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all">Try Again</button>
+          <button onClick={loadTemplates} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-all">{t('try_again')}</button>
         </div>
       ) : filteredTemplates.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm border-dashed text-center">
           <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
             <Layout className="w-10 h-10 text-slate-300" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900">No onboarding flows found</h3>
-          <p className="text-slate-500 mt-1 max-w-sm text-sm">Create your first onboarding template to collect vital information from new clients.</p>
+          <h3 className="text-lg font-bold text-slate-900">{t('no_onboarding_flows_found')}</h3>
+          <p className="text-slate-500 mt-1 max-w-sm text-sm">{t('create_first_onboarding_template_message')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -246,7 +248,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
                 {template.is_default && (
                   <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
                     <Star className="w-3 h-3 fill-current" />
-                    Default
+                    {t('default')}
                   </span>
                 )}
               </div>
@@ -269,23 +271,23 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
               )}
               
               <p className="text-sm text-slate-500 line-clamp-2 mb-6 font-medium leading-relaxed min-h-[40px]">
-                {template.description || 'No description provided.'}
+                {template.description || t('no_description_provided')}
               </p>
 
               <div className="mt-auto space-y-4">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4">
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-3 h-3" />
-                    {new Date(template.updated_at || template.created_at || '').toLocaleDateString()}
+                    {new Date(template.updated_at || template.created_at || '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
                   </span>
-                  <span>{template.templateSchema?.length || 0} Steps</span>
+                  <span>{template.templateSchema?.length || 0} {t('steps')}</span>
                 </div>
 
                 <div className="flex items-center gap-2 w-full pt-2">
-                  <button onClick={() => handleSetDefault(template.id)} disabled={template.is_default} className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${template.is_default ? 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600'}`}>Set Default</button>
+                  <button onClick={() => handleSetDefault(template.id)} disabled={template.is_default} className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${template.is_default ? 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed' : 'bg-white border border-slate-200 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600'}`}>{t('set_default')}</button>
                   <button onClick={() => handleDuplicate(template.id)} className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 transition-all"><Copy className="w-4 h-4" /></button>
                   <button onClick={() => handleDelete(template.id, template.name)} className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
-                  <button onClick={() => openAssignModal(template.id)} className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-500 transition-all" title="Assign to Clients"><UserPlus className="w-4 h-4" /></button>
+                  <button onClick={() => openAssignModal(template.id)} className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-xl hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-500 transition-all" title={t('assign_to_clients')}><UserPlus className="w-4 h-4" /></button>
                   <button onClick={() => onEdit?.(template.id)} style={{ backgroundColor: settings.theme_color }} className="flex items-center justify-center w-10 h-10 text-white rounded-xl hover:opacity-90 transition-all shadow-sm"><ChevronRight className="w-5 h-5" /></button>
                 </div>
               </div>
@@ -299,8 +301,8 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Assign Onboarding</h2>
-                <p className="text-sm text-slate-500 font-medium">Select clients who should receive this flow.</p>
+                <h2 className="text-xl font-bold text-slate-900">{t('assign_onboarding')}</h2>
+                <p className="text-sm text-slate-500 font-medium">{t('select_clients_for_flow')}</p>
               </div>
               <button 
                 onClick={() => { setAssigningTemplateId(null); setSelectedClients([]); }} 
@@ -314,7 +316,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
               {loadingClients ? (
                 <div className="flex flex-col items-center justify-center py-12"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin" /></div>
               ) : clients.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">No clients found.</div>
+                <div className="text-center py-12 text-slate-400">{t('no_clients_found')}</div>
               ) : clients.map(client => (
                 <label 
                   key={client.id}
@@ -352,7 +354,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
                 onClick={() => { setAssigningTemplateId(null); setSelectedClients([]); }}
                 className="flex-1 py-3 text-slate-600 font-bold rounded-xl hover:bg-white transition-colors border border-transparent"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button 
                 onClick={handleAssign}
@@ -360,7 +362,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
                 style={{ backgroundColor: settings.theme_color }}
                 className="flex-[2] py-3 text-white font-bold rounded-xl shadow-lg shadow-slate-900/10 hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isAssigning ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Assignment'}
+                {isAssigning ? <Loader2 className="w-5 h-5 animate-spin" /> : t('confirm_assignment')}
               </button>
             </div>
           </div>

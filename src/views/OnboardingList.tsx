@@ -7,6 +7,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface OnboardingListProps {
   onViewHistory: (clientId: string) => void;
@@ -14,6 +15,7 @@ interface OnboardingListProps {
 }
 
 export default function OnboardingList({ onViewHistory, onManageTemplates }: OnboardingListProps) {
+  const { t } = useLanguage();
   const { clients, isLoading: isClientsLoading } = useClient();
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,7 +34,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
         const data = await fetchWithAuth('/onboarding/manager/assignments');
         const map: Record<string, string> = {};
         (data || []).forEach((a: any) => {
-          map[a.client_id] = a.template?.name || 'Assigned';
+          map[a.client_id] = a.template?.name || t('assigned');
         });
         setAssignments(map);
       } catch (err) {
@@ -69,11 +71,11 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
         })
       });
       const template = availableTemplates.find(t => t.id === templateId);
-      setAssignments(prev => ({ ...prev, [selectedClient.id]: template?.name || 'Assigned' }));
+      setAssignments(prev => ({ ...prev, [selectedClient.id]: template?.name || t('assigned') }));
       setIsModalOpen(false);
     } catch (err: any) {
       console.error('Assignment error:', err);
-      alert(`Error assigning onboarding flow: ${err.message || 'Unknown error'}`);
+      alert(`${t('error_assigning_onboarding_flow')}: ${err.message || t('unknown_error')}`);
     } finally {
       setIsAssigning(false);
     }
@@ -86,12 +88,12 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
     // For now, we'll use the check_ins presence as a proxy or just the assignment
     return {
       id: c.id,
-      name: c.name || 'Unknown Client',
+      name: c.name || t('unknown_client'),
       email: c.email || '',
       avatar: c.avatar,
       initials: (c.name || 'C').substring(0, 2).toUpperCase(),
       hasOnboarding: !!assignments[c.id],
-      status: assignments[c.id] ? 'Pending' : 'Not Started'
+      status: assignments[c.id] ? t('pending') : t('not_started')
     };
   });
 
@@ -108,8 +110,8 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
     <div className="p-6 md:p-8 lg:p-10 w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Onboarding Monitoring</h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">Manage new client intakes and questionnaire assignments</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('onboarding_monitoring')}</h1>
+          <p className="text-sm text-slate-500 font-medium mt-1">{t('manage_new_client_intakes_and_questionnaire_assignments')}</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -117,7 +119,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
             className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-700 bg-white rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
-            Onboarding Templates
+            {t('onboarding_templates')}
           </button>
         </div>
       </div>
@@ -127,7 +129,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search clients..."
+            placeholder={t('search_clients')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
@@ -144,7 +146,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              {f}
+              {f === 'All' ? t('all') : f === 'Pending' ? t('pending') : t('completed')}
             </button>
           ))}
         </div>
@@ -158,7 +160,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
         <div className="space-y-4">
           {filteredClients.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <p className="text-slate-400 font-medium text-sm">No clients match this filter.</p>
+              <p className="text-slate-400 font-medium text-sm">{t('no_clients_match_filter')}</p>
             </div>
           ) : filteredClients.map((client) => (
             <div
@@ -190,7 +192,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                         className="ml-auto px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-100 flex items-center gap-1.5 shadow-sm"
                       >
                          <span className="material-symbols-outlined text-[14px]">assignment_add</span>
-                         {assignments[client.id] || 'Assign Onboarding'}
+                         {assignments[client.id] || t('assign_onboarding')}
                       </button>
                     </div>
                     <div className="flex items-center gap-2">
@@ -220,8 +222,8 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Assign Onboarding</h3>
-                <p className="text-xs text-slate-500 font-medium tracking-tight">Select a template for {selectedClient?.name}</p>
+                <h3 className="text-lg font-bold text-slate-900">{t('assign_onboarding')}</h3>
+                <p className="text-xs text-slate-500 font-medium tracking-tight">{t('select_template_for_client', { name: selectedClient?.name || '' })}</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
                 <span className="material-symbols-outlined text-slate-400">close</span>
@@ -231,28 +233,28 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
               {availableTemplates.length === 0 ? (
                 <div className="text-center py-12">
                   <ClipboardList className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                  <p className="text-sm text-slate-400 font-medium">No templates available.</p>
+                  <p className="text-sm text-slate-400 font-medium">{t('no_templates_available')}</p>
                 </div>
               ) : (
-                availableTemplates.map(t => (
+                availableTemplates.map((tpl) => (
                   <button 
-                    key={t.id}
-                    onClick={() => handleAssign(t.id)}
+                    key={tpl.id}
+                    onClick={() => handleAssign(tpl.id)}
                     disabled={isAssigning}
                     className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left group
-                      ${assignments[selectedClient?.id] === t.name 
+                      ${assignments[selectedClient?.id] === tpl.name 
                         ? 'bg-emerald-50 border-emerald-200 ring-1 ring-emerald-500/20' 
                         : 'bg-white border-slate-100 hover:border-emerald-200 hover:bg-slate-50'}`}
                   >
                     <div>
-                      <p className={`text-sm font-bold ${assignments[selectedClient?.id] === t.name ? 'text-emerald-900' : 'text-slate-900'}`}>
-                        {t.name}
+                      <p className={`text-sm font-bold ${assignments[selectedClient?.id] === tpl.name ? 'text-emerald-900' : 'text-slate-900'}`}>
+                        {tpl.name}
                       </p>
-                      {t.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">Recommended</span>}
+                      {tpl.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">{t('recommended')}</span>}
                     </div>
                     {isAssigning ? (
                        <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                    ) : assignments[selectedClient?.id] === t.name ? (
+                    ) : assignments[selectedClient?.id] === tpl.name ? (
                       <span className="material-symbols-outlined text-emerald-500">check_circle</span>
                     ) : (
                       <span className="material-symbols-outlined text-slate-300 group-hover:text-emerald-300 transition-colors">radio_button_unchecked</span>
