@@ -17,6 +17,7 @@ import { IntegrationsProvider } from './context/IntegrationsContext';
 
 // --- Production Diagnostic Logging ---
 class GlobalErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  declare props: { children: React.ReactNode };
   state = { hasError: false, error: null };
   static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
