@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useExerciseContext } from '../../context/ExerciseContext';
 import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ClientTrainingProps {
   onViewExercise?: (name: string) => void;
@@ -26,6 +27,7 @@ interface ExerciseLog {
 type ExerciseLogs = Record<string, ExerciseLog>;
 
 export default function ClientTraining({ onViewExercise }: ClientTrainingProps) {
+  const { t } = useLanguage();
   const { exercises, isLoading: exercisesLoading, refreshExercises } = useExerciseContext();
   const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [weekOffset, setWeekOffset] = useState(0);
@@ -280,7 +282,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err: any) {
       console.error('Error saving workout log:', err);
-      setSaveError(err.message || 'Failed to sync with database');
+      setSaveError(err.message || t('failed_sync_database'));
       setTimeout(() => setSaveError(null), 6000);
     } finally {
       setIsSaving(false);
@@ -359,7 +361,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 mb-4">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
-              <span className="text-slate-500">Training</span>
+              <span className="text-slate-500">{t('training')}</span>
             </li>
             <li>
               <div className="flex items-center">
@@ -386,7 +388,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email.split('@')[0]}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">flag</span> Goal: Fat Loss
+                <span className="material-symbols-outlined text-[16px]">flag</span> {t('goal')}: {t('fat_loss')}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
               <span className="flex items-center gap-1">
@@ -397,7 +399,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           <div className="px-4 py-2 bg-[#17cf54]/10 dark:bg-[#17cf54]/20 rounded-xl border border-[#17cf54]/20 dark:border-[#17cf54]/30">
             <div className="text-xs text-[#17cf54] dark:text-[#17cf54] uppercase tracking-wide font-semibold mb-1 text-center">Status</div>
             <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium text-sm">
-              <span className="w-2 h-2 rounded-full bg-[#17cf54]"></span> Active Plan
+              <span className="w-2 h-2 rounded-full bg-[#17cf54]"></span> {t('active_plan')}
             </div>
           </div>
         </div>
@@ -432,7 +434,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           <div className="flex items-center gap-3 pr-2 w-full sm:w-auto overflow-x-auto justify-center scrollbar-hide">
             {saveSuccess && (
               <span className="text-xs font-bold text-[#17cf54] flex items-center gap-1 animate-pulse whitespace-nowrap">
-                <span className="material-symbols-outlined text-[16px]">cloud_done</span> Synced!
+                <span className="material-symbols-outlined text-[16px]">cloud_done</span> {t('synced')}
               </span>
             )}
             {saveError && (
@@ -446,8 +448,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
               className="bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
             >
               {isSaving
-                ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Syncing...</>
-                : <><span className="material-symbols-outlined text-[18px]">cloud_upload</span> Sync Session</>
+                ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> {t('syncing')}</>
+                : <><span className="material-symbols-outlined text-[18px]">cloud_upload</span> {t('sync_session')}</>
               }
             </button>
           </div>
@@ -460,7 +462,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm p-6 md:p-8 flex-shrink-0 w-full">
              <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-lg">Workout Summary</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white text-lg">{t('workout_summary')}</h3>
                 {isWeekly && <p className="text-sm text-[#17cf54] font-medium mt-1">{currentWorkoutName}</p>}
               </div>
               <button className="text-slate-400 hover:text-slate-600"><span className="material-symbols-outlined text-[20px]">info</span></button>
@@ -481,7 +483,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
               {/* Session RPE input */}
               <div className="flex flex-col gap-4 w-full max-w-xs">
                 <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Session RPE (1-10)</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">{t('session_rpe')}</label>
                   <div className="flex gap-2 flex-wrap">
                     {[1,2,3,4,5,6,7,8,9,10].map(n => (
                       <button
@@ -497,9 +499,9 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">Session Notes</label>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">{t('session_notes')}</label>
                   <textarea
-                    placeholder="How did the session feel?"
+                    placeholder={t('session_notes_placeholder')}
                     value={sessionNotes}
                     onChange={e => setDayData(selectedDay, { notes: e.target.value })}
                     className="w-full p-3 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white min-h-[70px] focus:border-[#17cf54] focus:ring-0 outline-none resize-none"
@@ -529,15 +531,15 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900 dark:text-white text-base">{block.name}</h3>
-                      <p className="text-xs text-slate-500">{block.exercises?.length || 0} Exercises • {block.subtitle}</p>
+                      <p className="text-xs text-slate-500">{t('exercise_count_with_subtitle', { count: block.exercises?.length || 0, subtitle: block.subtitle })}</p>
                     </div>
                   </div>
                 </div>
                 
                 <div className="px-6 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider pl-[4.5rem] hidden md:grid">
-                  <div className="col-span-4">Exercise</div>
+                  <div className="col-span-4">{t('exercise')}</div>
                   <div className="col-span-8 grid grid-cols-5 gap-2 text-center pr-12">
-                    <div>Target</div><div>Sets</div><div>Reps</div><div>RIR</div><div>Rest</div>
+                    <div>{t('target')}</div><div>{t('sets')}</div><div>{t('reps_label')}</div><div>{t('rir_label')}</div><div>{t('rest')}</div>
                   </div>
                 </div>
 
