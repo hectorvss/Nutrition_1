@@ -1,6 +1,7 @@
 import React from 'react';
 import { Star, Flame, Clock, Plus, Heart } from 'lucide-react';
 import { Recipe } from '../../types/library';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface RecipeListProps {
   recipes: Recipe[];
@@ -9,6 +10,7 @@ interface RecipeListProps {
 }
 
 export default function RecipeList({ recipes, onSelect, onCreate }: RecipeListProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col gap-4">
       {recipes.map((recipe) => (
@@ -30,7 +32,7 @@ export default function RecipeList({ recipes, onSelect, onCreate }: RecipeListPr
                 <h3 className="font-bold text-xl text-slate-900 leading-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">{recipe.category}</span>
               </div>
-              <p className="text-sm text-slate-500 line-clamp-2 mb-3">A nutritious bowl packed with omega-3 fatty acids, fiber, and fresh greens. Perfect for post-workout recovery and sustained energy throughout the day.</p>
+              <p className="text-sm text-slate-500 line-clamp-2 mb-3">{t('recipe_card_sample_desc')}</p>
               <div className="flex flex-wrap gap-2 text-xs">
                 {recipe.tags.map(tag => (
                   <span key={tag} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600">{tag}</span>
@@ -66,7 +68,7 @@ export default function RecipeList({ recipes, onSelect, onCreate }: RecipeListPr
       >
         <div className="flex items-center gap-3 text-slate-400 group-hover:text-emerald-600 transition-colors">
           <Plus className="w-6 h-6" />
-          <span className="font-bold text-lg">Create Custom Recipe</span>
+          <span className="font-bold text-lg">{t('create_custom_recipe')}</span>
         </div>
       </div>
     </div>

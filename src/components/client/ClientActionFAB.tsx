@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ClientActionFABProps {
   onboardingData: any;
@@ -8,6 +9,7 @@ interface ClientActionFABProps {
 }
 
 export default function ClientActionFAB({ onboardingData, onOpenOnboarding, onOpenCheckIn }: ClientActionFABProps) {
+  const { t } = useLanguage();
   const today = new Date().getDay();
   const isWeekend = today === 6 || today === 0; // Saturday=6, Sunday=0
 
@@ -32,7 +34,7 @@ export default function ClientActionFAB({ onboardingData, onOpenOnboarding, onOp
         
         {/* Tooltip */}
         <div className="absolute right-20 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-           <p className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-widest">Setup Profile</p>
+           <p className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-widest">{t('setup_profile')}</p>
         </div>
       </motion.button>
     );
@@ -59,7 +61,7 @@ export default function ClientActionFAB({ onboardingData, onOpenOnboarding, onOp
         
         {/* Tooltip */}
         <div className="absolute right-20 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-           <p className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-widest">Check-in Semanal</p>
+           <p className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-widest">{t('quick_weekly_checkin')}</p>
         </div>
       </motion.button>
     );

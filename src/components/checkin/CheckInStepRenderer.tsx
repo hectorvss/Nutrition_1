@@ -3,6 +3,7 @@ import {
   CheckInStep, 
   CheckInQuestion 
 } from '../../types/checkIn';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Chip, 
   OptionCard, 
@@ -27,6 +28,7 @@ export default function CheckInStepRenderer({
   onUploadFile,
   isEditMode = false
 }: CheckInStepRendererProps) {
+  const { t } = useLanguage();
   
   // Render based on step type
   const renderQuestions = () => {
@@ -94,7 +96,7 @@ export default function CheckInStepRenderer({
                 <input 
                   type="number" 
                   step="0.1" 
-                  placeholder={q.placeholder || "00.0"} 
+                  placeholder={q.placeholder || t('number_placeholder')} 
                   value={value || ''} 
                   onChange={e => !isEditMode && onUpdateAnswer(q.id, e.target.value)}
                   disabled={isEditMode}
@@ -113,7 +115,7 @@ export default function CheckInStepRenderer({
             <div key={q.id}>
               <FieldLabel>{q.title}</FieldLabel>
               <textarea 
-                placeholder={q.placeholder || "Enter your response..."} 
+                placeholder={q.placeholder || t('enter_your_response')} 
                 value={value || ''} 
                 onChange={e => !isEditMode && onUpdateAnswer(q.id, e.target.value)}
                 disabled={isEditMode}
@@ -160,16 +162,20 @@ export default function CheckInStepRenderer({
         case 'photo_group':
           return (
             <div key={q.id} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {['Front', 'Side', 'Back'].map(pos => {
-                const photoKey = `${q.id}_${pos.toLowerCase()}`;
+              {[
+                { key: 'front', label: t('front') },
+                { key: 'side', label: t('side') },
+                { key: 'back', label: t('back_muscle') }
+              ].map(({ key, label }) => {
+                const photoKey = `${q.id}_${key}`;
                 const photoValue = answers[photoKey];
                 return (
-                  <div key={pos} className="space-y-3">
-                     <FieldLabel>{pos} View</FieldLabel>
+                  <div key={key} className="space-y-3">
+                     <FieldLabel>{label} {t('view_label')}</FieldLabel>
                      <div className="relative aspect-[3/4] bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center overflow-hidden group transition-all hover:border-emerald-400">
                         {photoValue ? (
                           <>
-                            <img src={photoValue} alt={pos} className="w-full h-full object-cover" />
+                            <img src={photoValue} alt={label} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <button 
                                 onClick={() => !isEditMode && onUpdateAnswer(photoKey, null)}
@@ -182,7 +188,7 @@ export default function CheckInStepRenderer({
                         ) : (
                           <div className="text-center p-6">
                              <span className="material-symbols-outlined text-slate-300 text-4xl mb-2">add_a_photo</span>
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Upload {pos}</p>
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('upload_label')} {label}</p>
                              <input 
                                type="file" 
                                accept="image/*"
@@ -269,7 +275,7 @@ export default function CheckInStepRenderer({
         {step.type === 'info_card' && (
           <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 border-dashed text-center">
             <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">info</span>
-            <p className="text-sm text-slate-500 font-medium">{step.subtitle || 'Information step for the client.'}</p>
+            <p className="text-sm text-slate-500 font-medium">{step.subtitle || t('information_step_for_client')}</p>
           </div>
         )}
       </div>

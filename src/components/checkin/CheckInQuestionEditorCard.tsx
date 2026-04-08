@@ -22,6 +22,7 @@ import {
 import { CheckInQuestion, CheckInStepType } from '../../types/checkIn';
 import { useTheme } from '../../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface CheckInQuestionEditorCardProps {
   question: CheckInQuestion;
@@ -48,10 +49,12 @@ export default function CheckInQuestionEditorCard({
   onDuplicate 
 }: CheckInQuestionEditorCardProps) {
   const { settings } = useTheme();
+  const { t } = useLanguage();
   const [showTypeSelector, setShowTypeSelector] = React.useState(false);
   const [editingOptionIdx, setEditingOptionIdx] = React.useState<number | null>(null);
+  const getTypeLabel = (id: CheckInStepType, fallback: string) => t(`question_type_${id}`, { defaultValue: fallback });
 
-  const activeType = QUESTION_TYPES.find(t => t.id === question.type) || QUESTION_TYPES[0];
+  const activeType = QUESTION_TYPES.find(type => type.id === question.type) || QUESTION_TYPES[0];
 
   const handleUpdateOption = (idx: number, newVal: string) => {
     const newOptions = [...(question.options || [])];
@@ -74,7 +77,7 @@ export default function CheckInQuestionEditorCard({
     <div className={`bg-white dark:bg-slate-900 rounded-[2.5rem] border ${question.hidden ? 'border-amber-200 dark:border-amber-900/50 bg-amber-50/30 opacity-[0.85]' : 'border-slate-100 dark:border-slate-800'} shadow-sm hover:shadow-xl transition-all group/q p-8 space-y-8 relative`}>
       {question.hidden && (
         <div className="absolute -top-3 right-8 px-3 py-1 bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-1.5 border border-amber-200 dark:border-amber-500/30">
-          <EyeOff className="w-3 h-3" /> Hidden from Client
+          <EyeOff className="w-3 h-3" /> {t('hidden_from_client')}
         </div>
       )}
       {/* Header Area */}
@@ -98,7 +101,7 @@ export default function CheckInQuestionEditorCard({
               {question.is_fixed && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700">
                   <Lock className="w-3 h-3" />
-                  <span className="text-[9px] font-black uppercase tracking-widest">Fixed</span>
+                  <span className="text-[9px] font-black uppercase tracking-widest">{t('fixed_label')}</span>
                 </div>
               )}
             </div>
@@ -119,7 +122,7 @@ export default function CheckInQuestionEditorCard({
               <button 
                 onClick={() => onUpdate({ hidden: !question.hidden })}
                 className={`p-3 rounded-2xl transition-all hover:scale-105 ${question.hidden ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/10' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10'}`}
-                title={question.hidden ? "Show Question" : "Hide Question"}
+                title={question.hidden ? t('show_question') : t('hide_question')}
               >
                 {question.hidden ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -127,14 +130,14 @@ export default function CheckInQuestionEditorCard({
                 onClick={onDuplicate}
                 style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
                 className="p-3 rounded-2xl transition-all hover:scale-105"
-                title="Duplicate Question"
+                title={t('duplicate_question')}
               >
                 <Copy className="w-5 h-5" />
               </button>
               <button 
                 onClick={onDelete}
                 className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all"
-                title="Delete Question"
+                title={t('delete_question')}
               >
                 <Trash2 className="w-5 h-5" />
               </button>
@@ -192,7 +195,7 @@ export default function CheckInQuestionEditorCard({
                className="px-5 py-3 rounded-2xl border-2 border-dashed text-slate-400 hover:opacity-80 transition-all flex items-center gap-2 text-sm font-bold"
              >
                <Plus className="w-4 h-4" />
-               Add Option
+               {t('add_option')}
              </button>
           </div>
         )}
@@ -238,7 +241,7 @@ export default function CheckInQuestionEditorCard({
                 <Info className="w-6 h-6" />
              </div>
              <p className="text-sm font-semibold leading-relaxed italic" style={{ color: settings.theme_color }}>
-               This card will display the description text above as a highlighted information block for your client.
+               {t('info_card_preview_text')}
              </p>
           </div>
         )}
@@ -249,7 +252,7 @@ export default function CheckInQuestionEditorCard({
              {[1, 2, 3].map(i => (
                <div key={i} className="aspect-square bg-white rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 text-slate-300 transition-all hover:bg-slate-50">
                   <ImageIcon className="w-8 h-8 opacity-20" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Photo {i}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">{t('photo_label')} {i}</span>
                </div>
              ))}
           </div>
@@ -271,7 +274,7 @@ export default function CheckInQuestionEditorCard({
         {question.type === 'slider' && (
           <div className="space-y-4 py-2">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Slider Preview (1-10)</span>
+              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{t('slider_preview')}</span>
               <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">5</div>
             </div>
             <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded-full relative">
@@ -293,7 +296,7 @@ export default function CheckInQuestionEditorCard({
           >
             <div className="flex items-center gap-3">
               {activeType.icon}
-              <span>{activeType.label}</span>
+              <span>{getTypeLabel(activeType.id, activeType.label)}</span>
             </div>
             {!question.is_fixed && <ChevronDown className={`w-4 h-4 transition-transform ${showTypeSelector ? 'rotate-180' : ''}`} />}
             {question.is_fixed && <Lock className="w-3 h-3 opacity-60" />}
@@ -308,7 +311,7 @@ export default function CheckInQuestionEditorCard({
                 className="absolute top-0 left-full ml-4 w-80 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[2rem] shadow-2xl z-40 p-3 overflow-hidden"
               >
                 <div className="py-2 px-4 mb-2">
-                   <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Select Question Type</span>
+                   <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{t('select_question_type')}</span>
                 </div>
                 {QUESTION_TYPES.map(type => (
                   <button 
@@ -328,7 +331,7 @@ export default function CheckInQuestionEditorCard({
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${question.type === type.id ? 'bg-white/10' : 'bg-slate-50 dark:bg-slate-700'}`}>
                          {type.icon}
                       </div>
-                      {type.label}
+                          {getTypeLabel(type.id, type.label)}
                     </div>
                     {question.type === type.id && <CheckCircle2 className="w-4 h-4 opacity-40 text-white" />}
                   </button>

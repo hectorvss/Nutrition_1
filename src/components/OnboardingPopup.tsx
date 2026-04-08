@@ -10,6 +10,7 @@ import {
 import { fetchWithAuth } from '../api';
 import CheckInStepRenderer from './checkin/CheckInStepRenderer';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface OnboardingPopupProps {
   onComplete: () => void;
@@ -51,6 +52,7 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<s
 
 export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   const { settings } = useTheme();
+  const { t } = useLanguage();
   const [activeAssignment, setActiveAssignment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -119,7 +121,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
       setTimeout(() => onComplete(), 2000);
     } catch (err) {
       console.error('Failed to submit onboarding:', err);
-      alert('Error submitting onboarding. Please try again.');
+      alert(t('error_submitting_onboarding'));
     } finally {
       setSubmitting(false);
     }
@@ -142,8 +144,8 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
           <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-10 h-10" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Setup Complete!</h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Your profile has been updated successfully.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('setup_complete')}</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">{t('profile_updated_successfully')}</p>
         </motion.div>
       </div>
     );
@@ -169,13 +171,13 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
             </button>
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-800" />
             <div className="flex flex-col">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">Checking in</p>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">{t('checking_in')}</p>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-none">{activeAssignment?.template?.name}</h2>
             </div>
          </div>
          <div className="flex items-center gap-4">
             <div className="hidden sm:flex flex-col items-end">
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Step {currentStepIndex + 1} of {templateSchema.length}</p>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{t('step_of_total', { current: currentStepIndex + 1, total: templateSchema.length })}</p>
                <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${((currentStepIndex + 1) / templateSchema.length) * 100}%` }} />
                </div>
@@ -237,7 +239,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    <span className="text-lg">{currentStepIndex === templateSchema.length - 1 ? 'Complete Setup' : 'Continue'}</span>
+                    <span className="text-lg">{currentStepIndex === templateSchema.length - 1 ? t('complete_setup') : t('continue_label')}</span>
                     <span className="material-symbols-outlined text-[20px]">{currentStepIndex === templateSchema.length - 1 ? 'task_alt' : 'arrow_forward'}</span>
                   </>
                 )}

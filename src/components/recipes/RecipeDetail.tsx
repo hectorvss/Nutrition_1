@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Bookmark, Flame, Clock, Users, BookOpen, ChevronRight } from 'lucide-react';
 import { Recipe } from '../../types/library';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface RecipeDetailProps {
   recipe: Recipe;
@@ -8,11 +9,12 @@ interface RecipeDetailProps {
 }
 
 export default function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
+  const { t } = useLanguage();
   return (
     <div className="flex flex-col h-full overflow-y-auto pb-20">
       <button onClick={onBack} className="text-slate-500 hover:text-emerald-600 text-sm flex items-center gap-1 mb-6">
         <ArrowLeft className="w-4 h-4" />
-        Back to Library
+        {t('back_to_library')}
       </button>
 
       <div className="relative h-64 rounded-3xl overflow-hidden mb-8">
@@ -34,7 +36,7 @@ export default function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-emerald-500" />
-              Ingredients
+              {t('ingredients')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Placeholder ingredients */}
@@ -51,12 +53,12 @@ export default function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
         <div className="lg:col-span-1">
           {/* Nutrition info */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Macronutrients</h3>
-            <div className="text-3xl font-bold text-slate-900 mb-4">{recipe.calories} <span className="text-sm font-medium text-slate-500">kcal</span></div>
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">{t('macronutrients')}</h3>
+            <div className="text-3xl font-bold text-slate-900 mb-4">{recipe.calories} <span className="text-sm font-medium text-slate-500">{t('kcal')}</span></div>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="font-medium text-slate-600">Protein</span>
+                  <span className="font-medium text-slate-600">{t('protein')}</span>
                   <span className="font-bold text-slate-900">{recipe.protein}g</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-2">

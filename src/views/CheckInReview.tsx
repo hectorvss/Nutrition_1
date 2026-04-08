@@ -1,54 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ArrowLeft, 
   ChevronRight, 
   Flag, 
   History, 
   FileText, 
-  MoreHorizontal, 
   Camera, 
   Check, 
-  X, 
-  TrendingDown, 
-  TrendingUp, 
-  Minus,
-  Smile,
-  AlertTriangle,
-  Edit3,
-  PieChart,
-  Activity,
-  Footprints,
-  Droplets,
-  Stethoscope,
   Mic,
   Paperclip,
   Send,
   Target,
-  Moon,
   Clock,
   CheckCircle2,
-  Brain,
-  Scale,
-  Zap,
-  Coffee,
-  Heart,
-  Calendar,
-  Shield,
-  Dumbbell
+  Brain
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell
-} from 'recharts';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 import CheckInReviewRenderer from '../components/checkin/CheckInReviewRenderer';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CheckInReviewProps {
   clientId: string;
@@ -60,6 +29,7 @@ interface CheckInReviewProps {
 
 export default function CheckInReview({ clientId, checkInId, onBack, readonly = false, isClient = false }: CheckInReviewProps) {
   const { reloadClients } = useClient();
+  const { t, language } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [coachNotes, setCoachNotes] = useState('');
@@ -152,10 +122,11 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
   }
 
   if (!data || !data.check_in) {
-    return <div className="p-8 text-center text-slate-500">Check-in not found.</div>;
+    return <div className="p-8 text-center text-slate-500">{t('checkin_not_found')}</div>;
   }
 
   const { client, check_in } = data;
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
   
   // Robust parsing for data_json
   let dj: any = {};
@@ -214,7 +185,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
           <ChevronRight className="w-4 h-4" />
           <span className="font-medium text-slate-900">{client.name}</span>
         </div>
-        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Client ID: {client.id.substring(0,8)}</div>
+        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('client_id')}: {client.id.substring(0,8)}</div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -234,29 +205,29 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
               <h1 className="text-2xl font-bold text-slate-900">{client.name}</h1>
               {!check_in.reviewed_at ? (
                 <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                  <Flag className="w-3 h-3" /> Pending Review
+                  <Flag className="w-3 h-3" /> {t('pending_review')}
                 </span>
               ) : (
                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs font-bold uppercase tracking-wide flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Reviewed
+                  <CheckCircle2 className="w-3 h-3" /> {t('reviewed_status')}
                 </span>
               )}
             </div>
             <p className="text-slate-500 text-sm flex items-center gap-2 mt-1 font-medium">
-              <Clock className="w-4 h-4 text-slate-400" /> Submitted {new Date(check_in.created_at).toLocaleString()}
+              <Clock className="w-4 h-4 text-slate-400" /> {t('submitted_on', { date: new Date(check_in.created_at).toLocaleString(locale) })}
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              Date: {new Date(check_in.date).toLocaleDateString()}
+              {t('date')}: {new Date(check_in.date).toLocaleDateString(locale)}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
             <History className="w-4 h-4" />
-            History
+            {t('history_badge')}
           </button>
           <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
             <FileText className="w-4 h-4" />
-            Export
+            {t('export_btn')}
           </button>
         </div>
       </div>
@@ -274,24 +245,24 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
         ) : (
           <>
             {/* Section 1: Overview */}
-            <Section title="Overall Experience" subtitle="Client's general thoughts on the past week." icon="mood">
-              <InfoField label="Overall Week" value={dj.overallWeek} />
-              <InfoField label="Primary Context" value={dj.contextChips} />
-              <InfoField label="Plan Alignment" value={dj.matchPlan} />
+            <Section title={t('overall_experience')} subtitle={t('client_general_thoughts')} icon="mood">
+              <InfoField label={t('overall_week')} value={dj.overallWeek} />
+              <InfoField label={t('primary_context')} value={dj.contextChips} />
+              <InfoField label={t('plan_alignment')} value={dj.matchPlan} />
               <InfoField label="Consistency" value={dj.consistency} />
-              <InfoField label="Mental Health" value={dj.mentalHealth} />
-              <InfoField label="Weekly Notes" value={dj.weekNotes} />
-              {dj.reviewNotes && <InfoField label="Review Request for Coach" value={dj.reviewNotes} />}
+              <InfoField label={t('mental_health')} value={dj.mentalHealth} />
+              <InfoField label={t('weekly_notes')} value={dj.weekNotes} />
+              {dj.reviewNotes && <InfoField label={t('review_request')} value={dj.reviewNotes} />}
             </Section>
 
             {/* Section 2: Body & Progress */}
-            <Section title="Body & Progress" subtitle="Physical updates and measurements." icon="straighten">
-              <InfoField label="Current Weight" value={dj.weight ? `${dj.weight} kg` : null} />
-              <InfoField label="Average Weight" value={dj.avgWeight ? `${dj.avgWeight} kg` : null} />
+            <Section title={t('body_progress')} subtitle={t('physical_updates')} icon="straighten">
+              <InfoField label={t('current_weight')} value={dj.weight ? `${dj.weight} kg` : null} />
+              <InfoField label={t('average_weight')} value={dj.avgWeight ? `${dj.avgWeight} kg` : null} />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <InfoField label="Waist" value={dj.waist ? `${dj.waist}cm` : null} />
-                <InfoField label="Hips" value={dj.hips ? `${dj.hips}cm` : null} />
-                <InfoField label="Chest" value={dj.chest ? `${dj.chest}cm` : null} />
+                <InfoField label={t('waist')} value={dj.waist ? `${dj.waist}cm` : null} />
+                <InfoField label={t('hips')} value={dj.hips ? `${dj.hips}cm` : null} />
+                <InfoField label={t('chest')} value={dj.chest ? `${dj.chest}cm` : null} />
               </div>
               <InfoField label="Visible Changes" value={dj.visibleChanges} />
               <InfoField label="Body Perception" value={dj.bodyPerception} />
@@ -301,12 +272,12 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
 
               {/* Progress Photos */}
               <div className="w-full mt-4">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Progress Photos</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('progress_photos')}</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {[
-                    { id: 'photoFront', label: 'Front' },
-                    { id: 'photoSide', label: 'Side' },
-                    { id: 'photoBack', label: 'Back' }
+                    { id: 'photoFront', label: t('front') },
+                    { id: 'photoSide', label: t('side') },
+                    { id: 'photoBack', label: t('back_muscle') }
                   ].map(p => (
                     <div key={p.id} className="aspect-[3/4] rounded-2xl bg-slate-50 border border-slate-100 dark:border-slate-800 overflow-hidden flex items-center justify-center">
                       {dj[p.id] ? (
@@ -324,7 +295,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             </Section>
 
             {/* Section 3: Nutrition Compliance */}
-            <Section title="Nutrition Compliance" subtitle="Tracking and dietary adherence." icon="restaurant">
+            <Section title={t('nutrition_compliance')} subtitle={t('tracking_dietary')} icon="restaurant">
               <InfoField label="Adherence Level" value={dj.nutritionAdherence} />
               <InfoField label="Calorie Target" value={dj.hitCalories} />
               <InfoField label="Protein Target" value={dj.hitProtein} />
@@ -340,7 +311,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             </Section>
 
             {/* Section 4: Digestion & Biofeedback */}
-            <Section title="Digestion & Biofeedback" icon="health_and_safety">
+            <Section title={t('digestion_biofeedback')} icon="health_and_safety">
               <InfoField label="Digestion Quality" value={dj.digestionQuality} />
               <InfoField label="Stool Consistency" value={dj.bowelRegularity} />
               <InfoField label="Symptoms" value={dj.digestiveSymptoms} />
@@ -354,7 +325,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             </Section>
 
             {/* Section 5: Habits */}
-            <Section title="Daily Habits" icon="task_alt">
+            <Section title={t('daily_habits')} icon="task_alt">
                <InfoField label="Water Amount" value={dj.waterAmount} />
                <InfoField label="Water Consistency" value={dj.waterIntake} />
                <InfoField label="Alcohol Intake" value={dj.alcoholIntake} />
@@ -366,7 +337,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             </Section>
 
             {/* Section 6: Training */}
-            <Section title="Training Performance" icon="fitness_center">
+            <Section title={t('training_performance')} icon="fitness_center">
                <InfoField label="Training Adherence" value={dj.trainingAdherence} />
                <InfoField label="Strength Levels" value={dj.strength} />
                <InfoField label="Overall Energy" value={dj.trainingEnergy} />
@@ -380,7 +351,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             </Section>
 
             {/* Section 7: Recovery */}
-            <Section title="Recovery & Sleep" icon="bedtime">
+            <Section title={t('recovery_sleep')} icon="bedtime">
                <InfoField label="Average Sleep" value={dj.sleepQuantity} />
                <InfoField label="Sleep Quality" value={dj.sleepQuality} />
                <InfoField label="Interruptions" value={dj.sleepInterruptions} />
@@ -393,7 +364,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             </Section>
 
             {/* Section 8: Activity & Pain */}
-            <Section title="Activity & Pain" icon="healing">
+            <Section title={t('activity_pain')} icon="healing">
                <InfoField label="Step Range" value={dj.stepRange} />
                <InfoField label="Steps Adherence" value={dj.stepsAdherence} />
                <InfoField label="Cardio Adherence" value={dj.cardioAdherence} />
@@ -406,7 +377,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             </Section>
 
             {/* Section 9: Looking Ahead */}
-            <Section title="Looking Ahead" icon="flag">
+            <Section title={t('looking_ahead')} icon="flag">
                <InfoField label="Improvement Focus" value={dj.improvementGoals} />
                <InfoField label="Next Week Readiness" value={dj.readiness} />
                <InfoField label="Non-negotiables" value={dj.nonNegotiables} />
@@ -424,23 +395,23 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
               <div className="w-10 h-10 rounded-xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center">
                 <span className="material-symbols-outlined text-xl">reviews</span>
               </div>
-              Coach Assessment
+              {t('coach_assessment')}
             </h2>
             <button className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shadow-sm bg-white dark:bg-slate-900 ring-1 ring-slate-950/5">
-              Load Template
+              {t('load_template')}
             </button>
           </div>
           
           <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Feedback Column */}
             <div className="lg:col-span-2 space-y-3">
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Internal Notes & Feedback</label>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">{t('internal_notes')}</label>
               <div className="relative group">
                 <textarea 
                   value={coachNotes}
                   onChange={(e) => setCoachNotes(e.target.value)}
                   className="w-full bg-yellow-50/50 dark:bg-amber-900/10 border-2 border-yellow-100/50 dark:border-amber-900/20 rounded-2xl p-6 text-[15px] leading-relaxed text-slate-700 dark:text-slate-200 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-200 transition-all min-h-[200px] resize-none outline-none font-medium placeholder-slate-400" 
-                  placeholder="Write your feedback here... e.g. 'Great progress on waist measurements, let's keep the carb cycling for another week...'"
+                  placeholder={t('feedback_placeholder')}
                 />
                 <div className="absolute bottom-4 right-4 flex items-center gap-2">
                   <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
@@ -456,7 +427,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
             {/* Actions & Next Focus Column */}
             <div className="space-y-6 flex flex-col justify-between">
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Next Week Focus</label>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">{t('next_week_focus')}</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
@@ -467,7 +438,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                     value={nextWeekFocus}
                     onChange={(e) => setNextWeekFocus(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-blue-50/50 dark:bg-blue-900/10 border-2 border-blue-100/50 dark:border-blue-900/20 rounded-2xl text-[14px] font-semibold text-slate-700 dark:text-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-200 transition-all outline-none placeholder-slate-400" 
-                    placeholder="e.g. Increase daily steps to 10k" 
+                    placeholder={t('next_week_focus_placeholder')} 
                     type="text"
                   />
                 </div>
@@ -481,10 +452,10 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                         <div className="w-5 h-5 border-2 border-slate-200 dark:border-slate-700 rounded-lg group-hover:border-slate-300 transition-all"></div>
                         <Check className="absolute w-3.5 h-3.5 text-emerald-500 opacity-0 peer-checked:opacity-100 left-0.5 transition-opacity" />
                      </div>
-                     <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Send via Email</span>
+                     <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{t('send_via_email')}</span>
                    </label>
                    <button className="text-[12px] font-bold text-red-500 hover:text-red-600 transition-colors">
-                     Clarification needed?
+                     {t('clarification_needed')}
                    </button>
                 </div>
 
@@ -499,7 +470,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        Mark Reviewed
+                        {t('mark_reviewed')}
                       </>
                     )}
                   </button>
@@ -514,7 +485,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                     ) : (
                       <>
                         <Send className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                        Publish Feedback
+                        {t('publish_feedback')}
                       </>
                     )}
                   </button>
@@ -532,25 +503,25 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
               <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
                 <Brain className="w-5 h-5" />
               </div>
-              Coach Feedback
+              {t('coach_feedback')}
             </h3>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-emerald-900 dark:text-emerald-200">
               <div className="lg:col-span-2 space-y-4">
-                <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest uppercase mb-1">Internal Notes & Feedback</p>
+                <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest uppercase mb-1">{t('internal_notes')}</p>
                 <div className="bg-white/50 dark:bg-slate-800/50 rounded-2xl p-6 border border-emerald-100 dark:border-emerald-800/50 whitespace-pre-wrap italic font-semibold leading-relaxed">
-                  {check_in.coach_notes || 'No feedback provided yet.'}
+                  {check_in.coach_notes || t('no_feedback_yet')}
                 </div>
               </div>
               
               <div className="space-y-4">
-                <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest uppercase mb-1">Next Week Focus</p>
+                <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-widest uppercase mb-1">{t('next_week_focus')}</p>
                 <div className="bg-white/50 dark:bg-slate-800/50 rounded-2xl p-6 border border-emerald-100 dark:border-emerald-800/50 flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-800/50 flex items-center justify-center shadow-sm">
                     <Target className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{check_in.next_week_focus || 'Keep it up!'}</h4>
+                    <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{check_in.next_week_focus || t('keep_it_up')}</h4>
                   </div>
                 </div>
               </div>

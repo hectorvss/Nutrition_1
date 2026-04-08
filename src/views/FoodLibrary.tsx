@@ -22,7 +22,7 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
   const { t } = useLanguage();
   const { foods } = useFoodContext();
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All Categories');
+  const [activeCategory, setActiveCategory] = useState('all');
 
   return (
     <div className="w-full p-4 md:p-6 lg:p-8 h-full flex flex-col overflow-hidden">
@@ -54,8 +54,9 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
               {foodCategories.map((cat, idx) => (
                 <button 
                   key={idx}
+                  onClick={() => setActiveCategory(idx === 0 ? 'all' : cat.name)}
                   className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                    idx === 0 ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:bg-slate-50'
+                    activeCategory === (idx === 0 ? 'all' : cat.name) ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <span>{cat.name}</span>
@@ -68,9 +69,9 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
           </div>
 
           <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100">
-            <h4 className="text-sm font-bold text-indigo-900 mb-2">Smart Search</h4>
+            <h4 className="text-sm font-bold text-indigo-900 mb-2">{t('smart_search_title')}</h4>
             <p className="text-xs text-indigo-700 leading-relaxed">
-              Search by nutrient density, glycemic index, or specific dietary requirements.
+              {t('smart_search_desc')}
             </p>
           </div>
         </div>
@@ -85,7 +86,7 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
               {foods
                 .filter(food => {
                   const matchSearch = !search || food.name.toLowerCase().includes(search.toLowerCase());
-                  const matchCat = activeCategory === 'All Categories' || food.category === activeCategory;
+                  const matchCat = activeCategory === 'all' || food.category === activeCategory;
                   return matchSearch && matchCat;
                 })
                 .map((food) => (

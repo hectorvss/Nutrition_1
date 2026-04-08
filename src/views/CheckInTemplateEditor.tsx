@@ -15,6 +15,7 @@ import {
 import { fetchWithAuth } from '../api';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 
@@ -26,6 +27,7 @@ interface CheckInTemplateEditorProps {
 
 export default function CheckInTemplateEditor({ templateId, onClose, onSave }: CheckInTemplateEditorProps) {
   const { settings } = useTheme();
+  const { t } = useLanguage();
   const [template, setTemplate] = useState<CheckInTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,16 +47,16 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
             templateSchema: found.template_schema || found.templateSchema || []
           });
         } else {
-          setError('Template not found');
+          setError(t('template_not_found'));
         }
       } catch (err) {
-        setError('Error loading template');
+        setError(t('error_loading_template'));
       } finally {
         setIsLoading(false);
       }
     }
     loadTemplate();
-  }, [templateId]);
+  }, [templateId, t]);
 
   const handleSave = async () => {
     if (!template) return;
@@ -72,7 +74,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
     } catch (err) {
-      setError('Error saving template');
+      setError(t('error_saving_template'));
     } finally {
       setIsSaving(false);
     }
@@ -89,8 +91,8 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     if (!template) return;
     const newStep: CheckInStep = {
       id: `step_${Date.now()}`,
-      title: 'New Step',
-      subtitle: 'Optional description for the client',
+      title: t('new_step'),
+      subtitle: t('optional_description'),
       questions: []
     };
     const newSchema = [...template.templateSchema, newStep];
@@ -99,7 +101,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
   };
 
   const removeStep = (index: number) => {
-    if (!template || !confirm('Are you sure you want to delete this step?')) return;
+    if (!template || !confirm(t('confirm_action'))) return;
     const newSchema = template.templateSchema.filter((_, i) => i !== index);
     setTemplate({ ...template, templateSchema: newSchema });
     setSelectedStepIndex(Math.max(0, index - 1));
@@ -118,10 +120,10 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     if (!template) return;
     const newQ: CheckInQuestion = {
       id: `q_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      title: 'New Question',
+      title: t('new_question'),
       type: 'single_choice',
       required: true,
-      options: ['Option 1', 'Option 2']
+      options: [t('option_1'), t('option_2')]
     };
     const newSchema = [...template.templateSchema];
     newSchema[stepIdx] = { 
@@ -179,8 +181,8 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     return (
       <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 shadow-sm m-8">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-bold text-slate-900">{error || 'Something went wrong'}</h3>
-        <button onClick={onClose} className="mt-4 text-emerald-600 font-bold hover:underline">Return to Library</button>
+        <h3 className="text-lg font-bold text-slate-900">{error || t('something_went_wrong')}</h3>
+        <button onClick={onClose} className="mt-4 text-emerald-600 font-bold hover:underline">{t('return_to_library')}</button>
       </div>
     );
   }
@@ -204,7 +206,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
             />
             <div className="flex items-center gap-2 mt-0.5">
                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: settings.theme_color }} />
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Protocol UI Builder</p>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('protocol_builder')}</p>
             </div>
           </div>
         </div>
@@ -216,7 +218,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
             className="text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 transition-all hover:scale-[1.03] active:scale-[0.97] shadow-xl shadow-slate-900/10 disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (success ? <CheckCircle2 className="w-5 h-5 text-white/80" /> : <Save className="w-5 h-5" />)}
-            {isSaving ? 'Saving...' : 'Save Template'}
+            {isSaving ? t('saving') : t('save_template')}
           </button>
         </div>
       </div>
@@ -226,7 +228,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
         <div className="w-80 flex flex-col m-6 mr-0">
           <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
-              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Step Sequence</h3>
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{t('step_sequence')}</h3>
               <button 
                 onClick={addStep} 
                 style={{ color: settings.theme_color, backgroundColor: `${settings.theme_color}10` }}
@@ -277,7 +279,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                  className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 hover:border-emerald-300 hover:text-emerald-500 transition-all text-xs font-semibold flex items-center justify-center gap-2"
                >
                  <PlusCircle className="w-4 h-4" />
-                 Add New Step
+                 {t('add_new_step')}
                </button>
             </div>
           </div>
@@ -296,13 +298,13 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                         type="text" 
                         value={selectedStep.title}
                         onChange={(e) => updateStep(selectedStepIndex, { title: e.target.value })}
-                        placeholder="Step Title"
+                        placeholder={t('step_title_placeholder')}
                         className="w-full bg-transparent border-none p-0 text-3xl font-bold tracking-tight text-slate-900 dark:text-white focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200"
                       />
                       <textarea 
                         value={selectedStep.subtitle || ''}
                         onChange={(e) => updateStep(selectedStepIndex, { subtitle: e.target.value })}
-                        placeholder="Instructions for this category..."
+                        placeholder={t('instructions_placeholder')}
                         className="w-full bg-transparent border-none p-0 text-lg font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none resize-none h-14 placeholder:text-slate-200 shadow-none border-transparent ring-0"
                       />
                     </div>
@@ -338,7 +340,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-slate-50 dark:bg-slate-800 group-hover/add:scale-110" style={{ color: settings.theme_color }}>
                          <Plus className="w-6 h-6" />
                       </div>
-                      <span className="text-sm font-semibold uppercase tracking-widest" style={{ color: `${settings.theme_color}80` }}>Add Question Sub-card</span>
+                      <span className="text-sm font-semibold uppercase tracking-widest" style={{ color: `${settings.theme_color}80` }}>{t('add_question')}</span>
                     </button>
                   </div>
                 </div>
@@ -351,7 +353,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                       style={{ backgroundColor: `${settings.theme_color}10`, color: settings.theme_color }}
                       className="flex items-center gap-4 px-10 py-5 rounded-[2rem] text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-sm border border-transparent hover:border-current bg-white dark:bg-slate-900"
                     >
-                      Siguiente bloque: {template.templateSchema[selectedStepIndex + 1].title}
+                      {t('next_block', { title: template.templateSchema[selectedStepIndex + 1].title })}
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   </div>
@@ -364,7 +366,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                   <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center mx-auto shadow-sm border border-slate-100">
                      <LayoutGrid className="w-10 h-10 text-slate-200" />
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Empty Flow</h3>
+                  <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">{t('empty_flow')}</h3>
                </div>
             )}
           </div>

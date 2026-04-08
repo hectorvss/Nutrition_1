@@ -196,7 +196,7 @@ function GeneralSettings() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('timezone')}</label>
               <select className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed" disabled>
-                <option>(GMT+01:00) Madrid, Paris, Berlin</option>
+                <option>{t('timezone_madrid_paris_berlin')}</option>
               </select>
             </div>
             <div>
@@ -253,7 +253,7 @@ function ProfileSettings() {
         }
       } catch (err: any) {
         console.error('Error loading profile:', err);
-        setError('Failed to load profile data.');
+        setError(t('failed_load_profile_data'));
       } finally {
         setLoading(false);
       }
@@ -270,11 +270,11 @@ function ProfileSettings() {
 
     // Basic validation
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file.');
+      setError(t('please_upload_image_file'));
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setError('Image size should be less than 2MB.');
+      setError(t('image_size_less_than_2mb'));
       return;
     }
 
@@ -310,7 +310,7 @@ function ProfileSettings() {
       reader.readAsDataURL(file);
     } catch (err: any) {
       console.error('Error uploading avatar:', err);
-      setError('Failed to update profile photo.');
+      setError(t('failed_update_profile_photo'));
     } finally {
       setSaving(false);
     }
@@ -338,7 +338,7 @@ function ProfileSettings() {
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       console.error('Error saving profile:', err);
-      setError(err.message || 'Failed to save profile.');
+      setError(err.message || t('failed_save_profile'));
     } finally {
       setSaving(false);
     }

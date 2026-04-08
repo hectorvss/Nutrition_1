@@ -55,7 +55,7 @@ interface MessagesProps {
 export default function Messages({ onNavigate }: MessagesProps) {
   const { user } = useAuth();
   const { clients } = useClient();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [latestMessages, setLatestMessages] = useState<Record<string, Message>>({});
   const [newMessage, setNewMessage] = useState('');
@@ -101,6 +101,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
   
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [activeRecipient, setActiveRecipient] = useState<any>(null);
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   useEffect(() => {
     if (user?.role === 'MANAGER') {
@@ -121,12 +122,12 @@ export default function Messages({ onNavigate }: MessagesProps) {
       // Clients talk to "Dr. Smith" (the manager)
       setActiveRecipient({
          id: user.manager_id || 'manager-id',
-         name: 'Dr. Smith',
+         name: t('your_coach'),
          avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBQBDNBbswmATmE2r_-gt71uWBTuLrTIArtoJ_1v6CiveQXTQptNKbdaU5h_h-SgJwHbQZFGVB1Py0fDRW8xkKDvoXSyp70zlpmG83dZIjSXtb5K8O77LJaIESdN9x5QRK6RGatr2Tz1KoCrHph7TKWXjLNp87eTjNRBcl0dKKj3uBaW0N8c0AsMibzJV5J50zY6wsT5RTjnNypeYfZoBBeNCcHvuZDiL7BiKBln8U2X_do4wuk8OpIHTA-QANHy3Y3QtDUDgjv4MG7',
          role: 'MANAGER'
       });
     }
-  }, [user, clients, selectedClientId]);
+  }, [user, clients, selectedClientId, t]);
 
   const loadMessages = async () => {
     if (!activeRecipient) return;
@@ -294,7 +295,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
         console.log('Uploading audio...');
         attachment_url = await uploadToStorage(audioBlob, 'voice-message.webm');
         attachment_type = 'audio';
-        attachment_name = 'Voice Message';
+        attachment_name = t('voice_message');
         console.log('Audio uploaded:', attachment_url);
       }
 
@@ -373,7 +374,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
       setSelectedRecipients([]);
       setSelectedFile(null);
       loadLatestMessages();
-      alert(`Mensaje enviado a ${selectedRecipients.length} destinatarios.`);
+      alert(t('broadcast_sent', { count: selectedRecipients.length }));
     } catch (err: any) {
       console.error('Failed to send broadcast:', err);
       alert(t('bulk_send_error'));
@@ -523,7 +524,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                         </div>
                         {latest && (
                           <span className="text-xs font-semibold text-emerald-500 whitespace-nowrap bg-emerald-500/5 px-2 py-1 rounded-lg">
-                            {new Date(latest.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(latest.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                       </div>
@@ -699,7 +700,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-bold text-slate-900 truncate">{client.name}</h4>
-                        <p className="text-xs text-slate-500 font-medium truncate">{client.plan} • Online</p>
+                        <p className="text-xs text-slate-500 font-medium truncate">{client.plan} • {t('online_status')}</p>
                       </div>
                       <button 
                         onClick={() => {
@@ -925,7 +926,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 </div>
                 <div className={`flex items-center space-x-1 mt-1 ${isOwn ? 'pr-1' : 'pl-1'}`}>
                    <p className="text-[10px] font-medium text-slate-400">
-                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                     {new Date(msg.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                    </p>
                    {isOwn && <CheckCheck className="w-3.5 h-3.5 text-emerald-500" />}
                 </div>

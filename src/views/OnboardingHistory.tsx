@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface OnboardingHistoryProps {
   clientId: string;
@@ -17,6 +18,7 @@ interface OnboardingHistoryProps {
 
 export default function OnboardingHistory({ clientId, onBack, onViewReview }: OnboardingHistoryProps) {
   const { clients } = useClient();
+  const { t, language } = useLanguage();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [client, setClient] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,9 +47,10 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
     fetchData();
   }, [clientId]);
 
-  const clientName = client?.full_name || contextClient?.name || 'Client';
+  const clientName = client?.full_name || contextClient?.name || t('client');
   const clientInitials = clientName.substring(0, 2).toUpperCase();
   const clientAvatar = client?.avatar_url || contextClient?.avatar;
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   if (isLoading) {
     return (
@@ -61,7 +64,7 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
     <div className="p-6 md:p-8 w-full space-y-6">
       <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
         <div className="flex items-center gap-2">
-          <button onClick={onBack} className="hover:text-emerald-600 transition-colors">Onboarding</button>
+          <button onClick={onBack} className="hover:text-emerald-600 transition-colors">{t('onboarding')}</button>
           <ChevronRight className="w-4 h-4" />
           <span className="font-medium text-slate-900">{clientName}</span>
         </div>
@@ -85,10 +88,10 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">{clientName}</h1>
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <History className="w-3 h-3" /> Onboarding History
+                <History className="w-3 h-3" /> {t('onboarding_history_badge')}
               </span>
             </div>
-            <p className="text-slate-500 text-sm mt-1 font-medium">{submissions.length} submissions found</p>
+            <p className="text-slate-500 text-sm mt-1 font-medium">{t('submissions_found_count', { count: submissions.length })}</p>
           </div>
         </div>
       </div>
@@ -96,7 +99,7 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
       <div className="space-y-4">
         {submissions.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 font-medium text-sm">
-            No onboarding submissions yet.
+            {t('no_onboarding_submissions')}
           </div>
         ) : (submissions || []).map((item, idx) => {
           if (!item) return null;
@@ -112,18 +115,18 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
                </div>
                <div>
                   <h3 className="text-lg font-bold text-slate-900">
-                    {item.template?.name || 'Onboarding Flow'}
+                    {item.template?.name || t('onboarding_flow')}
                   </h3>
                   <div className="flex items-center gap-2 text-sm text-slate-500 mt-0.5">
                     <CalendarIcon className="w-4 h-4" />
-                    {item.submitted_at ? new Date(item.submitted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Date unknown'}
+                    {item.submitted_at ? new Date(item.submitted_at).toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' }) : t('date_unknown')}
                   </div>
                </div>
             </div>
             
             <div className="flex items-center gap-4">
                <button className="px-5 py-2 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg hover:bg-slate-800 transition-all">
-                  View Results
+                  {t('view_results')}
                </button>
             </div>
           </div>

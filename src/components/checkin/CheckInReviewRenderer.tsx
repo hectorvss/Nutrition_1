@@ -1,6 +1,7 @@
 import React from 'react';
 import { Camera } from 'lucide-react';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../../types/checkIn';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface CheckInReviewRendererProps {
   template: CheckInTemplate;
@@ -9,6 +10,7 @@ interface CheckInReviewRendererProps {
 }
 
 export default function CheckInReviewRenderer({ template, answers, isClient = false }: CheckInReviewRendererProps) {
+  const { t } = useLanguage();
   const steps = template.templateSchema || [];
 
   const SectionWrapper = ({ title, subtitle, icon, children }: any) => (
@@ -38,7 +40,7 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
           ${isEmpty ? 'bg-slate-50/50 dark:bg-slate-800/30 border-dashed' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
           <div className="text-sm font-bold text-slate-700 dark:text-slate-200">
             {isEmpty ? (
-              <span className="text-slate-300 dark:text-slate-600 italic font-medium">No response provided</span>
+              <span className="text-slate-300 dark:text-slate-600 italic font-medium">{t('no_response_provided')}</span>
             ) : Array.isArray(value) ? (
               <div className="flex flex-wrap gap-2 mt-1">
                 {value.map((v: string) => (
@@ -59,7 +61,7 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
     if (q.type === 'photo_group') {
       return (
         <div key={q.id} className="w-full md:col-span-2 mt-2">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{q.title || 'Photos'}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{q.title || t('photos')}</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {['front', 'side', 'back'].map(pos => {
               const photoKey = `${q.id}_${pos}`;
@@ -85,7 +87,7 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
     if (q.type === 'measurement_group') {
        return (
          <div key={q.id} className="w-full md:col-span-2">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{q.title || 'Measurements'}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{q.title || t('measurements')}</p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                {(q.options || []).map(opt => (
                  <div key={opt} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
@@ -164,7 +166,7 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
           {(step.questions || []).map(q => renderQuestion(q))}
           {step.type === 'info_card' && (
             <div className="md:col-span-2 p-4 bg-slate-50 dark:bg-slate-800/20 rounded-2xl border border-slate-100 dark:border-slate-800 italic text-slate-400 text-sm">
-               {step.subtitle || 'Information card'}
+               {step.subtitle || t('information_card')}
             </div>
           )}
         </SectionWrapper>

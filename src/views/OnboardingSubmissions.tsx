@@ -14,9 +14,11 @@ import {
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function OnboardingSubmissions() {
   const { settings } = useTheme();
+  const { t, language } = useLanguage();
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +45,8 @@ export default function OnboardingSubmissions() {
     s.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
+
   if (selectedSubmission) {
       return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -52,10 +56,10 @@ export default function OnboardingSubmissions() {
                     className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold transition-all"
                   >
                       <ChevronRight className="w-5 h-5 rotate-180" />
-                      Back to Monitoring
+                      {t('back_to_monitoring')}
                   </button>
                   <span className="px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                      Completed Onboarding
+                      {t('completed_onboarding')}
                   </span>
               </div>
 
@@ -73,12 +77,12 @@ export default function OnboardingSubmissions() {
                           <div className="flex items-center gap-4 mt-2">
                               <span className="text-sm text-slate-500 font-medium flex items-center gap-1.5">
                                   <Clock className="w-4 h-4" />
-                                  Submitted on {new Date(selectedSubmission.lastSubmission.submitted_at).toLocaleDateString()}
+                                  {t('submitted_on_label')} {new Date(selectedSubmission.lastSubmission.submitted_at).toLocaleDateString(locale)}
                               </span>
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
                               <span className="text-sm text-slate-500 font-medium flex items-center gap-1.5">
                                   <FileText className="w-4 h-4" />
-                                  {selectedSubmission.lastSubmission.template?.name || 'Standard Questionnaire'}
+                                  {selectedSubmission.lastSubmission.template?.name || t('standard_questionnaire')}
                               </span>
                           </div>
                       </div>
@@ -112,7 +116,7 @@ export default function OnboardingSubmissions() {
           <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input 
             type="text" 
-            placeholder="Search clients..."
+            placeholder={t('search_clients')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-2.5 rounded-xl border-none bg-slate-50 ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 font-medium transition-all"
@@ -120,7 +124,7 @@ export default function OnboardingSubmissions() {
         </div>
         <button className="flex items-center gap-2 px-4 py-2 text-slate-600 font-bold text-sm bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all">
             <Filter className="w-4 h-4" />
-            Active Only
+            {t('active_only')}
         </button>
       </div>
 
@@ -133,8 +137,8 @@ export default function OnboardingSubmissions() {
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Users className="w-10 h-10 text-slate-300" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">No client activity found</h3>
-            <p className="text-slate-500 mt-2 max-w-sm mx-auto">Once you assign onboarding flows to your clients, their status and responses will appear here.</p>
+            <h3 className="text-xl font-bold text-slate-900">{t('no_client_activity_found')}</h3>
+            <p className="text-slate-500 mt-2 max-w-sm mx-auto">{t('onboarding_monitoring_empty_desc')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -167,7 +171,7 @@ export default function OnboardingSubmissions() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-[11px] font-bold">
                         <span className="text-slate-400 uppercase tracking-widest">Completed On</span>
-                        <span className="text-slate-900">{new Date(s.lastSubmission.submitted_at).toLocaleDateString()}</span>
+                        <span className="text-slate-900">{new Date(s.lastSubmission.submitted_at).toLocaleDateString(locale)}</span>
                     </div>
                     <button 
                         onClick={() => setSelectedSubmission(s)}
@@ -175,31 +179,31 @@ export default function OnboardingSubmissions() {
                         className="w-full py-3 rounded-xl text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 hover:opacity-90 transition-all"
                     >
                         <Eye className="w-4 h-4" />
-                        View Answers
+                        {t('view_answers')}
                     </button>
                   </div>
                 ) : s.status === 'pending' ? (
                    <div className="space-y-3">
                     <div className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="text-slate-400 uppercase tracking-widest">Assigned</span>
-                        <span className="text-slate-900">{new Date(s.activeAssignment.assigned_at).toLocaleDateString()}</span>
+                        <span className="text-slate-400 uppercase tracking-widest">{t('assigned_label')}</span>
+                        <span className="text-slate-900">{new Date(s.activeAssignment.assigned_at).toLocaleDateString(locale)}</span>
                     </div>
                     <div className="w-full py-3 rounded-xl bg-slate-50 border border-slate-100 text-slate-400 text-xs font-bold flex items-center justify-center gap-2 cursor-default">
                         <Clock className="w-4 h-4" />
-                        Awaiting Response
+                        {t('awaiting_response')}
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3 text-center py-2">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic flex items-center justify-center gap-2">
                         <AlertCircle className="w-3 h-3" />
-                        Not Assigned
+                        {t('not_assigned')}
                     </p>
                     <button 
                          className="w-full py-3 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center gap-2 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all"
                     >
                         <UserPlus className="w-4 h-4" />
-                        Quick Assign
+                        {t('quick_assign')}
                     </button>
                   </div>
                 )}

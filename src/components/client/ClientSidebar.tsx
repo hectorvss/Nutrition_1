@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ClientView } from '../../ClientApp';
 import { fetchWithAuth } from '../../api';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface ClientSidebarProps {
   currentView: ClientView;
@@ -11,18 +12,18 @@ interface ClientSidebarProps {
   onOpenOnboarding?: () => void;
 }
 
-const navItems = [
-  { id: 'dashboard', label: 'Today', icon: 'calendar_today' },
-  { id: 'check-ins', label: 'Check-ins', icon: 'how_to_reg' },
-  { id: 'messages', label: 'Messages', icon: 'chat_bubble' },
-  { id: 'nutrition', label: 'Nutrition', icon: 'restaurant' },
-  { id: 'training', label: 'Training', icon: 'fitness_center' },
-  { id: 'roadmap', label: 'Roadmap', icon: 'map' },
-  { id: 'progress', label: 'Progress', icon: 'trending_up' },
-];
-
 export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose, showOnboardingReminder, onOpenOnboarding }: ClientSidebarProps) {
+  const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
+  const navItems = [
+    { id: 'dashboard', label: t('today'), icon: 'calendar_today' },
+    { id: 'check-ins', label: t('checkins'), icon: 'how_to_reg' },
+    { id: 'messages', label: t('messages'), icon: 'chat_bubble' },
+    { id: 'nutrition', label: t('nutrition'), icon: 'restaurant' },
+    { id: 'training', label: t('training'), icon: 'fitness_center' },
+    { id: 'roadmap', label: t('roadmap'), icon: 'map' },
+    { id: 'progress', label: t('progress'), icon: 'trending_up' },
+  ];
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -105,7 +106,7 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
             }`}
           >
             <span className="material-symbols-outlined">settings</span>
-            Settings
+            {t('settings')}
           </button>
         </div>
       </aside>

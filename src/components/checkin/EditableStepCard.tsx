@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CheckInStep, CheckInQuestion, CheckInStepType } from '../../types/checkIn';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface EditableStepCardProps {
   step: CheckInStep;
@@ -33,6 +34,8 @@ const QUESTION_TYPES: { id: CheckInStepType; label: string; icon: any }[] = [
 ];
 
 export default function EditableStepCard({ step, index, onUpdate, onRemove }: EditableStepCardProps) {
+  const { t } = useLanguage();
+  const getTypeLabel = (id: CheckInStepType, fallback: string) => t(`question_type_${id}`, { defaultValue: fallback });
   
   const updateStepField = (field: keyof CheckInStep, value: any) => {
     onUpdate({ ...step, [field]: value });
@@ -47,10 +50,10 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
   const addQuestion = () => {
     const newQuestion: CheckInQuestion = {
       id: `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      title: 'New Question',
+      title: t('new_question'),
       type: 'single_choice',
       required: true,
-      options: ['Option 1', 'Option 2']
+      options: [t('option_1'), t('option_2')]
     };
     updateStepField('questions', [...(step.questions || []), newQuestion]);
   };
@@ -62,7 +65,7 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
 
   const addOption = (qIndex: number) => {
     const q = step.questions![qIndex];
-    const newOptions = [...(q.options || []), `Option ${(q.options || []).length + 1}`];
+    const newOptions = [...(q.options || []), `${t('option_label')} ${(q.options || []).length + 1}`];
     updateQuestion(qIndex, { options: newOptions });
   };
 
@@ -96,7 +99,7 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
             type="text" 
             value={step.title}
             onChange={(e) => updateStepField('title', e.target.value)}
-            placeholder="Step Title (e.g., Body Progress)"
+            placeholder={t('step_title_placeholder_with_example')}
             className="w-full bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white focus:ring-0 p-0 placeholder:text-slate-300"
           />
         </div>
@@ -111,11 +114,11 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
       <div className="p-8 space-y-10">
         {/* Step Context */}
         <div className="space-y-3">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] pl-1">Category Subtitle / Instructions</label>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] pl-1">{t('category_subtitle_instructions')}</label>
           <textarea 
             value={step.subtitle || ''}
             onChange={(e) => updateStepField('subtitle', e.target.value)}
-            placeholder="Briefly explain what this section is for..."
+            placeholder={t('briefly_explain_section')}
             className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-3xl p-5 text-sm font-medium text-slate-600 dark:text-slate-300 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all resize-none min-h-[100px]"
           />
         </div>
@@ -131,14 +134,14 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
                     value={q.title}
                     onChange={(e) => updateQuestion(qIdx, { title: e.target.value })}
                     className="w-full bg-transparent border-none font-bold text-lg text-slate-900 dark:text-white focus:ring-0 p-0"
-                    placeholder="Enter your question here..."
+                    placeholder={t('enter_question_here')}
                   />
                   <input 
                     type="text" 
                     value={q.subtitle || ''}
                     onChange={(e) => updateQuestion(qIdx, { subtitle: e.target.value })}
                     className="w-full bg-transparent border-none text-xs font-medium text-slate-400 focus:ring-0 p-0 mt-1"
-                    placeholder="Add an optional subtitle or secondary instruction..."
+                    placeholder={t('add_optional_subtitle_instruction')}
                   />
                 </div>
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl">
@@ -148,7 +151,7 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
                      className="bg-transparent border-none rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 py-2 pl-3 pr-10 focus:ring-0 cursor-pointer"
                    >
                      {QUESTION_TYPES.map(t => (
-                       <option key={t.id} value={t.id}>{t.label}</option>
+                       <option key={t.id} value={t.id}>{getTypeLabel(t.id, t.label)}</option>
                      ))}
                    </select>
                    <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700" />
@@ -165,8 +168,8 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
               {(q.type === 'single_choice' || q.type === 'multi_select') && (
                 <div className="space-y-4 pt-2 border-t border-slate-50 dark:border-slate-800/50">
                    <div className="flex items-center justify-between px-1">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-bold">Answer Bubbles</p>
-                      <span className="text-[9px] text-slate-300 font-bold uppercase">Click to edit bubble text</span>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-bold">{t('answer_bubbles')}</p>
+                      <span className="text-[9px] text-slate-300 font-bold uppercase">{t('click_edit_bubble_text')}</span>
                    </div>
                    <div className="flex flex-wrap gap-3">
                      {(q.options || []).map((opt, optIdx) => (
@@ -191,7 +194,7 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
                        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-50 transition-all text-sm font-bold"
                      >
                        <PlusCircle className="w-5 h-5" />
-                       Add Bubble
+                       {t('add_bubble')}
                      </button>
                    </div>
                 </div>
@@ -200,7 +203,7 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
               {/* Number Unit */}
               {q.type === 'number' && (
                 <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl w-fit">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Unit:</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('unit_label')}:</span>
                   <input 
                     type="text" 
                     value={q.unit || ''}
@@ -218,7 +221,7 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
             className="w-full py-6 rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:border-emerald-400 hover:text-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/5 transition-all flex items-center justify-center gap-3 text-sm font-bold"
           >
             <Plus className="w-5 h-5" />
-            Add Question to this Card
+            {t('add_question_to_card')}
           </button>
         </div>
       </div>

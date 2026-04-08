@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../api';
 import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, Play } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Login({ onBackToLanding }: { onBackToLanding?: () => void }) {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,14 +37,14 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.error || t('login_auth_failed'));
       }
 
       if (isLogin) {
         login(data.token, data.user);
       } else {
         setIsLogin(true);
-        setError('Account created successfully. Please log in.');
+        setError(t('login_account_created'));
       }
       
     } catch (err: any) {
@@ -64,7 +66,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
           whileTap={{ scale: 0.9 }}
           onClick={onBackToLanding}
           className="absolute top-8 left-8 w-12 h-12 rounded-full bg-white shadow-2xl flex items-center justify-center cursor-pointer border border-slate-100 z-[100] group"
-          title="Back to home"
+          title={t('back_to_home')}
         >
           <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-black transition-colors" />
         </motion.button>
@@ -85,12 +87,12 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
           />
 
           <h1 className="text-3xl font-sans font-medium tracking-tight mb-3">
-            {isLogin ? 'Welcome back' : 'Create account'}
+            {isLogin ? t('login_welcome') : t('login_create')}
           </h1>
           <p className="text-gray-500 text-sm mb-10 leading-relaxed">
             {isLogin 
-              ? 'Enter your credentials to access your dashboard.' 
-              : 'Join high-performance coaches and manage your clients smarter.'}
+              ? t('login_subtitle') 
+              : t('login_subtitle_signup')}
           </p>
 
           {/* Error Message */}
@@ -114,7 +116,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">
-                Email Address
+                {t('login_email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -124,7 +126,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-black/5 focus:border-black outline-none transition-all text-sm"
-                  placeholder="name@company.com"
+                  placeholder={t('email_placeholder')}
                 />
               </div>
             </div>
@@ -132,11 +134,11 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
             <div className="space-y-2">
               <div className="flex justify-between items-center ml-1">
                 <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
-                  Password
+                  {t('login_password')}
                 </label>
                 {isLogin && (
                   <button type="button" className="text-[11px] font-bold text-gray-400 hover:text-black transition-colors bg-transparent border-none cursor-pointer">
-                    Forgot password?
+                    {t('login_forgot')}
                   </button>
                 )}
               </div>
@@ -162,7 +164,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
               ) : (
                 <>
-                  <span>{isLogin ? 'Sign In' : 'Get Started'}</span>
+                  <span>{isLogin ? t('login_signin') : t('login_signup')}</span>
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}
@@ -171,7 +173,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
 
           <div className="mt-8 text-center lg:text-left">
             <p className="text-sm text-gray-500">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}
+              {isLogin ? t('login_no_account') : t('login_has_account')}
               <button 
                 onClick={() => {
                   setIsLogin(!isLogin);
@@ -179,7 +181,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
                 }}
                 className="ml-2 font-bold text-black hover:underline cursor-pointer bg-transparent border-none"
               >
-                {isLogin ? 'Join NutriDash Pro' : 'Sign in instead'}
+                {isLogin ? t('login_join') : t('login_signin_instead')}
               </button>
             </p>
           </div>
