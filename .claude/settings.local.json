@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(grep -oP '.{0,60}\\\\\\(void 0\\\\\\).{0,60}' dist/assets/index-CgoyW2Ns.js)",
+      "Bash(grep -oE '.{0,80}void 0.{0,80}' dist/assets/index-CgoyW2Ns.js)",
+      "Bash(npx vite:*)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -f \"tsx\")",
+      "Bash(pkill -f \"concurrently\")",
+      "Bash(grep -oE \">\\\\s*[A-Z][A-Za-z0-9\\\\s\\\\-,.!?\\(\\)/:&]{3,}</\\\\w+>\" \"/c/Users/usuario/OneDrive - Universidad Politécnica de Cartagena/Escritorio/Nutrition/src/views/PlanningDetail.tsx\")",
+      "Bash(grep -oE \">\\\\s*[A-Z][A-Za-z0-9\\\\s\\\\-,.!?\\(\\)/:&]{3,}</\\\\w+>\" \"/c/Users/usuario/OneDrive - Universidad Politécnica de Cartagena/Escritorio/Nutrition/src/views/ClientDetail.tsx\")"
+    ]
+  }
+}
