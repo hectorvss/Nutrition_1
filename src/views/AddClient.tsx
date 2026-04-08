@@ -11,12 +11,14 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface AddClientProps {
   onBack: () => void;
 }
 
 export default function AddClient({ onBack }: AddClientProps) {
+  const { t } = useLanguage();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,7 +46,7 @@ export default function AddClient({ onBack }: AddClientProps) {
 
   const handleCreate = async () => {
     if (!email) {
-       setError('Email is required');
+       setError(t('email_required'));
        return;
     }
     
@@ -78,15 +80,15 @@ export default function AddClient({ onBack }: AddClientProps) {
           <div className="flex items-center gap-2 text-sm text-slate-500 mb-8 font-medium">
             <button onClick={onBack} className="hover:text-emerald-600 transition-colors flex items-center gap-1">
               <ArrowLeft className="w-4 h-4" />
-              Clients
+              {t('clients')}
             </button>
             <ChevronRight className="w-4 h-4 text-slate-300" />
-            <span className="text-slate-900 font-bold">New Client</span>
+            <span className="text-slate-900 font-bold">{t('new_client_title')}</span>
           </div>
 
           <header className="mb-10">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">New Client</h1>
-            <p className="text-slate-500 mt-2 text-sm max-w-xl">Add a new client to your practice and set up their access.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('new_client_title')}</h1>
+            <p className="text-slate-500 mt-2 text-sm max-w-xl">{t('new_client_desc')}</p>
           </header>
           
           {error && (
@@ -99,51 +101,51 @@ export default function AddClient({ onBack }: AddClientProps) {
             {/* Personal Information */}
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100 bg-slate-50/30">
-                <h2 className="text-lg font-bold text-slate-900">Personal Information</h2>
+                <h2 className="text-lg font-bold text-slate-900">{t('personal_information')}</h2>
               </div>
               <div className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">First Name</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('first_name')}</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                       <input 
                         type="text" 
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="e.g. Jane"
+                        placeholder={t('first_name_placeholder')}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 placeholder:text-slate-400 transition-all"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Last Name</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('last_name')}</label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                       <input 
                         type="text" 
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        placeholder="e.g. Doe"
+                        placeholder={t('last_name_placeholder')}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 placeholder:text-slate-400 transition-all"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('email_address')}</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                       <input 
                         type="email" 
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="jane@example.com"
+                        placeholder={t('email_placeholder')}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 placeholder:text-slate-400 transition-all"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Phone Number</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('phone_number')}</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                       <input 
@@ -161,11 +163,11 @@ export default function AddClient({ onBack }: AddClientProps) {
             <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Account Access</h2>
-                  <p className="text-xs text-slate-500 font-medium mt-1">Credentials have been automatically generated.</p>
+                <h2 className="text-lg font-bold text-slate-900">{t('account_access')}</h2>
+                  <p className="text-xs text-slate-500 font-medium mt-1">{t('credentials_generated')}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-500">Send access details via email</span>
+                  <span className="text-xs font-bold text-slate-500">{t('send_email_toggle')}</span>
                   <div className="w-12 h-6 bg-emerald-500 rounded-full relative cursor-pointer shadow-inner">
                     <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
                   </div>
@@ -174,26 +176,26 @@ export default function AddClient({ onBack }: AddClientProps) {
               <div className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Username / Email</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('username_email')}</label>
                     <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl group hover:border-slate-300 transition-all">
                       <span className="text-sm font-bold text-slate-900 flex-1 truncate">{email || generatedUsername}</span>
                       <button 
                         onClick={() => copyToClipboard(email || generatedUsername)}
                         className="text-slate-400 hover:text-emerald-500 transition-colors"
-                        title="Copy to clipboard"
+                        title={t('copy_to_clipboard')}
                       >
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Temporary Password</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('temp_password')}</label>
                     <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl group hover:border-slate-300 transition-all">
                       <span className="text-sm font-bold text-slate-900 flex-1">{tempPassword}</span>
                       <button 
                         onClick={() => copyToClipboard(tempPassword)}
                         className="text-slate-400 hover:text-emerald-500 transition-colors"
-                        title="Copy to clipboard"
+                        title={t('copy_to_clipboard')}
                       >
                         <Copy className="w-4 h-4" />
                       </button>
@@ -209,7 +211,7 @@ export default function AddClient({ onBack }: AddClientProps) {
                 disabled={loading}
                 className="px-8 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button 
                 onClick={handleCreate}
@@ -217,7 +219,7 @@ export default function AddClient({ onBack }: AddClientProps) {
                 className="flex items-center gap-2 px-8 py-3 rounded-xl bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all active:scale-95"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                {loading ? 'Creating...' : 'Create Client'}
+                {loading ? t('creating') : t('create_client')}
               </button>
             </div>
           </div>

@@ -61,6 +61,7 @@ import CheckInHistory from './CheckInHistory';
 import CheckInReview from './CheckInReview';
 import CheckInReviewRenderer from '../components/checkin/CheckInReviewRenderer';
 import { Loader2 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 const primaryExercises = [
   'Bench Press', 'Squat', 'Deadlift', 'Military Press', 'Barbell Row',
@@ -113,6 +114,7 @@ interface WorkoutLogItemProps {
 }
 
 const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, onToggle, onUpdate }) => {
+  const { t } = useLanguage();
   const [exercises, setExercises] = useState(workout.exercises || []);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -174,19 +176,19 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
                   <span className="material-symbols-outlined text-slate-300 dark:text-slate-700">drag_handle</span>
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white">{ex.name}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{ex.muscle_group || 'Target muscles'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{ex.muscle_group || t('target_muscles')}</p>
                   </div>
                 </div>
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-2 shadow-sm">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500">edit_note</span>
-                  Client Log
+                  {t('client_log')}
                 </span>
               </div>
 
               <div className="pl-11 grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
                   <div className="grid grid-cols-4 gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center px-1">
-                    <div>Set</div><div>Weight</div><div>Reps</div><div>RIR</div>
+                    <div>{t('set_label')}</div><div>{t('weight')}</div><div>{t('reps_label')}</div><div>{t('rir_label')}</div>
                   </div>
                   {ex.sets_logged?.map((s: any, sIdx: number) => (
                     <div key={sIdx} className="grid grid-cols-4 gap-2">
@@ -209,14 +211,14 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
                     </div>
                   ))}
                   {(!ex.sets_logged || ex.sets_logged.length === 0) && (
-                    <p className="text-center text-xs text-slate-400 italic py-2">No sets logged</p>
+                    <p className="text-center text-xs text-slate-400 italic py-2">{t('no_sets_logged')}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block px-1">Notes & Sensations</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block px-1">{t('notes_sensations')}</label>
                   <textarea 
                     className="w-full p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 min-h-[100px] text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed shadow-sm italic outline-none focus:ring-1 focus:ring-emerald-500"
-                    placeholder="Notes..."
+                    placeholder={t('notes_placeholder')}
                     value={ex.notes || ""}
                     onChange={(e) => updateNotes(exIdx, e.target.value)}
                   />
@@ -237,7 +239,7 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
               ) : (
                 <span className="material-symbols-outlined text-[18px]">save</span>
               )}
-              {isSaving ? 'Saving...' : 'Save Session Log'}
+              {isSaving ? t('saving') : t('save_session_log')}
             </button>
           </div>
         </div>
@@ -247,10 +249,11 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
 };
 
 const NutritionPlanCard = ({ plan }: { plan: any }) => {
+  const { t } = useLanguage();
   if (!plan) return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
       <Utensils className="w-10 h-10 mx-auto mb-3 opacity-20" />
-      <p className="text-sm font-bold uppercase tracking-widest text-slate-500">No Nutrition Plan Assigned</p>
+      <p className="text-sm font-bold uppercase tracking-widest text-slate-500">{t('no_nutrition_plan_assigned')}</p>
     </div>
   );
 
@@ -284,22 +287,22 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
             <Utensils className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Current Nutritional Plan</h3>
-            <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{plan.name || 'Personalized Plan'}</p>
+            <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{t('current_nutritional_plan')}</h3>
+            <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{plan.name || t('personalized_plan')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50">Active</span>
+          <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-100 dark:border-emerald-800/50">{t('active')}</span>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
         <div className="grid grid-cols-4 gap-4">
           {[
-            { label: 'Calories', value: Math.round(totalKcal), unit: 'kcal', color: 'text-orange-500' },
-            { label: 'Protein', value: Math.round(totalP), unit: 'g', color: 'text-blue-500' },
-            { label: 'Carbs', value: Math.round(totalC), unit: 'g', color: 'text-emerald-500' },
-            { label: 'Fats', value: Math.round(totalF), unit: 'g', color: 'text-amber-500' },
+            { label: t('calories'), value: Math.round(totalKcal), unit: 'kcal', color: 'text-orange-500' },
+            { label: t('protein'), value: Math.round(totalP), unit: 'g', color: 'text-blue-500' },
+            { label: t('carbs'), value: Math.round(totalC), unit: 'g', color: 'text-emerald-500' },
+            { label: t('fats'), value: Math.round(totalF), unit: 'g', color: 'text-amber-500' },
           ].map((macro, i) => (
             <div key={i} className="text-center">
               <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{macro.label}</p>
@@ -347,13 +350,13 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
             </div>
           ))}
           {meals.length === 0 && (
-            <p className="text-center text-[10px] text-slate-400 italic py-2 uppercase tracking-widest">No meals defined for this day</p>
+            <p className="text-center text-[10px] text-slate-400 italic py-2 uppercase tracking-widest">{t('no_meals_defined_day')}</p>
           )}
         </div>
       </div>
       <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
         <button className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline flex items-center gap-1.5">
-          <ImageIcon className="w-3 h-3" /> View Photo Plan
+          <ImageIcon className="w-3 h-3" /> {t('view_photo_plan')}
         </button>
       </div>
     </div>
@@ -361,10 +364,11 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
 };
 
 const TrainingProgramCard = ({ program }: { program: any }) => {
+  const { t } = useLanguage();
   if (!program) return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
       <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-20" />
-      <p className="text-sm font-bold uppercase tracking-widest text-slate-500">No Training Program Assigned</p>
+      <p className="text-sm font-bold uppercase tracking-widest text-slate-500">{t('no_training_program_assigned')}</p>
     </div>
   );
 
@@ -379,10 +383,10 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
     const workoutId = data.weeklySchedule?.[selectedDay];
     const workout = (data.workouts || []).find((w: any) => w.id === workoutId);
     blocks = workout?.blocks || [];
-    workoutName = workout?.name || 'Rest Day';
+    workoutName = workout?.name || t('rest_day_label');
   } else {
     blocks = data.blocks || [];
-    workoutName = program.name || 'Training Session';
+    workoutName = program.name || t('training_session');
   }
 
   return (
@@ -393,12 +397,12 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
             <Dumbbell className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">Active Training Program</h3>
-            <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{program.name || 'Custom Routine'}</p>
+            <h3 className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{t('active_training_program')}</h3>
+            <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{program.name || t('custom_routine')}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800/50">Live</span>
+          <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[9px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800/50">{t('live_label')}</span>
         </div>
       </div>
 
@@ -430,7 +434,7 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
           {blocks.length === 0 ? (
             <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center">
               <span className="material-symbols-outlined text-slate-200 dark:text-slate-700 text-3xl mb-2">self_improvement</span>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rest & Recovery Day</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('rest_recovery_day')}</p>
             </div>
           ) : (
             blocks.slice(0, 3).map((block: any, idx: number) => (
@@ -448,19 +452,19 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
                       {ex.name}
                     </span>
                   ))}
-                  {(block.exercises || []).length > 4 && <span className="text-[8px] font-bold text-slate-400">+{block.exercises.length - 4} more</span>}
+                  {(block.exercises || []).length > 4 && <span className="text-[8px] font-bold text-slate-400">{t('more_count_compact', { count: block.exercises.length - 4 })}</span>}
                 </div>
               </div>
             ))
           )}
           {blocks.length > 3 && (
-            <p className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2">Plus {blocks.length - 3} more blocks...</p>
+            <p className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-2">{t('more_blocks_count', { count: blocks.length - 3 })}</p>
           )}
         </div>
       </div>
       <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
         <button className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline flex items-center gap-1.5">
-          <Target className="w-3 h-3" /> Open Full Program
+          <Target className="w-3 h-3" /> {t('open_full_program')}
         </button>
       </div>
     </div>
@@ -470,6 +474,7 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
 
 
 export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
+  const { t } = useLanguage();
   const { clients, deleteClient } = useClient();
   const [activeTab, setActiveTab] = useState<Tab>('Information');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
@@ -542,7 +547,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       await deleteClient(String(clientId));
       onBack();
     } catch {
-      setDeleteError('Failed to delete client. Please try again.');
+      setDeleteError(t('delete_client_error'));
       setIsDeleting(false);
     }
   };
@@ -561,7 +566,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   };
   // Find the exact client object, or fallback if something went wrong
   const client = clients.find(c => c.id === clientId as any) || {
-    name: 'Unknown Client',
+    name: t('unknown_client'),
     avatar: '',
     weight: '--',
     goal: '--',
@@ -576,7 +581,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       return (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
           <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-          <p className="text-sm font-medium">Cargando información general...</p>
+          <p className="text-sm font-medium">{t('loading_general_information')}</p>
         </div>
       );
     }
@@ -585,8 +590,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       return (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
           <Info className="w-12 h-12 mx-auto mb-4 opacity-20" />
-          <p className="text-lg font-medium text-slate-600 dark:text-slate-300">No onboarding data found</p>
-          <p className="text-sm mt-2 max-w-xs mx-auto">This client hasn't completed any onboarding forms yet, or the data is still being processed.</p>
+          <p className="text-lg font-medium text-slate-600 dark:text-slate-300">{t('no_onboarding_data_found')}</p>
+          <p className="text-sm mt-2 max-w-xs mx-auto">{t('onboarding_data_processing_hint')}</p>
         </div>
       );
     }
@@ -597,12 +602,12 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">General Information</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Consolidated data from latest onboarding: <span className="font-bold text-emerald-600">{template?.name || 'Onboarding'}</span></p>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">{t('general_information')}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('latest_onboarding_data_prefix')}: <span className="font-bold text-emerald-600">{template?.name || t('onboarding')}</span></p>
           </div>
           <div className="px-4 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-100 dark:border-emerald-800/50 flex items-center gap-2">
             <Clock className="w-3.5 h-3.5" />
-            Submitted: {new Date(onboardingSubmission.submitted_at).toLocaleDateString()}
+            {t('submitted')}: {new Date(onboardingSubmission.submitted_at).toLocaleDateString()}
           </div>
         </div>
         
@@ -610,7 +615,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           <CheckInReviewRenderer 
             template={{
               id: template?.id || '',
-              name: template?.name || 'Onboarding',
+              name: template?.name || t('onboarding'),
               templateSchema: template?.template_schema || [],
               key: template?.id || '',
               version: 1
@@ -619,7 +624,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           />
         ) : (
           <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
-            No rendering schema found for this template.
+            {t('no_rendering_schema_found')}
           </div>
         )}
       </div>
@@ -631,16 +636,16 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {isLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
           <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium">Cargando estadísticas...</p>
+          <p className="text-sm font-medium">{t('loading_stats')}</p>
         </div>
       ) : (
       <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Weight', value: stats?.latestWeight || '--', unit: 'kg', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Loss goal', value: stats?.goal || 'TBD', unit: '', change: 'Target', icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Body Fat', value: stats?.bodyFat || '--', unit: '%', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: 'Active', value: stats?.activeDays || '0', unit: 'days', change: `${stats?.adherenceRate || 0}% rate`, icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('weight'), value: stats?.latestWeight || '--', unit: 'kg', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('loss_goal'), value: stats?.goal || 'TBD', unit: '', change: t('target'), icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('body_fat'), value: stats?.bodyFat || '--', unit: '%', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('active'), value: stats?.activeDays || '0', unit: t('days'), change: `${stats?.adherenceRate || 0}% ${t('rate')}`, icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
@@ -662,12 +667,12 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Weight Progress</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Goal: {stats?.goal || 'TBD'}</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('weight_progress')}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">{t('goal')}: {stats?.goal || 'TBD'}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Overlay Body Fat %</span>
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('overlay_body_fat')}</span>
                 <div className="w-8 h-4 bg-slate-200 dark:bg-slate-700 rounded-full relative cursor-pointer">
                   <div className="absolute left-1 top-1 w-2 h-2 bg-white rounded-full"></div>
                 </div>
@@ -704,8 +709,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Macro Adherence</h3>
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">Avg. 7 Days</span>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('macro_adherence')}</h3>
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">{t('avg_7_days')}</span>
             </div>
             <div className="space-y-6">
               {[
@@ -727,15 +732,15 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               ))}
             </div>
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Daily Caloric Avg</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('daily_caloric_avg')}</span>
               <span className="text-sm font-bold text-slate-900 dark:text-white">{stats?.macros?.calories || 0} kcal</span>
             </div>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Allergies</h3>
-              <button className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">EDIT</button>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('allergies')}</h3>
+              <button className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">{t('edit')}</button>
             </div>
             <div className="flex flex-wrap gap-2 mb-6">
               {stats?.allergies?.map((allergy: string, idx: number) => (
@@ -745,10 +750,10 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               ))}
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">DIETARY STYLE</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('dietary_style')}</p>
               <div className="flex gap-2">
-                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">Low Carb</span>
-                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">High Protein</span>
+                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{t('low_carb')}</span>
+                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{t('high_protein')}</span>
               </div>
             </div>
           </div>
@@ -814,7 +819,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {isLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
           <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium">Cargando entrenamiento...</p>
+          <p className="text-sm font-medium">{t('loading_training')}</p>
         </div>
       ) : (
       <>
@@ -1322,7 +1327,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               </div>
               <p className="text-[10px] font-medium text-slate-600 mb-4">Avg 5.5h last 3 nights.</p>
               <button className="w-full py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 hover:bg-slate-50 flex items-center justify-between px-3">
-                Send Check-in Message
+                {t('send_checkin_message')}
                 <MessageSquare className="w-3 h-3" />
               </button>
             </div>
@@ -1389,7 +1394,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">CLIENT NOTE</p>
             <p className="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">
-              {stats?.activity?.find((a: any) => a.type === 'CHECK_IN' && a.sub)?.sub || "No client notes available for this period."}
+              {stats?.activity?.find((a: any) => a.type === 'CHECK_IN' && a.sub)?.sub || t('no_client_notes_period')}
             </p>
           </div>
         </div>
@@ -1398,11 +1403,11 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Adherence Snapshot</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Nutrition</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('nutrition')}</span>
               <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.macros?.protein ? 'High' : (stats?.adherenceRate || 0) + '%'}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Training</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('training')}</span>
               <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.training?.workoutCount ? Math.round((stats.training.workoutCount / 5) * 100) + '%' : '0%'}</span>
             </div>
           </div>
@@ -1478,7 +1483,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               </div>
             ))}
             {(!stats?.activity || stats.activity.length === 0) && (
-              <p className="text-center text-slate-400 text-sm py-4">No recent activity</p>
+              <p className="text-center text-slate-400 text-sm py-4">{t('no_recent_activity')}</p>
             )}
           </div>
         </div>
@@ -1487,21 +1492,21 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Account Access & Security */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900">Account Access & Security</h3>
+          <h3 className="text-lg font-bold text-slate-900">{t('account_access_security')}</h3>
           <ShieldCheck className="w-5 h-5 text-slate-400" />
         </div>
         <div className="p-6 flex-1 flex flex-col gap-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-bold text-slate-900">Grant App Access</p>
-              <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Allow client to log in</p>
+              <p className="text-sm font-bold text-slate-900">{t('grant_app_access')}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{t('allow_client_login')}</p>
             </div>
             <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 bg-emerald-500">
               <span className="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
             </button>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Access expiration date</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('access_expiration_date')}</label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm text-slate-600 focus:ring-emerald-500 focus:border-emerald-500 outline-none" type="date" defaultValue="2024-12-31" />
@@ -1513,7 +1518,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors font-bold text-sm border border-transparent hover:border-red-200"
           >
             <Trash2 className="w-4 h-4" />
-            Delete Client Permanently
+            {t('delete_client_permanently')}
           </button>
           </div>
         </div>
@@ -1522,8 +1527,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       {/* Client Documents */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900">Client Documents</h3>
-          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">Upload New</button>
+          <h3 className="text-lg font-bold text-slate-900">{t('client_documents')}</h3>
+          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">{t('upload_new')}</button>
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="flex flex-col gap-3">
@@ -1560,10 +1565,10 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   );
 
     const onboardingAnswers = onboardingSubmission?.answers_json || {};
-    const displayGender = onboardingAnswers.genero || onboardingAnswers.gender || client.gender || 'Unknown';
+    const displayGender = onboardingAnswers.genero || onboardingAnswers.gender || client.gender || t('unknown');
     const displayAge = onboardingAnswers.edad || onboardingAnswers.age || client.age || '--';
-    const displayLocation = onboardingAnswers.localizacion || onboardingAnswers.location || client.location || 'Unknown';
-    const displayPlan = client.planFamilyLabel || client.plan || 'No Plan';
+    const displayLocation = onboardingAnswers.localizacion || onboardingAnswers.location || client.location || t('unknown');
+    const displayPlan = client.planFamilyLabel || client.plan || t('no_plan');
     const joinDate = client.created_at ? new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2023';
 
     return (
@@ -1573,7 +1578,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="p-6 md:p-8 lg:p-10">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">
             <button onClick={onBack} className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1">
-              Clients
+              {t('clients')}
             </button>
             <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600" />
             <span className="text-slate-900 dark:text-white font-bold">{client.name}</span>
@@ -1586,7 +1591,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 <div className="flex items-center justify-center sm:justify-start gap-3 mb-1">
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{client.name}</h1>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
-                    Active
+                    {t('active')}
                   </span>
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium uppercase tracking-tight text-[10px] font-black">
@@ -1599,7 +1604,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   </div>
                   <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
                     <Calendar className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>Joined {joinDate}</span>
+                    <span>{t('joined')} {joinDate}</span>
                   </div>
                 </div>
               </div>
@@ -1608,29 +1613,29 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               <div className="flex items-center gap-3">
                 <button className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm text-sm font-bold">
                   <MessageSquare className="w-4 h-4" />
-                  Message
+                  {t('message')}
                 </button>
                 <button className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 text-sm font-bold">
                   <Edit className="w-4 h-4" />
-                  Edit Profile
+                  {t('edit_profile')}
                 </button>
               </div>
               <div className="flex gap-2 items-center">
                 <div 
                   onClick={() => client.email && navigator.clipboard.writeText(client.email)}
                   className="flex-1 flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 group cursor-pointer hover:border-slate-200 dark:hover:border-slate-600 transition-all"
-                  title="Copy Email"
+                  title={t('copy_email')}
                 >
                   <div className="flex items-center gap-2 overflow-hidden">
                     <User className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate">{client.email || 'No email'}</span>
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate">{client.email || t('no_email')}</span>
                   </div>
                   <Copy className="w-3 h-3 text-slate-300 dark:text-slate-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" />
                 </div>
                 <div 
                   onClick={() => client.tempPassword && navigator.clipboard.writeText(client.tempPassword)}
                   className={`flex-1 flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 transition-all ${client.tempPassword ? 'group cursor-pointer hover:border-slate-200 dark:hover:border-slate-600' : 'opacity-70 cursor-not-allowed'}`}
-                  title={client.tempPassword ? "Copy Password" : "Password not available. Reset from settings."}
+                  title={client.tempPassword ? t('copy_password') : t('password_not_available')}
                 >
                   <div className="flex items-center gap-2 overflow-hidden">
                     <Key className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
@@ -1657,7 +1662,11 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                     : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
               >
-                {tab}
+                {tab === 'Information' && t('information')}
+                {tab === 'Nutrition' && t('nutrition')}
+                {tab === 'Training' && t('training')}
+                {tab === 'Planning' && t('planning')}
+                {tab === 'Mindset' && t('mindset')}
                 {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full"></div>
                 )}
@@ -1686,7 +1695,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
                   <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Delete Client</h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('delete_client')}</h2>
               </div>
               <button onClick={() => setShowDeleteModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
                 <X className="w-5 h-5" />
@@ -1694,14 +1703,14 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
             <div className="p-6 space-y-4">
               <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/50">
-                <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-1">⚠ This action cannot be undone</p>
+                <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-1">⚠ {t('action_cannot_be_undone')}</p>
                 <p className="text-sm text-red-600 dark:text-red-400">
-                  All data for <span className="font-bold">{client.name}</span> — including plans, sessions, and check-ins — will be permanently erased.
+                  {t('all_client_data_deleted_prefix')} <span className="font-bold">{client.name}</span> {t('all_client_data_deleted_suffix')}
                 </p>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">
-                  Type <span className="text-red-600">{client.name}</span> to confirm
+                  {t('type')} <span className="text-red-600">{client.name}</span> {t('to_confirm_suffix')}
                 </label>
                 <input
                   autoFocus
@@ -1720,7 +1729,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   onClick={() => setShowDeleteModal(false)}
                   className="flex-1 py-2.5 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
                 >
-                  Cancel
+                  {t('cancel')}
                 </button>
                 <button
                   onClick={handleConfirmDelete}
@@ -1733,10 +1742,10 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Deleting...
+                      {t('deleting')}
                     </>
                   ) : (
-                    <><Trash2 className="w-4 h-4" /> Delete permanently</>
+                    <><Trash2 className="w-4 h-4" /> {t('delete_permanently')}</>
                   )}
                 </button>
               </div>
@@ -1747,3 +1756,4 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     </>
   );
 }
+

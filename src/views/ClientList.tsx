@@ -75,7 +75,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
       await deleteClient(deleteTarget.id);
       setDeleteTarget(null);
     } catch {
-      setDeleteError('Failed to delete client. Please try again.');
+      setDeleteError(t('delete_client_error'));
     } finally {
       setIsDeleting(false);
     }
@@ -162,7 +162,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
 
           {error && (
              <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6">
-               Error loading clients: {error}
+               {t('error_loading_clients')}: {error}
              </div>
           )}
           
@@ -190,7 +190,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                   </div>
                   <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Filters:</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('filters_label')}:</span>
                     <div className="flex gap-2">
                       <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-[10px] font-bold flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                         Tag: High Priority 
@@ -201,7 +201,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                         <X className="w-3 h-3 hover:text-red-500 cursor-pointer" />
                       </span>
                     </div>
-                    <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline ml-1">Reset all</button>
+                    <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline ml-1">{t('reset_all')}</button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
