@@ -2,7 +2,6 @@ export type Language = 'es' | 'en';
 
 export const translations: Record<Language, Record<string, string>> = {
   es: {
-    // Nav
     dashboard: "Panel de Control",
     tasks: "Tareas",
     calendar: "Calendario",
@@ -16,8 +15,6 @@ export const translations: Record<Language, Record<string, string>> = {
     onboarding: "Onboarding",
     analytics: "Analítica",
     settings: "Configuración",
-    
-    // Dashboard (Manager)
     welcome_manager: "Buenos días, Manager",
     today: "Hoy",
     pending_attention: "Tienes {count} elementos pendientes que requieren tu atención.",
@@ -42,8 +39,6 @@ export const translations: Record<Language, Record<string, string>> = {
     no_recent_activity: "No se encontró actividad reciente.",
     review: "Revisar",
     resolve: "Resolver",
-
-    // Dashboard (Client)
     good_morning: "Buenos días",
     good_afternoon: "Buenas tardes",
     good_evening: "Buenas noches",
@@ -71,8 +66,6 @@ export const translations: Record<Language, Record<string, string>> = {
     open_messenger: "Abrir Mensajería",
     next_up: "Siguiente",
     units: "unidades",
-
-    // Settings Profile
     profile_details: "Detalles del Perfil",
     full_name: "Nombre Completo",
     professional_title: "Título Profesional",
@@ -93,15 +86,11 @@ export const translations: Record<Language, Record<string, string>> = {
     social_profiles_desc: "Conecta tus redes sociales.",
     email_not_changeable: "El correo no se puede cambiar aquí.",
     saving: "Guardando...",
-    
-    // Appearance
     appearance: "Apariencia",
     theme_color: "Color del Tema",
     theme_color_desc: "Selecciona un color principal para tu espacio de trabajo.",
     dark_mode: "Modo Oscuro",
     appearance_desc: "Personaliza el aspecto de tu plataforma.",
-
-    // General & Tabs
     general: "General",
     profile: "Perfil",
     security: "Seguridad",
@@ -114,16 +103,12 @@ export const translations: Record<Language, Record<string, string>> = {
     timezone: "Zona Horaria",
     date_format: "Formato de Fecha",
     currency: "Moneda",
-
-    // Settings General
     settings_header: "Configuración",
     settings_desc: "Gestiona tus preferencias de cuenta, apariencia y notificaciones.",
     sign_out: "Cerrar Sesión",
     personal_details: "Detalles Personales",
     personal_details_desc: "Actualiza tu foto y detalles personales aquí.",
     profile_saved: "¡Perfil guardado correctamente!",
-    
-    // Security
     change_password: "Cambiar Contraseña",
     security_desc: "Asegúrate de que tu cuenta use una contraseña larga y aleatoria.",
     new_password: "Nueva Contraseña",
@@ -145,8 +130,6 @@ export const translations: Record<Language, Record<string, string>> = {
     date: "Fecha",
     status: "Estado",
     no_active_sessions: "No hay otras sesiones activas.",
-    
-    // Billing
     billing: "Facturación",
     current_plan: "Plan Actual",
     manage_subscription: "Gestiona los detalles de tu suscripción",
@@ -168,8 +151,6 @@ export const translations: Record<Language, Record<string, string>> = {
     amount: "Cantidad",
     invoice: "Factura",
     paid: "Pagado",
-
-    // Integrations
     google_calendar: "Google Calendar",
     google_calendar_desc: "Sincroniza tus citas y horarios con Google Calendar.",
     connection_status: "Estado de Conexión",
@@ -189,8 +170,6 @@ export const translations: Record<Language, Record<string, string>> = {
     secret_key: "Secret Key",
     save_all_integrations: "Guardar Todas las Integraciones",
     test_stripe: "Probar Stripe",
-    
-    // Notifications
     notification_preferences: "Preferencias de Notificación",
     notification_prefs_desc: "Elige cómo y cuándo quieres ser notificado.",
     event_type: "Tipo de Evento",
@@ -202,8 +181,6 @@ export const translations: Record<Language, Record<string, string>> = {
     system_updates_desc: "Noticias del producto y mantenimiento.",
     cancel: "Cancelar",
     save_notification_prefs: "Guardar Preferencias de Notificación",
-
-    // Nutrition
     nutrition_header: "Nutrición",
     goal: "Objetivo",
     age: "Edad",
@@ -376,8 +353,6 @@ export const translations: Record<Language, Record<string, string>> = {
     per_page: "por página",
     showing: "Mostrando",
     of_total: "de",
-
-    // Calendar & Tasks
     calendar_day: "Día",
     calendar_week: "Semana",
     calendar_month: "Mes",
@@ -406,8 +381,6 @@ export const translations: Record<Language, Record<string, string>> = {
     daily_schedule_desc: "Resumen del horario diario",
     manage_schedules_desc: "Gestiona los horarios y tareas de los clientes",
     items: "elementos",
-
-    // Food Library
     food_library_btn: "Biblioteca de Alimentos",
     food_recipe_library: "Biblioteca de Alimentos y Recetas",
     add_custom_food: "Añadir Alimento Personalizado",
@@ -418,8 +391,6 @@ export const translations: Record<Language, Record<string, string>> = {
     loading_templates: "Cargando plantillas...",
     recommended: "Recomendado",
     ketogenic_option: "Cetogénico (20/5/75)",
-
-    // Training
     training_program_title: "Programa de Entrenamiento",
     assign_program: "Asignar Programa de Entrenamiento",
     create_scratch: "Crear desde Cero",
@@ -557,32 +528,6 @@ export const translations: Record<Language, Record<string, string>> = {
     SESSION: "Sesión",
     TASK: "Tarea",
     PLAN_UPDATE: "Actualización",
-    'AUTOMATIC ALERT': "Alerta Automática",
-    'DIRECT MESSAGE': "Mensaje Directo",
-    'WEEKLY CHECK-IN': "Check-in Semanal",
-    'PLAN UPDATE': "Nueva Planificación",
-    'MISSING PLAN': "Sin Plan",
-    'OVERDUE CHECK-IN': "Check-in Atrasado",
-    'Video Call': "Videollamada",
-    'In-Person': "Presencial",
-    'Training': "Entrenamiento",
-    'Nutrition': "Nutrición",
-    'Internal': "Interno",
-    'Training Analysis': "Análisis de Entrenamiento",
-    'MANUAL TASK': "Tarea Manual",
-    'USER CREATED': "Creado por Usuario",
-    'LOW ADHERENCE': "Baja Adherencia",
-    'Review {name}\'s Status': "Revisar estado de {name}",
-    'Client has missed check-in windows. Last check-in recorded: {date}.': "El cliente ha perdido ventanas de check-in. Último check-in: {date}.",
-    'Investigate drop in tracking': "Investigar caída en seguimiento",
-    'Client\'s overall progress is at {progress}%. May need intervention.': "El progreso general es {progress}%. Puede necesitar intervención.",
-    'Assign Plan to {name}': "Asignar Plan a {name}",
-    'Client has no active training or nutrition plan assigned.': "El cliente no tiene un plan de entrenamiento o nutrición activo asignado.",
-    'Due Today': "Para Hoy",
-    'Alert': "Alerta",
-    'Overdue 2d': "Atrasado 2d",
-
-    // Sidebar Groups
     sidebar_core: "Principal",
     sidebar_automation: "Automatización",
     sidebar_work: "Trabajo",
@@ -591,8 +536,6 @@ export const translations: Record<Language, Record<string, string>> = {
     sidebar_insights: "Información",
     automations: "Automatizaciones",
     planning: "Planificación",
-
-    // Login
     login_welcome: "Bienvenido de nuevo",
     login_create: "Crear cuenta",
     login_subtitle: "Introduce tus credenciales para acceder a tu panel.",
@@ -608,8 +551,6 @@ export const translations: Record<Language, Record<string, string>> = {
     login_signin_instead: "Inicia sesión",
     login_account_created: "Cuenta creada correctamente. Por favor, inicia sesión.",
     login_auth_failed: "Error de autenticación",
-
-    // Check-in List
     checkin_list_title: "Check-ins de Clientes",
     checkin_list_subtitle: "Revisa el progreso semanal y la adherencia",
     checkin_templates_btn: "Plantillas de Check-in",
@@ -625,8 +566,6 @@ export const translations: Record<Language, Record<string, string>> = {
     select_template_for: "Selecciona una plantilla para {name}",
     no_templates_available: "No hay plantillas disponibles.",
     go_to_library: "Ir a la Biblioteca",
-
-    // Check-in History
     checkins_submitted: "{count} check-ins enviados",
     history_badge: "Historial",
     filter_btn: "Filtrar",
@@ -638,8 +577,6 @@ export const translations: Record<Language, Record<string, string>> = {
     no_adherence_data: "Sin datos de adherencia",
     no_checkins_submitted: "Aún no se han enviado check-ins.",
     confirm_delete: "¿Confirmar?",
-
-    // Check-in Review
     overall_experience: "Experiencia General",
     client_general_thoughts: "Pensamientos generales del cliente sobre la semana pasada.",
     body_progress: "Cuerpo y Progreso",
@@ -743,8 +680,6 @@ export const translations: Record<Language, Record<string, string>> = {
     export_btn: "Exportar",
     submitted_on: "Enviado el {date}",
     feedback_placeholder: "Escribe tu feedback aquí... ej. 'Gran progreso en medidas de cintura, sigamos con el ciclado de carbohidratos otra semana...'",
-
-    // Check-in Templates
     templates_library: "Biblioteca de Plantillas de Check-in",
     templates_library_subtitle: "Gestiona y crea estructuras de check-in personalizadas para tus clientes",
     create_template: "Crear Plantilla",
@@ -767,8 +702,6 @@ export const translations: Record<Language, Record<string, string>> = {
     duplicate_btn: "Duplicar",
     back_to_checkins: "Volver a Check-ins",
     back_to_onboarding: "Volver a Onboarding",
-
-    // Check-in Template Editor
     protocol_builder: "Constructor de Protocolo UI",
     save_template: "Guardar Plantilla",
     step_sequence: "Secuencia de Pasos",
@@ -785,8 +718,6 @@ export const translations: Record<Language, Record<string, string>> = {
     option_2: "Opción 2",
     something_went_wrong: "Algo salió mal",
     return_to_library: "Volver a la Biblioteca",
-
-    // Messages
     messages_title: "Mensajes",
     type_message: "Escribe un mensaje...",
     send_btn: "Enviar",
@@ -797,8 +728,6 @@ export const translations: Record<Language, Record<string, string>> = {
     clear_chat_confirm: "¿Estás seguro de que quieres vaciar la conversación con {name}?",
     no_conversations: "No hay conversaciones",
     search_messages: "Buscar mensajes...",
-
-    // Automations
     automations_title: "Automatizaciones",
     automations_subtitle: "Configura flujos automáticos para tus clientes",
     create_automation: "Crear Automatización",
@@ -809,8 +738,6 @@ export const translations: Record<Language, Record<string, string>> = {
     recurring_frequency: "Recurrente",
     active_automations: "Automatizaciones activas",
     no_automations: "No hay automatizaciones configuradas",
-
-    // Analytics
     analytics_title: "Analítica",
     loading_analytics: "Cargando analítica...",
     analytics_overview: "Resumen del rendimiento del negocio y métricas de clientes.",
@@ -917,8 +844,6 @@ export const translations: Record<Language, Record<string, string>> = {
     selected_template: "Plantilla Seleccionada",
     status_label: "Estado",
     years_label: "años",
-
-    // Planning
     planning_management: "Gestión de Planificación",
     planning_subtitle: "Estructura bloques y establece objetivos a largo plazo para tus clientes",
     planning_drafting: "Borrador",
@@ -1007,14 +932,12 @@ export const translations: Record<Language, Record<string, string>> = {
     phases_label: "Fases",
     weeks_label: "semanas",
     days_week: "días/semana",
-    goals_targets: "Goals & Targets",
-    key_milestones: "Key Milestones",
-    strategic_assumptions: "Strategic Assumptions",
+    goals_targets: "Objetivos y Metas",
+    key_milestones: "HITOS CLAVE",
+    strategic_assumptions: "SUPUESTOS ESTRATÉGICOS",
     daily_steps_target: "Daily Steps Target",
     sleep_hygiene: "Sleep Hygiene",
     primary_constraints: "Primary Constraints",
-
-    // Library
     library_title: "Biblioteca",
     library_subtitle: "Gestiona tus recursos de nutrición",
     new_recipe: "Nueva Receta",
@@ -1050,8 +973,6 @@ export const translations: Record<Language, Record<string, string>> = {
     score_col: "Puntuación",
     custom_label: "Personalizado",
     add_custom_supplement: "Añadir Suplemento Personalizado",
-
-    // Recipe
     back_to_library: "Volver a la Biblioteca",
     create_recipe: "Crear Nueva Receta",
     save_draft: "Guardar Borrador",
@@ -1076,8 +997,6 @@ export const translations: Record<Language, Record<string, string>> = {
     edit_recipe: "Editar Receta",
     portion_automation: "Automatización de Porción",
     macronutrients: "Macronutrientes",
-
-    // Food Create
     add_new_food: "Añadir Nuevo Alimento",
     create_custom_food_title: "Crear Alimento Personalizado",
     food_form_desc: "Añade un nuevo alimento a tu base de datos personal.",
@@ -1091,8 +1010,6 @@ export const translations: Record<Language, Record<string, string>> = {
     sugar: "Azúcar",
     sodium: "Sodio",
     save_to_database: "Guardar en la Base de Datos",
-
-    // Supplement Create
     create_supplement: "Crear Suplemento Personalizado",
     supplement_form_desc: "Añade un nuevo suplemento a tu base de datos personal o de clientes.",
     add_to_library: "Añadir a la Biblioteca",
@@ -1119,8 +1036,6 @@ export const translations: Record<Language, Record<string, string>> = {
     timing_with_meal: "Con Comida",
     technical_data: "Datos Técnicos",
     quality_rating: "Calificación de Calidad",
-
-    // Exercise Create
     create_exercise: "Crear Ejercicio Personalizado",
     exercise_form_desc: "Añade un nuevo ejercicio a tu base de datos personal o de clientes.",
     exercise_name: "Nombre del Ejercicio",
@@ -1133,8 +1048,6 @@ export const translations: Record<Language, Record<string, string>> = {
     secondary_muscles: "Músculos Secundarios",
     required_tools: "Herramientas Necesarias",
     difficulty_level: "Nivel de Dificultad",
-
-    // Exercise Detail
     exercise_not_found: "Ejercicio no encontrado",
     go_back: "Volver",
     edit_activity: "Editar Actividad",
@@ -1153,8 +1066,6 @@ export const translations: Record<Language, Record<string, string>> = {
     endurance: "Resistencia",
     exercise_details_desc: "Detalles y Descripción del Ejercicio",
     no_description: "No se ha proporcionado descripción.",
-
-    // Add Client
     new_client_title: "Nuevo Cliente",
     new_client_desc: "Añade un nuevo cliente a tu consulta y configura su acceso.",
     personal_information: "Información Personal",
@@ -1167,8 +1078,6 @@ export const translations: Record<Language, Record<string, string>> = {
     temp_password: "Contraseña Temporal",
     create_client: "Crear Cliente",
     creating: "Creando...",
-
-    // Create Task
     create_event: "Crear Nuevo Evento",
     edit_event: "Editar Evento",
     create_event_desc: "Añade un nuevo evento o cita al calendario",
@@ -1207,15 +1116,13 @@ export const translations: Record<Language, Record<string, string>> = {
     daily: "Diario",
     weekly: "Semanal",
     monthly: "Mensual",
-    custom: "Personalizado...",
+    custom: "Personalizado",
     priority_label: "Prioridad",
     priority_note: "Indica el nivel de urgencia de esta tarea.",
     low: "Baja",
     medium: "Media",
     high: "Alta",
     sync_info: "Todas las tareas programadas se sincronizan automáticamente con tu lista de tareas interna y el calendario.",
-
-    // Task Intelligence
     task_intelligence: "Inteligencia de Tareas",
     task_intelligence_desc: "Configura cómo el sistema prioriza y automatiza tu flujo de trabajo diario.",
     history_log: "Registro de Historial",
@@ -1224,8 +1131,6 @@ export const translations: Record<Language, Record<string, string>> = {
     communications: "COMUNICACIONES",
     client_performance: "RENDIMIENTO DEL CLIENTE",
     operations: "OPERACIONES",
-
-    // Onboarding
     onboarding_title: "Onboarding",
     onboarding_subtitle: "Gestiona los flujos de incorporación de tus clientes",
     create_flow: "Crear Flujo",
@@ -1236,13 +1141,11 @@ export const translations: Record<Language, Record<string, string>> = {
     flow_builder: "Constructor de Flujo de Onboarding",
     save_flow: "Guardar Flujo",
     sequence_label: "Secuencia",
-
-    // Common
     loading: "Cargando...",
     yesterday: "Ayer",
     phase_label: "Fase",
     focus_label: "Enfoque",
-    last_update: "Ášltima actualización",
+    last_update: "ÚLTIMA ACTUALIZACIÓN",
     days_ago: "Hace {count} días",
     training_phase_hypertrophy: "Hipertrofia",
     error: "Error",
@@ -1998,8 +1901,7 @@ export const translations: Record<Language, Record<string, string>> = {
     planning_mock_week_nov15_next: "Nov 15 (Siguiente)",
     planning_mock_milestone_begin_strength_peak: "Inicio de pico de fuerza",
     planning_mock_constraints_protein_distribution: "Sin lacteos, prefiere mayor distribucion proteica al inicio del dia.",
-    unknown_error: "Error desconocido"
-    // New translations for gaps found
+    unknown_error: "Error desconocido",
     soft_green: "Verde Suave",
     deep_blue: "Azul Profundo",
     teal: "Cian",
@@ -2008,10 +1910,7 @@ export const translations: Record<Language, Record<string, string>> = {
     amber: "Ámbar",
     slate: "Pizarra",
     dark: "Oscuro",
-    custom: "Personalizado",
     close_custom: "Cerrar",
-    
-    // Automations
     automation_unread_title: "Mensajes Directos No Leídos",
     automation_unread_desc: "Crear tarea si un mensaje directo no se responde en 2 horas.",
     automation_dormant_title: "Clientes Inactivos",
@@ -2032,47 +1931,32 @@ export const translations: Record<Language, Record<string, string>> = {
     automation_weekly_overdue_desc: "Tarea generada cuando un cliente pierde un check-in programado.",
     automation_plan_update_title: "Actualización de Plan Pendiente",
     automation_plan_update_desc: "Recordatorio para renovar planes de dieta/entrenamiento cada 4 semanas.",
-    
-    // Planning
-    last_update: "ÚLTIMA ACTUALIZACIÓN",
     add_milestone: "AÑADIR HITO",
     days_unit: "días",
     fat_loss_focus: "Enfoque: Pérdida de Grasa",
-    goals_targets: "Objetivos y Metas",
-    key_milestones: "HITOS CLAVE",
-    strategic_assumptions: "SUPUESTOS ESTRATÉGICOS",
     steps_target: "Objetivo de Pasos Diarios",
     sleep_target: "Higiene del Sueño",
     constraints: "Restricciones Principales",
     metrics_tracking: "Seguimiento de Métricas",
     strategy_overview: "Resumen de la Estrategia",
-    
-    // Task Intelligence
-    task_intelligence: "Inteligencia de Tareas",
     automation_rules_smart_tasks: "Reglas de Automatización y Tareas Inteligentes",
     automation_desc: "El sistema creará tareas automáticamente basadas en estos disparadores.",
     configure_priorities_desc: "Configura cómo el sistema prioriza y automatiza tu flujo de trabajo diario.",
-    
-    // Planning Detail Trajectory
     goal_trajectory: "Trayectoria de Metas y Predicciones",
     actual_label: "Real",
     projected_label: "Proyectado",
-    target_weight: "Peso Objetivo",
     starting_weight: "Peso Inicial",
     strength_target: "Objetivo de Fuerza",
     reference_lift: "Levantamiento de Referencia",
     remaining_unit: "restantes",
     finished: "Finalizado",
-    week: "Semana",
     of: "de",
-    
-    // Activity & Common
     chat_file: "Archivo de Chat",
     received_message: "Mensaje Recibido",
-    new_message_from: "Nuevo mensaje de {name}"
+    new_message_from: "Nuevo mensaje de {name}",
+
   },
   en: {
-    // Nav
     dashboard: "Dashboard",
     tasks: "Tasks",
     calendar: "Calendar",
@@ -2086,8 +1970,6 @@ export const translations: Record<Language, Record<string, string>> = {
     onboarding: "Onboarding",
     analytics: "Analytics",
     settings: "Settings",
-
-    // Dashboard (Manager)
     welcome_manager: "Good Morning, Manager",
     today: "Today",
     pending_attention: "You have {count} pending items requiring your attention.",
@@ -2113,8 +1995,6 @@ export const translations: Record<Language, Record<string, string>> = {
     no_recent_activity: "No recent activity found.",
     review: "Review",
     resolve: "Resolve",
-
-    // Dashboard (Client)
     good_morning: "Good morning",
     good_afternoon: "Good afternoon",
     good_evening: "Good evening",
@@ -2142,8 +2022,6 @@ export const translations: Record<Language, Record<string, string>> = {
     open_messenger: "Open Messenger",
     next_up: "Next Up",
     units: "units",
-
-    // Settings Profile
     profile_details: "Profile Details",
     full_name: "Full Name",
     professional_title: "Professional Title",
@@ -2164,15 +2042,11 @@ export const translations: Record<Language, Record<string, string>> = {
     social_profiles_desc: "Connect your social media accounts.",
     email_not_changeable: "Email cannot be changed here.",
     saving: "Saving...",
-
-    // Appearance
     appearance: "Appearance",
     theme_color: "Theme Color",
     theme_color_desc: "Select a primary color theme for your workspace.",
     dark_mode: "Dark Mode",
     appearance_desc: "Customize the look and feel of your platform.",
-
-    // General & Tabs
     general: "General",
     profile: "Profile",
     security: "Security",
@@ -2185,16 +2059,12 @@ export const translations: Record<Language, Record<string, string>> = {
     timezone: "Timezone",
     date_format: "Date Format",
     currency: "Currency",
-
-    // Settings General
     settings_header: "Settings",
     settings_desc: "Manage your account preferences, appearance, and notifications.",
     sign_out: "Sign Out",
     personal_details: "Personal Details",
     personal_details_desc: "Update your photo and personal details here.",
     profile_saved: "Profile saved successfully!",
-
-    // Security
     change_password: "Change Password",
     security_desc: "Ensure your account is using a long, random password to stay secure.",
     new_password: "New Password",
@@ -2216,8 +2086,6 @@ export const translations: Record<Language, Record<string, string>> = {
     date: "Date",
     status: "Status",
     no_active_sessions: "No other active sessions.",
-
-    // Billing
     billing: "Billing",
     current_plan: "Current Plan",
     manage_subscription: "Manage your subscription details",
@@ -2239,8 +2107,6 @@ export const translations: Record<Language, Record<string, string>> = {
     amount: "Amount",
     invoice: "Invoice",
     paid: "Paid",
-
-    // Integrations
     google_calendar: "Google Calendar",
     google_calendar_desc: "Sync your appointments and schedules with Google Calendar.",
     connection_status: "Connection Status",
@@ -2260,8 +2126,6 @@ export const translations: Record<Language, Record<string, string>> = {
     secret_key: "Secret Key",
     save_all_integrations: "Save All Integrations",
     test_stripe: "Test Stripe",
-
-    // Notifications
     notification_preferences: "Notification Preferences",
     notification_prefs_desc: "Choose how and when you want to be notified.",
     event_type: "Event Type",
@@ -2273,8 +2137,6 @@ export const translations: Record<Language, Record<string, string>> = {
     system_updates_desc: "Product news and platform maintenance.",
     cancel: "Cancel",
     save_notification_prefs: "Save Notification Preferences",
-
-    // Nutrition
     nutrition_header: "Nutrition",
     goal: "Goal",
     age: "Age",
@@ -2447,8 +2309,6 @@ export const translations: Record<Language, Record<string, string>> = {
     per_page: "per page",
     showing: "Showing",
     of_total: "of",
-
-    // Calendar & Tasks
     calendar_day: "Day",
     calendar_week: "Week",
     calendar_month: "Month",
@@ -2478,8 +2338,6 @@ export const translations: Record<Language, Record<string, string>> = {
     manage_schedules_desc: "Manage client schedules and tasks",
     items_count: "{count} items",
     items: "items",
-
-    // Food Library
     food_library_btn: "Food Library",
     food_recipe_library: "Food & Recipe Library",
     add_custom_food: "Add Custom Food",
@@ -2490,8 +2348,6 @@ export const translations: Record<Language, Record<string, string>> = {
     loading_templates: "Loading templates...",
     recommended: "Recommended",
     ketogenic_option: "Ketogenic (20/5/75)",
-
-    // Training
     training_program_title: "Training Program",
     assign_program: "Assign Training Program",
     create_scratch: "Create from Scratch",
@@ -2625,32 +2481,6 @@ export const translations: Record<Language, Record<string, string>> = {
     SESSION: "Session",
     TASK: "Task",
     PLAN_UPDATE: "Update",
-    'AUTOMATIC ALERT': "Automatic Alert",
-    'DIRECT MESSAGE': "Direct Message",
-    'WEEKLY CHECK-IN': "Weekly Check-in",
-    'PLAN UPDATE': "Plan Update",
-    'MISSING PLAN': "Missing Plan",
-    'OVERDUE CHECK-IN': "Overdue Check-in",
-    'Video Call': "Video Call",
-    'In-Person': "In-Person",
-    'Training': "Training",
-    'Nutrition': "Nutrition",
-    'Internal': "Internal",
-    'Training Analysis': "Training Analysis",
-    'MANUAL TASK': "Manual Task",
-    'USER CREATED': "User Created",
-    'LOW ADHERENCE': "Low Adherence",
-    'Review {name}\'s Status': "Review {name}'s Status",
-    'Client has missed check-in windows. Last check-in recorded: {date}.': "Client has missed check-in windows. Last check-in recorded: {date}.",
-    'Investigate drop in tracking': "Investigate drop in tracking",
-    'Client\'s overall progress is at {progress}%. May need intervention.': "Client's overall progress is at {progress}%. May need intervention.",
-    'Assign Plan to {name}': "Assign Plan to {name}",
-    'Client has no active training or nutrition plan assigned.': "Client has no active training or nutrition plan assigned.",
-    'Due Today': "Due Today",
-    'Alert': "Alert",
-    'Overdue 2d': "Overdue 2d",
-
-    // Sidebar Groups
     sidebar_core: "Core",
     sidebar_automation: "Automation",
     sidebar_work: "Work",
@@ -2659,8 +2489,6 @@ export const translations: Record<Language, Record<string, string>> = {
     sidebar_insights: "Insights",
     automations: "Automations",
     planning: "Planning",
-
-    // Login
     login_welcome: "Welcome back",
     login_create: "Create account",
     login_subtitle: "Enter your credentials to access your dashboard.",
@@ -2676,8 +2504,6 @@ export const translations: Record<Language, Record<string, string>> = {
     login_signin_instead: "Sign in instead",
     login_account_created: "Account created successfully. Please log in.",
     login_auth_failed: "Authentication failed",
-
-    // Check-in List
     checkin_list_title: "Client Check-ins",
     checkin_list_subtitle: "Review weekly progress and adherence",
     checkin_templates_btn: "Check-in Templates",
@@ -2693,8 +2519,6 @@ export const translations: Record<Language, Record<string, string>> = {
     select_template_for: "Select a template for {name}",
     no_templates_available: "No templates available.",
     go_to_library: "Go to Library",
-
-    // Check-in History
     checkins_submitted: "{count} check-ins submitted",
     history_badge: "History",
     filter_btn: "Filter",
@@ -2706,8 +2530,6 @@ export const translations: Record<Language, Record<string, string>> = {
     no_adherence_data: "No adherence data",
     no_checkins_submitted: "No check-ins submitted yet.",
     confirm_delete: "Confirm?",
-
-    // Check-in Review
     overall_experience: "Overall Experience",
     client_general_thoughts: "Client's general thoughts on the past week.",
     body_progress: "Body & Progress",
@@ -2811,8 +2633,6 @@ export const translations: Record<Language, Record<string, string>> = {
     export_btn: "Export",
     submitted_on: "Submitted {date}",
     feedback_placeholder: "Write your feedback here... e.g. 'Great progress on waist measurements, let's keep the carb cycling for another week...'",
-
-    // Check-in Templates
     templates_library: "Check-in Templates Library",
     templates_library_subtitle: "Manage and create custom check-in structures for your clients",
     create_template: "Create Template",
@@ -2835,8 +2655,6 @@ export const translations: Record<Language, Record<string, string>> = {
     duplicate_btn: "Duplicate",
     back_to_checkins: "Back to Check-ins",
     back_to_onboarding: "Back to Onboarding",
-
-    // Check-in Template Editor
     protocol_builder: "Protocol UI Builder",
     save_template: "Save Template",
     step_sequence: "Step Sequence",
@@ -2853,8 +2671,6 @@ export const translations: Record<Language, Record<string, string>> = {
     option_2: "Option 2",
     something_went_wrong: "Something went wrong",
     return_to_library: "Return to Library",
-
-    // Messages
     messages_title: "Messages",
     type_message: "Type a message...",
     send_btn: "Send",
@@ -2865,8 +2681,6 @@ export const translations: Record<Language, Record<string, string>> = {
     clear_chat_confirm: "Are you sure you want to clear the conversation with {name}?",
     no_conversations: "No conversations",
     search_messages: "Search messages...",
-
-    // Automations
     automations_title: "Automations",
     automations_subtitle: "Configure automated flows for your clients",
     create_automation: "Create Automation",
@@ -2877,8 +2691,6 @@ export const translations: Record<Language, Record<string, string>> = {
     recurring_frequency: "Recurring",
     active_automations: "Active automations",
     no_automations: "No automations configured",
-
-    // Analytics
     analytics_title: "Analytics",
     loading_analytics: "Loading analytics...",
     analytics_overview: "Business performance and client metrics overview.",
@@ -2985,8 +2797,6 @@ export const translations: Record<Language, Record<string, string>> = {
     selected_template: "Selected Template",
     status_label: "Status",
     years_label: "years",
-
-    // Planning
     planning_management: "Planning Management",
     planning_subtitle: "Structure blocks and set long-term goals for your clients",
     planning_drafting: "Drafting",
@@ -3076,13 +2886,11 @@ export const translations: Record<Language, Record<string, string>> = {
     weeks_label: "weeks",
     days_week: "days/week",
     goals_targets: "Goals & Targets",
-    key_milestones: "Key Milestones",
-    strategic_assumptions: "Strategic Assumptions",
+    key_milestones: "KEY MILESTONES",
+    strategic_assumptions: "STRATEGIC ASSUMPTIONS",
     daily_steps_target: "Daily Steps Target",
     sleep_hygiene: "Sleep Hygiene",
     primary_constraints: "Primary Constraints",
-
-    // Library
     library_title: "Library",
     library_subtitle: "Manage your nutrition resources",
     new_recipe: "New Recipe",
@@ -3118,8 +2926,6 @@ export const translations: Record<Language, Record<string, string>> = {
     score_col: "Score",
     custom_label: "Custom",
     add_custom_supplement: "Add Custom Supplement",
-
-    // Recipe
     back_to_library: "Back to Library",
     create_recipe: "Create New Recipe",
     save_draft: "Save Draft",
@@ -3144,8 +2950,6 @@ export const translations: Record<Language, Record<string, string>> = {
     edit_recipe: "Edit Recipe",
     portion_automation: "Portion Automation",
     macronutrients: "Macronutrients",
-
-    // Food Create
     add_new_food: "Add New Food",
     create_custom_food_title: "Create Custom Food",
     food_form_desc: "Add a new food item to your personal database.",
@@ -3159,8 +2963,6 @@ export const translations: Record<Language, Record<string, string>> = {
     sugar: "Sugar",
     sodium: "Sodium",
     save_to_database: "Save to Database",
-
-    // Supplement Create
     create_supplement: "Create Custom Supplement",
     supplement_form_desc: "Add a new supplement to your personal or client database.",
     add_to_library: "Add to Library",
@@ -3187,8 +2989,6 @@ export const translations: Record<Language, Record<string, string>> = {
     timing_with_meal: "With Meal",
     technical_data: "Technical Data",
     quality_rating: "Quality Rating",
-
-    // Exercise Create
     create_exercise: "Create Custom Exercise",
     exercise_form_desc: "Add a new exercise to your personal or client database.",
     exercise_name: "Exercise Name",
@@ -3202,8 +3002,6 @@ export const translations: Record<Language, Record<string, string>> = {
     required_tools: "Required Tools",
     difficulty_level: "Difficulty Level",
     safety_rating: "Safety Rating",
-
-    // Exercise Detail
     exercise_not_found: "Exercise not found",
     go_back: "Go Back",
     edit_activity: "Edit Activity",
@@ -3225,8 +3023,6 @@ export const translations: Record<Language, Record<string, string>> = {
     endurance: "Endurance",
     exercise_details_desc: "Exercise details & Description",
     no_description: "No description provided.",
-
-    // Add Client
     new_client_title: "New Client",
     new_client_desc: "Add a new client to your practice and set up their access.",
     personal_information: "Personal Information",
@@ -3239,8 +3035,6 @@ export const translations: Record<Language, Record<string, string>> = {
     temp_password: "Temporary Password",
     create_client: "Create Client",
     creating: "Creating...",
-
-    // Create Task
     create_event: "Create New Event",
     edit_event: "Edit Event",
     create_event_desc: "Add a new event or appointment to the schedule",
@@ -3279,15 +3073,13 @@ export const translations: Record<Language, Record<string, string>> = {
     daily: "Daily",
     weekly: "Weekly",
     monthly: "Monthly",
-    custom: "Custom...",
+    custom: "Custom",
     priority_label: "Priority",
     priority_note: "Indicate the urgency level of this task.",
     low: "Low",
     medium: "Medium",
     high: "High",
     sync_info: "All scheduled tasks are automatically synchronized with your internal task list and calendar.",
-
-    // Task Intelligence
     task_intelligence: "Task Intelligence",
     task_intelligence_desc: "Configure how the system prioritizes and automates your daily workflow.",
     history_log: "History Log",
@@ -3296,8 +3088,6 @@ export const translations: Record<Language, Record<string, string>> = {
     communications: "COMMUNICATIONS",
     client_performance: "CLIENT PERFORMANCE",
     operations: "OPERATIONS",
-
-    // Onboarding
     onboarding_title: "Onboarding",
     onboarding_subtitle: "Manage client onboarding flows",
     create_flow: "Create Flow",
@@ -3308,13 +3098,11 @@ export const translations: Record<Language, Record<string, string>> = {
     flow_builder: "Onboarding Flow Builder",
     save_flow: "Save Flow",
     sequence_label: "Sequence",
-
-    // Common
     loading: "Loading...",
     yesterday: "Yesterday",
     phase_label: "Phase",
     focus_label: "Focus",
-    last_update: "Last Update",
+    last_update: "LAST UPDATE",
     days_ago: "{count} days ago",
     training_phase_hypertrophy: "Hypertrophy",
     error: "Error",
@@ -4070,8 +3858,7 @@ export const translations: Record<Language, Record<string, string>> = {
     planning_mock_week_nov15_next: "Nov 15 (Next)",
     planning_mock_milestone_begin_strength_peak: "Begin strength peak",
     planning_mock_constraints_protein_distribution: "Dairy-free, prefers higher protein distribution early in day.",
-    unknown_error: "Unknown error"
-    // New translations for gaps found
+    unknown_error: "Unknown error",
     soft_green: "Soft Green",
     deep_blue: "Deep Blue",
     teal: "Teal",
@@ -4080,10 +3867,7 @@ export const translations: Record<Language, Record<string, string>> = {
     amber: "Amber",
     slate: "Slate",
     dark: "Dark",
-    custom: "Custom",
     close_custom: "Close",
-    
-    // Automations
     automation_unread_title: "Unread Direct Messages",
     automation_unread_desc: "Create task if a direct message is not answered within 2 hours.",
     automation_dormant_title: "Dormant Clients",
@@ -4104,43 +3888,29 @@ export const translations: Record<Language, Record<string, string>> = {
     automation_weekly_overdue_desc: "Task generated when a scheduled check-in is missed by the client.",
     automation_plan_update_title: "Plan Update Due",
     automation_plan_update_desc: "Reminder to refresh client diet/workout plans every 4 weeks.",
-    
-    // Planning
-    last_update: "LAST UPDATE",
     add_milestone: "ADD MILESTONE",
     days_unit: "days",
     fat_loss_focus: "Focus: Fat Loss",
-    goals_targets: "Goals & Targets",
-    key_milestones: "KEY MILESTONES",
-    strategic_assumptions: "STRATEGIC ASSUMPTIONS",
     steps_target: "Daily Steps Target",
     sleep_target: "Sleep Hygiene",
     constraints: "Primary Constraints",
     metrics_tracking: "Metrics Tracking",
     strategy_overview: "Strategy Overview",
-    
-    // Task Intelligence
-    task_intelligence: "Task Intelligence",
     automation_rules_smart_tasks: "Automation Rules & Smart Tasks",
     automation_desc: "System will automatically create tasks based on these triggers.",
     configure_priorities_desc: "Configure how the system prioritizes and automates your daily workflow.",
-    
-    // Planning Detail Trajectory
     goal_trajectory: "Goal Trajectory & Predictions",
     actual_label: "Actual",
     projected_label: "Projected",
-    target_weight: "Target Weight",
     starting_weight: "Starting Weight",
     strength_target: "Strength Target",
     reference_lift: "Reference Lift",
     remaining_unit: "remaining",
     finished: "Finished",
-    week: "Week",
     of: "of",
-    
-    // Activity & Common
     chat_file: "Chat File",
     received_message: "Message Received",
-    new_message_from: "New message from {name}"
+    new_message_from: "New message from {name}",
+
   }
 };
