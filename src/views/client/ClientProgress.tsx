@@ -504,7 +504,7 @@ export default function ClientProgress() {
                   </div>
                   {isSelected && (
                     <span className="flex items-center gap-1 text-[8px] font-black tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-lg uppercase">
-                      <CheckCircle2 className="w-2.5 h-2.5" /> Selected
+                      <CheckCircle2 className="w-2.5 h-2.5" /> {t('selected')}
                     </span>
                   )}
                 </div>
@@ -574,7 +574,7 @@ export default function ClientProgress() {
                 const sortedReps = Array.from(repCounts).sort((a, b) => Number(a) - Number(b));
                 const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
                 return sortedReps.map((reps, i) => (
-                  <Area key={reps} name={`${reps} Reps`} type="natural" dataKey={(row: any) => {
+                  <Area key={reps} name={t('reps_count', { count: reps })} type="natural" dataKey={(row: any) => {
                     const exData = findExData(row.logs);
                     return (exData && exData.repMaxes && exData.repMaxes[reps]) || null;
                   }} stroke={colors[i % colors.length]} strokeWidth={2.5} fill={`url(#colorStrength${(i % 5) + 1})`} dot={{ r: 3, fill: colors[i % colors.length], strokeWidth: 1.5, stroke: '#fff' }} connectNulls />
@@ -639,10 +639,10 @@ export default function ClientProgress() {
       <div className="xl:col-span-2 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Projected Goal Date', value: 'Dec 15', sub: 'On Track', icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { label: 'Target Delta', value: '-4.5 kg', sub: '', icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' },
-            { label: 'Current Mesocycle', value: '2/4', sub: '', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-            { label: 'Success Probability', value: '88%', sub: 'High Confidence', icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { label: t('planning_projected_goal_date'), value: 'Dec 15', sub: t('planning_on_track'), icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' },
+            { label: t('planning_target_delta'), value: '-4.5 kg', sub: '', icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' },
+            { label: t('planning_current_mesocycle'), value: '2/4', sub: '', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+            { label: t('planning_success_probability'), value: '88%', sub: t('planning_high_confidence'), icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50' },
           ].map((stat: any, idx) => (
             <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
               <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
@@ -665,9 +665,9 @@ export default function ClientProgress() {
           </div>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Nutrition', value: '78%', change: '+2%', icon: Utensils, color: 'text-emerald-500' },
-              { label: 'Training', value: '85%', change: '+5%', icon: Dumbbell, color: 'text-emerald-500' },
-              { label: 'Avg Steps', value: '8.2k', sub: '/9k', change: '-4%', icon: Activity, color: 'text-red-500' },
+              { label: t('nutrition'), value: '78%', change: '+2%', icon: Utensils, color: 'text-emerald-500' },
+              { label: t('training'), value: '85%', change: '+5%', icon: Dumbbell, color: 'text-emerald-500' },
+              { label: t('planning_avg_steps'), value: '8.2k', sub: '/9k', change: '-4%', icon: Activity, color: 'text-red-500' },
             ].map((stat, idx) => (
               <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                 <div className="flex justify-between items-start mb-4">
@@ -692,15 +692,15 @@ export default function ClientProgress() {
               <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
                 <div className="w-1/3 bg-red-50 border-r border-slate-100 flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-red-700">{t('deficit')}</span>
-                  <span className="text-[8px] font-bold text-red-400 uppercase">Wk 1-4</span>
+                  <span className="text-[8px] font-bold text-red-400 uppercase">{t('planning_week_range', { start: 1, end: 4 })}</span>
                 </div>
                 <div className="w-1/3 bg-blue-50 border-r border-slate-100 flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-blue-700">{t('maintenance')}</span>
-                  <span className="text-[8px] font-bold text-blue-400 uppercase">Wk 5-8</span>
+                  <span className="text-[8px] font-bold text-blue-400 uppercase">{t('planning_week_range', { start: 5, end: 8 })}</span>
                 </div>
                 <div className="w-1/3 bg-emerald-50 flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-emerald-700">{t('surplus')}</span>
-                  <span className="text-[8px] font-bold text-emerald-400 uppercase">Wk 9-12</span>
+                  <span className="text-[8px] font-bold text-emerald-400 uppercase">{t('planning_week_range', { start: 9, end: 12 })}</span>
                 </div>
               </div>
             </div>
@@ -709,15 +709,15 @@ export default function ClientProgress() {
               <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
                 <div className="w-1/4 bg-purple-50 border-r border-slate-100 flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-purple-700">{t('metabolic')}</span>
-                  <span className="text-[8px] font-bold text-purple-400 uppercase">Wk 1-3</span>
+                  <span className="text-[8px] font-bold text-purple-400 uppercase">{t('planning_week_range', { start: 1, end: 3 })}</span>
                 </div>
                 <div className="w-[41.6%] bg-indigo-50 border-r border-slate-100 flex flex-col items-center justify-center">
                   <span className="text-[10px] font-bold text-indigo-700">{t('strength_base')}</span>
-                  <span className="text-[8px] font-bold text-indigo-400 uppercase">Wk 4-8</span>
+                  <span className="text-[8px] font-bold text-indigo-400 uppercase">{t('planning_week_range', { start: 4, end: 8 })}</span>
                 </div>
                 <div className="w-[33.3%] bg-amber-50 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-amber-700">Hypertrophy</span>
-                  <span className="text-[8px] font-bold text-amber-400 uppercase">Wk 9-12</span>
+                  <span className="text-[10px] font-bold text-amber-700">{t('hypertrophy')}</span>
+                  <span className="text-[8px] font-bold text-amber-400 uppercase">{t('planning_week_range', { start: 9, end: 12 })}</span>
                 </div>
               </div>
             </div>

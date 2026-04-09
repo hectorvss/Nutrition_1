@@ -77,7 +77,7 @@ interface RoadmapData {
 }
 
 // --- MOCK DATA GENERATOR ---
-const getInitialData = (): RoadmapData => ({
+const getInitialData = (t: (key: string, vars?: Record<string, any>) => string): RoadmapData => ({
   status: 'LIVE',
   startDate: '2023-10-01',
   endDate: '2024-01-15',
@@ -85,53 +85,53 @@ const getInitialData = (): RoadmapData => ({
   totalWeeks: 12,
   nutrition: [
     { 
-      id: 'n1', title: 'Maintenance', startWeek: 1, endWeek: 4, type: 'nutrition', color: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800 text-blue-600',
+      id: 'n1', title: t('maintenance'), startWeek: 1, endWeek: 4, type: 'nutrition', color: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800 text-blue-600',
       kcal: '2,650', macros: '30/40/30', deficit: '0', water: '3.0', 
-      rationale: 'Initial phase to establish metabolic baseline and assess maintenance calories before entering deficit.',
-      timing: ['Pre: 40g Pro / 60g Carb', 'Post: 40g Pro / 80g Carb'],
+      rationale: t('roadmap_mock_rationale_maintenance'),
+      timing: [t('roadmap_mock_timing_pre_40_60'), t('roadmap_mock_timing_post_40_80')],
       micros: [{ label: 'Magnesium', value: '400mg' }]
     },
     { 
-      id: 'n2', title: 'Deficit (-500)', startWeek: 5, endWeek: 8, type: 'nutrition', color: 'bg-amber-50 dark:bg-amber-900/30 border-[#17cf54] border-y border-x-2 text-amber-700',
+      id: 'n2', title: t('roadmap_mock_deficit_500'), startWeek: 5, endWeek: 8, type: 'nutrition', color: 'bg-amber-50 dark:bg-amber-900/30 border-[#17cf54] border-y border-x-2 text-amber-700',
       kcal: '2,150', macros: '40/30/30', deficit: '-500', water: '3.5',
-      rationale: 'Calculated -500kcal deficit targeting ~1lb/week fat loss while maintaining muscle mass.',
-      timing: ['Pre: 30g Pro / 40g Carb', 'Post: 40g Pro / 50g Carb'],
+      rationale: t('roadmap_mock_rationale_deficit'),
+      timing: [t('roadmap_mock_timing_pre_30_40'), t('roadmap_mock_timing_post_40_50')],
       micros: [{ label: 'Zinc', value: '15mg' }]
     },
     { 
-      id: 'n3', title: 'Maintenance', startWeek: 9, endWeek: 12, type: 'nutrition', color: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800 text-green-600',
+      id: 'n3', title: t('maintenance'), startWeek: 9, endWeek: 12, type: 'nutrition', color: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800 text-green-600',
       kcal: '2,400', macros: '35/35/30', deficit: '0', water: '3.2',
-      rationale: 'Reverse diet phase to bring calories back to maintenance after the deficit block.',
-      timing: ['Pre: 35g Pro / 50g Carb', 'Post: 40g Pro / 60g Carb'],
+      rationale: t('roadmap_mock_rationale_reverse'),
+      timing: [t('roadmap_mock_timing_pre_35_50'), t('roadmap_mock_timing_post_40_60')],
       micros: [{ label: 'Vitamin D', value: '5000 IU' }]
     },
   ],
   training: [
     { 
-      id: 't1', title: 'Hypertrophy Base (4x)', startWeek: 1, endWeek: 6, type: 'training', color: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 text-indigo-600',
-      focus: 'Hypertrophy', sessions: '4 Lift Days', intensity: 'RPE 7-9', tempo: '3-0-1-0',
-      loading: 'Linear Periodization: Increase load by 2-5% weekly.',
-      scope: 'Posterior Chain focus.',
-      recovery: 'Prioritize sleep (>7.5h).'
+      id: 't1', title: t('roadmap_mock_hypertrophy_base_4x'), startWeek: 1, endWeek: 6, type: 'training', color: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 text-indigo-600',
+      focus: t('hypertrophy'), sessions: t('roadmap_mock_sessions_4_lift_days'), intensity: 'RPE 7-9', tempo: '3-0-1-0',
+      loading: t('roadmap_mock_loading_linear_periodization'),
+      scope: t('roadmap_mock_scope_posterior_chain'),
+      recovery: t('roadmap_mock_recovery_prioritize_sleep')
     },
     { 
-      id: 't2', title: 'Strength Peak (3x)', startWeek: 7, endWeek: 12, type: 'training', color: 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800 text-rose-600',
-      focus: 'Strength', sessions: '3 Lift Days', intensity: 'RPE 8-10', tempo: '2-0-X-0',
-      loading: 'Wave Loading: Alternating heavy/medium intensities.',
-      scope: 'Compound lifts maximization.',
-      recovery: 'Extended rest between sets.'
+      id: 't2', title: t('roadmap_mock_strength_peak_3x'), startWeek: 7, endWeek: 12, type: 'training', color: 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800 text-rose-600',
+      focus: t('strength'), sessions: t('roadmap_mock_sessions_3_lift_days'), intensity: 'RPE 8-10', tempo: '2-0-X-0',
+      loading: t('roadmap_mock_loading_wave_loading'),
+      scope: t('roadmap_mock_scope_compound_lifts'),
+      recovery: t('roadmap_mock_recovery_extended_rest')
     },
   ],
   goals: [
-    { id: 'g1', type: 'physical', label: 'Weight: 140 lbs', desc: 'Lose 10lbs fat, maintain muscle', value: 60, targetValue: '140 lbs', currentValue: '150 lbs' },
-    { id: 'g2', type: 'nutrition', label: 'Adherence: 90%+', desc: 'Daily macro tracking accuracy', value: 85, targetValue: '90%+', currentValue: 'Consistent' },
-    { id: 'g3', type: 'training', label: 'Frequency: 4x/wk', desc: 'Complete all hypertrophy sessions', value: 100, targetValue: '100%', currentValue: '16/16 sessions' },
-    { id: 'g4', type: 'mindset', label: 'Sleep: 7.5h+', desc: 'Consistent sleep/wake hygiene', value: 70, targetValue: '7.5h+', currentValue: 'Avg 6.5h sleep' },
+    { id: 'g1', type: 'physical', label: t('roadmap_mock_goal_weight_140'), desc: t('roadmap_mock_goal_desc_lose_fat_keep_muscle'), value: 60, targetValue: '140 lbs', currentValue: '150 lbs' },
+    { id: 'g2', type: 'nutrition', label: t('roadmap_mock_goal_adherence_90'), desc: t('roadmap_mock_goal_desc_macro_accuracy'), value: 85, targetValue: '90%+', currentValue: t('roadmap_mock_consistent') },
+    { id: 'g3', type: 'training', label: t('roadmap_mock_goal_frequency_4x_week'), desc: t('roadmap_mock_goal_desc_complete_hypertrophy'), value: 100, targetValue: '100%', currentValue: t('roadmap_mock_goal_current_sessions_16_16') },
+    { id: 'g4', type: 'mindset', label: t('roadmap_mock_goal_sleep_7_5'), desc: t('roadmap_mock_goal_desc_sleep_hygiene'), value: 70, targetValue: '7.5h+', currentValue: t('roadmap_mock_goal_current_sleep_6_5') },
   ],
   assumptions: {
     steps: '10,000 - 12,000',
-    sleep: '7.5 hours minimum',
-    constraints: 'Dairy-free, prefers higher morning protein.'
+    sleep: t('roadmap_mock_sleep_minimum'),
+    constraints: t('roadmap_mock_constraints_dairy_free')
   }
 });
 
@@ -149,7 +149,7 @@ export default function ClientRoadmap() {
   const loadRoadmap = async () => {
     try {
       const data = await fetchWithAuth('/client/roadmap');
-      const roadmapData = data.data_json && data.data_json.nutrition ? data.data_json : getInitialData();
+      const roadmapData = data.data_json && data.data_json.nutrition ? data.data_json : getInitialData(t);
       setRoadmap(roadmapData);
       
       const currentWeek = roadmapData.currentWeek || 1;
@@ -160,7 +160,7 @@ export default function ClientRoadmap() {
       setSelectedTrainingId(currentTra?.id || (roadmapData.training[0]?.id || null));
     } catch (error) {
       console.error('Error loading roadmap:', error);
-      const initial = getInitialData();
+      const initial = getInitialData(t);
       setRoadmap(initial);
       setSelectedNutritionId(initial.nutrition[0].id);
       setSelectedTrainingId(initial.training[0].id);
@@ -221,8 +221,8 @@ export default function ClientRoadmap() {
             <div className="overflow-x-auto pb-6 no-scrollbar relative">
               <div className="min-w-[1240px] space-y-6 relative">
                  <div className="flex justify-between px-4 text-[11px] font-bold text-slate-300 uppercase tracking-[0.2em]">
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <span key={i} className={`w-1/12 text-center ${i + 1 === roadmap.currentWeek ? 'text-[#17cf54] font-black' : ''}`}>W{i + 1}</span>
+                  {Array.from({ length: roadmap.totalWeeks }).map((_, i) => (
+                    <span key={i} style={{ width: `${100 / roadmap.totalWeeks}%` }} className={`text-center ${i + 1 === roadmap.currentWeek ? 'text-[#17cf54] font-black' : ''}`}>{t('planning_week_label_short', { week: i + 1 })}</span>
                   ))}
                 </div>
 
@@ -311,12 +311,12 @@ export default function ClientRoadmap() {
                     <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeNutrition.macros}</p>
                   </div>
                   <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-amber-500/20 group/card">
-                    <p className="text-[10px] font-bold text-amber-600/60 uppercase tracking-widest mb-1 font-semibold italic">Déficit</p>
-                    <p className="text-xl font-bold text-amber-600 tracking-tight leading-none">{activeNutrition.deficit} <span className="text-[10px] text-amber-500/50 font-bold tracking-widest">KCAL/D</span></p>
+                    <p className="text-[10px] font-bold text-amber-600/60 uppercase tracking-widest mb-1 font-semibold italic">{t('deficit')}</p>
+                    <p className="text-xl font-bold text-amber-600 tracking-tight leading-none">{activeNutrition.deficit} <span className="text-[10px] text-amber-500/50 font-bold tracking-widest">{t('roadmap_kcal_per_day')}</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-blue-500/20 group/card">
                     <p className="text-[10px] font-bold text-blue-600/60 uppercase tracking-widest mb-1 font-semibold italic">{t('water')}</p>
-                    <p className="text-xl font-bold text-blue-500 tracking-tight leading-none">{activeNutrition.water} <span className="text-[10px] text-blue-400/50 font-bold tracking-widest">LITROS</span></p>
+                    <p className="text-xl font-bold text-blue-500 tracking-tight leading-none">{activeNutrition.water} <span className="text-[10px] text-blue-400/50 font-bold tracking-widest">{t('liters')}</span></p>
                   </div>
                 </div>
 
@@ -436,7 +436,7 @@ export default function ClientRoadmap() {
                 <div className="flex justify-between items-center mb-6">
                   <span className={`text-[11px] font-bold uppercase tracking-widest flex items-center gap-3 ${goal.type === 'physical' ? 'text-blue-500' : goal.type === 'nutrition' ? 'text-amber-500' : goal.type === 'training' ? 'text-purple-500' : 'text-rose-500'}`}>
                     {goal.type === 'physical' ? <ScaleIcon className="w-5 h-5" /> : goal.type === 'nutrition' ? <NutritionIcon className="w-5 h-5" /> : goal.type === 'training' ? <TrainingIcon className="w-5 h-5" /> : <MindsetIcon className="w-5 h-5" />}
-                    {goal.type}
+                    {goal.type === 'physical' ? t('physical') : goal.type === 'nutrition' ? t('nutrition') : goal.type === 'training' ? t('training') : t('mindset')}
                   </span>
                   <span className={`text-[11px] font-bold px-3 py-1.5 rounded-xl ${goal.type === 'physical' ? 'bg-blue-50 text-blue-600 shadow-blue-500/5' : goal.type === 'nutrition' ? 'bg-amber-50 text-amber-600 shadow-amber-500/5' : goal.type === 'training' ? 'bg-purple-50 text-purple-600 shadow-purple-500/5' : 'bg-rose-50 text-rose-600 shadow-rose-500/5'}`}>{goal.value}%</span>
                 </div>
