@@ -69,13 +69,26 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
-  const [rules, setRules] = useState<AutomationRule[]>(defaultRules);
-  const [manualTasks, setManualTasks] = useState<TaskItem[]>([]);
-  const [completedAutomatedIds, setCompletedAutomatedIds] = useState<Record<string, string>>({}); // { id: dateStr }
-  const [isLoading, setIsLoading] = useState(true);
   const { clients } = useClient();
   const { user } = useAuth();
   const { t } = useLanguage();
+
+  const localizedDefaultRules = useMemo<AutomationRule[]>(() => [
+    { id: 'unread-dm', category: 'COMMUNICATIONS', title: t('automation_unread_title'), badge: 'Default', desc: t('automation_unread_desc'), priority: 'High', priorityColor: 'text-red-500', enabled: true },
+    { id: 'new-leads', category: 'COMMUNICATIONS', title: t('automation_leads_title'), desc: t('automation_leads_desc'), priority: 'Medium', priorityColor: 'text-orange-500', enabled: true },
+    { id: 'sudden-weight', category: 'CLIENT PERFORMANCE', title: t('automation_sudden_weight_title'), desc: t('automation_sudden_weight_desc'), priority: 'High', priorityColor: 'text-red-500', enabled: true },
+    { id: 'low-adherence', category: 'CLIENT PERFORMANCE', title: t('automation_low_adherence_title'), desc: t('automation_low_adherence_desc'), priority: 'Medium', priorityColor: 'text-orange-500', enabled: true },
+    { id: 'no-login', category: 'CLIENT PERFORMANCE', title: t('automation_no_login_title'), desc: t('automation_no_login_desc'), priority: 'Medium', priorityColor: 'text-orange-500', enabled: true },
+    { id: 'goal-milestone', category: 'CLIENT PERFORMANCE', title: t('automation_goal_milestone_title'), badge: 'Disabled', desc: t('automation_goal_milestone_desc'), priority: 'Low', priorityColor: 'text-slate-400', enabled: false },
+    { id: 'onboarding-not-finished', category: 'OPERATIONS', title: t('automation_onboarding_title'), desc: t('automation_onboarding_desc'), priority: 'High', priorityColor: 'text-red-500', enabled: true },
+    { id: 'weekly-overdue', category: 'OPERATIONS', title: t('automation_weekly_overdue_title'), desc: t('automation_weekly_overdue_desc'), priority: 'Medium', priorityColor: 'text-orange-500', enabled: true },
+    { id: 'plan-update', category: 'OPERATIONS', title: t('automation_plan_update_title'), desc: t('automation_plan_update_desc'), priority: 'Low', priorityColor: 'text-slate-400', enabled: true },
+  ], [t]);
+
+  const [rules, setRules] = useState<AutomationRule[]>(localizedDefaultRules);
+  const [manualTasks, setManualTasks] = useState<TaskItem[]>([]);
+  const [completedAutomatedIds, setCompletedAutomatedIds] = useState<Record<string, string>>({}); // { id: dateStr }
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchManualTasks = async () => {
     if (!user) {

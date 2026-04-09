@@ -13,7 +13,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
       name: client.name,
       avatar: client.avatar,
       status: hasActivePlan ? 'ACTIVE' : 'NO_PLAN',
-      roadmapStatus: hasActivePlan ? t('plan_assigned') : t('no_strategic_plan'),
+      roadmapStatus: hasActivePlan ? t('plan_assigned', { defaultValue: 'PLAN ASIGNED' }) : t('no_strategic_plan', { defaultValue: 'NO STRATEGIC PLAN' }),
       online: client.status === 'Active',
       roadmapProgress: hasActivePlan ? t('roadmap_live') : t('roadmap_needs_setup'),
       planFamilyLabel: client.planFamilyLabel
@@ -28,8 +28,8 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
           <div className="p-8 border-b border-slate-100 space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-3xl font-bold text-slate-900">{t('planning_management')}</h2>
-                <p className="text-sm text-slate-500 mt-1 font-medium">{t('planning_subtitle')}</p>
+                <h2 className="text-3xl font-bold text-slate-900">{t('planning_management', { defaultValue: 'Planning Management' })}</h2>
+                <p className="text-sm text-slate-500 mt-1 font-medium">{t('planning_desc', { defaultValue: 'Structure blocks and set long-term goals for your clients' })}</p>
               </div>
             </div>
 
@@ -38,18 +38,20 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                 <span className="material-symbols-outlined text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 text-[20px]">search</span>
                 <input 
                   className="w-full pl-12 pr-4 py-3 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all font-medium" 
-                  placeholder={t('search_client_placeholder')} 
+                  placeholder={t('search_client_placeholder', { defaultValue: 'Search client by name...' })} 
+
                   type="text"
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full sm:w-auto">
-                <button className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/10 text-sm font-bold transition-all whitespace-nowrap">{t('all_clients')}</button>
+                <button className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/10 text-sm font-bold transition-all whitespace-nowrap">{t('all_clients', { defaultValue: 'All Clients' })}</button>
                 <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  {t('planning_drafting')}
+                  {t('drafting', { defaultValue: 'Drafting' })}
                   <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">4</span>
                 </button>
                 <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  {t('active_roadmap')}
+                  {t('active_roadmap', { defaultValue: 'Active Roadmap' })}
+
                   <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">12</span>
                 </button>
               </div>
@@ -93,11 +95,11 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500 font-medium">
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">map</span>
-                            <span>{t('active_roadmap')}: {client.planFamilyLabel || t('not_defined')}</span>
+                            <span>{t('roadmap_label', { defaultValue: 'Roadmap' })}: {client.planFamilyLabel || t('not_defined', { defaultValue: 'Not Defined' })}</span>
                           </div>
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">calendar_today</span>
-                            <span>{t('planning_timeline')}: 12 {t('weeks_label')}</span>
+                            <span>{t('timeline_label', { defaultValue: 'Timeline' })}: 12 {t('weeks_unit', { defaultValue: 'Weeks' })}</span>
                           </div>
                         </div>
                       </div>
@@ -106,7 +108,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                     <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end pl-[5.25rem] md:pl-0">
                       <div className="flex flex-col items-end text-right">
                         <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('last_update')}</span>
-                        <span className="text-xs font-bold text-slate-600">{t('days_ago', { count: 2 })}</span>
+                        <span className="text-xs font-bold text-slate-600">2 {t('days_ago', { defaultValue: 'days ago' })}</span>
                       </div>
                       
                       <button 
@@ -124,7 +126,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                         <span className="material-symbols-outlined text-[18px]">
                           {client.status === 'ACTIVE' ? 'route' : 'add'}
                         </span>
-                        {client.status === 'ACTIVE' ? t('edit_roadmap') : t('setup_roadmap')}
+                        {client.status === 'ACTIVE' ? t('edit_roadmap', { defaultValue: 'Edit Roadmap' }) : t('setup_roadmap', { defaultValue: 'Setup Roadmap' })}
                       </button>
                     </div>
                   </div>

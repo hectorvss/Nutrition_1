@@ -1282,14 +1282,14 @@ function AppearanceSettings() {
   );
 
   const presets = [
-    { name: t('green', { defaultValue: 'Soft Green' }), color: '#10b981' },
-    { name: t('blue', { defaultValue: 'Deep Blue' }), color: '#3b82f6' },
-    { name: t('teal', { defaultValue: 'Teal' }), color: '#0d9488' },
-    { name: t('purple', { defaultValue: 'Purple' }), color: '#8b5cf6' },
-    { name: t('rose', { defaultValue: 'Rose' }), color: '#f43f5e' },
-    { name: t('amber', { defaultValue: 'Amber' }), color: '#f59e0b' },
-    { name: t('slate', { defaultValue: 'Slate' }), color: '#64748b' },
-    { name: t('dark', { defaultValue: 'Dark' }), color: '#0f172a' },
+    { name: t('soft_green'), color: '#10b981' },
+    { name: t('deep_blue'), color: '#3b82f6' },
+    { name: t('teal'), color: '#0d9488' },
+    { name: t('purple'), color: '#8b5cf6' },
+    { name: t('rose'), color: '#f43f5e' },
+    { name: t('amber'), color: '#f59e0b' },
+    { name: t('slate'), color: '#64748b' },
+    { name: t('dark'), color: '#0f172a' },
   ];
 
   const isPresetSelected = presets.some(p => p.color === settings.theme_color);

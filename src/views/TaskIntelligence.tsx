@@ -59,13 +59,13 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
               <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">{t('task_intelligence')}</h1>
             </div>
             <p className="text-slate-500 leading-relaxed">
-              {t('task_intelligence_desc')}
+              {t('configure_priorities_desc', { defaultValue: 'Configure how the system prioritizes and automates your daily workflow.' })}
             </p>
           </div>
           <div className="flex items-center gap-3">
             <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
               <History className="w-4 h-4" />
-              {t('history_log')}
+              {t('history', { defaultValue: 'History' })}
             </button>
             <button 
               onClick={handleSave}
@@ -86,8 +86,8 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
                 <Bot className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">{t('automation_rules')}</h2>
-                <p className="text-xs text-slate-500">{t('automation_rules_desc')}</p>
+                <h2 className="text-lg font-bold text-slate-900">{t('automation_rules_smart_tasks', { defaultValue: 'Automation Rules & Smart Tasks' })}</h2>
+                <p className="text-xs text-slate-500">{t('automation_desc', { defaultValue: 'System will automatically create tasks based on these triggers.' })}</p>
               </div>
             </div>
           </div>
@@ -133,7 +133,7 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
                         <div className="flex items-center gap-8 shrink-0">
                           <div className="flex items-center gap-6">
                             <div className="flex flex-col items-end">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('priority_label')}</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('priority_label', { defaultValue: 'Priority' })}</span>
                               
                               <div className="relative group">
                                 <select 
@@ -141,9 +141,9 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
                                   onChange={(e) => handleChangePriority(rule.id, e.target.value)}
                                   className={`appearance-none bg-transparent flex items-center gap-2 text-sm font-bold outline-none cursor-pointer pr-5 ${rule.priorityColor}`}
                                 >
-                                  <option value="High" className="text-red-500">{t('high')}</option>
-                                  <option value="Medium" className="text-orange-500">{t('medium')}</option>
-                                  <option value="Low" className="text-slate-400">{t('low')}</option>
+                                  <option value="High" className="text-red-500">{t('high_priority', { defaultValue: 'High' })}</option>
+                                  <option value="Medium" className="text-orange-500">{t('medium_priority', { defaultValue: 'Medium' })}</option>
+                                  <option value="Low" className="text-slate-400">{t('low_priority', { defaultValue: 'Low' })}</option>
                                 </select>
                                 <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
                               </div>

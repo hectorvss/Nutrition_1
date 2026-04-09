@@ -806,7 +806,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <Icon name="psychology" className="font-variation-fill" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('planning_block_strategic_details')}</h3>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('planning_block_strategic_details', { defaultValue: 'Block Strategic Details' })}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     {t('planning_strategy_roadmap_week_intelligence', { week: roadmap.currentWeek })}
                   </p>
@@ -1238,16 +1238,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Icon name="analytics" className="text-emerald-500" />
-                    {t('planning_goal_trajectory_predictions')}
+                    {t('planning_goal_trajectory_predictions', { defaultValue: 'Goal Trajectory & Predictions' })}
                   </h3>
                   <div className="flex items-center gap-5">
                     <div className="flex items-center gap-1.5">
                       <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" /></svg>
-	                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_actual')}</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_actual', { defaultValue: 'Actual' })}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#10b981" strokeWidth="3" strokeDasharray="5 3" strokeLinecap="round" /></svg>
-	                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_projected')}</span>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_projected', { defaultValue: 'Projected' })}</span>
                     </div>
                   </div>
                 </div>
@@ -1281,16 +1281,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                             if (!isNaN(v) && v > 0) updateGoals({ totalWeeks: v });
                           }}
                         />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">{t('weeks_label')}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{t('weeks_label', { defaultValue: 'weeks' })}</span>
                       </div>
                       <p className="text-[9px] text-slate-400 mt-1">
-                        {t('planning_week_of', { current: Math.min(currentWeekIndex + 1, totalWeeks), total: totalWeeks })} &mdash; {currentWeekIndex >= totalWeeks - 1 ? t('planning_finished') : t('planning_weeks_remaining', { count: totalWeeks - currentWeekIndex - 1 })}
+                        {t('planning_week_of', { current: Math.min(currentWeekIndex + 1, totalWeeks), total: totalWeeks, defaultValue: `Week ${Math.min(currentWeekIndex + 1, totalWeeks)} of ${totalWeeks}` })} &mdash; {currentWeekIndex >= totalWeeks - 1 ? t('planning_finished', { defaultValue: 'Finished' }) : t('planning_weeks_remaining', { count: totalWeeks - currentWeekIndex - 1, defaultValue: `${totalWeeks - currentWeekIndex - 1}w remaining` })}
                       </p>
                     </div>
 
                     {/* Target Weight */}
                     <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
-	                      <p className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">{t('target_weight')}</p>
+                      <p className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">{t('target_weight', { defaultValue: 'Target Weight' })}</p>
                       <div className="flex items-baseline gap-1.5">
                         <input
                           type="number" step="0.5"
@@ -1308,7 +1308,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Start Weight */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-	                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('start_weight')}</p>
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('start_weight', { defaultValue: 'Starting Weight' })}</p>
                       <div className="flex items-baseline gap-1">
                         <input
                           type="number" step="0.5"
@@ -1327,7 +1327,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Strength Target */}
                     <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
-	                      <p className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">{t('planning_strength_target')}</p>
+                      <p className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">{t('planning_strength_target', { defaultValue: 'Strength Target' })}</p>
                       <div className="flex items-baseline gap-1.5">
                         <input
                           type="number" step="2.5"
@@ -1341,7 +1341,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                     {/* Reference Lift */}
                     <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('planning_reference_lift')}</p>
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('planning_reference_lift', { defaultValue: 'Reference Lift' })}</p>
                       <input
                         className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-full focus:ring-0 outline-none"
                         value={tGoals.exerciseName || ''}
@@ -1519,7 +1519,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <Icon name="timeline" className="text-slate-400" />
                   {t('key_milestones')}
                 </h3>
-                <button className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ {t('planning_add_milestone')}</button>
+                <button className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ {t('planning_add_milestone', { defaultValue: 'Add Milestone' })}</button>
               </div>
               <div className="space-y-3">
                 {roadmap.milestones.map((m) => (
@@ -1549,7 +1549,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
               </h3>
               <div className="space-y-5">
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('daily_steps_target')}</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('daily_steps_target', { defaultValue: 'Daily Steps Target' })}</label>
                   <input 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
@@ -1558,7 +1558,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('sleep_hygiene')}</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('sleep_hygiene', { defaultValue: 'Sleep Hygiene' })}</label>
                   <input 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold" 
                     type="text" 
@@ -1567,7 +1567,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('primary_constraints')}</label>
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('primary_constraints', { defaultValue: 'Primary Constraints' })}</label>
                   <textarea 
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all resize-none font-medium leading-relaxed h-20" 
                     value={roadmap.assumptions.constraints}
