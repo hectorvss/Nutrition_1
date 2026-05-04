@@ -220,7 +220,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   // Generate tasks dynamically based on clients and enabled rules
   const tasks = useMemo(() => {
     const generated: TaskItem[] = [...manualTasks];
-    let taskIdCounter = generated.length > 0 ? Math.max(...generated.map(t => t.id)) + 1 : 1;
+    // Use a timestamp-based counter so generated IDs never collide with DB-persisted manual task IDs
+    let taskIdCounter = Date.now();
 
     // Helper to evaluate clients against rules
     const evaluate = (client: ClientData) => {

@@ -81,7 +81,7 @@ export default function Nutrition() {
                 try {
                   // Fetch the template from the backend
                   const response = await fetch(`/api/manager/nutrition-templates/${templateId}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
                   });
                   const data = await response.json();
                   if (data && data.data_json) {

@@ -35,23 +35,22 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
   const [activeCount, setActiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState(false);
 
   useEffect(() => {
     const loadAnalytics = async () => {
       setLoading(true);
+      setAnalyticsError(false);
       try {
         const data = await fetchWithAuth('/manager/analytics');
-        if (data.recentActivity) {
-          setActivity(data.recentActivity);
-        }
-        if (data.attentionRequired) {
-          setAttentionCheckIns(data.attentionRequired);
-        }
+        if (data.recentActivity) setActivity(data.recentActivity);
+        if (data.attentionRequired) setAttentionCheckIns(data.attentionRequired);
         if (data.business && typeof data.business.activeClients === 'number') {
           setActiveCount(data.business.activeClients);
         }
       } catch (error) {
         console.error('Failed to load analytics:', error);
+        setAnalyticsError(true);
       } finally {
         setLoading(false);
       }
@@ -129,6 +128,19 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <div className="p-12 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('loading_items')}</p>
+                </div>
+              ) : analyticsError ? (
+                <div className="p-8 flex flex-col items-center justify-center gap-3 text-center">
+                  <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                    <Bell className="w-5 h-5 text-red-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-600">{t('error_loading_data')}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline"
+                  >
+                    {t('retry')}
+                  </button>
                 </div>
               ) : combinedAttention.length === 0 ? (
                 <div className="p-8 text-center text-slate-500 italic">{t('no_pending_items')}</div>

@@ -6,7 +6,11 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY is not set. Cannot start without a valid Stripe key.');
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-12-18.acacia' as any,
 });
 
@@ -74,6 +78,27 @@ router.post('/webhook', async (req: any, res) => {
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Idempotency guard: reject replayed events
+  try {
+    const { error: insertErr } = await supabaseAdmin
+      .from('stripe_processed_events')
+      .insert({ event_id: event.id });
+
+    if (insertErr) {
+      // Unique violation means already processed
+      if (insertErr.code === '23505') {
+        return res.json({ received: true, duplicate: true });
+      }
+      throw insertErr;
+    }
+  } catch (dedupErr: any) {
+    if (dedupErr.code === '23505') {
+      return res.json({ received: true, duplicate: true });
+    }
+    console.error('Dedup check failed:', dedupErr);
+    return res.status(500).json({ error: 'Dedup check failed' });
   }
 
   // Handle the event

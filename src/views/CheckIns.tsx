@@ -16,8 +16,9 @@ interface CheckInsProps {
 
 export default function CheckIns({ initialClientId, initialCheckInId, onViewChange }: CheckInsProps) {
   const { t } = useLanguage();
+  // 'review' requires both clientId and checkInId — fall back to 'list' if clientId is missing
   const [viewMode, setViewMode] = useState<CheckInViewMode>(
-    initialCheckInId ? 'review' : (initialClientId ? 'history' : 'list')
+    (initialCheckInId && initialClientId) ? 'review' : (initialClientId ? 'history' : 'list')
   );
   const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(initialCheckInId || null);

@@ -28,9 +28,9 @@ export const verifyManager = async (req: any, res: any, next: any) => {
       return res.status(500).json({ error: 'Error verifying user role' });
     }
 
-    const role = userData?.role || user.user_metadata?.role;
-
-    if (role !== 'MANAGER') {
+    // DB is the source of truth for role. NEVER fall back to user_metadata —
+    // it is user-mutable via supabase.auth.updateUser and would allow privilege escalation.
+    if (!userData || userData.role !== 'MANAGER') {
       return res.status(403).json({ error: 'Forbidden: se requiere rol MANAGER' });
     }
 
@@ -59,15 +59,19 @@ export const verifyClient = async (req: any, res: any, next: any) => {
 
     const user = data.user;
 
-    const { data: userData } = await supabaseAdmin
+    const { data: userData, error: dbError } = await supabaseAdmin
       .from('users')
       .select('role')
       .eq('id', user.id)
       .maybeSingle();
 
-    const role = userData?.role || user.user_metadata?.role;
+    if (dbError) {
+      console.error('verifyClient: DB error', dbError);
+      return res.status(500).json({ error: 'Error verifying user role' });
+    }
 
-    if (role !== 'CLIENT') {
+    // DB is the source of truth — never trust user_metadata for authorization.
+    if (!userData || userData.role !== 'CLIENT') {
       return res.status(403).json({ error: 'Forbidden: se requiere rol CLIENT' });
     }
 

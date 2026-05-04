@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import managerRoutes from './routes/manager.js';
 import clientRoutes from './routes/client.js';
@@ -34,6 +35,39 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// Rate limiting — protección contra brute-force y abuso
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones. Inténtalo de nuevo en 15 minutos.' },
+  skip: (req) => req.path === '/api/health',
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de autenticación. Inténtalo de nuevo en 15 minutos.' },
+});
+
+// Tighter limit on /setup (only used during initial onboarding) and /cron (called by scheduler).
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Rate limit exceeded.' },
+});
+
+app.use('/api/', globalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/setup', sensitiveLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/automations/cron', sensitiveLimiter);
 
 // IMPORTANT: Stripe Webhook needs the raw body for signature verification
 // This must be defined BEFORE express.json()

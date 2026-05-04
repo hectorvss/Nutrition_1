@@ -66,32 +66,57 @@ router.get('/profile', async (req: any, res) => {
   }
 });
 
-// Get my plans
+// Get my plans — scoped to current manager so stale plans from previous managers don't leak
 router.get('/plans', async (req: any, res) => {
   try {
-    const { data: nutrition } = await supabaseAdmin.from('nutrition_plans').select('*').eq('client_id', req.user.id);
-    const { data: training } = await supabaseAdmin.from('training_programs').select('*').eq('client_id', req.user.id);
-    
-    res.json({ nutrition, training });
+    const { data: clientRow } = await supabaseAdmin
+      .from('users')
+      .select('manager_id')
+      .eq('id', req.user.id)
+      .maybeSingle();
+
+    const managerId = clientRow?.manager_id;
+    if (!managerId) {
+      return res.json({ nutrition: [], training: [] });
+    }
+
+    const [{ data: nutrition }, { data: training }] = await Promise.all([
+      supabaseAdmin.from('nutrition_plans').select('*').eq('client_id', req.user.id).eq('created_by', managerId),
+      supabaseAdmin.from('training_programs').select('*').eq('client_id', req.user.id).eq('created_by', managerId),
+    ]);
+
+    res.json({ nutrition: nutrition || [], training: training || [] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Get my roadmap
+// Get my roadmap — scoped to current manager so stale roadmaps from previous managers don't leak.
 router.get('/roadmap', async (req: any, res) => {
   try {
+    const { data: clientRow } = await supabaseAdmin
+      .from('users')
+      .select('manager_id')
+      .eq('id', req.user.id)
+      .maybeSingle();
+
+    const managerId = clientRow?.manager_id;
+    if (!managerId) {
+      return res.json({ data_json: { nutrition: [], training: [] }, status: 'Empty' });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('roadmaps')
       .select('*')
       .eq('client_id', req.user.id)
+      .eq('manager_id', managerId)
       .maybeSingle();
 
     if (error) throw error;
-    res.json(data || { 
-      data_json: { nutrition: [], training: [] }, 
-      status: 'Empty' 
+    res.json(data || {
+      data_json: { nutrition: [], training: [] },
+      status: 'Empty'
     });
   } catch (error: any) {
     console.error('Error fetching roadmap:', error);
@@ -102,18 +127,36 @@ router.get('/roadmap', async (req: any, res) => {
 // Save a completed workout session
 router.post('/workout-logs', async (req: any, res) => {
   try {
-    const { plan_id, workout_name, day_key, exercises, notes, session_rpe, logged_at } = req.body;
+    const { plan_id, workout_name, day_key, exercises, notes, session_rpe } = req.body;
+
+    // Cap exercises array to prevent DoS via huge payloads
+    const safeExercises = Array.isArray(exercises) ? exercises.slice(0, 100) : [];
+
+    // If a plan_id is given, ensure it belongs to this client (prevents tagging logs to other clients' plans)
+    if (plan_id) {
+      const { data: planRow } = await supabaseAdmin
+        .from('training_programs')
+        .select('id')
+        .eq('id', plan_id)
+        .eq('client_id', req.user.id)
+        .maybeSingle();
+      if (!planRow) {
+        return res.status(403).json({ error: 'Forbidden: plan does not belong to this client' });
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('workout_logs')
       .insert({
         client_id: req.user.id,
         plan_id: plan_id || null,
-        workout_name: workout_name || 'Workout Session',
-        day_key: day_key || null,
-        exercises: exercises || [],
-        notes: notes || null,
+        workout_name: typeof workout_name === 'string' ? workout_name.slice(0, 200) : 'Workout Session',
+        day_key: typeof day_key === 'string' ? day_key.slice(0, 50) : null,
+        exercises: safeExercises,
+        notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
         session_rpe: session_rpe || null,
-        logged_at: logged_at || new Date().toISOString()
+        // Always server-side timestamp — client cannot backdate logs.
+        logged_at: new Date().toISOString()
       })
       .select()
       .single();
@@ -178,6 +221,11 @@ router.get('/onboarding/active', async (req: any, res) => {
 router.post('/onboarding/active/:id/action', async (req: any, res) => {
   const { status } = req.body; // 'seen' or 'dismissed'
   const assignmentId = req.params.id;
+
+  const VALID_STATUSES = ['seen', 'dismissed', 'completed'];
+  if (!status || !VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
+  }
 
   try {
     const { data, error } = await supabaseAdmin
@@ -250,9 +298,9 @@ router.get('/profile-stats', async (req: any, res) => {
         if (d.calories_intake) { totalKcal += d.calories_intake; countKcal++; }
       });
 
-      avgProteinAdherence = countP > 0 ? Math.round((totalP / countP) * 100) : 90;
-      avgCarbsAdherence = countC > 0 ? Math.round((totalC / countC) * 100) : 85;
-      avgFatsAdherence = countF > 0 ? Math.round((totalF / countF) * 100) : 92;
+      avgProteinAdherence = countP > 0 ? Math.round((totalP / countP) * 100) : 0;
+      avgCarbsAdherence = countC > 0 ? Math.round((totalC / countC) * 100) : 0;
+      avgFatsAdherence = countF > 0 ? Math.round((totalF / countF) * 100) : 0;
       dailyCaloricAvg = countKcal > 0 ? Math.round(totalKcal / countKcal) : 0;
     }
 
@@ -275,7 +323,7 @@ router.get('/profile-stats', async (req: any, res) => {
           else if (str.includes('<50%')) { totalAdh += 30; countAdh++; }
         }
       });
-      calculatedAdherenceRate = countAdh > 0 ? Math.round(totalAdh / countAdh) : 85; // Fallback to 85 if no scorable data
+      calculatedAdherenceRate = countAdh > 0 ? Math.round(totalAdh / countAdh) : 0;
     }
 
     // 6. Recent Activity (Messages)

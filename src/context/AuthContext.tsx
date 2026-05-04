@@ -22,17 +22,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const checkAuthStatus = async () => {
-       const token = getAuthToken();
-       if (token) {
-           // We can verify token by fetching user profile or just trust the local state/storage 
-           // For robust implementation, we fetch the active user role if it's stored, or let fetchWithAuth fail internally
-           // To keep it simple, we'll parse it from localstorage if not implemented a /me endpoint
-           const savedUser = localStorage.getItem('auth_user');
-           if (savedUser) {
-             setUser(JSON.parse(savedUser));
-           }
-       }
-       setIsLoading(false);
+      const token = getAuthToken();
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Verify token is still valid against the server
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          // Token expired or invalid — clear everything
+          setAuthToken('');
+          localStorage.removeItem('auth_user');
+          setUser(null);
+        } else if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            setUser(data.user);
+            localStorage.setItem('auth_user', JSON.stringify(data.user));
+          }
+        } else {
+          // Server error — fall back to cached user to avoid logging out on flaky network
+          const savedUser = localStorage.getItem('auth_user');
+          if (savedUser) setUser(JSON.parse(savedUser));
+        }
+      } catch {
+        // Network error — fall back to cached user
+        const savedUser = localStorage.getItem('auth_user');
+        if (savedUser) setUser(JSON.parse(savedUser));
+      }
+
+      setIsLoading(false);
     };
     checkAuthStatus();
   }, []);

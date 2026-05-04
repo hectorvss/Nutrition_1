@@ -168,29 +168,32 @@ export default function Messages({ onNavigate }: MessagesProps) {
     return () => clearInterval(interval);
   }, [activeRecipient]);
 
-  // Mark as read when entering a chat
+  // Mark as read when entering a chat — applies to both MANAGER and CLIENT
   useEffect(() => {
-    if (activeRecipient?.id && user?.role === 'MANAGER') {
+    if (!activeRecipient?.id) return;
+
+    if (user?.role === 'MANAGER') {
       const latest = latestMessages[activeRecipient.id];
       if (latest && latest.unreadCount && latest.unreadCount > 0) {
-        // 1. Mark as read on server
         fetchWithAuth(`/messages/${activeRecipient.id}/read`, { method: 'POST' })
           .then(() => {
-             // 2. Tell Sidebar to refresh its total count
-             window.dispatchEvent(new CustomEvent('updateUnreadCount'));
-             // 3. Briefly refresh the local list to be sure
-             setTimeout(loadLatestMessages, 500); 
+            window.dispatchEvent(new CustomEvent('updateUnreadCount'));
+            setTimeout(loadLatestMessages, 500);
           })
           .catch(console.error);
 
-        // 4. Update UI immediately for snappiness
         setLatestMessages(prev => ({
           ...prev,
           [activeRecipient.id]: { ...prev[activeRecipient.id], unreadCount: 0 }
         }));
       }
+    } else if (user?.role === 'CLIENT') {
+      // Clients mark their manager's messages as read on entering the chat
+      fetchWithAuth(`/messages/${activeRecipient.id}/read`, { method: 'POST' })
+        .then(() => window.dispatchEvent(new CustomEvent('updateUnreadCount')))
+        .catch(console.error);
     }
-  }, [activeRecipient, user, latestMessages]);
+  }, [activeRecipient, user]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -209,6 +212,15 @@ export default function Messages({ onNavigate }: MessagesProps) {
     }
     return () => clearInterval(interval);
   }, [isRecording]);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream?.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'file') => {
     const file = e.target.files?.[0];
@@ -291,6 +303,11 @@ export default function Messages({ onNavigate }: MessagesProps) {
         attachment_name = selectedFile.file.name;
         console.log('File uploaded:', attachment_url);
       } else if (audioBlob) {
+        const ALLOWED_AUDIO_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'];
+        if (!ALLOWED_AUDIO_TYPES.includes(audioBlob.type)) {
+          console.error('Invalid audio MIME type:', audioBlob.type);
+          return;
+        }
         setUploading(true);
         console.log('Uploading audio...');
         attachment_url = await uploadToStorage(audioBlob, 'voice-message.webm');

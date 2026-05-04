@@ -159,7 +159,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       try {
         setIsLoadingTemplates(true);
         const response = await fetch('/api/manager/nutrition-templates', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
         });
         const data = await response.json();
         setTemplates(Array.isArray(data) ? data : []);

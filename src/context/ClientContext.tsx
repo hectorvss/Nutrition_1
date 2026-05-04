@@ -137,12 +137,13 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteClient = async (clientId: string) => {
-    // Remove from UI immediately (optimistic update)
+    const previous = [...clients];
     setClients(prev => prev.filter(c => c.id !== clientId));
     try {
       await fetchWithAuth(`/manager/clients/${clientId}`, { method: 'DELETE' });
     } catch (err: any) {
-      console.warn('deleteClient API error:', err?.message);
+      console.error('deleteClient API error, rolling back:', err?.message);
+      setClients(previous);
     }
   };
 

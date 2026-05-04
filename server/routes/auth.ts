@@ -1,7 +1,15 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { supabase, supabaseAdmin } from '../db/index.js';
 
 const router = Router();
+
+const timingSafeStrEqual = (a: string | undefined, b: string | undefined) => {
+  if (!a || !b) return false;
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+};
 
 // Login
 router.post('/login', async (req, res) => {
@@ -60,10 +68,21 @@ router.post('/setup', async (req: any, res) => {
   try {
     if (targetRole === 'MANAGER') {
       // Solo se puede crear un manager con el secret de setup (onboarding inicial del sistema)
-      const secret = req.headers['x-setup-secret'];
+      const secret = req.headers['x-setup-secret'] as string | undefined;
       const validSecret = process.env.SETUP_SECRET;
-      if (!validSecret || secret !== validSecret) {
+      if (!validSecret) {
+        return res.status(500).json({ error: 'Server misconfigured: SETUP_SECRET not set' });
+      }
+      if (!timingSafeStrEqual(secret, validSecret)) {
         return res.status(403).json({ error: 'Forbidden: se requiere x-setup-secret para crear managers' });
+      }
+      // Block reuse: once any MANAGER exists, refuse further manager creation via this endpoint.
+      const { count: managerCount } = await supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'MANAGER');
+      if ((managerCount || 0) > 0) {
+        return res.status(403).json({ error: 'Setup already completed: a manager already exists' });
       }
     } else {
       // Para crear clientes: el caller debe ser un MANAGER autenticado
@@ -83,8 +102,8 @@ router.post('/setup', async (req: any, res) => {
         .eq('id', authData.user.id)
         .maybeSingle();
 
-      const callerRole = callerData?.role || authData.user.user_metadata?.role;
-      if (callerRole !== 'MANAGER') {
+      // DB is the source of truth — never trust user_metadata for authorization.
+      if (!callerData || callerData.role !== 'MANAGER') {
         return res.status(403).json({ error: 'Forbidden: solo los managers pueden crear clientes' });
       }
 
@@ -135,13 +154,12 @@ router.get('/me', async (req: any, res) => {
       .eq('id', authData.user.id)
       .maybeSingle();
 
-    res.json({
-      user: userData || {
-        id: authData.user.id,
-        email: authData.user.email,
-        role: authData.user.user_metadata?.role || 'CLIENT'
-      }
-    });
+    if (!userData) {
+      // No row in users table = unprovisioned account. Reject — never derive role from JWT metadata.
+      return res.status(403).json({ error: 'User not provisioned' });
+    }
+
+    res.json({ user: userData });
   } catch (error) {
     console.error('GET /me error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -152,6 +170,8 @@ router.get('/me', async (req: any, res) => {
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email requerido' });
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Formato de email inválido' });
 
   try {
     const redirectUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';

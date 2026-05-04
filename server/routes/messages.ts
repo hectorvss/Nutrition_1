@@ -5,18 +5,30 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 
 // Initialize Storage Bucket
+const ALLOWED_MIME = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav',
+  'application/pdf'
+];
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10MB
+
 const initStorage = async () => {
   try {
     const { data: buckets, error: listError } = await supabaseAdmin.storage.listBuckets();
     if (listError) throw listError;
-    
+
+    const bucketCfg = {
+      public: true, // attachments are accessed via plain URLs in the chat
+      allowedMimeTypes: ALLOWED_MIME, // strict whitelist — no image/* wildcard (would allow SVG with embedded JS)
+      fileSizeLimit: MAX_ATTACHMENT_BYTES,
+    };
+
     if (!buckets.find(b => b.name === 'messages-media')) {
-      const { error: createError } = await supabaseAdmin.storage.createBucket('messages-media', {
-        public: true, // Allow public read access to attachments via URLs
-        allowedMimeTypes: ['image/*', 'audio/*', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-        fileSizeLimit: 52428800 // 50MB
-      });
+      await supabaseAdmin.storage.createBucket('messages-media', bucketCfg);
       console.log('Created storage bucket: messages-media');
+    } else {
+      // Tighten existing bucket settings (no-op if already correct)
+      await supabaseAdmin.storage.updateBucket('messages-media', bucketCfg);
     }
   } catch (err) {
     console.error('Error initializing storage bucket:', err);
@@ -27,6 +39,18 @@ initStorage();
 
 router.use(authenticate);
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Defense against PostgREST filter injection via .or() interpolation —
+// any param destined for a Supabase filter string MUST be a valid UUID.
+const requireUuidParam = (paramName: string) => (req: any, res: any, next: any) => {
+  const v = req.params[paramName];
+  if (!v || !UUID_RE.test(v)) {
+    return res.status(400).json({ error: `Invalid ${paramName} format` });
+  }
+  next();
+};
+
 // Get total unread messages count
 router.get('/unread-count', async (req: any, res) => {
   const userId = req.user.id;
@@ -35,6 +59,7 @@ router.get('/unread-count', async (req: any, res) => {
       .from('messages')
       .select('*', { count: 'exact', head: true })
       .eq('receiver_id', userId)
+      .eq('deleted_by_receiver', false)
       .or('is_read.eq.false,is_read.is.null');
 
     if (error) throw error;
@@ -72,7 +97,11 @@ router.get('/recent', async (req: any, res) => {
     messages?.forEach(msg => {
       const isSender = msg.sender_id === userId;
       const partnerId = isSender ? msg.receiver_id : msg.sender_id;
-      
+
+      // Skip messages soft-deleted for this user
+      if (isSender && msg.deleted_by_sender) return;
+      if (!isSender && msg.deleted_by_receiver) return;
+
       if (!latestMessages[partnerId]) {
         latestMessages[partnerId] = msg;
         unreadCounts[partnerId] = 0;
@@ -101,7 +130,7 @@ router.get('/recent', async (req: any, res) => {
 });
 
 // Get messages for a specific conversation (filtra soft-deletes)
-router.get('/:otherUserId', async (req: any, res) => {
+router.get('/:otherUserId', requireUuidParam('otherUserId'), async (req: any, res) => {
   const userId = req.user.id;
   const { otherUserId } = req.params;
 
@@ -129,7 +158,7 @@ router.get('/:otherUserId', async (req: any, res) => {
 });
 
 // Mark messages from a specific conversation as read
-router.post('/:otherUserId/read', async (req: any, res) => {
+router.post('/:otherUserId/read', requireUuidParam('otherUserId'), async (req: any, res) => {
   const userId = req.user.id;
   const { otherUserId } = req.params;
 
@@ -154,8 +183,27 @@ router.post('/', async (req: any, res) => {
   const sender_id = req.user.id;
   const { receiver_id, content, attachment_url, attachment_type, attachment_name } = req.body;
 
-  if (!receiver_id || (!content && !attachment_url)) {
+  if (!receiver_id || !UUID_RE.test(receiver_id)) {
+    return res.status(400).json({ error: 'Invalid receiver_id format' });
+  }
+  if (!content && !attachment_url) {
     return res.status(400).json({ error: 'Receiver and content or attachment are required' });
+  }
+
+  // Validate attachment_url, if present, must point to OUR Supabase Storage messages-media bucket.
+  // Otherwise an attacker could store a phishing link as an "attachment".
+  if (attachment_url) {
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+    const expectedPrefix = supabaseUrl.replace(/\/$/, '') + '/storage/v1/object/public/messages-media/';
+    if (typeof attachment_url !== 'string' || !attachment_url.startsWith(expectedPrefix)) {
+      return res.status(400).json({ error: 'attachment_url must point to messages-media storage' });
+    }
+    if (attachment_type && !['image', 'audio', 'file', 'pdf'].includes(String(attachment_type))) {
+      return res.status(400).json({ error: 'Invalid attachment_type' });
+    }
+    if (attachment_name && /[\\/\0]/.test(String(attachment_name))) {
+      return res.status(400).json({ error: 'Invalid attachment_name' });
+    }
   }
 
   try {
@@ -207,24 +255,15 @@ router.post('/', async (req: any, res) => {
 
 // Clear conversation history — soft-delete: solo marca como borrado para el usuario que lo solicita
 // Los mensajes siguen existiendo para el otro usuario
-router.delete('/:otherUserId', async (req: any, res) => {
+router.delete('/:otherUserId', requireUuidParam('otherUserId'), async (req: any, res) => {
   const userId = req.user.id;
   const { otherUserId } = req.params;
 
   try {
-    // Marcar mensajes ENVIADOS por mí como borrados para mí
-    await supabaseAdmin
-      .from('messages')
-      .update({ deleted_by_sender: true })
-      .eq('sender_id', userId)
-      .eq('receiver_id', otherUserId);
-
-    // Marcar mensajes RECIBIDOS por mí como borrados para mí
-    await supabaseAdmin
-      .from('messages')
-      .update({ deleted_by_receiver: true })
-      .eq('sender_id', otherUserId)
-      .eq('receiver_id', userId);
+    await Promise.all([
+      supabaseAdmin.from('messages').update({ deleted_by_sender: true }).eq('sender_id', userId).eq('receiver_id', otherUserId),
+      supabaseAdmin.from('messages').update({ deleted_by_receiver: true }).eq('sender_id', otherUserId).eq('receiver_id', userId),
+    ]);
 
     res.json({ success: true });
   } catch (error: any) {

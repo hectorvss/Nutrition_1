@@ -33,10 +33,9 @@ const verifyManager = async (req: any, res: any, next: any) => {
       return res.status(500).json({ error: 'Error verifying user role' });
     }
 
-    // Fallback a user_metadata si el registro aún no existe en la tabla users
-    const role = userData?.role || user.user_metadata?.role;
-
-    if (role !== 'MANAGER') {
+    // DB is the source of truth — never fall back to user_metadata (it is user-mutable
+    // via supabase.auth.updateUser and would allow privilege escalation).
+    if (!userData || userData.role !== 'MANAGER') {
       return res.status(403).json({ error: 'Forbidden: se requiere rol MANAGER' });
     }
 
@@ -49,6 +48,9 @@ const verifyManager = async (req: any, res: any, next: any) => {
 };
 
 router.use(verifyManager);
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const KEY_RE = /^[a-z0-9_-]{1,64}$/i;
 
 // Get current manager profile
 router.get('/profile', async (req: any, res) => {
@@ -71,6 +73,20 @@ router.get('/profile', async (req: any, res) => {
 router.post('/profile', async (req: any, res) => {
   const profileData = req.body;
   const userId = req.user.id;
+
+  // Validate avatar_url: must be a small data URL of an allowed image type, OR null/empty.
+  if (profileData.avatar_url) {
+    const av = String(profileData.avatar_url);
+    const isAllowedDataUrl = /^data:image\/(jpeg|png|webp);base64,/i.test(av);
+    const isHttpsUrl = /^https:\/\//i.test(av);
+    if (!isAllowedDataUrl && !isHttpsUrl) {
+      return res.status(400).json({ error: 'avatar_url must be an https URL or a data URL of jpeg/png/webp' });
+    }
+    // Cap size at ~2MB worth of base64 (≈2.7M chars). Rejects huge base64 blobs.
+    if (av.length > 2_800_000) {
+      return res.status(413).json({ error: 'avatar_url too large (max 2 MB)' });
+    }
+  }
 
   try {
     const { data: existing } = await supabaseAdmin
@@ -283,9 +299,9 @@ router.get('/clients', async (req: any, res) => {
     
     // Helper to map adherence string/score to percentage
     const mapAdherence = (str: string, d?: any): number => {
-      // Prioritize numeric slider (1-10 -> 10-100%)
-      if (d?.nutrition_adherence_score !== undefined) return Number(d.nutrition_adherence_score) * 10;
-      if (d?.adherence_score !== undefined) return Number(d.adherence_score) * 10;
+      // Prioritize numeric slider (1-10 -> 10-100%), clamped to [0, 100]
+      if (d?.nutrition_adherence_score !== undefined) return Math.min(Math.max(Number(d.nutrition_adherence_score) * 10, 0), 100);
+      if (d?.adherence_score !== undefined) return Math.min(Math.max(Number(d.adherence_score) * 10, 0), 100);
       
       // Fallback to text
       if (!str) return 0;
@@ -382,6 +398,11 @@ router.patch('/clients/:id/status', async (req: any, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+
+    const VALID_STATUSES = ['Active', 'Archived', 'Inactive'];
+    if (!status || !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
+    }
 
     const { data: updatedUser, error } = await supabaseAdmin
       .from('users')
@@ -520,17 +541,8 @@ router.post('/clients/:id/nutrition-plan', async (req: any, res) => {
   const { name, data_json } = req.body;
   const managerId = req.user.id;
   try {
-    // 1. Check if a plan already exists for this client by this manager
-    const { data: existingPlan, error: fetchError } = await supabaseAdmin
-      .from('nutrition_plans')
-      .select('id')
-      .eq('client_id', id)
-      .eq('created_by', managerId)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-
-    let planData, planError;
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
 
     const payload = {
       client_id: id,
@@ -540,26 +552,12 @@ router.post('/clients/:id/nutrition-plan', async (req: any, res) => {
       updated_at: new Date().toISOString()
     };
 
-    if (existingPlan) {
-      // 2a. Update existing plan
-      const { data, error } = await supabaseAdmin
-        .from('nutrition_plans')
-        .update(payload)
-        .eq('id', existingPlan.id)
-        .select()
-        .single();
-      planData = data;
-      planError = error;
-    } else {
-      // 2b. Insert new plan
-      const { data, error } = await supabaseAdmin
-        .from('nutrition_plans')
-        .insert(payload)
-        .select()
-        .single();
-      planData = data;
-      planError = error;
-    }
+    // Atomic upsert — relies on UNIQUE(client_id, created_by) constraint
+    const { data: planData, error: planError } = await supabaseAdmin
+      .from('nutrition_plans')
+      .upsert(payload, { onConflict: 'client_id,created_by' })
+      .select()
+      .single();
 
     if (planError) throw planError;
     res.json(planData);
@@ -595,17 +593,8 @@ router.post('/clients/:id/training-program', async (req: any, res) => {
   const { name, data_json } = req.body;
   const managerId = req.user.id;
   try {
-    // 1. Check if a program already exists for this client by this manager
-    const { data: existingProgram, error: fetchError } = await supabaseAdmin
-      .from('training_programs')
-      .select('id')
-      .eq('client_id', id)
-      .eq('created_by', managerId)
-      .maybeSingle();
-
-    if (fetchError) throw fetchError;
-
-    let programData, programError;
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
 
     const payload = {
       client_id: id,
@@ -615,26 +604,12 @@ router.post('/clients/:id/training-program', async (req: any, res) => {
       updated_at: new Date().toISOString()
     };
 
-    if (existingProgram) {
-      // 2a. Update existing program
-      const { data, error } = await supabaseAdmin
-        .from('training_programs')
-        .update(payload)
-        .eq('id', existingProgram.id)
-        .select()
-        .single();
-      programData = data;
-      programError = error;
-    } else {
-      // 2b. Insert new program
-      const { data, error } = await supabaseAdmin
-        .from('training_programs')
-        .insert(payload)
-        .select()
-        .single();
-      programData = data;
-      programError = error;
-    }
+    // Atomic upsert — relies on UNIQUE(client_id, created_by) constraint
+    const { data: programData, error: programError } = await supabaseAdmin
+      .from('training_programs')
+      .upsert(payload, { onConflict: 'client_id,created_by' })
+      .select()
+      .single();
 
     if (programError) throw programError;
     res.json(programData);
@@ -685,6 +660,9 @@ router.post('/clients/:id/apply-master-plan', async (req: any, res) => {
   const managerId = req.user.id;
 
   try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     // 1. Fetch Master Plan detail
     let masterPlan: any = null;
     const { data: mData, error: mError } = await supabaseAdmin
@@ -1229,14 +1207,7 @@ router.post('/clients/:id/apply-master-plan', async (req: any, res) => {
       mode: 'example' // As requested: predeterminado en Example Mode
     };
 
-    // 3. Upsert into nutrition_plans
-    const { data: existingPlan } = await supabaseAdmin
-      .from('nutrition_plans')
-      .select('id')
-      .eq('client_id', id)
-      .eq('created_by', managerId)
-      .maybeSingle();
-
+    // 3. Upsert into nutrition_plans (atomic — relies on UNIQUE(client_id, created_by))
     const payload = {
       client_id: id,
       created_by: managerId,
@@ -1245,12 +1216,11 @@ router.post('/clients/:id/apply-master-plan', async (req: any, res) => {
       updated_at: new Date().toISOString()
     };
 
-    let result;
-    if (existingPlan) {
-      result = await supabaseAdmin.from('nutrition_plans').update(payload).eq('id', existingPlan.id).select().single();
-    } else {
-      result = await supabaseAdmin.from('nutrition_plans').insert(payload).select().single();
-    }
+    const result = await supabaseAdmin
+      .from('nutrition_plans')
+      .upsert(payload, { onConflict: 'client_id,created_by' })
+      .select()
+      .single();
 
     if (result.error) throw result.error;
     res.json(result.data);
@@ -1267,6 +1237,9 @@ router.post('/clients/:id/apply-training-master-plan', async (req: any, res: any
   const managerId = req.user.id;
 
   try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const fallbacks: Record<string, any> = {
       'training_fuerza-start': {
         name: 'Fuerza Start',
@@ -1477,14 +1450,7 @@ router.post('/clients/:id/apply-training-master-plan', async (req: any, res: any
 
     const masterPlan = fallbacks[slug];
 
-    // Upsert into training_programs
-    const { data: existingProgram } = await supabaseAdmin
-      .from('training_programs')
-      .select('id')
-      .eq('client_id', id)
-      .eq('created_by', managerId)
-      .maybeSingle();
-
+    // Atomic upsert into training_programs (relies on UNIQUE(client_id, created_by))
     const payload = {
       client_id: id,
       created_by: managerId,
@@ -1493,12 +1459,11 @@ router.post('/clients/:id/apply-training-master-plan', async (req: any, res: any
       updated_at: new Date().toISOString()
     };
 
-    let result;
-    if (existingProgram) {
-      result = await supabaseAdmin.from('training_programs').update(payload).eq('id', existingProgram.id).select().single();
-    } else {
-      result = await supabaseAdmin.from('training_programs').insert(payload).select().single();
-    }
+    const result = await supabaseAdmin
+      .from('training_programs')
+      .upsert(payload, { onConflict: 'client_id,created_by' })
+      .select()
+      .single();
 
     if (result.error) throw result.error;
     res.json(result.data);
@@ -1548,11 +1513,17 @@ router.get('/settings', verifyManager, async (req: any, res) => {
 // Update manager settings
 router.post('/settings', verifyManager, async (req: any, res) => {
   try {
+    const ALLOWED_SETTINGS_FIELDS = ['theme_color', 'dark_mode', 'density', 'font_scale', 'notification_prefs', 'language'];
+    const filtered: Record<string, any> = {};
+    for (const key of ALLOWED_SETTINGS_FIELDS) {
+      if (key in req.body) filtered[key] = req.body[key];
+    }
+
     const { data, error } = await supabaseAdmin
       .from('manager_settings')
       .upsert({
         user_id: req.user.id,
-        ...req.body
+        ...filtered
       })
       .select()
       .single();
@@ -1706,46 +1677,71 @@ router.post('/security/2fa/toggle', async (req: any, res) => {
 });// Get real aggregated analytics for this manager
 router.get('/analytics', async (req: any, res) => {
   const managerId = req.user.id;
-  
+
   try {
-    // 1. Basic Counts
-    const { count: totalClients } = await supabaseAdmin
-      .from('users')
-      .select('*', { count: 'exact', head: true })
-      .eq('manager_id', managerId)
-      .eq('role', 'CLIENT');
-      
-    const { count: activeClients } = await supabaseAdmin
-      .from('users')
-      .select('*', { count: 'exact', head: true })
-      .eq('manager_id', managerId)
-      .eq('role', 'CLIENT')
-      .eq('status', 'Active');
-      
     const now = new Date();
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    
-    const { count: newClients } = await supabaseAdmin
+
+    // 1. Single clients fetch — replaces 3 serial COUNT queries
+    const { data: allClientData } = await supabaseAdmin
       .from('users')
-      .select('*', { count: 'exact', head: true })
+      .select('id, created_at, status')
       .eq('manager_id', managerId)
       .eq('role', 'CLIENT')
-      .gte('created_at', thirtyDaysAgo.toISOString());
+      .order('created_at', { ascending: true });
 
-    // 2. Performance & Activity Metrics (from Check-ins)
-    const { data: checkIns, error: checkInsError } = await supabaseAdmin
-      .from('check_ins')
-      .select(`
-        date,
-        data_json,
-        client_id,
-        users!inner (manager_id, created_at)
-      `)
-      .eq('users.manager_id', managerId)
-      .gte('date', sixtyDaysAgo.toISOString().split('T')[0]);
+    const totalClients = allClientData?.length || 0;
+    const activeClients = allClientData?.filter(c => c.status === 'Active').length || 0;
+    const newClients = allClientData?.filter(c => new Date(c.created_at) >= thirtyDaysAgo).length || 0;
+    const clientIds = (allClientData || []).map(c => c.id);
+
+    // 2. Run all main data queries in parallel
+    const [
+      checkInsRes,
+      recentCheckInsRes,
+      recentMessagesRes,
+      allCheckInsRes,
+      allProgramsRes,
+      integrationsRes,
+      recentSubmissionsRes,
+    ] = await Promise.all([
+      // Performance metrics: check_ins last 60 days — filtered by clientIds (no join needed)
+      clientIds.length > 0
+        ? supabaseAdmin.from('check_ins').select('date, data_json, client_id').in('client_id', clientIds).gte('date', sixtyDaysAgo.toISOString().split('T')[0])
+        : Promise.resolve({ data: [], error: null }),
+      // Recent legacy check-ins for activity feed
+      clientIds.length > 0
+        ? supabaseAdmin.from('check_ins').select('id, date, client_id, reviewed_at, users!inner (email, profiles!left (full_name))').in('client_id', clientIds).order('date', { ascending: false }).limit(10)
+        : Promise.resolve({ data: [], error: null }),
+      // Recent messages received by manager
+      supabaseAdmin.from('messages').select('id, content, created_at, sender_id, users!sender_id (email, role, profiles!left (full_name))').eq('receiver_id', managerId).eq('users.role', 'CLIENT').order('created_at', { ascending: false }).limit(10),
+      // All check-ins for cohort analysis (lightweight: only client_id + date)
+      clientIds.length > 0
+        ? supabaseAdmin.from('check_ins').select('client_id, date').in('client_id', clientIds)
+        : Promise.resolve({ data: [], error: null }),
+      // Training programs
+      clientIds.length > 0
+        ? supabaseAdmin.from('manager_training_programs').select('data_json').in('client_id', clientIds)
+        : Promise.resolve({ data: [], error: null }),
+      // Integrations (for Stripe revenue)
+      supabaseAdmin.from('integrations').select('*').eq('user_id', managerId).maybeSingle(),
+      // Recent template-based submissions (new check-in system)
+      clientIds.length > 0
+        ? supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, client_id, users!inner (email, profiles!left (full_name))').in('client_id', clientIds).order('submitted_at', { ascending: false }).limit(10)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const checkIns = checkInsRes.data || [];
+    const checkInsError = checkInsRes.error;
+    const recentCheckIns = recentCheckInsRes.data || [];
+    const recentMessages = recentMessagesRes.data || [];
+    const allCheckIns = allCheckInsRes.data || [];
+    const allPrograms = allProgramsRes.data || [];
+    const recentSubmissions = recentSubmissionsRes.data || [];
+    const integrations = integrationsRes.data;
 
     if (checkInsError) throw checkInsError;
 
@@ -1894,26 +1890,13 @@ router.get('/analytics', async (req: any, res) => {
       training.intensityTrends = trainingByDay.map(d => d.count > 0 ? Number((d.intensity / d.count).toFixed(1)) : 0);
     }
 
-    // 4. Cohort Analysis Logic
-    // Get all clients to group by month
-    const { data: allClients } = await supabaseAdmin
-      .from('users')
-      .select('id, created_at')
-      .eq('manager_id', managerId)
-      .eq('role', 'CLIENT')
-      .order('created_at', { ascending: true });
-
-    const { data: allCheckIns } = await supabaseAdmin
-      .from('check_ins')
-      .select('client_id, date')
-      .in('client_id', (allClients || []).map(c => c.id));
-
+    // 4. Cohort Analysis Logic (uses allClientData + allCheckIns already fetched)
     const cohorts: any[] = [];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+
     // Group clients by month
     const clientGroups: Record<string, string[]> = {};
-    allClients?.forEach(c => {
+    allClientData?.forEach(c => {
       const date = new Date(c.created_at);
       const key = `${months[date.getMonth()]} ${date.getFullYear()}`;
       if (!clientGroups[key]) clientGroups[key] = [];
@@ -1922,8 +1905,8 @@ router.get('/analytics', async (req: any, res) => {
 
     // For each cohort, calculate retention for subsequent months
     Object.keys(clientGroups).reverse().slice(0, 5).reverse().forEach(cohortKey => {
-      const clientIds = clientGroups[cohortKey];
-      const cohortStartDate = new Date(allClients?.find(c => clientIds.includes(c.id))?.created_at || '');
+      const cohortClientIds = clientGroups[cohortKey];
+      const cohortStartDate = new Date(allClientData?.find(c => cohortClientIds.includes(c.id))?.created_at || '');
       
       const retention = [100]; // Month 0 is always 100%
       for (let i = 1; i <= 6; i++) {
@@ -1936,14 +1919,14 @@ router.get('/analytics', async (req: any, res) => {
         }
 
         const activeInMonth = new Set(
-          (allCheckIns || []).filter(ci => {
-            if (!clientIds.includes(ci.client_id)) return false;
+          allCheckIns.filter(ci => {
+            if (!cohortClientIds.includes(ci.client_id)) return false;
             const ciDate = new Date(ci.date);
             return ciDate.getMonth() === targetMonth.getMonth() && ciDate.getFullYear() === targetMonth.getFullYear();
           }).map(ci => ci.client_id)
         ).size;
 
-        retention.push(Math.round((activeInMonth / clientIds.length) * 100));
+        retention.push(Math.round((activeInMonth / cohortClientIds.length) * 100));
       }
       cohorts.push({ cohort: cohortKey, data: retention });
     });
@@ -1951,45 +1934,7 @@ router.get('/analytics', async (req: any, res) => {
     // 5. Compliance Score Calculation (Weighted aggregation of adherence)
     const complianceScore = training.avgCompletion * 0.4 + nutrition.avgHydration * 0.3 + (retentionRate) * 0.3;
 
-    // 6. Recent Activity & Attention Required
-    const { data: recentCheckIns } = await supabaseAdmin
-      .from('check_ins')
-      .select(`
-        id, 
-        date, 
-        client_id, 
-        reviewed_at, 
-        users!inner (
-          email,
-          manager_id,
-          profiles!left (
-            full_name
-          )
-        )
-      `)
-      .eq('users.manager_id', managerId)
-      .order('date', { ascending: false })
-      .limit(10);
-
-    // Fetch recent messages received by manager from clients
-    const { data: recentMessages } = await supabaseAdmin
-      .from('messages')
-      .select(`
-        id,
-        content,
-        created_at,
-        sender_id,
-        users!sender_id (
-          email,
-          role,
-          profiles!left (full_name)
-        )
-      `)
-      .eq('receiver_id', managerId)
-      .eq('users.role', 'CLIENT')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
+    // 6. Recent Activity & Attention Required (recentCheckIns + recentMessages from Promise.all above)
     const activity = [
       ...(recentCheckIns || []).map(ci => {
         const userData = ci.users as any;
@@ -2004,6 +1949,21 @@ router.get('/analytics', async (req: any, res) => {
           color: 'bg-emerald-100 text-emerald-600',
           checkInId: ci.id,
           clientId: ci.client_id
+        };
+      }),
+      // New template-based submissions
+      ...recentSubmissions.map(sub => {
+        const userData = sub.users as any;
+        const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+        const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
+        return {
+          type: 'CHECK_IN',
+          title: 'New Check-in',
+          sub: `from ${clientName}`,
+          time: sub.submitted_at,
+          color: 'bg-emerald-100 text-emerald-600',
+          checkInId: sub.id,
+          clientId: sub.client_id
         };
       }),
       ...(recentMessages || []).map(msg => {
@@ -2041,6 +2001,23 @@ router.get('/analytics', async (req: any, res) => {
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=random`
           };
         }),
+      // Template-based submissions always need manager review
+      ...recentSubmissions.map(sub => {
+        const userData = sub.users as any;
+        const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
+        const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
+        return {
+          id: sub.id,
+          type: 'CHECK_IN',
+          client: clientName,
+          clientId: sub.client_id,
+          title: 'Review Check-in',
+          desc: `Template submission from ${clientName}`,
+          timeLabel: sub.submitted_at,
+          status: 'pending',
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=random`
+        };
+      }),
       ...(recentMessages || [])
         .slice(0, 5) // Prioritize messages
         .map(msg => {
@@ -2061,14 +2038,9 @@ router.get('/analytics', async (req: any, res) => {
         })
     ].sort((a, b) => new Date(b.timeLabel).getTime() - new Date(a.timeLabel).getTime());
 
-    // 7. Revenue & Stripe
+    // 7. Revenue & Stripe (integrations already fetched in Promise.all)
     let revenue = 0;
     let monthlyRevenue = Array(12).fill(0);
-    const { data: integrations } = await supabaseAdmin
-      .from('integrations')
-      .select('*')
-      .eq('user_id', managerId)
-      .maybeSingle();
 
     if (integrations?.stripe_enabled && integrations?.stripe_secret_key) {
       try {
@@ -2085,12 +2057,7 @@ router.get('/analytics', async (req: any, res) => {
       } catch (sErr) { console.error('Stripe analytics error:', sErr); }
     }
 
-    // 7. Training Distribution & Muscle Frequency (Based on Assigned Plans)
-    const { data: allPrograms } = await supabaseAdmin
-      .from('manager_training_programs')
-      .select('data_json')
-      .in('client_id', (allClients || []).map(c => c.id));
-
+    // 7. Training Distribution & Muscle Frequency (allPrograms from Promise.all above)
     let typeDist: Record<string, number> = { Strength: 0, Hypertrophy: 0, Mobility: 0, Cardio: 0 };
     let muscleFreq: Record<string, number> = { Legs: 0, Back: 0, Chest: 0, Shoulders: 0, Arms: 0, Core: 0 };
     let totalWorkouts = 0;
@@ -2383,7 +2350,11 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       dailyCaloricAvg = countKcal > 0 ? Math.round(totalKcal / countKcal) : 0;
     }
 
-    // 6. Recent Activity
+    // 6. Recent Activity — id was validated as UUID earlier (route ownership check), so safe in .or().
+    // Defense in depth: re-check format before interpolating into PostgREST filter string.
+    if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid client id format' });
+    }
     const { data: recentMsgs } = await supabaseAdmin
       .from('messages')
       .select('created_at, content')
@@ -2743,7 +2714,11 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
 // Supplementation handlers
 router.get('/clients/:id/supplementation', async (req: any, res) => {
   const { id } = req.params;
+  const managerId = req.user.id;
   try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const { data: profile, error } = await supabaseAdmin
       .from('clients_profiles')
       .select('metadata')
@@ -2760,8 +2735,12 @@ router.get('/clients/:id/supplementation', async (req: any, res) => {
 
 router.post('/clients/:id/supplementation', async (req: any, res) => {
   const { id } = req.params;
+  const managerId = req.user.id;
   const { supplementation } = req.body;
   try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const { data: profile } = await supabaseAdmin
       .from('clients_profiles')
       .select('metadata')
@@ -2790,6 +2769,7 @@ router.post('/clients/:id/supplementation', async (req: any, res) => {
 router.post('/onboarding/:id/publish', async (req: any, res) => {
   const { user_ids } = req.body; // Array of user IDs or 'all'
   const flowId = req.params.id;
+  const managerId = req.user.id;
 
   try {
     // 1. Mark flow as published
@@ -2800,17 +2780,21 @@ router.post('/onboarding/:id/publish', async (req: any, res) => {
 
     if (updateError) throw updateError;
 
-    // 2. Assign to users
-    let targets = [];
+    // 2. Resolve targets — ALWAYS scoped to clients owned by this manager.
+    //    Without this filter a malicious manager could push onboarding to another manager's clients.
+    const { data: ownedClients } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT');
+    const ownedIds = new Set((ownedClients || []).map(c => c.id));
+
+    let targets: string[] = [];
     if (user_ids === 'all') {
-      const { data: clients } = await supabaseAdmin
-        .from('users')
-        .select('id')
-        .eq('manager_id', req.user.id)
-        .eq('role', 'CLIENT');
-      targets = clients?.map(c => c.id) || [];
-    } else {
-      targets = user_ids || [];
+      targets = Array.from(ownedIds);
+    } else if (Array.isArray(user_ids)) {
+      // Intersect requested list with owned clients — silently drops foreign IDs.
+      targets = user_ids.filter((u: any) => typeof u === 'string' && ownedIds.has(u));
     }
 
     if (targets.length > 0) {
@@ -2894,7 +2878,8 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
     // Standardize: if task has date and start_time/time
     const dateStr = task.date || new Date().toISOString().split('T')[0];
     const timeStr = task.time || task.start_time || '09:00';
-    const endStr = task.end_time || (parseInt(timeStr.split(':')[0]) + 1).toString().padStart(2, '0') + ':' + timeStr.split(':')[1];
+    const derivedEndHour = (parseInt(timeStr.split(':')[0]) + 1) % 24;
+    const endStr = task.end_time || (derivedEndHour.toString().padStart(2, '0') + ':' + timeStr.split(':')[1]);
 
     const eventBody = {
       summary: task.title,
@@ -3163,7 +3148,11 @@ router.delete('/tasks/:id', async (req: any, res) => {
 
 router.get('/clients/:clientId/roadmap', async (req: any, res) => {
   const { clientId } = req.params;
+  const managerId = req.user.id;
   try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', clientId).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const { data, error } = await supabaseAdmin
       .from('roadmaps')
       .select('*')
@@ -3192,6 +3181,13 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
   const { clientId } = req.params;
   const managerId = req.user.id;
   const body = req.body;
+
+  try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', clientId).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+  } catch (ownerErr: any) {
+    return res.status(500).json({ error: ownerErr.message || 'Server error' });
+  }
 
   // Extract core fields and ensure data_json is clean
   const data_json = body.data_json || body;
@@ -3277,7 +3273,11 @@ router.get('/clients/:id/workout-logs', async (req: any, res) => {
 // Save or update a workout log for a client (Manager side)
 router.post('/clients/:id/workout-logs', async (req: any, res) => {
   const clientId = req.params.id;
+  const managerId = req.user.id;
   try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', clientId).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const { plan_id, workout_name, day_key, exercises, notes, session_rpe, logged_at } = req.body;
     const { data, error } = await supabaseAdmin
       .from('workout_logs')
@@ -3303,8 +3303,12 @@ router.post('/clients/:id/workout-logs', async (req: any, res) => {
 });
 
 router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
-  const { logId } = req.params;
+  const { id: clientId, logId } = req.params;
+  const managerId = req.user.id;
   try {
+    const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', clientId).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const { exercises, notes, session_rpe } = req.body;
     const { data, error } = await supabaseAdmin
       .from('workout_logs')
@@ -3314,6 +3318,7 @@ router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
         session_rpe: session_rpe || null
       })
       .eq('id', logId)
+      .eq('client_id', clientId)
       .select()
       .single();
 
@@ -3354,17 +3359,19 @@ router.get('/nutrition-templates', async (req: any, res: any) => {
 router.get('/nutrition-templates/:id', async (req: any, res: any) => {
   const { id } = req.params;
   try {
-    // We prioritize the exact ID/Key match, but still verify language if needed
-    // Usually, if they have the ID, they want THAT specifically.
-    const { data, error } = await supabaseAdmin
-      .from('nutrition_templates')
-      .select('*')
-      .or(`id.eq.${id},key.eq.${id}`)
-      .maybeSingle();
+    // The :id param can be either a UUID or a slug "key". Validate which one and
+    // use parameterized .eq() — never interpolate raw user input into .or() filter strings.
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) {
+      return res.status(400).json({ error: 'Invalid template id/key format' });
+    }
+    const query = supabaseAdmin.from('nutrition_templates').select('*');
+    const { data, error } = await (isUuid ? query.eq('id', id) : query.eq('key', id)).maybeSingle();
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Template not found' });
-    
+
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching template detail:', error);
@@ -3401,11 +3408,13 @@ router.get('/training-templates', async (req: any, res: any) => {
 router.get('/training-templates/:id', async (req: any, res: any) => {
   const { id } = req.params;
   try {
-    const { data, error } = await supabaseAdmin
-      .from('training_templates')
-      .select('*')
-      .or(`id.eq.${id},key.eq.${id}`)
-      .maybeSingle();
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) {
+      return res.status(400).json({ error: 'Invalid template id/key format' });
+    }
+    const query = supabaseAdmin.from('training_templates').select('*');
+    const { data, error } = await (isUuid ? query.eq('id', id) : query.eq('key', id)).maybeSingle();
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Template not found' });

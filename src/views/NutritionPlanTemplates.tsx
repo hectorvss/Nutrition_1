@@ -28,7 +28,7 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
     const fetchTemplates = async () => {
       try {
         const response = await fetch('/api/manager/nutrition-templates', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('sb-token')}` }
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
         });
         const data = await response.json();
         if (Array.isArray(data)) {

@@ -243,7 +243,10 @@ const verifyClient = _verifyClient;
 const verifyManager = _verifyManager;
 
 // Client: Submit a new check-in
+// DEPRECATED: Use POST /client/submissions (template-based) for new check-ins.
+// This endpoint remains for backward compatibility with clients that haven't migrated.
 router.post('/client/check-ins', verifyClient, async (req: any, res) => {
+  console.warn('[DEPRECATED] POST /client/check-ins used by client', req.user?.id, '— prefer /client/submissions');
   const { data_json, date } = req.body;
   const clientId = req.user.id;
 
@@ -537,12 +540,14 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
 
-    // 2. Try to update dynamic table first
+    // 2. Try to update dynamic table first — scope to BOTH id and client_id
+    //    so a manager can't review check-ins of clients they do own with checkInIds from other clients.
     const reviewedAt = new Date().toISOString();
     const { data: dynamicUpdate, error: dynamicUpdateError } = await supabaseAdmin
       .from('client_checkin_submissions')
       .update({ coach_notes, next_week_focus, reviewed_at: reviewedAt, status: 'reviewed' })
       .eq('id', checkInId)
+      .eq('client_id', id)
       .select()
       .maybeSingle();
 
@@ -551,11 +556,12 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
        return res.json({ success: true, data: dynamicUpdate });
     }
 
-    // 3. Fallback to legacy table
+    // 3. Fallback to legacy table — same scoping
     const { data: legacyUpdate, error: legacyUpdateError } = await supabaseAdmin
       .from('check_ins')
       .update({ coach_notes, next_week_focus, reviewed_at: reviewedAt })
       .eq('id', checkInId)
+      .eq('client_id', id)
       .select()
       .single();
 
@@ -566,19 +572,25 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
           .from('check_ins')
           .select('data_json')
           .eq('id', checkInId)
+          .eq('client_id', id)
           .single();
-        
-        const new_dj = { 
-          ...(current?.data_json || {}), 
-          coach_notes, 
-          next_week_focus, 
-          reviewed_at: reviewedAt 
+
+        if (!current) {
+          return res.status(404).json({ error: 'Check-in not found for this client' });
+        }
+
+        const new_dj = {
+          ...(current.data_json || {}),
+          coach_notes,
+          next_week_focus,
+          reviewed_at: reviewedAt
         };
 
         const { error: fallbackError } = await supabaseAdmin
           .from('check_ins')
           .update({ data_json: new_dj })
-          .eq('id', checkInId);
+          .eq('id', checkInId)
+          .eq('client_id', id);
         
         if (fallbackError) throw fallbackError;
         return res.json({ success: true, method: 'data_json' });
@@ -716,17 +728,28 @@ router.post('/manager/checkin-templates', verifyManager, async (req: any, res) =
 router.patch('/manager/checkin-templates/:id', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
-  const updates = req.body;
+  const ALLOWED = ['name', 'description', 'template_schema', 'is_default', 'status'];
+  const updates: Record<string, any> = {};
+  for (const key of ALLOWED) {
+    if (key in req.body) updates[key] = req.body[key];
+  }
 
   try {
+    // Scope SELECT by manager_id — prevents reading other managers' templates
+    // and is required for the optimistic-lock UPDATE below to be safe.
     const { data: current } = await supabaseAdmin
       .from('checkin_templates')
       .select('version, template_schema')
       .eq('id', id)
-      .single();
+      .eq('manager_id', managerId)
+      .maybeSingle();
 
-    let newVersion = current?.version || 1;
-    if (updates.template_schema && JSON.stringify(updates.template_schema) !== JSON.stringify(current?.template_schema)) {
+    if (!current) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    let newVersion = current.version || 1;
+    if (updates.template_schema && JSON.stringify(updates.template_schema) !== JSON.stringify(current.template_schema)) {
       newVersion += 1;
     }
 
@@ -737,6 +760,7 @@ router.patch('/manager/checkin-templates/:id', verifyManager, async (req: any, r
         .eq('manager_id', managerId);
     }
 
+    // Optimistic concurrency: refuse if version moved since we read it.
     const { data, error } = await supabaseAdmin
       .from('checkin_templates')
       .update({
@@ -746,10 +770,14 @@ router.patch('/manager/checkin-templates/:id', verifyManager, async (req: any, r
       })
       .eq('id', id)
       .eq('manager_id', managerId)
+      .eq('version', current.version || 1)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+      return res.status(409).json({ error: 'Template was modified concurrently. Reload and try again.' });
+    }
     res.json(data);
   } catch (error: any) {
     console.error('Error updating template:', error);

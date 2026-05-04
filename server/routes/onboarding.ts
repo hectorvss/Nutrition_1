@@ -109,10 +109,16 @@ router.post('/manager/templates', verifyManager, async (req: any, res) => {
 router.patch('/manager/templates/:id', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
+  const { name, description, template_schema, is_default } = req.body;
+  const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+  if (name !== undefined) patch.name = name;
+  if (description !== undefined) patch.description = description;
+  if (template_schema !== undefined) patch.template_schema = template_schema;
+  if (is_default !== undefined) patch.is_default = !!is_default;
   try {
     const { data, error } = await supabaseAdmin
       .from('onboarding_templates')
-      .update({ ...req.body, updated_at: new Date().toISOString() })
+      .update(patch)
       .eq('id', id)
       .eq('manager_id', managerId)
       .select().single();

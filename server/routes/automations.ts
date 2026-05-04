@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 
@@ -163,34 +164,40 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           }
         }
 
-        // 5. Check for duplicates or "Once" rules — usar insert directo como lock
+        // 5. "Once" rules: claim delivery slot atomically via INSERT to a dedicated tracker.
+        // The PRIMARY KEY (automation_id, client_id) makes this race-free — two concurrent
+        // workers cannot both succeed, the loser gets a unique-violation and skips.
         if (rules.frequency === 'Once') {
-          // Intentar insertar el log primero como barrera anti-race-condition
-          // Si ya existe un log para esta combinación, skip
-          const { data: existingLogs } = await supabaseAdmin
-            .from('automation_logs')
-            .select('id')
-            .eq('automation_id', automation.id)
-            .eq('client_id', clientId)
-            .limit(1);
+          const { error: claimError } = await supabaseAdmin
+            .from('automation_once_deliveries')
+            .insert({ automation_id: automation.id, client_id: clientId });
 
-          if (existingLogs && existingLogs.length > 0) continue;
+          if (claimError) {
+            // 23505 = unique violation → already delivered. Any other error: log and skip too.
+            if (claimError.code !== '23505') {
+              console.error(`automation_once_deliveries claim failed for ${automation.id}/${clientId}:`, claimError);
+            }
+            continue;
+          }
         }
 
         // 6. Replace placeholders (manager profile se cachea por automation arriba)
         const coachName = _cachedCoachName;
 
+        const clientName = profile?.full_name || 'there';
+        const firstName = clientName.split(' ')[0];
+        const coachFirstName = coachName.split(' ')[0];
         let finalMessage = automation.message
-          .replace(/{Client Name}/g, profile?.full_name || 'there')
-          .replace(/{First Name}/g, (profile?.full_name || 'there').split(' ')[0])
-          .replace(/{Coach Name}/g, coachName)
-          .replace(/{Coach First Name}/g, coachName.split(' ')[0])
-          .replace(/{Current Weight}/g, currentWeight.toString())
-          .replace(/{Goal Weight}/g, goalWeight.toString())
-          .replace(/{Adherence Rate}/g, `${adherence}%`)
-          .replace(/{Check-in Day}/g, checkInDay)
-          .replace(/{Days Inactive}/g, daysInactive.toString())
-          .replace(/{Days Until Expiry}/g, "30"); // Fallback or calculate if column exists
+          .replace(/{Client Name}/g, () => clientName)
+          .replace(/{First Name}/g, () => firstName)
+          .replace(/{Coach Name}/g, () => coachName)
+          .replace(/{Coach First Name}/g, () => coachFirstName)
+          .replace(/{Current Weight}/g, () => currentWeight.toString())
+          .replace(/{Goal Weight}/g, () => goalWeight.toString())
+          .replace(/{Adherence Rate}/g, () => `${adherence}%`)
+          .replace(/{Check-in Day}/g, () => checkInDay)
+          .replace(/{Days Inactive}/g, () => daysInactive.toString())
+          .replace(/{Days Until Expiry}/g, () => "30");
         
         // 7. Send message
         const { error: sendError } = await supabaseAdmin
@@ -312,9 +319,9 @@ router.get('/', verifyManager, async (req: any, res: any) => {
 
       const { data: seeded, error: seedError } = await supabaseAdmin
         .from('automations')
-        .insert(defaults)
+        .upsert(defaults, { onConflict: 'manager_id,trigger_id', ignoreDuplicates: true })
         .select();
-      
+
       if (seedError) throw seedError;
       data = seeded;
     }
@@ -379,7 +386,13 @@ router.delete('/:id', verifyManager, async (req: any, res) => {
 router.post('/cron', async (req: any, res) => {
   const secret = req.headers['x-cron-secret'] || req.body?.cron_secret;
   const validSecret = process.env.CRON_SECRET;
-  if (!validSecret || secret !== validSecret) {
+  if (!validSecret) {
+    return res.status(500).json({ error: 'Server misconfigured: CRON_SECRET not set' });
+  }
+  // Timing-safe comparison to prevent secret brute-forcing via response timing.
+  const a = Buffer.from(String(secret || ''));
+  const b = Buffer.from(validSecret);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
     return res.status(403).json({ error: 'Forbidden: x-cron-secret inválido o ausente' });
   }
   try {
