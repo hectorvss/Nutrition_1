@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '../db/index.js';
+import { verifyManager } from '../middleware/auth.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -12,11 +13,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder'
 const router = Router();
 
 // 1. Create Checkout Session
-router.post('/create-checkout-session', async (req: any, res) => {
+router.post('/create-checkout-session', verifyManager, async (req: any, res) => {
   const { priceId, userId, userEmail } = req.body;
 
   if (!priceId || !userId) {
     return res.status(400).json({ error: 'Missing priceId or userId' });
+  }
+
+  // Ensure the authenticated manager can only create sessions for themselves
+  if (req.user.id !== userId) {
+    return res.status(403).json({ error: 'Forbidden: userId mismatch' });
   }
 
   try {

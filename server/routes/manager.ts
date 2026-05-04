@@ -249,7 +249,7 @@ router.get('/clients', async (req: any, res) => {
         created_at,
         status,
         profiles!user_id (full_name, avatar_url),
-        clients_profiles!user_id (weight, goal, notes, temp_password),
+        clients_profiles!user_id (weight, goal, notes),
         check_ins (id, date, reviewed_at, data_json),
         client_checkin_submissions!client_id (id, submitted_at, reviewed_at, answers_json),
         workout_logs!client_id (logged_at),
@@ -342,7 +342,6 @@ router.get('/clients', async (req: any, res) => {
         weight: dj.weight || c.clients_profiles?.weight || c.clients_profiles?.[0]?.weight || null,
         goal: c.clients_profiles?.goal || c.clients_profiles?.[0]?.goal || null,
         notes: c.clients_profiles?.notes || c.clients_profiles?.[0]?.notes || null,
-        temp_password: c.clients_profiles?.temp_password || c.clients_profiles?.[0]?.temp_password || null,
         nutritionPlanAssigned: !!(c.nutrition_plans && c.nutrition_plans.length > 0),
         trainingPlanAssigned: !!(c.training_programs && c.training_programs.length > 0),
         planningAssigned: !!(c.roadmaps && c.roadmaps.length > 0),
@@ -436,7 +435,6 @@ router.post('/clients', async (req: any, res) => {
         weight: profile.weight,
         goal: profile.goal,
         notes: profile.notes,
-        temp_password: password,
         height: profile.height
       });
 
