@@ -342,21 +342,33 @@ export default function CheckInQuestionEditorCard({
         </div>
 
         <div className="flex items-center gap-5">
-           <label className="flex items-center gap-2 cursor-pointer group/toggle">
-              <input 
-                type="checkbox" 
-                checked={question.required}
-                onChange={(e) => onUpdate({ required: e.target.checked })}
-                className="hidden"
-              />
-              <div 
-                className={`w-10 h-6 rounded-full p-1 transition-all ${question.required ? 'bg-emerald-500' : 'bg-slate-200'}`}
-                style={question.required ? { backgroundColor: settings.theme_color } : {}}
-              >
-                 <div className={`w-4 h-4 bg-white rounded-full transition-all ${question.required ? 'translate-x-4' : 'translate-x-0'}`} />
-              </div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Required</span>
-           </label>
+           {question.is_fixed ? (
+             // Fixed question: required is permanently ON and the toggle is locked.
+             <div className="flex items-center gap-2 cursor-not-allowed" title={t('locked_question_hint', { defaultValue: 'Pregunta fija del sistema — siempre obligatoria' })}>
+                <div className="w-10 h-6 rounded-full p-1 bg-amber-500 flex">
+                   <div className="w-4 h-4 bg-white rounded-full translate-x-4" />
+                </div>
+                <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                   <Lock className="w-3 h-3" /> {t('locked_label', { defaultValue: 'Locked' })}
+                </span>
+             </div>
+           ) : (
+             <label className="flex items-center gap-2 cursor-pointer group/toggle">
+                <input
+                  type="checkbox"
+                  checked={question.required}
+                  onChange={(e) => onUpdate({ required: e.target.checked })}
+                  className="hidden"
+                />
+                <div
+                  className={`w-10 h-6 rounded-full p-1 transition-all ${question.required ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                  style={question.required ? { backgroundColor: settings.theme_color } : {}}
+                >
+                   <div className={`w-4 h-4 bg-white rounded-full transition-all ${question.required ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Required</span>
+             </label>
+           )}
         </div>
       </div>
     </div>

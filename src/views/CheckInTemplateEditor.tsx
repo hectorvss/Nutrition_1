@@ -17,8 +17,8 @@ import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn'
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
-import FixedQuestionsPanel from '../components/ui/FixedQuestionsPanel';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
+import { Lock } from 'lucide-react';
 
 interface CheckInTemplateEditorProps {
   templateId: string;
@@ -40,12 +40,22 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     async function loadTemplate() {
       setIsLoading(true);
       try {
-        const data = await fetchWithAuth(`/check-ins/manager/checkin-templates`);
+        const [data, fixed] = await Promise.all([
+          fetchWithAuth(`/check-ins/manager/checkin-templates`),
+          fetchWithAuth(`/check-ins/manager/fixed-questions`).catch(() => [])
+        ]);
         const found = data.find((t: any) => t.id === templateId);
         if (found) {
+          const customSchema: any[] = found.template_schema || found.templateSchema || [];
+          // Prepend the system fixed steps (marked `locked`) that the custom
+          // template doesn't already define, so they show inline in the editor.
+          const customStepIds = new Set(customSchema.map((s: any) => s.id));
+          const fixedSteps = (Array.isArray(fixed) ? fixed : [])
+            .filter((s: any) => !customStepIds.has(s.id))
+            .map((s: any) => ({ ...s, locked: true }));
           setTemplate({
             ...found,
-            templateSchema: found.template_schema || found.templateSchema || []
+            templateSchema: [...fixedSteps, ...customSchema]
           });
         } else {
           setError(t('template_not_found'));
@@ -67,7 +77,8 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
         method: 'PATCH',
         body: JSON.stringify({
           name: template.name,
-          template_schema: template.templateSchema,
+          // Never persist the system fixed steps — they are injected at runtime.
+          template_schema: template.templateSchema.filter((s: any) => !s.locked),
           is_active: true
         })
       });
@@ -102,7 +113,9 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
   };
 
   const removeStep = (index: number) => {
-    if (!template || !confirm(t('confirm_action'))) return;
+    if (!template) return;
+    if ((template.templateSchema[index] as any)?.locked) return; // fixed step
+    if (!confirm(t('confirm_action'))) return;
     const newSchema = template.templateSchema.filter((_, i) => i !== index);
     setTemplate({ ...template, templateSchema: newSchema });
     setSelectedStepIndex(Math.max(0, index - 1));
@@ -189,6 +202,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
   }
 
   const selectedStep = template.templateSchema[selectedStepIndex];
+  const isFixedStep = !!(selectedStep as any)?.locked;
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
@@ -262,7 +276,10 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                       <div className="flex-1 min-w-0">
                         <span className="block text-xs font-bold truncate tracking-tight">{step.title}</span>
                       </div>
-                      <div 
+                      {(step as any).locked && (
+                        <Lock className={`w-3 h-3 shrink-0 ${selectedStepIndex === idx ? 'text-white/70' : 'text-amber-500'}`} />
+                      )}
+                      <div
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
                           ${selectedStepIndex === idx ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}
                       >
@@ -290,33 +307,41 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center">
           <div className="w-full max-w-6xl space-y-8 pb-32">
 
-            <FixedQuestionsPanel kind="checkin" />
-
             {selectedStep && (
               <>
                 <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 space-y-2">
-                      <input 
-                        type="text" 
+                      {isFixedStep && (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-1 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">
+                          <Lock className="w-3 h-3" />
+                          <span className="text-[9px] font-black uppercase tracking-widest">{t('fixed_step_badge', { defaultValue: 'Bloque fijo del sistema' })}</span>
+                        </div>
+                      )}
+                      <input
+                        type="text"
+                        readOnly={isFixedStep}
                         value={selectedStep.title}
                         onChange={(e) => updateStep(selectedStepIndex, { title: e.target.value })}
                         placeholder={t('step_title_placeholder')}
-                        className="w-full bg-transparent border-none p-0 text-3xl font-bold tracking-tight text-slate-900 dark:text-white focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200"
+                        className={`w-full bg-transparent border-none p-0 text-3xl font-bold tracking-tight text-slate-900 dark:text-white focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200 ${isFixedStep ? 'cursor-default' : ''}`}
                       />
-                      <textarea 
+                      <textarea
+                        readOnly={isFixedStep}
                         value={selectedStep.subtitle || ''}
                         onChange={(e) => updateStep(selectedStepIndex, { subtitle: e.target.value })}
                         placeholder={t('instructions_placeholder')}
-                        className="w-full bg-transparent border-none p-0 text-lg font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none resize-none h-14 placeholder:text-slate-200 shadow-none border-transparent ring-0"
+                        className={`w-full bg-transparent border-none p-0 text-lg font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none resize-none h-14 placeholder:text-slate-200 shadow-none border-transparent ring-0 ${isFixedStep ? 'cursor-default' : ''}`}
                       />
                     </div>
-                    <button 
-                      onClick={() => removeStep(selectedStepIndex)}
-                      className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all shrink-0"
-                    >
-                      <Trash2 className="w-6 h-6" />
-                    </button>
+                    {!isFixedStep && (
+                      <button
+                        onClick={() => removeStep(selectedStepIndex)}
+                        className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all shrink-0"
+                      >
+                        <Trash2 className="w-6 h-6" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-6 pt-6 border-t border-slate-50 dark:border-slate-800/50">
@@ -335,16 +360,23 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
                       </AnimatePresence>
                     </Reorder.Group>
 
-                    <button 
-                      onClick={() => addQuestion(selectedStepIndex)}
-                      style={{ borderColor: `${settings.theme_color}30` }}
-                      className="w-full py-8 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/5 transition-all flex flex-col items-center justify-center gap-2 group/add"
-                    >
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-slate-50 dark:bg-slate-800 group-hover/add:scale-110" style={{ color: settings.theme_color }}>
-                         <Plus className="w-6 h-6" />
+                    {isFixedStep ? (
+                      <div className="w-full py-6 rounded-[2.5rem] border-2 border-dashed border-amber-200 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 flex items-center justify-center gap-2">
+                        <Lock className="w-4 h-4" />
+                        <span className="text-xs font-bold uppercase tracking-widest">{t('fixed_step_locked_hint', { defaultValue: 'Preguntas fijas — obligatorias y no editables' })}</span>
                       </div>
-                      <span className="text-sm font-semibold uppercase tracking-widest" style={{ color: `${settings.theme_color}80` }}>{t('add_question')}</span>
-                    </button>
+                    ) : (
+                      <button
+                        onClick={() => addQuestion(selectedStepIndex)}
+                        style={{ borderColor: `${settings.theme_color}30` }}
+                        className="w-full py-8 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/5 transition-all flex flex-col items-center justify-center gap-2 group/add"
+                      >
+                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-slate-50 dark:bg-slate-800 group-hover/add:scale-110" style={{ color: settings.theme_color }}>
+                           <Plus className="w-6 h-6" />
+                        </div>
+                        <span className="text-sm font-semibold uppercase tracking-widest" style={{ color: `${settings.theme_color}80` }}>{t('add_question')}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
