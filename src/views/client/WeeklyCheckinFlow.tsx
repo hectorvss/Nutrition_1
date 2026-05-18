@@ -54,10 +54,12 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
     async function loadTemplate() {
       setIsLoading(true);
       try {
         const data = await fetchWithAuth('/check-ins/client/active-template');
+        if (!mounted) return;
         if (data) {
           setTemplate({
             ...data,
@@ -68,12 +70,13 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
         }
       } catch (err) {
         console.error('Error fetching template:', err);
-        setTemplate(DEFAULT_CHECKIN_TEMPLATE);
+        if (mounted) setTemplate(DEFAULT_CHECKIN_TEMPLATE);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     }
     loadTemplate();
+    return () => { mounted = false; };
   }, []);
 
   if (isLoading) {
@@ -86,6 +89,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
   const steps = template?.templateSchema || [];
   const totalSteps = steps.length;
+  const hasSteps = totalSteps > 0;
 
   const updateAnswer = async (key: string, value: any) => {
     if (value === 'pending_upload') {
@@ -119,14 +123,48 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
     });
   };
 
+  // True only if a conditional question is currently visible (or has no condition).
+  const isQuestionVisible = (q: any): boolean => {
+    if (q.hidden) return false;
+    if (!q.conditional) return true;
+    const { field, operator, value } = q.conditional;
+    const fieldValue = answers[field];
+    if (operator === 'equals') return fieldValue === value;
+    if (operator === 'not_equals') return fieldValue !== value;
+    if (operator === 'contains') return (fieldValue || []).includes(value);
+    return true;
+  };
+
+  // True if the question has a usable answer, accounting for composite types
+  // (measurement_group / photo_group store their values under derived keys).
+  const isQuestionAnswered = (q: any): boolean => {
+    if (q.type === 'measurement_group') {
+      return (q.options || []).some((opt: string) => {
+        const v = answers[opt];
+        return v !== undefined && v !== null && v !== '';
+      });
+    }
+    if (q.type === 'photo_group') {
+      return ['front', 'side', 'back'].some(pos => {
+        const v = answers[`${q.id}_${pos}`];
+        return v !== undefined && v !== null && v !== '';
+      });
+    }
+    const answer = answers[q.id];
+    if (Array.isArray(answer)) return answer.length > 0;
+    // Treat 0 / "0" as a valid answer (e.g. sliders, numeric fields).
+    return answer !== undefined && answer !== null && answer !== '';
+  };
+
   const handleNext = () => {
-    // Basic validation for required fields in the current step
+    // Validation for required fields in the current step
     if (currentStep > 0 && currentStep <= totalSteps) {
       const currentStepData = steps[currentStep - 1];
       const hasMissingRequired = (currentStepData.questions || []).some(q => {
         if (!q.required) return false;
-        const answer = answers[q.id];
-        return !answer || (Array.isArray(answer) && answer.length === 0);
+        // Skip conditional questions that are not currently shown to the client.
+        if (!isQuestionVisible(q)) return false;
+        return !isQuestionAnswered(q);
       });
 
       if (hasMissingRequired) {
@@ -176,6 +214,24 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
   // --- UI RENDERING ---
 
+  // No steps configured: show empty state instead of letting the user get stuck
+  if (!hasSteps) {
+    return (
+      <div className="fixed inset-0 lg:left-64 z-[250] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 p-10 text-center">
+        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-400">
+          <span className="material-symbols-outlined text-3xl">assignment_late</span>
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('no_checkins_yet')}</h2>
+        <button
+          onClick={onCancel}
+          className="mt-4 text-white px-6 py-3 rounded-2xl font-bold"
+          style={{ backgroundColor: 'var(--brand-primary, #17cf54)' }}
+        >
+          {t('continue_label')}
+        </button>
+      </div>
+    );
+  }
 
   // Page 1..N: Dynamic Step
   const stepData = steps[currentStep - 1];
@@ -204,7 +260,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
             <div className="hidden sm:flex flex-col items-end">
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{t('step_of_total', { current: currentStep, total: totalSteps })}</p>
                <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(currentStep / totalSteps) * 100}%` }} />
+                  <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${(currentStep / Math.max(totalSteps, 1)) * 100}%` }} />
                </div>
             </div>
             <button onClick={onCancel} className="p-2 text-slate-400 hover:text-red-500 transition-colors">

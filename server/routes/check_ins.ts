@@ -236,76 +236,127 @@ const injectFixedQuestions = (schema: any[]) => {
 
   return [...stepsToInject, ...safeSchema];
 };
+
+// Finds the manager's "General Check-in" template, creating it if it doesn't
+// exist. Guarantees the caller always gets a template backed by a real DB row
+// (with a valid UUID id) so client submissions never fail with "Template not found".
+const resolveGeneralCheckinTemplate = async (managerId: string): Promise<any | null> => {
+  if (!managerId) return null;
+
+  // 1. Look for an existing General Check-in (including archived ones)
+  const { data: existing } = await supabaseAdmin
+    .from('checkin_templates')
+    .select('*')
+    .eq('manager_id', managerId)
+    .eq('name', 'General Check-in')
+    .maybeSingle();
+
+  if (existing) return existing;
+
+  // 2. None exists — create one. Make it the default if the manager has none.
+  const { count: templateCount } = await supabaseAdmin
+    .from('checkin_templates')
+    .select('id', { count: 'exact', head: true })
+    .eq('manager_id', managerId);
+
+  const { data: created, error: createError } = await supabaseAdmin
+    .from('checkin_templates')
+    .insert({
+      manager_id: managerId,
+      name: 'General Check-in',
+      description: 'Comprehensive weekly check-in template. Tracks adherence, body progress, recovery, training, and more.',
+      template_schema: GENERAL_CHECKIN_SCHEMA,
+      is_default: (templateCount || 0) === 0,
+      version: 1
+    })
+    .select()
+    .maybeSingle();
+
+  if (createError) {
+    console.error('[CheckIn] Error auto-creating General Check-in:', JSON.stringify(createError));
+    return null;
+  }
+
+  return created;
+};
 // ... (rest of the code until POST /client/check-ins)
 
 // Middleware centralizado con verificación de rol real
 const verifyClient = _verifyClient;
 const verifyManager = _verifyManager;
 
-// Client: Submit a new check-in
-// DEPRECATED: Use POST /client/submissions (template-based) for new check-ins.
-// This endpoint remains for backward compatibility with clients that haven't migrated.
+// Client: Submit a new check-in — REMOVED.
+// The legacy free-form check_ins write path has been retired; all new check-ins
+// go through the template-based POST /client/submissions. This stub returns
+// 410 Gone so any stale client gets a clear error instead of silently writing
+// data into the legacy table that the rest of the app no longer maintains.
 router.post('/client/check-ins', verifyClient, async (req: any, res) => {
-  console.warn('[DEPRECATED] POST /client/check-ins used by client', req.user?.id, '— prefer /client/submissions');
-  const { data_json, date } = req.body;
-  const clientId = req.user.id;
-
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('check_ins')
-      .insert({
-        client_id: clientId,
-        date: date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        data_json: data_json || {}
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Trigger Automations
-    try {
-      const { data: client } = await supabaseAdmin
-        .from('users')
-        .select('manager_id, clients_profiles(goal, weight)')
-        .eq('id', clientId)
-        .single();
-      
-      if (client?.manager_id) {
-        const weight = data_json?.weight;
-        const goal = client.clients_profiles?.[0]?.goal;
-        
-        if (weight && goal) {
-          // Check if goal hit (assuming simple weight target for milestone)
-          // Adjust logic based on goal type if needed
-          const isGoalMet = Math.abs(Number(weight) - Number(goal)) < 0.5;
-          if (isGoalMet) {
-            processTrigger(client.manager_id, 'milestone', { clientId, weight, goal });
-          }
-        }
-      }
-    } catch (triggerErr) {
-      console.error('Automation trigger error (check-in):', triggerErr);
-    }
-
-    res.json(data);
-  } catch (error: any) {
-    console.error('Error submitting check-in:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
-  }
+  console.warn('[REMOVED] POST /check-ins/client/check-ins called by', req.user?.id, '— use POST /check-ins/client/submissions');
+  res.status(410).json({
+    error: 'This endpoint has been removed. Submit check-ins via POST /check-ins/client/submissions.'
+  });
 });
 
 // Client: Get my check-in history
+// Unified: merges legacy `check_ins` and dynamic `client_checkin_submissions`
+// so the client sees every check-in regardless of which system created it.
 router.get('/client/check-ins', verifyClient, async (req: any, res) => {
+  const clientId = req.user.id;
   try {
-    const { data, error } = await supabaseAdmin
+    // 1. Legacy check-ins
+    const { data: legacyData, error: legacyError } = await supabaseAdmin
       .from('check_ins')
       .select('*')
-      .eq('client_id', req.user.id)
+      .eq('client_id', clientId)
       .order('date', { ascending: false });
 
-    if (error) throw error;
-    res.json(data);
+    if (legacyError) throw legacyError;
+
+    // 2. Dynamic template-based submissions
+    const { data: dynamicData, error: dynamicError } = await supabaseAdmin
+      .from('client_checkin_submissions')
+      .select(`
+        *,
+        template:checkin_templates(*)
+      `)
+      .eq('client_id', clientId)
+      .order('submitted_at', { ascending: false });
+
+    if (dynamicError) throw dynamicError;
+
+    // 3. Map to unified format (same shape the manager endpoint returns)
+    const legacyParsed = (legacyData || []).map((ci: any) => ({
+      ...ci,
+      type: 'legacy',
+      reviewed_at: ci.reviewed_at || (ci.data_json?.reviewed_at) || null,
+      coach_notes: ci.coach_notes || (ci.data_json?.coach_notes) || null,
+      next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
+    }));
+
+    const dynamicParsed = (dynamicData || []).map((ci: any) => ({
+      id: ci.id,
+      client_id: ci.client_id,
+      date: ci.submitted_at,
+      created_at: ci.submitted_at,
+      status: ci.status,
+      reviewed_at: ci.reviewed_at,
+      data_json: ci.answers_json,
+      template_id: ci.template_id,
+      template: ci.template ? {
+        ...ci.template,
+        templateSchema: ci.template.template_schema
+      } : null,
+      type: 'dynamic',
+      coach_notes: ci.coach_notes || null,
+      next_week_focus: ci.next_week_focus || null
+    }));
+
+    // 4. Merge and sort by date descending
+    const allCheckIns = [...legacyParsed, ...dynamicParsed].sort((a, b) =>
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    res.json(allCheckIns);
   } catch (error: any) {
     console.error('Error fetching client check-ins:', error);
     res.status(500).json({ error: 'Server error' });
@@ -313,18 +364,88 @@ router.get('/client/check-ins', verifyClient, async (req: any, res) => {
 });
 
 // Client: Get a single check-in by ID
+// Unified: tries the dynamic table first, then falls back to legacy.
+// Returns { client, check_in } so the shared CheckInReview view works in client mode.
 router.get('/client/check-ins/:checkInId', verifyClient, async (req: any, res) => {
   const { checkInId } = req.params;
+  const clientId = req.user.id;
   try {
-    const { data, error } = await supabaseAdmin
+    // Build the client object (the authenticated user themselves)
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select(`
+        id,
+        email,
+        profiles!left ( full_name, avatar_url )
+      `)
+      .eq('id', clientId)
+      .single();
+
+    const profile = Array.isArray(userData?.profiles) ? userData?.profiles[0] : userData?.profiles;
+    const client = {
+      id: clientId,
+      email: userData?.email || null,
+      name: profile?.full_name || userData?.email || 'Client',
+      avatar: profile?.avatar_url || null
+    };
+
+    // 1. Try dynamic submission first
+    const { data: dynamicData, error: dynamicError } = await supabaseAdmin
+      .from('client_checkin_submissions')
+      .select(`
+        *,
+        template:checkin_templates(*)
+      `)
+      .eq('id', checkInId)
+      .eq('client_id', clientId)
+      .maybeSingle();
+
+    if (dynamicError) throw dynamicError;
+
+    if (dynamicData) {
+      // Prioritize snapshot if available
+      const template = dynamicData.template_snapshot_json || (dynamicData.template ? {
+        ...dynamicData.template,
+        templateSchema: dynamicData.template.template_schema
+      } : null);
+
+      const formatted = {
+        ...dynamicData,
+        date: dynamicData.submitted_at,
+        created_at: dynamicData.submitted_at,
+        data_json: dynamicData.answers_json,
+        template,
+        type: 'dynamic'
+      };
+      return res.json({ client, check_in: formatted });
+    }
+
+    // 2. Fallback to legacy check_ins
+    const { data: legacyData, error: legacyError } = await supabaseAdmin
       .from('check_ins')
       .select('*')
       .eq('id', checkInId)
-      .eq('client_id', req.user.id)
-      .single();
+      .eq('client_id', clientId)
+      .maybeSingle();
 
-    if (error) throw error;
-    res.json(data);
+    if (legacyError) throw legacyError;
+    if (!legacyData) return res.status(404).json({ error: 'Check-in not found' });
+
+    let dj = legacyData.data_json;
+    if (typeof dj === 'string') {
+      try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
+    }
+
+    const formatted = {
+      ...legacyData,
+      data_json: dj,
+      type: 'legacy',
+      reviewed_at: legacyData.reviewed_at || dj?.reviewed_at || null,
+      coach_notes: legacyData.coach_notes || dj?.coach_notes || null,
+      next_week_focus: legacyData.next_week_focus || dj?.next_week_focus || null
+    };
+
+    res.json({ client, check_in: formatted });
   } catch (error: any) {
     console.error('Error fetching single check-in:', error);
     res.status(500).json({ error: 'Server error' });
@@ -731,7 +852,9 @@ router.post('/manager/checkin-templates', verifyManager, async (req: any, res) =
 router.patch('/manager/checkin-templates/:id', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
-  const ALLOWED = ['name', 'description', 'template_schema', 'is_default', 'status'];
+  // NOTE: 'is_active' is a real column; 'status' is NOT (it does not exist on
+  // checkin_templates), so it must never be forwarded to the DB.
+  const ALLOWED = ['name', 'description', 'template_schema', 'is_default', 'is_active'];
   const updates: Record<string, any> = {};
   for (const key of ALLOWED) {
     if (key in req.body) updates[key] = req.body[key];
@@ -1005,7 +1128,14 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
       return res.json(defaultTemplate);
     }
 
-    // 3. Last fallback: system default (legacy) or empty response
+    // 3. Last fallback: ensure a real "General Check-in" template exists for
+    //    the manager and return it, so the client can always submit a check-in
+    //    backed by a valid template_id.
+    if (manager?.manager_id) {
+      const general = await resolveGeneralCheckinTemplate(manager.manager_id);
+      if (general) return res.json(general);
+    }
+
     res.json(null);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1017,28 +1147,47 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
   const clientId = req.user.id;
   const { template_id, answers_json } = req.body;
 
-  if (!template_id || !answers_json) {
-    return res.status(400).json({ error: 'template_id and answers_json are required' });
+  if (!answers_json) {
+    return res.status(400).json({ error: 'answers_json is required' });
   }
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   try {
-    // 1. Fetch current template and verify ownership (client side security)
-    const { data: template, error: templateErr } = await supabaseAdmin
-      .from('checkin_templates')
-      .select('*, manager:users!manager_id(id)')
-      .eq('id', template_id)
-      .single();
-
-    if (templateErr || !template) throw new Error('Template not found');
-
-    // 2. Verify client belongs to the template's manager
+    // 1. Resolve the client's manager up front
     const { data: clientInfo, error: clientInfoErr } = await supabaseAdmin
       .from('users')
       .select('manager_id')
       .eq('id', clientId)
       .single();
-    
-    if (clientInfoErr || !clientInfo || clientInfo.manager_id !== template.manager_id) {
+
+    if (clientInfoErr || !clientInfo) {
+      return res.status(403).json({ error: 'Client account not found' });
+    }
+
+    // 2. Fetch the requested template (only if template_id is a valid UUID)
+    let template: any = null;
+    if (template_id && UUID_RE.test(String(template_id))) {
+      const { data: found } = await supabaseAdmin
+        .from('checkin_templates')
+        .select('*')
+        .eq('id', template_id)
+        .maybeSingle();
+      template = found || null;
+    }
+
+    // 3. Fallback: if the template is missing or invalid (e.g. the client sent
+    //    the in-memory default template), resolve the manager's General Check-in.
+    if (!template) {
+      template = await resolveGeneralCheckinTemplate(clientInfo.manager_id);
+    }
+
+    if (!template) {
+      return res.status(404).json({ error: 'No check-in template available' });
+    }
+
+    // 4. Verify client belongs to the template's manager
+    if (clientInfo.manager_id !== template.manager_id) {
       return res.status(403).json({ error: 'Security violation: Template manager mismatch' });
     }
 
@@ -1047,7 +1196,7 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
       .from('client_checkin_submissions')
       .insert({
         client_id: clientId,
-        template_id,
+        template_id: template.id,
         template_version: template.version || 1,
         template_snapshot_json: {
           ...template,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
+import CheckInReviewRenderer from '../../components/checkin/CheckInReviewRenderer';
 
 interface CheckInDetailViewProps {
   checkIn: any;
@@ -10,6 +11,13 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
   const { t, language } = useLanguage();
   const dj = checkIn.data_json || {};
   const locale = language === 'es' ? 'es-ES' : 'en-US';
+
+  // Dynamic (template-based) check-ins must be rendered from their own schema,
+  // not the hardcoded legacy sections below.
+  const dynamicTemplate = checkIn.type === 'dynamic'
+    ? (checkIn.template || checkIn.template_snapshot_json)
+    : null;
+  const isDynamic = !!dynamicTemplate;
 
   const Section = ({ title, subtitle, icon, children, gridCols = "grid-cols-1" }: any) => (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800 space-y-8">
@@ -66,6 +74,17 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
             </p>
           </div>
         </div>
+        {isDynamic ? (
+          <CheckInReviewRenderer
+            template={{
+              ...dynamicTemplate,
+              templateSchema: dynamicTemplate.templateSchema || dynamicTemplate.template_schema || []
+            }}
+            answers={dj}
+            isClient={true}
+          />
+        ) : (
+        <>
         {/* Section 1: Overview */}
         <Section title={t('overall_experience')} subtitle={t('general_thoughts_past_week')} icon="mood">
           <InfoField label={t('overall_week')} value={dj.overallWeek} />
@@ -204,6 +223,8 @@ export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailView
            <InfoField label={t('coach_support_request')} value={dj.supportNeeded} fullWidth />
            <InfoField label={t('final_thoughts')} value={dj.extraNotes} fullWidth />
         </Section>
+        </>
+        )}
 
         {/* Coach Feedback Section (If available) */}
         {checkIn.reviewed_at && (

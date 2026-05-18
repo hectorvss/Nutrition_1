@@ -6,12 +6,15 @@ CREATE TABLE IF NOT EXISTS public.client_checkin_assignments (
     client_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     template_id UUID NOT NULL REFERENCES public.checkin_templates(id) ON DELETE CASCADE,
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT TRUE,
-    
-    -- Ensure a client can only have one active assignment at a time
-    -- This is reinforced by the application layer, but a partial index provides extra safety
-    UNIQUE (client_id, is_active) WHERE (is_active = TRUE)
+    is_active BOOLEAN DEFAULT TRUE
 );
+
+-- Ensure a client can only have one active assignment at a time.
+-- A partial UNIQUE INDEX is the correct mechanism — an inline table-level
+-- "UNIQUE (...) WHERE ..." constraint is not valid Postgres syntax.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_client_checkin_assignments_active
+ON public.client_checkin_assignments (client_id)
+WHERE (is_active = TRUE);
 
 -- Row Level Security
 ALTER TABLE public.client_checkin_assignments ENABLE ROW LEVEL SECURITY;

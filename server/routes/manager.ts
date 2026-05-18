@@ -1716,6 +1716,8 @@ router.get('/analytics', async (req: any, res) => {
       allProgramsRes,
       integrationsRes,
       recentSubmissionsRes,
+      perfSubmissionsRes,
+      allSubmissionsRes,
     ] = await Promise.all([
       // Performance metrics: check_ins last 60 days — filtered by clientIds (no join needed)
       clientIds.length > 0
@@ -1741,18 +1743,40 @@ router.get('/analytics', async (req: any, res) => {
       clientIds.length > 0
         ? supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, reviewed_at, client_id, users!inner (email, profiles!left (full_name))').in('client_id', clientIds).order('submitted_at', { ascending: false }).limit(10)
         : Promise.resolve({ data: [], error: null }),
+      // Performance metrics: dynamic submissions last 60 days (merged with legacy below)
+      clientIds.length > 0
+        ? supabaseAdmin.from('client_checkin_submissions').select('submitted_at, answers_json, client_id').in('client_id', clientIds).gte('submitted_at', sixtyDaysAgo.toISOString())
+        : Promise.resolve({ data: [], error: null }),
+      // All dynamic submissions for cohort analysis (lightweight: client_id + date)
+      clientIds.length > 0
+        ? supabaseAdmin.from('client_checkin_submissions').select('client_id, submitted_at').in('client_id', clientIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const checkIns = checkInsRes.data || [];
     const checkInsError = checkInsRes.error;
     const recentCheckIns = recentCheckInsRes.data || [];
     const recentMessages = recentMessagesRes.data || [];
-    const allCheckIns = allCheckInsRes.data || [];
     const allPrograms = allProgramsRes.data || [];
     const recentSubmissions = recentSubmissionsRes.data || [];
     const integrations = integrationsRes.data;
 
     if (checkInsError) throw checkInsError;
+
+    // Unify legacy check_ins and dynamic submissions so all downstream metrics
+    // (churn, retention, active clients, nutrition/training aggregation) count
+    // check-ins regardless of which system produced them.
+    const perfSubmissions = (perfSubmissionsRes.data || []).map((s: any) => ({
+      date: (s.submitted_at || '').split('T')[0],
+      data_json: s.answers_json || {},
+      client_id: s.client_id
+    }));
+    const checkIns = [...(checkInsRes.data || []), ...perfSubmissions];
+
+    const allSubmissions = (allSubmissionsRes.data || []).map((s: any) => ({
+      client_id: s.client_id,
+      date: (s.submitted_at || '').split('T')[0]
+    }));
+    const allCheckIns = [...(allCheckInsRes.data || []), ...allSubmissions];
 
     // Filter check-ins into buckets
     const last30DaysCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= thirtyDaysAgo);
