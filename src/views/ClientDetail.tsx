@@ -62,6 +62,7 @@ import CheckInReview from './CheckInReview';
 import CheckInReviewRenderer from '../components/checkin/CheckInReviewRenderer';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 const primaryExercises = [
   'Bench Press', 'Squat', 'Deadlift', 'Military Press', 'Barbell Row',
@@ -936,10 +937,10 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             )}
             <div className="relative group">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 transition-colors pointer-events-none" />
-              <select 
+              <Select
                 value={strengthRange}
-                onChange={(e) => setStrengthRange(e.target.value)}
-                className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 shadow-sm transition-all outline-none"
+                onChange={(val) => setStrengthRange(val)}
+                className="text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-3 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50 shadow-sm transition-all outline-none"
               >
                 <option value="1W">{t('last_7_days')}</option>
                 <option value="14D">{t('last_14_days')}</option>
@@ -948,8 +949,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 <option value="6M">{t('last_6_months')}</option>
                 <option value="YTD">{t('year_to_date')}</option>
                 <option value="ALL">{t('all_history')}</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none transition-transform group-hover:translate-y-[-40%]" />
+              </Select>
             </div>
           </div>
         </div>

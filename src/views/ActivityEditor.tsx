@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface ActivityEditorProps {
   onBack: () => void;
@@ -64,23 +65,21 @@ export default function ActivityEditor({ onBack, activityName = 'Bulgarian Split
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">{t('muscle_group')}</label>
                     <div className="relative">
-                      <select className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all appearance-none cursor-pointer font-bold text-sm">
+                      <Select className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm">
                         <option>{t('legs_quadriceps')}</option>
                         <option>{t('legs_hamstrings')}</option>
                         <option>{t('glutes')}</option>
-                      </select>
-                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                      </Select>
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">{t('equipment')}</label>
                     <div className="relative">
-                      <select className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all appearance-none cursor-pointer font-bold text-sm">
+                      <Select className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm">
                         <option>{t('dumbbells')}</option>
                         <option>{t('barbell')}</option>
                         <option>{t('bodyweight')}</option>
-                      </select>
-                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                      </Select>
                     </div>
                   </div>
                 </div>

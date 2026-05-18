@@ -28,6 +28,7 @@ import {
 import { AutomationDeliveryRules, AutomationCondition } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface AutomationCreateMessageProps {
   triggerName: string;
@@ -256,14 +257,14 @@ export default function AutomationCreateMessage({
                       <div className="flex flex-col gap-2">
                         <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('repeat_frequency')}</label>
                         <div className="flex gap-2">
-                          <select 
+                          <Select
                             value={rules.frequency}
-                            onChange={e => updateRule('frequency', e.target.value as any)}
-                            className="w-24 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+                            onChange={(val) => updateRule('frequency', val as any)}
+                            className="w-24 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
                           >
                             <option value="Every">{t('every')}</option>
                             <option value="Once">{t('once')}</option>
-                          </select>
+                          </Select>
                           {rules.frequency === 'Every' && (
                             <div className="flex-1 flex items-center gap-2">
                               <input 
@@ -273,15 +274,15 @@ export default function AutomationCreateMessage({
                                 onChange={e => updateRule('frequencyValue', parseInt(e.target.value) || 1)}
                                 className="w-20 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500" 
                               />
-                              <select 
+                              <Select
                                 value={rules.frequencyUnit}
-                                onChange={e => updateRule('frequencyUnit', e.target.value as any)}
-                                className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                onChange={(val) => updateRule('frequencyUnit', val as any)}
+                                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm px-3 py-2 focus:border-emerald-500 focus:ring-emerald-500"
                               >
                                 <option value="Days">{t('days')}</option>
                                 <option value="Weeks">{t('weeks')}</option>
                                 <option value="Months">{t('months')}</option>
-                              </select>
+                              </Select>
                             </div>
                           )}
                         </div>
@@ -447,21 +448,21 @@ export default function AutomationCreateMessage({
                             {rules.activation_conditions.filter(c => c.enabled).map((c, i) => (
                               <div key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800 group">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase w-20">If {c.type}:</span>
-                                <select
+                                <Select
                                   value={c.operator}
-                                  onChange={e => {
+                                  onChange={(val) => {
                                     const idx = rules.activation_conditions.indexOf(c);
                                     const next = rules.activation_conditions.map((cond, ci) =>
-                                      ci === idx ? { ...cond, operator: e.target.value as any } : cond
+                                      ci === idx ? { ...cond, operator: val as any } : cond
                                     );
                                     updateRule('activation_conditions', next);
                                   }}
-                                  className="bg-transparent border-none p-0 text-xs font-bold text-emerald-600 dark:text-emerald-400 focus:ring-0 cursor-pointer"
+                                  className="bg-transparent border-none px-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 focus:ring-0"
                                 >
                                   <option value=">">{'>'}</option>
                                   <option value="<">{'<'}</option>
                                   <option value="==">{'='}</option>
-                                </select>
+                                </Select>
                                 <input 
                                   type="text"
                                   value={c.value}

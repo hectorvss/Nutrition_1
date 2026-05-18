@@ -19,6 +19,7 @@ import {
 
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 // We don't need the local Client interface or mock data anymore
 // The interface is now defined in ClientContext.tsx
@@ -326,15 +327,15 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                 <p className="text-xs font-bold text-slate-400">
                   {t('showing')} <span className="text-slate-900 dark:text-white">{rangeStart}-{rangeEnd}</span> {t('of_total')} <span className="text-slate-900 dark:text-white">{filteredClients.length}</span> {t('clients_label').toLowerCase()}
                 </p>
-                <select
+                <Select
                   value={perPage}
-                  onChange={(e) => setPerPage(Number(e.target.value))}
-                  className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 py-1.5 pr-8 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none shadow-sm"
+                  onChange={(val) => setPerPage(Number(val))}
+                  className="text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 py-1.5 pl-3 pr-3 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none shadow-sm"
                 >
                   <option value={10}>10 {t('per_page')}</option>
                   <option value={20}>20 {t('per_page')}</option>
                   <option value={50}>50 {t('per_page')}</option>
-                </select>
+                </Select>
               </div>
               <div className="flex gap-2">
                 <button

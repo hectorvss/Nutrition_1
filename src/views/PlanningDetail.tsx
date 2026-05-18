@@ -7,6 +7,7 @@ import {
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 // --- TYPES ---
 
@@ -78,6 +79,7 @@ interface Goal {
 interface TrajectoryGoals {
   targetWeight: number;
   startWeight: number;
+  currentWeight?: number;   // auto-filled from the latest check-in unless the coach overrides it
   targetStrengthKg: number;
   startStrengthKg: number;
   exerciseName: string;
@@ -167,16 +169,15 @@ function computeTrajectory(
   checkInsByDate: { date: string; weight: number }[],
   goals: TrajectoryGoals,
   locale: string
-): { chartData: any[]; currentWeekIndex: number } {
+): { chartData: any[]; currentWeekIndex: number; anchorWeight: number; weeklyRate: number } {
   const totalWeeks = goals.totalWeeks || roadmap.totalWeeks || 12;
-  const startW = goals.startWeight || 0;
   const allBlocks = [...roadmap.nutrition, ...roadmap.training];
 
   const programStart = goals.programStartDate
     ? new Date(goals.programStartDate)
     : new Date();
 
-  // Compute current week index (0-based for array)
+  // Current week index (0-based)
   const now = new Date();
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
   const currentWeekIndex = Math.max(
@@ -184,50 +185,65 @@ function computeTrajectory(
     Math.min(totalWeeks - 1, Math.floor((now.getTime() - programStart.getTime()) / msPerWeek))
   );
 
-  // Build one entry per week with projected weight
+  // 1. Bucket real check-ins by program week (last one of the week wins)
+  const actualByWeek: (number | undefined)[] = [];
+  for (let w = 0; w < totalWeeks; w++) {
+    const weekStart = new Date(programStart.getTime() + w * msPerWeek);
+    const weekEnd = new Date(weekStart.getTime() + msPerWeek);
+    const ci = checkInsByDate.filter(c => {
+      const d = new Date(c.date);
+      return d >= weekStart && d < weekEnd;
+    });
+    actualByWeek[w] = ci.length > 0 ? ci[ci.length - 1].weight : undefined;
+  }
+
+  // 2. Anchor the projection to the client's real current weight: the latest
+  //    check-in up to now. Falls back to the explicit currentWeight, then start.
+  let anchorWeight = goals.currentWeight || goals.startWeight || 0;
+  for (let w = currentWeekIndex; w >= 0; w--) {
+    if (actualByWeek[w] != null) { anchorWeight = actualByWeek[w] as number; break; }
+  }
+
+  // 3. Build the chart. Past weeks show only actual; from "now" onward the
+  //    projected line starts AT the anchor weight and applies phase rates,
+  //    so the projection visually continues from reality (not a parallel guess).
   const chartData: any[] = [];
-  let projW = startW;
+  let projW = anchorWeight;
+  let firstFutureRate = 0;
+  let firstFutureCaptured = false;
 
   for (let w = 0; w < totalWeeks; w++) {
-    const weekNum = w + 1; // 1-based to match block startWeek / endWeek
+    const weekNum = w + 1;
     const weekDate = new Date(programStart.getTime() + w * msPerWeek);
     const weekLabel = weekDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 
-    // Projection: derive rates from active blocks this week
-    const activeBlocks = allBlocks.filter(b => weekNum >= b.startWeek && weekNum <= b.endWeek);
-    let weekWeightRate = 0;
-    let usedNutBlock = false;
-    activeBlocks.forEach(b => {
-      if (b.type === 'nutrition' && !usedNutBlock) {
-        weekWeightRate = getPhaseRates(b).weightRate;
-        usedNutBlock = true;
-      }
-    });
-
-    projW = parseFloat((projW + weekWeightRate).toFixed(2));
-
-    // Find a real check-in close to (within) this week window
-    const weekStart = weekDate;
-    const weekEnd = new Date(weekDate.getTime() + msPerWeek);
-    const ciInWeek = checkInsByDate.filter(ci => {
-      const d = new Date(ci.date);
-      return d >= weekStart && d < weekEnd;
-    });
-    // Prefer the last one of the week
-    const actualW = ciInWeek.length > 0
-      ? ciInWeek[ciInWeek.length - 1].weight
-      : undefined;
+    let projected: number | undefined;
+    if (w < currentWeekIndex) {
+      projected = undefined; // past — actual line only
+    } else if (w === currentWeekIndex) {
+      projected = parseFloat(anchorWeight.toFixed(1)); // anchor — joins actual & projection
+    } else {
+      const activeBlocks = allBlocks.filter(b => weekNum >= b.startWeek && weekNum <= b.endWeek);
+      let rate = 0;
+      let used = false;
+      activeBlocks.forEach(b => {
+        if (b.type === 'nutrition' && !used) { rate = getPhaseRates(b).weightRate; used = true; }
+      });
+      if (!firstFutureCaptured) { firstFutureRate = rate; firstFutureCaptured = true; }
+      projW = parseFloat((projW + rate).toFixed(2));
+      projected = projW;
+    }
 
     chartData.push({
       week: weekNum,
       label: weekLabel,
-      projected: projW,
-      actual: w <= currentWeekIndex ? actualW : undefined,
+      projected,
+      actual: actualByWeek[w],
       isCurrentWeek: w === currentWeekIndex,
     });
   }
 
-  return { chartData, currentWeekIndex };
+  return { chartData, currentWeekIndex, anchorWeight, weeklyRate: firstFutureRate };
 }
 
 export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
@@ -1223,48 +1239,62 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
           {/* --- 4. GOAL TRAJECTORY & PREDICTIONS --- */}
           {roadmap && (() => {
-            // Resolve trajectory goals with smart defaults
             const today = new Date().toISOString().split('T')[0];
+            const locale = language === 'es' ? 'es-ES' : 'en-US';
+            const isEs = language === 'es';
+
+            // Auto values from real check-ins (auto-filled, coach can override)
+            const autoStart = checkInsHistory.length > 0 ? checkInsHistory[0].weight : undefined;
+            const autoCurrent = checkInsHistory.length > 0 ? checkInsHistory[checkInsHistory.length - 1].weight : undefined;
+            const saved = roadmap.trajectoryGoals || {};
+
             const tGoals: TrajectoryGoals = {
               targetWeight: 70,
-              startWeight: checkInsHistory.length > 0 ? checkInsHistory[0].weight : 80,
+              startWeight: autoStart ?? 80,
+              currentWeight: autoCurrent ?? autoStart ?? 80,
               targetStrengthKg: 100,
               startStrengthKg: 60,
               exerciseName: 'Key Lift',
               programStartDate: today,
               totalWeeks: roadmap.totalWeeks || 12,
-              ...(roadmap.trajectoryGoals || {}),
+              ...saved,
             };
+            const startIsAuto = saved.startWeight === undefined && autoStart !== undefined;
+            const currentIsAuto = saved.currentWeight === undefined && autoCurrent !== undefined;
 
             const totalWeeks = tGoals.totalWeeks || 12;
-
-            const { chartData, currentWeekIndex } = computeTrajectory(
-              roadmap,
-              checkInsHistory,
-              tGoals,
-              language === 'es' ? 'es-ES' : 'en-US'
-            );
-
-            // KPIs
-            const finalProjected = chartData[chartData.length - 1]?.projected ?? tGoals.startWeight;
-            const projWeightDelta = parseFloat((finalProjected - tGoals.startWeight).toFixed(1));
             const hasActualData = checkInsHistory.length > 0;
 
-            // Find min/max for Y-axis domain
+            const { chartData, currentWeekIndex, anchorWeight, weeklyRate } = computeTrajectory(
+              roadmap, checkInsHistory, tGoals, locale
+            );
+
+            // --- Headline KPIs ---
+            const currentW = parseFloat((anchorWeight || tGoals.currentWeight || tGoals.startWeight || 0).toFixed(1));
+            const targetW = tGoals.targetWeight || 0;
+            const remaining = parseFloat((targetW - currentW).toFixed(1));            // signed: + gain, - lose
+            const finalProjected = parseFloat((chartData[chartData.length - 1]?.projected ?? currentW).toFixed(1));
+            const projGap = parseFloat((finalProjected - targetW).toFixed(1));        // how far the projection lands from target
+            const onTrack = Math.abs(projGap) <= 1;                                    // within 1 kg = on track
+            const losing = remaining < 0;
+            const weeksLeft = Math.max(0, totalWeeks - currentWeekIndex - 1);
+
+            // Y-axis domain
             const allWeights = [
-              ...chartData.map(d => d.projected).filter(Boolean),
+              ...chartData.map(d => d.projected).filter((v): v is number => typeof v === 'number'),
               ...checkInsHistory.map(c => c.weight),
-              tGoals.targetWeight,
+              targetW,
             ].filter(v => v > 0);
             const minW = allWeights.length > 0 ? Math.floor(Math.min(...allWeights)) - 2 : 60;
             const maxW = allWeights.length > 0 ? Math.ceil(Math.max(...allWeights)) + 2 : 100;
 
+            // Only persist fields the coach explicitly changes — weights left
+            // untouched stay auto-derived from check-ins on every render.
             const updateGoals = (partial: Partial<TrajectoryGoals>) => {
               if (!roadmap) return;
-              setRoadmap({ ...roadmap, trajectoryGoals: { ...tGoals, ...partial } });
+              setRoadmap({ ...roadmap, trajectoryGoals: { ...(roadmap.trajectoryGoals || {}), ...partial } });
             };
 
-            // Custom tooltip for Recharts
             const ChartTooltip = ({ active, payload, label }: any) => {
               if (!active || !payload?.length) return null;
               const proj = payload.find((p: any) => p.dataKey === 'projected');
@@ -1274,13 +1304,13 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <div className="text-emerald-400 mb-1.5 uppercase tracking-widest">{label}</div>
                   {actual?.value != null && (
                     <div className="flex items-center justify-between gap-3">
-	                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />{t('planning_actual')}</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />{t('planning_actual', { defaultValue: 'Actual' })}</span>
                       <span>{actual.value} kg</span>
                     </div>
                   )}
                   {proj?.value != null && (
                     <div className="flex items-center justify-between gap-3 mt-0.5">
-	                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />{t('planning_projected_short')}</span>
+                      <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />{t('planning_projected_short', { defaultValue: 'Projected' })}</span>
                       <span>{proj.value} kg</span>
                     </div>
                   )}
@@ -1288,245 +1318,244 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
               );
             };
 
-            // Recharts components (imported at the top)
-
+            const kpiTile = (tone: string, label: string, value: React.ReactNode, sub?: React.ReactNode) => (
+              <div className={`rounded-2xl p-4 border ${tone}`}>
+                <p className="text-[9px] font-bold uppercase tracking-widest opacity-60 mb-1">{label}</p>
+                <div className="flex items-baseline gap-1">{value}</div>
+                {sub && <div className="mt-1 text-[10px] font-semibold opacity-70">{sub}</div>}
+              </div>
+            );
 
             return (
               <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
                 {/* Header */}
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Icon name="analytics" className="text-emerald-500" />
+                    <Icon name="monitoring" className="text-emerald-500" />
                     {t('planning_goal_trajectory_predictions', { defaultValue: 'Goal Trajectory & Predictions' })}
                   </h3>
-                  <div className="flex items-center gap-5">
+                  <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1.5">
-                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" /></svg>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_actual', { defaultValue: 'Actual' })}</span>
+                      <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" /></svg>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_actual', { defaultValue: 'Actual' })}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#10b981" strokeWidth="3" strokeDasharray="5 3" strokeLinecap="round" /></svg>
+                      <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#10b981" strokeWidth="3" strokeDasharray="5 3" strokeLinecap="round" /></svg>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_projected', { defaultValue: 'Projected' })}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-5">
-                  {/* LEFT: Controls — fixed width on desktop, full width on mobile */}
-                  <div className="flex flex-col gap-3 lg:w-52 shrink-0">
-
-                    {/* Program Start Date */}
-                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('planning_program_start_date')}</p>
+                {/* KPI ROW */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                  {kpiTile(
+                    'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/40 text-blue-700 dark:text-blue-300',
+                    isEs ? 'Peso actual' : 'Current weight',
+                    <><span className="text-3xl font-extrabold">{currentW || '--'}</span><span className="text-sm font-bold opacity-70">kg</span></>,
+                    hasActualData
+                      ? (isEs ? 'Último check-in' : 'Latest check-in')
+                      : (isEs ? 'Sin check-ins aún' : 'No check-ins yet')
+                  )}
+                  {kpiTile(
+                    'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-300',
+                    isEs ? 'Objetivo' : 'Target',
+                    <>
                       <input
-                        type="date"
-                        className="text-sm font-bold text-slate-900 dark:text-white bg-transparent border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 w-full focus:ring-2 focus:ring-emerald-500 outline-none"
-                        value={tGoals.programStartDate || ''}
-                        onChange={e => updateGoals({ programStartDate: e.target.value })}
+                        type="number" step="0.5"
+                        className="text-3xl font-extrabold bg-transparent border-none p-0 w-[4.5rem] focus:ring-0 outline-none"
+                        value={tGoals.targetWeight || ''}
+                        onChange={e => { const v = parseFloat(e.target.value); updateGoals({ targetWeight: isNaN(v) ? 0 : v }); }}
                       />
-                    </div>
+                      <span className="text-sm font-bold opacity-70">kg</span>
+                    </>,
+                    isEs ? 'Editable' : 'Editable'
+                  )}
+                  {kpiTile(
+                    'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200',
+                    isEs ? 'Por recorrer' : 'To go',
+                    <>
+                      <Icon name={losing ? 'trending_down' : remaining > 0 ? 'trending_up' : 'drag_handle'} className={`text-2xl ${losing ? 'text-emerald-500' : remaining > 0 ? 'text-amber-500' : 'text-slate-400'}`} />
+                      <span className="text-3xl font-extrabold">{Math.abs(remaining) || 0}</span><span className="text-sm font-bold opacity-70">kg</span>
+                    </>,
+                    remaining === 0 ? (isEs ? 'En el objetivo' : 'At target') : losing ? (isEs ? 'para bajar' : 'to lose') : (isEs ? 'para subir' : 'to gain')
+                  )}
+                  {kpiTile(
+                    'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/40 text-amber-700 dark:text-amber-300',
+                    isEs ? 'Semana' : 'Week',
+                    <><span className="text-3xl font-extrabold">{Math.min(currentWeekIndex + 1, totalWeeks)}</span><span className="text-sm font-bold opacity-70">/ {totalWeeks}</span></>,
+                    weeksLeft > 0 ? (isEs ? `${weeksLeft} sem. restantes` : `${weeksLeft}w remaining`) : (isEs ? 'Programa finalizado' : 'Program finished')
+                  )}
+                </div>
 
-                    {/* Total Weeks */}
-                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-2">{t('total_duration')}</p>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="4" max="52"
-                          className="text-xl font-bold text-slate-900 dark:text-white bg-transparent border-none p-0 w-12 focus:ring-0 outline-none"
-                          value={tGoals.totalWeeks || ''}
-                          onChange={e => {
-                            const v = parseInt(e.target.value);
-                            if (!isNaN(v) && v > 0) updateGoals({ totalWeeks: v });
-                          }}
-                        />
-                        <span className="text-[10px] font-bold text-slate-400 uppercase">{t('weeks_label', { defaultValue: 'weeks' })}</span>
-                      </div>
-                      <p className="text-[9px] text-slate-400 mt-1">
-                        {t('planning_week_of', { current: Math.min(currentWeekIndex + 1, totalWeeks), total: totalWeeks, defaultValue: `Week ${Math.min(currentWeekIndex + 1, totalWeeks)} of ${totalWeeks}` })} &mdash; {currentWeekIndex >= totalWeeks - 1 ? t('planning_finished', { defaultValue: 'Finished' }) : t('planning_weeks_remaining', { count: totalWeeks - currentWeekIndex - 1, defaultValue: `${totalWeeks - currentWeekIndex - 1}w remaining` })}
-                      </p>
-                    </div>
+                {/* Projection summary banner */}
+                <div className={`flex items-center gap-2.5 rounded-2xl px-4 py-3 mb-4 text-xs font-bold ${
+                  !hasActualData
+                    ? 'bg-slate-50 dark:bg-slate-800/60 text-slate-500'
+                    : onTrack
+                      ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300'
+                }`}>
+                  <Icon name={!hasActualData ? 'info' : onTrack ? 'check_circle' : 'warning'} className="text-lg" />
+                  <span>
+                    {!hasActualData
+                      ? (isEs ? 'Aún no hay check-ins de peso: la proyección se basa solo en las fases del plan.' : 'No weight check-ins yet — the projection is based on plan phases only.')
+                      : onTrack
+                        ? (isEs
+                            ? `A este ritmo terminará en ~${finalProjected} kg, justo en el objetivo.`
+                            : `At this pace they finish around ~${finalProjected} kg — right on target.`)
+                        : (isEs
+                            ? `A este ritmo terminará en ~${finalProjected} kg (${projGap > 0 ? '+' : ''}${projGap} kg del objetivo). Revisa las fases del plan.`
+                            : `At this pace they finish around ~${finalProjected} kg (${projGap > 0 ? '+' : ''}${projGap} kg off target). Review the plan phases.`)}
+                  </span>
+                </div>
 
-                    {/* Target Weight */}
-                    <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/50">
-                      <p className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1.5">{t('target_weight', { defaultValue: 'Target Weight' })}</p>
-                      <div className="flex items-baseline gap-1.5">
-                        <input
-                          type="number" step="0.5"
-                          className="text-3xl font-bold text-blue-700 dark:text-blue-300 bg-transparent border-none p-0 w-20 focus:ring-0 outline-none"
-                          value={tGoals.targetWeight || ''}
-                          onChange={e => { const v = parseFloat(e.target.value); updateGoals({ targetWeight: isNaN(v) ? 0 : v }); }}
-                        />
-                        <span className="text-sm font-bold text-blue-600">kg</span>
-                      </div>
-                      <p className={`text-[10px] mt-1.5 flex items-center gap-1 font-bold uppercase tracking-tight ${projWeightDelta >= 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        <Icon name={projWeightDelta >= 0 ? 'trending_up' : 'trending_down'} className="text-[14px]" />
-                        {projWeightDelta >= 0 ? '+' : ''}{projWeightDelta} kg projected
-                      </p>
-                    </div>
+                {/* Phase strips */}
+                {roadmap.nutrition.length > 0 && (
+                  <div className="flex gap-1 px-1 mb-1.5">
+                    {roadmap.nutrition.map(b => (
+                      <div
+                        key={b.id}
+                        style={{ flex: Math.max(1, b.endWeek - b.startWeek + 1) }}
+                        className={`h-2 rounded-full ${b.colorToken?.split(' ')[0] || 'bg-blue-200'}`}
+                        title={`${b.title} (W${b.startWeek}–W${b.endWeek})`}
+                      />
+                    ))}
+                  </div>
+                )}
 
-                    {/* Start Weight */}
-                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('start_weight', { defaultValue: 'Starting Weight' })}</p>
-                      <div className="flex items-baseline gap-1">
-                        <input
-                          type="number" step="0.5"
-                          className="text-xl font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-16 focus:ring-0 outline-none"
-                          value={tGoals.startWeight || ''}
-                          onChange={e => { const v = parseFloat(e.target.value); updateGoals({ startWeight: isNaN(v) ? 0 : v }); }}
+                {/* Chart */}
+                <div className="w-full" style={{ height: 320 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={chartData} margin={{ top: 12, right: 64, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="traj-projected" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.18}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
+
+                      <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }}
+                        interval={totalWeeks > 16 ? Math.floor(totalWeeks / 8) : 1}
+                      />
+                      <YAxis
+                        domain={[minW, maxW]}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }}
+                        tickCount={5}
+                        tickFormatter={v => `${v}kg`}
+                        width={42}
+                      />
+
+                      <RechartTooltip content={<ChartTooltip />} />
+
+                      {/* Target weight reference line */}
+                      {targetW > 0 && (
+                        <ReferenceLine
+                          y={targetW}
+                          stroke="#10b981"
+                          strokeDasharray="6 4"
+                          strokeWidth={1.5}
+                          label={{ value: `${isEs ? 'Objetivo' : 'Target'} ${targetW}kg`, position: 'right', fill: '#10b981', fontSize: 9, fontWeight: 700 }}
                         />
-                        <span className="text-[10px] font-bold text-slate-400">kg</span>
-                      </div>
-                      {hasActualData && (
-                        <p className="text-[9px] text-slate-400 mt-1">
-                          Latest: {checkInsHistory[checkInsHistory.length - 1]?.weight} kg
-                        </p>
                       )}
-                    </div>
 
-                    {/* Strength Target */}
-                    <div className="p-4 rounded-2xl bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800/50">
-                      <p className="text-[9px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1.5">{t('planning_strength_target', { defaultValue: 'Strength Target' })}</p>
-                      <div className="flex items-baseline gap-1.5">
-                        <input
-                          type="number" step="2.5"
-                          className="text-3xl font-bold text-purple-700 dark:text-purple-300 bg-transparent border-none p-0 w-20 focus:ring-0 outline-none"
-                          value={tGoals.targetStrengthKg || ''}
-                          onChange={e => { const v = parseFloat(e.target.value); updateGoals({ targetStrengthKg: isNaN(v) ? 0 : v }); }}
+                      {/* "Now" reference line */}
+                      {chartData[currentWeekIndex] && (
+                        <ReferenceLine
+                          x={chartData[currentWeekIndex].label}
+                          stroke="#64748b"
+                          strokeDasharray="4 3"
+                          strokeWidth={1.5}
+                          label={{ value: isEs ? 'Hoy' : 'Now', position: 'top', fill: '#64748b', fontSize: 9, fontWeight: 700 }}
                         />
-                        <span className="text-sm font-bold text-purple-600">kg</span>
-                      </div>
-                    </div>
+                      )}
 
-                    {/* Reference Lift */}
-                    <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('planning_reference_lift', { defaultValue: 'Reference Lift' })}</p>
-                      <input
-                        className="text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 w-full focus:ring-0 outline-none"
-                        value={tGoals.exerciseName || ''}
-                        placeholder={t('planning_reference_lift_placeholder')}
-                        onChange={e => updateGoals({ exerciseName: e.target.value })}
+                      {/* Projected (from current weight onward) */}
+                      <Area
+                        type="monotone"
+                        dataKey="projected"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        strokeDasharray="7 4"
+                        fill="url(#traj-projected)"
+                        dot={false}
+                        activeDot={{ r: 5, fill: '#10b981', stroke: 'white', strokeWidth: 2 }}
+                        connectNulls
                       />
+
+                      {/* Actual check-ins */}
+                      <Line
+                        type="monotone"
+                        dataKey="actual"
+                        stroke="#3b82f6"
+                        strokeWidth={3}
+                        dot={{ fill: 'white', stroke: '#3b82f6', strokeWidth: 2.5, r: 4 }}
+                        activeDot={{ r: 7, fill: '#3b82f6', stroke: 'white', strokeWidth: 2 }}
+                        connectNulls={false}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Compact settings row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-3 py-2 border border-slate-200 dark:border-slate-700">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('planning_program_start_date', { defaultValue: 'Start date' })}</p>
+                    <input
+                      type="date"
+                      className="text-xs font-bold text-slate-800 dark:text-white bg-transparent border-none p-0 w-full focus:ring-0 outline-none"
+                      value={tGoals.programStartDate || ''}
+                      onChange={e => updateGoals({ programStartDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-3 py-2 border border-slate-200 dark:border-slate-700">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('total_duration', { defaultValue: 'Duration' })}</p>
+                    <div className="flex items-baseline gap-1">
+                      <input
+                        type="number" min="4" max="52"
+                        className="text-sm font-bold text-slate-800 dark:text-white bg-transparent border-none p-0 w-10 focus:ring-0 outline-none"
+                        value={tGoals.totalWeeks || ''}
+                        onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) updateGoals({ totalWeeks: v }); }}
+                      />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{t('weeks_label', { defaultValue: 'weeks' })}</span>
                     </div>
                   </div>
-
-                  {/* RIGHT: Recharts Chart — fills remaining space */}
-                  <div className="flex-1 min-w-0 flex flex-col gap-2">
-                    {/* Phase strips */}
-                    <div className="flex gap-1 px-1">
-                      {roadmap.nutrition.map(b => (
-                        <div
-                          key={b.id}
-                          style={{ flex: b.endWeek - b.startWeek + 1 }}
-                          className={`h-1.5 rounded-full ${b.colorToken?.split(' ')[0] || 'bg-blue-200'} flex items-center justify-center overflow-hidden`}
-                          title={`${b.title} (W${b.startWeek}–W${b.endWeek})`}
-                        />
-                      ))}
+                  <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-3 py-2 border border-slate-200 dark:border-slate-700">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                      {t('start_weight', { defaultValue: 'Start weight' })}
+                      {startIsAuto && <span className="text-[7px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 px-1 py-px rounded font-black">AUTO</span>}
+                    </p>
+                    <div className="flex items-baseline gap-1">
+                      <input
+                        type="number" step="0.5"
+                        className="text-sm font-bold text-slate-800 dark:text-white bg-transparent border-none p-0 w-12 focus:ring-0 outline-none"
+                        value={tGoals.startWeight || ''}
+                        onChange={e => { const v = parseFloat(e.target.value); updateGoals({ startWeight: isNaN(v) ? 0 : v }); }}
+                      />
+                      <span className="text-[10px] font-bold text-slate-400">kg</span>
                     </div>
-
-                    {/* Chart */}
-                    <div className="w-full" style={{ height: 300 }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={chartData} margin={{ top: 8, right: 60, left: 0, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="traj-projected" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.15}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="traj-actual" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
-
-                          <XAxis
-                            dataKey="label"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8', textAnchor: 'middle' }}
-                            interval={totalWeeks > 16 ? Math.floor(totalWeeks / 8) : 1}
-                          />
-                          <YAxis
-                            domain={[minW, maxW]}
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }}
-                            tickCount={5}
-                            tickFormatter={v => `${v}kg`}
-                            width={42}
-                          />
-
-                          <RechartTooltip content={<ChartTooltip />} />
-
-                          {/* Target weight reference line */}
-                          {tGoals.targetWeight > 0 && (
-                            <ReferenceLine
-                              y={tGoals.targetWeight}
-                              stroke="#10b981"
-                              strokeDasharray="6 4"
-                              strokeWidth={1.5}
-                              label={{
-                                value: `Target ${tGoals.targetWeight}kg`,
-                                position: 'right',
-                                fill: '#10b981',
-                                fontSize: 9,
-                                fontWeight: 700,
-                              }}
-                            />
-                          )}
-
-                          {/* Current week reference line */}
-                          {chartData[currentWeekIndex] && (
-                            <ReferenceLine
-                              x={chartData[currentWeekIndex].label}
-                              stroke="#10b981"
-                              strokeDasharray="4 3"
-                              strokeWidth={2}
-                              label={{
-                                value: `W${currentWeekIndex + 1} Now`,
-                                position: 'top',
-                                fill: '#10b981',
-                                fontSize: 9,
-                                fontWeight: 700,
-                              }}
-                            />
-                          )}
-
-                          {/* Projected area + line */}
-                          <Area
-                            type="monotone"
-                            dataKey="projected"
-                            stroke="#10b981"
-                            strokeWidth={2.5}
-                            strokeDasharray="7 4"
-                            fill="url(#traj-projected)"
-                            dot={false}
-                            activeDot={false}
-                            connectNulls
-                          />
-
-                          {/* Actual line + dots */}
-                          <Line
-                            type="monotone"
-                            dataKey="actual"
-                            stroke="#3b82f6"
-                            strokeWidth={3}
-                            dot={{ fill: 'white', stroke: '#3b82f6', strokeWidth: 2.5, r: 5 }}
-                            activeDot={{ r: 7, fill: '#3b82f6', stroke: 'white', strokeWidth: 2 }}
-                            connectNulls={false}
-                          />
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-3 py-2 border border-slate-200 dark:border-slate-700">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                      {isEs ? 'Peso actual' : 'Current weight'}
+                      {currentIsAuto && <span className="text-[7px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 px-1 py-px rounded font-black">AUTO</span>}
+                    </p>
+                    <div className="flex items-baseline gap-1">
+                      <input
+                        type="number" step="0.5"
+                        className="text-sm font-bold text-slate-800 dark:text-white bg-transparent border-none p-0 w-12 focus:ring-0 outline-none"
+                        value={tGoals.currentWeight || ''}
+                        onChange={e => { const v = parseFloat(e.target.value); updateGoals({ currentWeight: isNaN(v) ? 0 : v }); }}
+                      />
+                      <span className="text-[10px] font-bold text-slate-400">kg</span>
                     </div>
-
-                    {/* No data banner inside chart area */}
-                    {!hasActualData && (
-                      <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-1">
-                        {t('planning_no_checkin_projection')}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1561,16 +1590,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                     placeholder={t('planning_goal_label', { defaultValue: 'Goal name' })}
                     onChange={(e) => updateGoal(goal.id, { label: e.target.value })}
                   />
-                  <select
+                  <Select
                     className="text-xs font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
                     value={goal.type}
-                    onChange={(e) => updateGoal(goal.id, { type: e.target.value as Goal['type'] })}
+                    onChange={(val) => updateGoal(goal.id, { type: val as Goal['type'] })}
                   >
                     <option value="physical">{t('physical', { defaultValue: 'Physical' })}</option>
                     <option value="nutrition">{t('nutrition', { defaultValue: 'Nutrition' })}</option>
                     <option value="training">{t('training', { defaultValue: 'Training' })}</option>
                     <option value="mindset">{t('mindset', { defaultValue: 'Mindset' })}</option>
-                  </select>
+                  </Select>
                   <input
                     className="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
                     value={goal.desc}
@@ -1666,15 +1695,15 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <select
+                      <Select
                         className="px-2 py-1.5 text-[9px] font-bold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 outline-none uppercase tracking-widest"
                         value={m.status}
-                        onChange={(e) => updateMilestone(m.id, { status: e.target.value as Milestone['status'] })}
+                        onChange={(val) => updateMilestone(m.id, { status: val as Milestone['status'] })}
                       >
                         <option value="future">{t('planning_status_future', { defaultValue: 'Future' })}</option>
                         <option value="next">{t('planning_status_next', { defaultValue: 'Next' })}</option>
                         <option value="done">{t('planning_status_done', { defaultValue: 'Done' })}</option>
-                      </select>
+                      </Select>
                       <button
                         onClick={() => deleteMilestone(m.id)}
                         className="p-1.5 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
@@ -1776,11 +1805,11 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('planning_start_week')}</label>
-                      <select 
+                      <Select
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={draftBlockValues.startWeek}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
+                        onChange={(raw) => {
+                          const val = parseInt(raw);
                           const duration = (draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1);
                           setDraftBlockValues({
                             ...draftBlockValues,
@@ -1792,15 +1821,15 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                         {Array.from({ length: planWeeks }).map((_, i) => (
                           <option key={i + 1} value={i + 1}>{t('planning_week_label', { week: i + 1 })}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('total_duration')}</label>
-                      <select 
+                      <Select
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={(draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1) + 1}
-                        onChange={(e) => {
-                          const dur = parseInt(e.target.value);
+                        onChange={(raw) => {
+                          const dur = parseInt(raw);
                           setDraftBlockValues({
                             ...draftBlockValues,
                             endWeek: Math.min((draftBlockValues.startWeek || 1) + dur - 1, planWeeks)
@@ -1810,19 +1839,19 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                         {Array.from({ length: planWeeks }).map((_, i) => (
                           <option key={i + 1} value={i + 1}>{i + 1} {t('weeks_label')}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">{t('planning_end_week')}</label>
-                      <select 
+                      <Select
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all"
                         value={draftBlockValues.endWeek}
-                        onChange={(e) => setDraftBlockValues({ ...draftBlockValues, endWeek: parseInt(e.target.value) })}
+                        onChange={(raw) => setDraftBlockValues({ ...draftBlockValues, endWeek: parseInt(raw) })}
                       >
                         {Array.from({ length: planWeeks }).map((_, i) => (
                           <option key={i + 1} disabled={i + 1 < (draftBlockValues.startWeek || 1)} value={i + 1}>{t('planning_week_label', { week: i + 1 })}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   </div>
 

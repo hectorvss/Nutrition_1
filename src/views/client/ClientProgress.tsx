@@ -44,6 +44,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import CheckInHistory from '../CheckInHistory';
 import CheckInReview from '../CheckInReview';
+import Select from '../../components/ui/Select';
 
 interface WorkoutLogItemProps {
   workout: any;
@@ -493,10 +494,10 @@ export default function ClientProgress() {
             )}
             <div className="relative group">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <select 
+              <Select
                 value={strengthRange}
-                onChange={(e) => setStrengthRange(e.target.value)}
-                className="appearance-none text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-8 text-slate-600 dark:text-slate-300 outline-none shadow-sm transition-all"
+                onChange={(val) => setStrengthRange(val)}
+                className="text-[10px] font-bold border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 py-2 pl-9 pr-3 text-slate-600 dark:text-slate-300 outline-none shadow-sm transition-all"
               >
                 <option value="1W">{t('last_7_days')}</option>
                 <option value="14D">{t('last_14_days')}</option>
@@ -505,8 +506,7 @@ export default function ClientProgress() {
                 <option value="6M">{t('last_6_months')}</option>
                 <option value="YTD">{t('year_to_date')}</option>
                 <option value="ALL">{t('all_history')}</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              </Select>
             </div>
           </div>
         </div>

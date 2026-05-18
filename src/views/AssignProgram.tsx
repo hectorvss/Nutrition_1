@@ -4,6 +4,7 @@ import { PROGRAM_TEMPLATES } from '../constants/training_presets';
 import { useClient } from '../context/ClientContext';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface AssignProgramProps {
   clientId: string;
@@ -262,19 +263,16 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
 
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('primary_focus')}</label>
-                    <div className="relative">
-                      <select
-                        value={focus}
-                        onChange={e => setFocus(e.target.value)}
-                        className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3.5 pl-4 pr-10 text-sm font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 appearance-none outline-none transition-all"
-                      >
-                        <option value={selectedProgram.focus}>{selectedProgram.focus}</option>
-                        <option value={t('training_phase_hypertrophy')}>{t('training_phase_hypertrophy')}</option>
-                        <option value={t('training_focus_endurance')}>{t('training_focus_endurance')}</option>
-                        <option value={t('training_focus_mobility')}>{t('training_focus_mobility')}</option>
-                      </select>
-                      <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
-                    </div>
+                    <Select
+                      value={focus}
+                      onChange={(val) => setFocus(val)}
+                      className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3.5 px-4 text-sm font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                    >
+                      <option value={selectedProgram.focus}>{selectedProgram.focus}</option>
+                      <option value={t('training_phase_hypertrophy')}>{t('training_phase_hypertrophy')}</option>
+                      <option value={t('training_focus_endurance')}>{t('training_focus_endurance')}</option>
+                      <option value={t('training_focus_mobility')}>{t('training_focus_mobility')}</option>
+                    </Select>
                   </div>
 
                   <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">

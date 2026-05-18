@@ -14,6 +14,7 @@ import {
   Target
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface PlanningTemplate {
   id: string;
@@ -333,18 +334,17 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-emerald-500 transition-colors">
                     <Icon name="schedule" className="text-[20px]" />
                   </div>
-                  <select 
-                    className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer"
+                  <Select
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.duration}
-                    onChange={(e) => setSettings({...settings, duration: Number(e.target.value)})}
+                    onChange={(val) => setSettings({...settings, duration: Number(val)})}
                   >
                     <option value={8}>8 {t('weeks_label')}</option>
                     <option value={10}>10 {t('weeks_label')}</option>
                     <option value={12}>12 {t('weeks_label')}</option>
                     <option value={16}>16 {t('weeks_label')}</option>
                     <option value={20}>20 {t('weeks_label')}</option>
-                  </select>
-                  <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
+                  </Select>
                 </div>
               </div>
 
@@ -354,18 +354,17 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-amber-500 transition-colors">
                     <Icon name="fitness_center" className="text-[20px]" />
                   </div>
-                  <select 
-                    className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer"
+                  <Select
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.trainingFreq}
-                    onChange={(e) => setSettings({...settings, trainingFreq: e.target.value})}
+                    onChange={(val) => setSettings({...settings, trainingFreq: val})}
                   >
                     <option value="2">2 {t('days_week')}</option>
                     <option value="3">3 {t('days_week')}</option>
                     <option value="4">4 {t('days_week')}</option>
                     <option value="5">5 {t('days_week')}</option>
                     <option value="6">6 {t('days_week')}</option>
-                  </select>
-                  <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
+                  </Select>
                 </div>
               </div>
 
@@ -375,17 +374,16 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-rose-500 transition-colors">
                     <Icon name="speed" className="text-[20px]" />
                   </div>
-                  <select 
-                    className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer"
+                  <Select
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.intensityLevel}
-                    onChange={(e) => setSettings({...settings, intensityLevel: e.target.value})}
+                    onChange={(val) => setSettings({...settings, intensityLevel: val})}
                   >
                     <option value="low">{t('planning_intensity_low')}</option>
                     <option value="moderate">{t('planning_intensity_moderate')}</option>
                     <option value="aggressive">{t('planning_intensity_aggressive')}</option>
                     <option value="elite">{t('planning_intensity_elite')}</option>
-                  </select>
-                  <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
+                  </Select>
                 </div>
               </div>
 
@@ -395,18 +393,17 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors">
                     <Icon name="target" className="text-[20px]" />
                   </div>
-                  <select 
-                    className="w-full pl-12 pr-10 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer"
+                  <Select
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.primaryGoal}
-                    onChange={(e) => setSettings({...settings, primaryGoal: e.target.value})}
+                    onChange={(val) => setSettings({...settings, primaryGoal: val})}
                   >
                     <option value="fat_loss">{t('analytics_fat_loss')}</option>
                     <option value="muscle_gain">{t('analytics_muscle_gain')}</option>
                     <option value="body_recomposition">{t('body_recomposition')}</option>
                     <option value="metabolic_reset">{t('metabolic_reset')}</option>
                     <option value="endurance_focus">{t('endurance_focus')}</option>
-                  </select>
-                  <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
+                  </Select>
                 </div>
               </div>
             </div>

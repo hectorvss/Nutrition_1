@@ -5,6 +5,7 @@ import { fetchWithAuth } from '../api';
 import { PROGRAM_TEMPLATES } from '../constants/training_presets';
 import { trainingPrograms } from '../constants/training';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface TrainingNoPlanProps {
   client: any;
@@ -521,10 +522,10 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('primary_focus')}</label>
-                  <select
-                    className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white text-sm focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium py-2.5 px-3"
+                  <Select
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white text-sm focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium py-2.5 px-3"
                     value={focusOverride}
-                    onChange={(e) => setFocusOverride(e.target.value)}
+                    onChange={(val) => setFocusOverride(val)}
                   >
                     {!['Full Body Strength', 'Hypertrophy', 'Endurance', 'Mobility'].includes(focusOverride) && (
                       <option value={focusOverride}>{focusOverride}</option>
@@ -533,7 +534,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                     <option value="Hypertrophy">{t('training_focus_hypertrophy')}</option>
                     <option value="Endurance">{t('training_focus_endurance')}</option>
                     <option value="Mobility">{t('training_focus_mobility')}</option>
-                  </select>
+                  </Select>
                 </div>
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-700 mt-2">

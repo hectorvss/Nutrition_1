@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useFoodContext } from '../context/FoodContext';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface FoodCreateProps {
   onBack: () => void;
@@ -91,15 +92,15 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-900 mb-2">{t('category_label')}</label>
-                    <select
+                    <Select
                       value={category}
-                      onChange={e => setCategory(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm"
+                      onChange={(val) => setCategory(val)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm"
                     >
                       {FOOD_CATEGORIES.map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-900 mb-2">
@@ -121,12 +122,12 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
                         className="w-full px-4 py-2.5 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm"
                         placeholder="100"
                       />
-                      <select value={servingUnit} onChange={e => setServingUnit(e.target.value)} className="w-24 px-3 py-2.5 rounded-xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm font-medium">
+                      <Select value={servingUnit} onChange={(val) => setServingUnit(val)} className="w-24 px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm font-medium">
                         <option>g</option>
                         <option>ml</option>
                         <option>oz</option>
                         <option>cup</option>
-                      </select>
+                      </Select>
                     </div>
                   </div>
                 </div>

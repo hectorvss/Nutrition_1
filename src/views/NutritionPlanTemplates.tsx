@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
+import Select from '../components/ui/Select';
 
 interface NutritionPlanTemplatesProps {
   client?: any;
@@ -203,14 +204,13 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                 <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">{t('daily_structure')}</label>
                 <div className="relative">
                   <Utensils className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <select className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer">
+                  <Select className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-bold">
                     <option>{t('three_meals')}</option>
                     <option>{t('three_meals_one_snack')}</option>
                     <option>{t('three_meals_two_snacks')}</option>
                     <option>{t('four_meals')}</option>
                     <option>{t('five_meals')}</option>
-                  </select>
-                  <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
+                  </Select>
                 </div>
               </div>
 
@@ -218,17 +218,16 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                 <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">{t('macro_split')}</label>
                 <div className="relative">
                   <PieChart className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <select
+                  <Select
                     value={macroSplit}
-                    onChange={e => setMacroSplit(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer"
+                    onChange={(val) => setMacroSplit(val)}
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-bold"
                   >
                     <option value="balanced">{t('balanced_option')}</option>
                     <option value="low_carb">{t('low_carb_option')}</option>
                     <option value="high_carb">{t('high_carb_option')}</option>
                     <option value="ketogenic">{t('ketogenic_option')}</option>
-                  </select>
-                  <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
+                  </Select>
                 </div>
               </div>
             </div>

@@ -14,6 +14,7 @@ import {
 import { motion } from 'framer-motion';
 import { CheckInStep, CheckInQuestion, CheckInStepType } from '../../types/checkIn';
 import { useLanguage } from '../../context/LanguageContext';
+import Select from '../ui/Select';
 
 interface EditableStepCardProps {
   step: CheckInStep;
@@ -145,15 +146,15 @@ export default function EditableStepCard({ step, index, onUpdate, onRemove }: Ed
                   />
                 </div>
                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl">
-                   <select 
+                   <Select
                      value={q.type}
-                     onChange={(e) => updateQuestion(qIdx, { type: e.target.value as any })}
-                     className="bg-transparent border-none rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 py-2 pl-3 pr-10 focus:ring-0 cursor-pointer"
+                     onChange={(val) => updateQuestion(qIdx, { type: val as any })}
+                     className="bg-transparent border-none rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 py-2 px-3 focus:ring-0"
                    >
                      {QUESTION_TYPES.map(t => (
                        <option key={t.id} value={t.id}>{getTypeLabel(t.id, t.label)}</option>
                      ))}
-                   </select>
+                   </Select>
                    <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700" />
                    <button 
                      onClick={() => removeQuestion(qIdx)}

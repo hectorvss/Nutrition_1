@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface RecipeCreateProps {
   onBack: () => void;
@@ -55,11 +56,11 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-2">{t('category_label')}</label>
-                      <select className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all appearance-none">
+                      <Select className="w-full rounded-2xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all">
                         <option>{t('lunch_dinner_option')}</option>
                         <option>{t('breakfast_option')}</option>
                         <option>{t('snack_option')}</option>
-                      </select>
+                      </Select>
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-2">{t('prep_time')}</label>
@@ -121,9 +122,9 @@ export default function RecipeCreate({ onBack }: RecipeCreateProps) {
                         />
                       </div>
                       <div className="w-32">
-                        <select className="w-full rounded-xl border-slate-200 bg-white py-2 text-sm font-bold focus:ring-2 focus:ring-emerald-500">
+                        <Select className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500">
                           <option>{item.unit}</option>
-                        </select>
+                        </Select>
                       </div>
                       <button className="text-slate-300 hover:text-red-500 transition-colors">
                         <span className="material-symbols-outlined text-[20px]">delete</span>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface SupplementCreateProps {
   onBack: () => void;
@@ -68,7 +69,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('supplement_type')}</label>
-                    <select className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all appearance-none">
+                    <Select placeholder={t('select_type')} className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
                       <option value="">{t('select_type')}</option>
                       <option value="protein">{t('protein_powder')}</option>
                       <option value="vitamin">{t('vitamin_mineral')}</option>
@@ -77,7 +78,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                       <option value="amino-acids">{t('amino_acids')}</option>
                       <option value="fat-burner">{t('fat_burner')}</option>
                       <option value="other">{t('other')}</option>
-                    </select>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('description_notes')}</label>
@@ -111,7 +112,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('recommended_timing')}</label>
-                    <select className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all appearance-none">
+                    <Select className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
                       <option value="anytime">{t('timing_anytime')}</option>
                       <option value="morning">{t('timing_morning')}</option>
                       <option value="pre-workout">{t('timing_pre_workout')}</option>
@@ -119,7 +120,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                       <option value="post-workout">{t('timing_post_workout')}</option>
                       <option value="bedtime">{t('timing_before_bed')}</option>
                       <option value="meal">{t('timing_with_meal')}</option>
-                    </select>
+                    </Select>
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('primary_ingredient')}</label>

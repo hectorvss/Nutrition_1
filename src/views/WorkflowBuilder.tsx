@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 /* ---- types ---- */
 interface CatalogNode {
@@ -346,11 +347,11 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
                   <div key={f.name} className="flex flex-col gap-1">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">{f.label}</label>
                     {f.type === 'select' ? (
-                      <select value={val} onChange={e => updateConfig(f.name, e.target.value)}
+                      <Select value={val} onChange={(v) => updateConfig(f.name, v)}
                         className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm px-2 py-1.5">
                         <option value="">—</option>
                         {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
+                      </Select>
                     ) : f.type === 'textarea' || f.type === 'json' ? (
                       <textarea value={typeof val === 'object' ? JSON.stringify(val) : val}
                         onChange={e => updateConfig(f.name, e.target.value)} rows={4}

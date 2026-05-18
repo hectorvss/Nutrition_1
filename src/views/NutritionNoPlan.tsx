@@ -4,6 +4,7 @@ import { useFoodContext } from '../context/FoodContext';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface NutritionNoPlanProps {
   client: any;
@@ -724,10 +725,10 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">{t('daily_structure')}</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">restaurant</span>
-                  <select 
-                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-semibold cursor-pointer"
+                  <Select
+                    className="w-full pl-10 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-semibold"
                     value={dailyStructure}
-                    onChange={(e) => setDailyStructure(e.target.value)}
+                    onChange={(val) => setDailyStructure(val)}
                   >
                     <option value="3 Meals">{t('three_meals')}</option>
                     <option value="3 Meals + 1 Snack">{t('three_meals_one_snack')}</option>
@@ -738,8 +739,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                     <option value="5 Meals">{t('five_meals')}</option>
                     <option value="5 Meals + 1 Snack">{t('five_meals_one_snack')}</option>
                     <option value="6 Meals">{t('six_meals')}</option>
-                  </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                  </Select>
                 </div>
               </div>
               
@@ -747,10 +747,10 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase">{t('macro_split')}</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">pie_chart</span>
-                  <select 
-                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-semibold cursor-pointer"
+                  <Select
+                    className="w-full pl-10 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-semibold"
                     value={macroSplitId}
-                    onChange={(e) => setMacroSplitId(e.target.value)}
+                    onChange={(val) => setMacroSplitId(val)}
                   >
                     <option value="Balanced (40/30/30)">{t('macro_balanced_403030')}</option>
                     <option value="Low Carb (40/40/20)">{t('macro_low_carb_404020')}</option>
@@ -758,8 +758,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
                     <option value="High Carb (25/55/20)">{t('macro_high_carb_255520')}</option>
                     <option value="High Carb (20/60/20)">{t('macro_high_carb_206020')}</option>
                     <option value="Ketogenic (20/5/75)">{t('macro_ketogenic_20575')}</option>
-                  </select>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] pointer-events-none">expand_more</span>
+                  </Select>
                 </div>
               </div>
             </div>

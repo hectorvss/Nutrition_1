@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Save, Edit3, Plus, Trash2, GripVertical, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import Select from '../ui/Select';
 
 interface RecipeCreateProps {
   onCancel: () => void;
@@ -42,11 +43,11 @@ export default function RecipeCreate({ onCancel }: RecipeCreateProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">{t('category')}</label>
-                  <select className="w-full rounded-xl border-slate-200 focus:ring-emerald-500 focus:border-emerald-500 text-sm">
+                  <Select className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm">
                     <option>{t('category_lunch_dinner')}</option>
                     <option>{t('category_breakfast')}</option>
                     <option>{t('category_snack')}</option>
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">{t('prep_time_min')}</label>

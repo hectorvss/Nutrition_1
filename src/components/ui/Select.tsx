@@ -12,8 +12,10 @@ export interface SelectOption {
 }
 
 interface SelectProps {
-  value: any;
-  onChange: (value: any) => void;
+  /** Controlled value. Omit for uncontrolled usage. */
+  value?: any;
+  /** Change handler. Optional for uncontrolled / read-only selects. */
+  onChange?: (value: any) => void;
   /** Accepts native <option> children — drop-in replacement for <select>. */
   children?: ReactNode;
   /** Alternative to children: pass an explicit options array. */
@@ -56,7 +58,18 @@ export default function Select({
       return { value: optValue, label: p.children ?? p.value, disabled: !!p.disabled };
     });
 
-  const selected = opts.find(o => String(o.value) === String(value));
+  // Uncontrolled fallback: when no `value` prop is supplied, keep the
+  // selection in internal state (defaults to the first option).
+  const isControlled = value !== undefined;
+  const [internalValue, setInternalValue] = useState<any>(opts[0]?.value);
+  const currentValue = isControlled ? value : internalValue;
+
+  const commit = (v: any) => {
+    if (!isControlled) setInternalValue(v);
+    onChange?.(v);
+  };
+
+  const selected = opts.find(o => String(o.value) === String(currentValue));
 
   const updateCoords = useCallback(() => {
     const r = triggerRef.current?.getBoundingClientRect();
@@ -133,7 +146,7 @@ export default function Select({
             <div className="px-3 py-2 text-sm text-slate-400">—</div>
           )}
           {opts.map((o, i) => {
-            const isSelected = String(o.value) === String(value);
+            const isSelected = String(o.value) === String(currentValue);
             return (
               <button
                 key={i}
@@ -143,7 +156,7 @@ export default function Select({
                 disabled={o.disabled}
                 onClick={() => {
                   if (o.disabled) return;
-                  onChange(o.value);
+                  commit(o.value);
                   setOpen(false);
                 }}
                 className={`w-full flex items-center justify-between gap-2 text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${

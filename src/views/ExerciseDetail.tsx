@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useExerciseContext } from '../context/ExerciseContext';
 import { TrainingCategory } from '../types/training';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface ExerciseDetailProps {
   exerciseName?: string;
@@ -179,17 +180,17 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('category_label')}</label>
                   {isEditing ? (
-                    <select 
-                      value={category} 
-                      onChange={(e) => setCategory(e.target.value as any)}
-                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all cursor-pointer font-medium"
+                    <Select
+                      value={category}
+                      onChange={(val) => setCategory(val as any)}
+                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
                     >
                       <option value="Strength">{t('strength_cat')}</option>
                       <option value="Mobility">{t('mobility_cat')}</option>
                       <option value="Warm-up">{t('warmup_cat')}</option>
                       <option value="Cardio">{t('cardio_cat')}</option>
                       <option value="Rehab">{t('rehab_cat')}</option>
-                    </select>
+                    </Select>
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
                       {category}
@@ -217,16 +218,16 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('type_label')}</label>
                   {isEditing ? (
-                    <select 
-                      value={type} 
-                      onChange={(e) => setType(e.target.value as any)}
-                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all cursor-pointer font-medium"
+                    <Select
+                      value={type}
+                      onChange={(val) => setType(val as any)}
+                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
                     >
                       <option value="Compound">{t('compound_type')}</option>
                       <option value="Isolation">{t('isolation_type')}</option>
                       <option value="Stretch">{t('stretch_type')}</option>
                       <option value="Hold">{t('hold_type')}</option>
-                    </select>
+                    </Select>
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
                       {type}
@@ -286,15 +287,15 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('difficulty_level')}</label>
                   {isEditing ? (
-                    <select 
-                      value={difficultyLevel} 
-                      onChange={(e) => setDifficultyLevel(e.target.value as any)}
-                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all cursor-pointer font-medium"
+                    <Select
+                      value={difficultyLevel}
+                      onChange={(val) => setDifficultyLevel(val as any)}
+                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
                     >
                       <option value="Beginner">{t('beginner_level')}</option>
                       <option value="Intermediate">{t('intermediate_level')}</option>
                       <option value="Advanced">{t('advanced_level')}</option>
-                    </select>
+                    </Select>
                   ) : (
                     <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
                       {difficultyLevel}
