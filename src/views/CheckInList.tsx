@@ -280,26 +280,26 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                   <button onClick={() => { setIsModalOpen(false); onManageTemplates(); }} className="mt-4 text-emerald-500 text-xs font-bold uppercase tracking-widest hover:underline">{t('go_to_library')}</button>
                 </div>
               ) : (
-                availableTemplates.map(t => (
-                  <button 
-                    key={t.id}
-                    onClick={() => handleAssign(t.id)}
+                availableTemplates.map(tmpl => (
+                  <button
+                    key={tmpl.id}
+                    onClick={() => handleAssign(tmpl.id)}
                     disabled={!!isAssigning}
                     className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left group
-                      ${isAssigning === t.id ? 'opacity-70 cursor-wait' : !!isAssigning ? 'opacity-50 cursor-not-allowed' : ''}
-                      ${assignments[selectedClient?.id] === t.name 
-                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/30 ring-1 ring-emerald-500/20' 
+                      ${isAssigning === tmpl.id ? 'opacity-70 cursor-wait' : !!isAssigning ? 'opacity-50 cursor-not-allowed' : ''}
+                      ${assignments[selectedClient?.id] === tmpl.name
+                        ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-500/30 ring-1 ring-emerald-500/20'
                         : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-emerald-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                   >
                     <div>
-                      <p className={`text-sm font-bold ${assignments[selectedClient?.id] === t.name ? 'text-emerald-900 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
-                        {t.name}
+                      <p className={`text-sm font-bold ${assignments[selectedClient?.id] === tmpl.name ? 'text-emerald-900 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+                        {tmpl.name}
                       </p>
-                      {t.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">{t('recommended')}</span>}
+                      {tmpl.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">{t('recommended')}</span>}
                     </div>
-                    {isAssigning === t.id ? (
+                    {isAssigning === tmpl.id ? (
                       <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                    ) : assignments[selectedClient?.id] === t.name ? (
+                    ) : assignments[selectedClient?.id] === tmpl.name ? (
                       <span className="material-symbols-outlined text-emerald-500">check_circle</span>
                     ) : (
                       <span className="material-symbols-outlined text-slate-300 group-hover:text-emerald-300 transition-colors">radio_button_unchecked</span>

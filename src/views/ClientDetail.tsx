@@ -250,6 +250,9 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
 
 const NutritionPlanCard = ({ plan }: { plan: any }) => {
   const { t } = useLanguage();
+  // Hooks must run unconditionally — declared before any early return.
+  const [selectedDay, setSelectedDay] = useState('monday');
+
   if (!plan) return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
       <Utensils className="w-10 h-10 mx-auto mb-3 opacity-20" />
@@ -259,8 +262,7 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
 
   const data = plan.data_json || {};
   const isWeekly = data.type === 'weekly';
-  const [selectedDay, setSelectedDay] = useState('monday');
-  
+
   const currentDayData = isWeekly ? (data.days?.[selectedDay] || {}) : data;
   const meals = currentDayData.meals || [];
 
@@ -365,6 +367,9 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
 
 const TrainingProgramCard = ({ program }: { program: any }) => {
   const { t } = useLanguage();
+  // Hooks must run unconditionally — declared before any early return.
+  const [selectedDay, setSelectedDay] = useState('monday');
+
   if (!program) return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
       <Dumbbell className="w-10 h-10 mx-auto mb-3 opacity-20" />
@@ -374,7 +379,6 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
 
   const data = program.data_json || {};
   const isWeekly = !!data.weeklySchedule;
-  const [selectedDay, setSelectedDay] = useState('monday');
 
   let blocks = [];
   let workoutName = '';

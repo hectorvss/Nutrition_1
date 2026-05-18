@@ -21,6 +21,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Safely read the cached user — a corrupt localStorage value must never
+    // throw here, or setIsLoading(false) would never run and the app would
+    // hang forever on the loading screen.
+    const getCachedUser = (): User | null => {
+      try {
+        const saved = localStorage.getItem('auth_user');
+        return saved ? JSON.parse(saved) : null;
+      } catch {
+        localStorage.removeItem('auth_user');
+        return null;
+      }
+    };
+
     const checkAuthStatus = async () => {
       const token = getAuthToken();
       if (!token) {
@@ -47,16 +60,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           // Server error — fall back to cached user to avoid logging out on flaky network
-          const savedUser = localStorage.getItem('auth_user');
-          if (savedUser) setUser(JSON.parse(savedUser));
+          setUser(getCachedUser());
         }
       } catch {
         // Network error — fall back to cached user
-        const savedUser = localStorage.getItem('auth_user');
-        if (savedUser) setUser(JSON.parse(savedUser));
+        setUser(getCachedUser());
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
     checkAuthStatus();
   }, []);

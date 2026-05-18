@@ -26,18 +26,25 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
     headers,
   });
 
-  if ((response.status === 401 || response.status === 403) && token) {
-    // Unauthorized or Forbidden - but we had a token, so it must be invalid
+  if (response.status === 401 && token) {
+    // 401 = invalid/expired token -> the session is genuinely dead, log out.
     setAuthToken('');
     localStorage.removeItem('auth_user');
-    window.location.href = '/'; 
-    return;
+    window.location.href = '/';
+    // Throw so callers stop executing instead of receiving `undefined`
+    // (which would crash on .map / .forEach before the redirect completes).
+    throw new Error('Session expired');
   }
 
   if (!response.ok) {
+    // 403 (forbidden) is NOT a dead session — e.g. a client hitting a
+    // manager-only endpoint. Surface it as a normal error, never log out.
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || 'API Request Failed');
   }
 
-  return response.json();
+  // 204 No Content (and empty bodies) would make response.json() throw.
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 };

@@ -23,7 +23,11 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
 
   const refreshProfile = async () => {
-    if (!user) return;
+    if (!user) {
+      // No user yet — stop the loading state so the app doesn't hang.
+      setLoading(false);
+      return;
+    }
     try {
       const data = await fetchWithAuth('/manager/profile');
       if (data) {
