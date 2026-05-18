@@ -495,11 +495,20 @@ router.delete('/clients/:id', async (req: any, res) => {
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
 
-    // Delete client profile first (foreign key)
+    // Delete dependent rows that do NOT cascade on user deletion.
+    // (check_ins, messages, nutrition_plans, training_programs, workout_logs,
+    //  clients_profiles, profiles, integrations cascade automatically; these don't.)
+    await supabaseAdmin.from('client_checkin_submissions').delete().eq('client_id', id);
+    await supabaseAdmin.from('client_checkin_assignments').delete().eq('client_id', id);
+    await supabaseAdmin.from('client_onboarding_submissions').delete().eq('client_id', id);
+    await supabaseAdmin.from('client_onboarding_assignments').delete().eq('client_id', id);
+
+    // Delete client profile (defensive — also cascades)
     await supabaseAdmin.from('clients_profiles').delete().eq('user_id', id);
 
-    // Remove the manager link and mark as deleted in users table
-    await supabaseAdmin.from('users').delete().eq('id', id);
+    // Remove the user record (cascades check_ins, messages, plans, etc.)
+    const { error: userDeleteError } = await supabaseAdmin.from('users').delete().eq('id', id);
+    if (userDeleteError) throw userDeleteError;
 
     // Delete from Supabase Auth (removes authentication access)
     const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
@@ -1724,13 +1733,13 @@ router.get('/analytics', async (req: any, res) => {
         : Promise.resolve({ data: [], error: null }),
       // Training programs
       clientIds.length > 0
-        ? supabaseAdmin.from('manager_training_programs').select('data_json').in('client_id', clientIds)
+        ? supabaseAdmin.from('training_programs').select('data_json').in('client_id', clientIds)
         : Promise.resolve({ data: [], error: null }),
       // Integrations (for Stripe revenue)
       supabaseAdmin.from('integrations').select('*').eq('user_id', managerId).maybeSingle(),
       // Recent template-based submissions (new check-in system)
       clientIds.length > 0
-        ? supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, client_id, users!inner (email, profiles!left (full_name))').in('client_id', clientIds).order('submitted_at', { ascending: false }).limit(10)
+        ? supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, reviewed_at, client_id, users!inner (email, profiles!left (full_name))').in('client_id', clientIds).order('submitted_at', { ascending: false }).limit(10)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -2001,8 +2010,8 @@ router.get('/analytics', async (req: any, res) => {
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(clientName)}&background=random`
           };
         }),
-      // Template-based submissions always need manager review
-      ...recentSubmissions.map(sub => {
+      // Template-based submissions still pending manager review
+      ...recentSubmissions.filter(sub => !sub.reviewed_at).map(sub => {
         const userData = sub.users as any;
         const profile = Array.isArray(userData.profiles) ? userData.profiles[0] : userData.profiles;
         const clientName = profile?.full_name || userData.email?.split('@')[0] || 'Client';
@@ -2138,93 +2147,9 @@ router.get('/analytics', async (req: any, res) => {
 });
 ;
 
-// --- ONBOARDING ROUTES ---
-
-// List all onboarding flows
-router.get('/onboarding', async (req: any, res) => {
-  try {
-    const { data: flows, error } = await supabaseAdmin
-      .from('onboarding_messages')
-      .select('*')
-      .order('updated_at', { ascending: false });
-
-    if (error) {
-      if (error.code === '42P01') return res.json([]); // Table doesn't exist yet
-      throw error;
-    }
-    res.json(flows || []);
-  } catch (error: any) {
-    console.error('Error fetching onboarding flows:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
-  }
-});
-
-// Get specific flow with assignment stats
-router.get('/onboarding/:id', async (req: any, res) => {
-  try {
-    const { data: flow, error } = await supabaseAdmin
-      .from('onboarding_messages')
-      .select('*')
-      .eq('id', req.params.id)
-      .single();
-
-    if (error) throw error;
-
-    // Get assignment stats
-    const { data: stats, error: statsError } = await supabaseAdmin
-      .from('onboarding_assignments')
-      .select('status')
-      .eq('message_id', req.params.id);
-
-    const counts = {
-      total: stats?.length || 0,
-      seen: stats?.filter((s: any) => s.status === 'seen').length || 0,
-      dismissed: stats?.filter((s: any) => s.status === 'dismissed').length || 0,
-      pending: stats?.filter((s: any) => s.status === 'pending').length || 0
-    };
-
-    res.json({ ...flow, stats: counts });
-  } catch (error: any) {
-    console.error('Error fetching flow details:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
-  }
-});
-
-// Create or update an onboarding flow
-router.post('/onboarding', async (req: any, res) => {
-  const { id, title, description, content, status } = req.body;
-  try {
-    const payload = {
-      title,
-      description,
-      content: content || [],
-      status: status || 'draft',
-      updated_at: new Date().toISOString()
-    };
-
-    let result;
-    if (id) {
-      result = await supabaseAdmin
-        .from('onboarding_messages')
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single();
-    } else {
-      result = await supabaseAdmin
-        .from('onboarding_messages')
-        .insert({ ...payload, created_at: new Date().toISOString() })
-        .select()
-        .single();
-    }
-
-    if (result.error) throw result.error;
-    res.json(result.data);
-  } catch (error: any) {
-    console.error('Error saving onboarding flow:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
-  }
-});
+// NOTE: The legacy /onboarding* routes (onboarding_messages / onboarding_assignments)
+// were removed. They had no manager_id scoping (cross-tenant IDOR) and were unused —
+// the app uses the multi-tenant system in routes/onboarding.ts (/api/onboarding/*).
 
 // Get detailed profile stats for a specific client
 router.get('/clients/:id/profile-stats', async (req: any, res) => {
@@ -2253,8 +2178,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     // 3. Weight & Body Fat History
     const weightHistory = (checkIns || []).map(ci => ({
       date: ci.date,
-      weight: (ci.data_json as any).weight || null,
-      bodyFat: (ci.data_json as any).body_fat || null
+      weight: (ci.data_json as any)?.weight || null,
+      bodyFat: (ci.data_json as any)?.body_fat || null
     })).filter(w => w.weight !== null);
 
     // 4. Latest Measurements (From legacy and dynamic)
@@ -2587,8 +2512,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     }
 
     // 10. Mindset Stats & History
-    const latestCheckIn = checkIns.length > 0 ? checkIns[checkIns.length - 1] : null;
-    const latestData = latestCheckIn ? (latestCheckIn.data_json as any) : {};
+    const latestCheckIn = (checkIns && checkIns.length > 0) ? checkIns[checkIns.length - 1] : null;
+    const latestData = (latestCheckIn?.data_json as any) || {};
     
     const mindset = {
       energy: latestData.energy_level || '--',
@@ -2597,10 +2522,10 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       motivation: latestData.motivation_level || '--',
       history: (checkIns || []).map(ci => ({
         date: ci.date,
-        energy: (ci.data_json as any).energy_level || null,
-        stress: (ci.data_json as any).stress_level || null,
-        mood: (ci.data_json as any).mood_score || null,
-        motivation: (ci.data_json as any).motivation_level || null
+        energy: (ci.data_json as any)?.energy_level || null,
+        stress: (ci.data_json as any)?.stress_level || null,
+        mood: (ci.data_json as any)?.mood_score || null,
+        motivation: (ci.data_json as any)?.motivation_level || null
       })).filter(h => h.energy || h.stress || h.mood || h.motivation)
     };
 
@@ -2762,59 +2687,6 @@ router.post('/clients/:id/supplementation', async (req: any, res) => {
   } catch (error: any) {
     console.error('Error updating supplementation:', error);
     res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Publish/Assign flow to users
-router.post('/onboarding/:id/publish', async (req: any, res) => {
-  const { user_ids } = req.body; // Array of user IDs or 'all'
-  const flowId = req.params.id;
-  const managerId = req.user.id;
-
-  try {
-    // 1. Mark flow as published
-    const { error: updateError } = await supabaseAdmin
-      .from('onboarding_messages')
-      .update({ status: 'published', updated_at: new Date().toISOString() })
-      .eq('id', flowId);
-
-    if (updateError) throw updateError;
-
-    // 2. Resolve targets — ALWAYS scoped to clients owned by this manager.
-    //    Without this filter a malicious manager could push onboarding to another manager's clients.
-    const { data: ownedClients } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('manager_id', managerId)
-      .eq('role', 'CLIENT');
-    const ownedIds = new Set((ownedClients || []).map(c => c.id));
-
-    let targets: string[] = [];
-    if (user_ids === 'all') {
-      targets = Array.from(ownedIds);
-    } else if (Array.isArray(user_ids)) {
-      // Intersect requested list with owned clients — silently drops foreign IDs.
-      targets = user_ids.filter((u: any) => typeof u === 'string' && ownedIds.has(u));
-    }
-
-    if (targets.length > 0) {
-      const assignments = targets.map(uid => ({
-        message_id: flowId,
-        user_id: uid,
-        status: 'pending'
-      }));
-
-      const { error: assignError } = await supabaseAdmin
-        .from('onboarding_assignments')
-        .upsert(assignments, { onConflict: 'message_id,user_id' });
-
-      if (assignError) throw assignError;
-    }
-
-    res.json({ success: true, assigned_to: targets.length });
-  } catch (error: any) {
-    console.error('Error publishing flow:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 

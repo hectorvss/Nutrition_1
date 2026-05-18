@@ -68,46 +68,41 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         
         if (clientError || !client) continue;
 
-        // Fetch latest check-in for weight, RPE, Mood
+        // Fetch latest check-in. check_ins stores all metrics inside data_json
+        // (the columns weight/mood_score/rpe_score do not exist on the table).
         const { data: latestCheckIn } = await supabaseAdmin
           .from('check_ins')
-          .select('weight, created_at, mood_score, rpe_score')
+          .select('data_json, date, created_at')
           .eq('client_id', clientId)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        // Fetch adherence (last 7 days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const { data: habits } = await supabaseAdmin
-          .from('habit_logs')
-          .select('status')
-          .eq('client_id', clientId)
-          .gte('date', sevenDaysAgo.toISOString().split('T')[0]);
-        
-        const adherence = habits && habits.length > 0 
-          ? Math.round((habits.filter(h => h.status === 'completed').length / habits.length) * 100)
-          : 0;
+        const ciData: any = latestCheckIn?.data_json || {};
+
+        // Habit adherence tracking is not implemented (no habit_logs table),
+        // so adherence-based automations evaluate against 0.
+        const adherence = 0;
 
         const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles;
         const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
         const nPlan = Array.isArray(client.nutrition_plans) ? client.nutrition_plans[0] : client.nutrition_plans;
 
-        const currentWeight = latestCheckIn?.weight || 0;
+        const currentWeight = Number(ciData.weight ?? ciData.avgWeight ?? ciData.bodyWeight) || 0;
         const goalWeight = cProfile?.goal_weight || 0;
         const lastLogin = cProfile?.last_login ? new Date(cProfile.last_login) : new Date();
         const daysInactive = Math.floor((new Date().getTime() - lastLogin.getTime()) / (1000 * 3600 * 24));
         const checkInDay = cProfile?.check_in_day || 'Monday';
-        
+
         // Days since last check-in
-        const lastCheckinDate = latestCheckIn?.created_at ? new Date(latestCheckIn.created_at) : null;
-        const daysSinceCheckin = lastCheckinDate 
+        const lastCheckinRaw = latestCheckIn?.created_at || latestCheckIn?.date || null;
+        const lastCheckinDate = lastCheckinRaw ? new Date(lastCheckinRaw) : null;
+        const daysSinceCheckin = lastCheckinDate
           ? Math.floor((new Date().getTime() - lastCheckinDate.getTime()) / (1000 * 3600 * 24))
           : 999;
 
-        const mood = latestCheckIn?.mood_score || 0;
-        const rpe = latestCheckIn?.rpe_score || 0;
+        const mood = Number(ciData.mood ?? ciData.mood_score) || 0;
+        const rpe = Number(ciData.rpe ?? ciData.rpe_score) || 0;
 
         // 4. Unified Condition Evaluation Helper
         const evalConditions = (conditions: any[]) => {
@@ -332,15 +327,26 @@ router.get('/', verifyManager, async (req: any, res: any) => {
   }
 });
 
+// Only these columns may come from the request body. manager_id is always set
+// server-side; ids, timestamps and arbitrary columns are never accepted from clients.
+const AUTOMATION_FIELDS = ['name', 'description', 'trigger_id', 'message', 'delivery_rules', 'icon_info', 'enabled'] as const;
+function pickAutomationFields(body: any): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const key of AUTOMATION_FIELDS) {
+    if (body && body[key] !== undefined) out[key] = body[key];
+  }
+  return out;
+}
+
 router.post('/', verifyManager, async (req: any, res) => {
-  const payload = { ...req.body, manager_id: req.user.id };
+  const payload = { ...pickAutomationFields(req.body), manager_id: req.user.id };
   try {
     const { data, error } = await supabaseAdmin
       .from('automations')
       .insert(payload)
       .select()
       .single();
-    
+
     if (error) throw error;
     res.json(data);
   } catch (error: any) {
@@ -352,7 +358,7 @@ router.put('/:id', verifyManager, async (req: any, res) => {
   try {
     const { data, error } = await supabaseAdmin
       .from('automations')
-      .update(req.body)
+      .update(pickAutomationFields(req.body))
       .eq('id', req.params.id)
       .eq('manager_id', req.user.id)
       .select()
@@ -519,22 +525,8 @@ router.post('/cron', async (req: any, res) => {
           }
         }
         else if (automation.trigger_id === 'adherence-high') {
-          // Check on Sundays for weekly adherence > 90%
-          if (today.getDay() === 0) { // Sunday
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            const { data: habits } = await supabaseAdmin
-              .from('habit_logs')
-              .select('status')
-              .eq('client_id', client.id)
-              .gte('date', sevenDaysAgo.toISOString().split('T')[0]);
-            
-            const adherence = habits && habits.length > 0 
-              ? Math.round((habits.filter(h => h.status === 'completed').length / habits.length) * 100)
-              : 0;
-
-            if (adherence >= 90) shouldTrigger = true;
-          }
+          // Habit adherence tracking is not implemented (no habit_logs table),
+          // so this automation never triggers automatically from the cron.
         }
 
         if (shouldTrigger) {

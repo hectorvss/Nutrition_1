@@ -14,14 +14,18 @@ const timingSafeStrEqual = (a: string | undefined, b: string | undefined) => {
 // Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  
+
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+
   try {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (authError || !authData.user) {
+    if (authError || !authData.user || !authData.session) {
       return res.status(401).json({ error: authError?.message || 'Invalid credentials' });
     }
 

@@ -470,6 +470,7 @@ router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (re
         template:checkin_templates(*)
       `)
       .eq('id', checkInId)
+      .eq('client_id', id)
       .maybeSingle();
 
     if (dynamicError) throw dynamicError;
@@ -497,9 +498,11 @@ router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (re
       .from('check_ins')
       .select('*')
       .eq('id', checkInId)
-      .single();
-    
+      .eq('client_id', id)
+      .maybeSingle();
+
     if (legacyError) throw legacyError;
+    if (!legacyData) return res.status(404).json({ error: 'Check-in not found' });
     
     let dj = legacyData.data_json;
     if (typeof dj === 'string') {

@@ -167,6 +167,20 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
       });
     }
 
+    // 1b. Verify the template belongs to this manager (or is a global template)
+    const { data: template, error: templateErr } = await supabaseAdmin
+      .from('onboarding_templates')
+      .select('id, manager_id')
+      .eq('id', template_id)
+      .maybeSingle();
+
+    if (templateErr || !template || (template.manager_id && template.manager_id !== managerId)) {
+      return res.status(400).json({
+        error: 'Invalid template',
+        message: 'This template does not belong to your account or was not found.'
+      });
+    }
+
     // 2. Ensure profile exists for foreign key (safety for new/legacy users)
     await supabaseAdmin.from('profiles').upsert({ user_id: client_id }, { onConflict: 'user_id' });
 
@@ -278,11 +292,26 @@ router.get('/client/active', verifyClient, async (req: any, res) => {
 
 router.post('/client/submit', verifyClient, async (req: any, res) => {
   const clientId = req.user.id;
-  const { template_id, answers_json, assignment_id } = req.body;
+  const { answers_json } = req.body;
   try {
+    // Derive the template & assignment server-side from the client's own active
+    // assignment — never trust template_id / assignment_id from the request body
+    // (a client could otherwise submit against, or deactivate, another tenant's data).
+    const { data: assignment, error: assignmentErr } = await supabaseAdmin
+      .from('client_onboarding_assignments')
+      .select('id, template_id')
+      .eq('client_id', clientId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (assignmentErr) throw assignmentErr;
+    if (!assignment) {
+      return res.status(400).json({ error: 'No active onboarding assignment found.' });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('client_onboarding_submissions')
-      .insert({ client_id: clientId, template_id, answers_json, submitted_at: new Date().toISOString() })
+      .insert({ client_id: clientId, template_id: assignment.template_id, answers_json, submitted_at: new Date().toISOString() })
       .select().single();
 
     if (error) throw error;
@@ -346,9 +375,11 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
       console.error('Error syncing onboarding data to profile:', syncErr);
     }
 
-    if (assignment_id) {
-      await supabaseAdmin.from('client_onboarding_assignments').update({ is_active: false }).eq('id', assignment_id);
-    }
+    await supabaseAdmin
+      .from('client_onboarding_assignments')
+      .update({ is_active: false })
+      .eq('id', assignment.id)
+      .eq('client_id', clientId);
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: 'Server error' });

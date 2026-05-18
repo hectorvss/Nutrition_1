@@ -87,25 +87,15 @@ router.post('/webhook', async (req: any, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Idempotency guard: reject replayed events
-  try {
-    const { error: insertErr } = await supabaseAdmin
-      .from('stripe_processed_events')
-      .insert({ event_id: event.id });
+  // Idempotency guard: skip events we have already fully processed.
+  const { data: alreadyProcessed } = await supabaseAdmin
+    .from('stripe_processed_events')
+    .select('event_id')
+    .eq('event_id', event.id)
+    .maybeSingle();
 
-    if (insertErr) {
-      // Unique violation means already processed
-      if (insertErr.code === '23505') {
-        return res.json({ received: true, duplicate: true });
-      }
-      throw insertErr;
-    }
-  } catch (dedupErr: any) {
-    if (dedupErr.code === '23505') {
-      return res.json({ received: true, duplicate: true });
-    }
-    console.error('Dedup check failed:', dedupErr);
-    return res.status(500).json({ error: 'Dedup check failed' });
+  if (alreadyProcessed) {
+    return res.json({ received: true, duplicate: true });
   }
 
   // Handle the event
@@ -117,17 +107,17 @@ router.post('/webhook', async (req: any, res) => {
         const subscriptionId = session.subscription as string;
         const customerId = session.customer as string;
 
-        if (userId) {
+        if (userId && subscriptionId) {
           const subscription = await stripe!.subscriptions.retrieve(subscriptionId);
-          const planTier = getPlanTier(subscription.items.data[0].price.id);
+          const priceId = subscription.items?.data?.[0]?.price?.id;
 
           await supabaseAdmin.from('manager_subscriptions').upsert({
             user_id: userId,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            plan_tier: planTier,
+            plan_tier: priceId ? getPlanTier(priceId) : 'professional',
             status: subscription.status,
-            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            current_period_end: subscriptionPeriodEnd(subscription),
             updated_at: new Date().toISOString(),
           });
         }
@@ -146,7 +136,7 @@ router.post('/webhook', async (req: any, res) => {
         if (subData?.user_id) {
           await supabaseAdmin.from('manager_subscriptions').update({
             status: subscription.status,
-            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            current_period_end: subscriptionPeriodEnd(subscription),
             updated_at: new Date().toISOString(),
           }).eq('stripe_subscription_id', subscription.id);
         }
@@ -154,12 +144,25 @@ router.post('/webhook', async (req: any, res) => {
       }
     }
 
+    // Record the event as processed ONLY after successful handling, so a failed
+    // event is retried by Stripe instead of being silently dropped as a duplicate.
+    await supabaseAdmin.from('stripe_processed_events').insert({ event_id: event.id });
+
     res.json({ received: true });
   } catch (error: any) {
     console.error('Webhook Event Handler Error:', error);
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 });
+
+// Resolves the subscription period end across Stripe API versions.
+// Newer versions moved current_period_end onto the subscription item.
+function subscriptionPeriodEnd(subscription: any): string | null {
+  const raw = subscription?.current_period_end
+    ?? subscription?.items?.data?.[0]?.current_period_end;
+  if (!raw || typeof raw !== 'number') return null;
+  return new Date(raw * 1000).toISOString();
+}
 
 // Helper to map Price IDs to Tiers
 function getPlanTier(priceId: string): string {
