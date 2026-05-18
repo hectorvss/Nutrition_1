@@ -60,8 +60,7 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           .select(`
             id,
             profiles(full_name),
-            clients_profiles(goal_weight, check_in_day, last_login),
-            nutrition_plans(updated_at)
+            clients_profiles(goal_weight, check_in_day, last_login)
           `)
           .eq('id', clientId)
           .single();
@@ -86,7 +85,6 @@ export async function processTrigger(managerId: string, triggerId: string, data:
 
         const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles;
         const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
-        const nPlan = Array.isArray(client.nutrition_plans) ? client.nutrition_plans[0] : client.nutrition_plans;
 
         const currentWeight = Number(ciData.weight ?? ciData.avgWeight ?? ciData.bodyWeight) || 0;
         const goalWeight = cProfile?.goal_weight || 0;
@@ -312,9 +310,12 @@ router.get('/', verifyManager, async (req: any, res: any) => {
         }
       ];
 
+      // Plain insert: this branch only runs when the manager has zero automations,
+      // so there is nothing to conflict with. (There is no unique constraint on
+      // manager_id,trigger_id, so an upsert with onConflict would error out.)
       const { data: seeded, error: seedError } = await supabaseAdmin
         .from('automations')
-        .upsert(defaults, { onConflict: 'manager_id,trigger_id', ignoreDuplicates: true })
+        .insert(defaults)
         .select();
 
       if (seedError) throw seedError;
@@ -389,8 +390,12 @@ router.delete('/:id', verifyManager, async (req: any, res) => {
 /**
  * Endpoint for scheduled tasks (Cron) — protegido con CRON_SECRET
  */
-router.post('/cron', async (req: any, res) => {
-  const secret = req.headers['x-cron-secret'] || req.body?.cron_secret;
+const cronHandler = async (req: any, res: any) => {
+  // Vercel Cron invokes with GET and "Authorization: Bearer <CRON_SECRET>".
+  // External schedulers may use POST with "x-cron-secret" or a body field.
+  const authHeader = String(req.headers['authorization'] || '');
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const secret = req.headers['x-cron-secret'] || req.body?.cron_secret || bearer;
   const validSecret = process.env.CRON_SECRET;
   if (!validSecret) {
     return res.status(500).json({ error: 'Server misconfigured: CRON_SECRET not set' });
@@ -417,12 +422,11 @@ router.post('/cron', async (req: any, res) => {
       const { data: clients } = await supabaseAdmin
         .from('users')
         .select(`
-          id, 
-          email, 
+          id,
+          email,
           created_at,
           profiles (full_name, birthday),
-          clients_profiles (last_login, check_in_day, height, weight, goal),
-          nutrition_plans (updated_at)
+          clients_profiles (last_login, check_in_day, height, weight, goal)
         `)
         .eq('manager_id', automation.manager_id)
         .eq('role', 'CLIENT');
@@ -464,6 +468,7 @@ router.post('/cron', async (req: any, res) => {
               .select('id')
               .eq('client_id', client.id)
               .gte('date', yesterday.toISOString().split('T')[0])
+              .limit(1)
               .maybeSingle();
 
             if (!checkIn) {
@@ -520,6 +525,8 @@ router.post('/cron', async (req: any, res) => {
               .select('sent_at')
               .eq('automation_id', automation.id)
               .eq('client_id', client.id)
+              .order('sent_at', { ascending: false })
+              .limit(1)
               .maybeSingle();
             if (!lastSent) shouldTrigger = true;
           }
@@ -540,6 +547,9 @@ router.post('/cron', async (req: any, res) => {
     console.error('Cron error:', error);
     res.status(500).json({ error: error.message });
   }
-});
+};
+
+router.post('/cron', cronHandler);
+router.get('/cron', cronHandler);
 
 export default router;
