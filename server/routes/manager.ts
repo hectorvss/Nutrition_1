@@ -3286,12 +3286,11 @@ router.get('/clients/:clientId/roadmap', async (req: any, res) => {
 
     if (error) throw error;
     
-    // Default structure if not found
+    // Default structure if not found — same shape as a stored row (data_json wrapper)
     if (!data) {
-      return res.json({ 
-        nutrition: [], 
-        training: [], 
-        status: 'Draft' 
+      return res.json({
+        data_json: { nutrition: [], training: [], goals: [], milestones: [] },
+        status: 'Draft'
       });
     }
 
@@ -3320,7 +3319,11 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
 
   // Derived Recommendations (Simple Algorithm)
   const deriveRecommendations = (data: any) => {
-    const goal = data.primaryGoal || data.goalType || (data.goals?.[0]?.label === 'Fat Loss' ? 'Fat Loss' : 'Fat Loss');
+    const goal = data.primaryGoal
+      || data.goalType
+      || data.trajectoryGoals?.primaryGoal
+      || data.goals?.[0]?.label
+      || 'Fat Loss';
     const mapping: Record<string, any> = {
       'Fat Loss': { nutrition: 'fat-loss-std', training: 'fat-loss-base' },
       'Muscle Gain': { nutrition: 'muscle-gain-std', training: 'hypertrophy-base' },

@@ -81,8 +81,8 @@ router.get('/plans', async (req: any, res) => {
     }
 
     const [{ data: nutrition }, { data: training }] = await Promise.all([
-      supabaseAdmin.from('nutrition_plans').select('*').eq('client_id', req.user.id).eq('created_by', managerId),
-      supabaseAdmin.from('training_programs').select('*').eq('client_id', req.user.id).eq('created_by', managerId),
+      supabaseAdmin.from('nutrition_plans').select('*').eq('client_id', req.user.id).eq('created_by', managerId).order('updated_at', { ascending: false }),
+      supabaseAdmin.from('training_programs').select('*').eq('client_id', req.user.id).eq('created_by', managerId).order('updated_at', { ascending: false }),
     ]);
 
     res.json({ nutrition: nutrition || [], training: training || [] });
@@ -132,6 +132,14 @@ router.post('/workout-logs', async (req: any, res) => {
     // Cap exercises array to prevent DoS via huge payloads
     const safeExercises = Array.isArray(exercises) ? exercises.slice(0, 100) : [];
 
+    // Validate day_key against the known set, and session_rpe to a 1-10 range.
+    const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const safeDayKey = (typeof day_key === 'string' && VALID_DAYS.includes(day_key.toLowerCase()))
+      ? day_key.toLowerCase()
+      : null;
+    const rpeNum = Number(session_rpe);
+    const safeRpe = (Number.isFinite(rpeNum) && rpeNum >= 1 && rpeNum <= 10) ? rpeNum : null;
+
     // If a plan_id is given, ensure it belongs to this client (prevents tagging logs to other clients' plans)
     if (plan_id) {
       const { data: planRow } = await supabaseAdmin
@@ -151,10 +159,10 @@ router.post('/workout-logs', async (req: any, res) => {
         client_id: req.user.id,
         plan_id: plan_id || null,
         workout_name: typeof workout_name === 'string' ? workout_name.slice(0, 200) : 'Workout Session',
-        day_key: typeof day_key === 'string' ? day_key.slice(0, 50) : null,
+        day_key: safeDayKey,
         exercises: safeExercises,
         notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
-        session_rpe: session_rpe || null,
+        session_rpe: safeRpe,
         // Always server-side timestamp — client cannot backdate logs.
         logged_at: new Date().toISOString()
       })

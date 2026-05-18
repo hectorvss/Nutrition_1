@@ -17,7 +17,6 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
       status: hasActivePlan ? 'ACTIVE' : 'NO_PLAN',
       roadmapStatus: hasActivePlan ? t('plan_assigned', { defaultValue: 'PLAN ASIGNED' }) : t('no_strategic_plan', { defaultValue: 'NO STRATEGIC PLAN' }),
       online: client.status === 'Active',
-      roadmapProgress: hasActivePlan ? t('roadmap_live') : t('roadmap_needs_setup'),
       planFamilyLabel: client.planFamilyLabel
     };
   });

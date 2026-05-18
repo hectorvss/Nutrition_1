@@ -5,14 +5,14 @@ import {
   Save, 
   Bot, 
   MessageSquare, 
-  Activity, 
-  ChevronDown,
+  Activity,
   Wand2,
   Settings2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTask, AutomationRule } from '../context/TaskContext';
 import { useLanguage } from '../context/LanguageContext';
+import Select from '../components/ui/Select';
 
 interface TaskIntelligenceProps {
   onNavigate: (view: string) => void;
@@ -153,18 +153,15 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
                             <div className="flex flex-col items-end">
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('priority_label', { defaultValue: 'Priority' })}</span>
                               
-                              <div className="relative group">
-                                <select 
-                                  value={rule.priority}
-                                  onChange={(e) => handleChangePriority(rule.id, e.target.value)}
-                                  className={`appearance-none bg-transparent flex items-center gap-2 text-sm font-bold outline-none cursor-pointer pr-5 ${rule.priorityColor}`}
-                                >
-                                  <option value="High" className="text-red-500">{t('high_priority', { defaultValue: 'High' })}</option>
-                                  <option value="Medium" className="text-orange-500">{t('medium_priority', { defaultValue: 'Medium' })}</option>
-                                  <option value="Low" className="text-slate-400">{t('low_priority', { defaultValue: 'Low' })}</option>
-                                </select>
-                                <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                              </div>
+                              <Select
+                                value={rule.priority}
+                                onChange={(val) => handleChangePriority(rule.id, val)}
+                                className={`bg-transparent text-sm font-bold outline-none ${rule.priorityColor}`}
+                              >
+                                <option value="High">{t('high_priority', { defaultValue: 'High' })}</option>
+                                <option value="Medium">{t('medium_priority', { defaultValue: 'Medium' })}</option>
+                                <option value="Low">{t('low_priority', { defaultValue: 'Low' })}</option>
+                              </Select>
 
                             </div>
                           </div>

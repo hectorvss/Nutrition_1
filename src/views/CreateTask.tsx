@@ -18,6 +18,7 @@ import { useClient } from '../context/ClientContext';
 import { useTask } from '../context/TaskContext';
 import { useCalendar } from '../context/CalendarContext';
 import { supabase } from '../supabase';
+import Select from '../components/ui/Select';
 import { useLanguage } from '../context/LanguageContext';
 
 interface CreateTaskProps {
@@ -454,17 +455,17 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('repeat_label')}</label>
-                    <select 
+                    <Select
                       value={repeat}
-                      onChange={e => setRepeat(e.target.value)}
-                      className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5"
+                      onChange={(val) => setRepeat(val)}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                     >
                       <option>{t('does_not_repeat')}</option>
                       <option>{t('daily')}</option>
                       <option>{t('weekly')}</option>
                       <option>{t('monthly')}</option>
                       <option>{t('custom')}</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
               </section>

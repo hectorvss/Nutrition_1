@@ -243,6 +243,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   const [draftBlockValues, setDraftBlockValues] = useState<Partial<RoadmapBlock> | null>(null);
   const [draftStratData, setDraftStratData] = useState<BlockStrategicDetails | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
   // --- Trajectory Data ---
   // Store check-ins as flat array with date + weight (not bucketed by week)
@@ -535,6 +536,51 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
     return true;
   };
 
+  // --- GOALS MANAGEMENT ---
+  const addGoal = () => {
+    if (!roadmap) return;
+    const newGoal: Goal = {
+      id: `g${Date.now()}`,
+      type: 'physical',
+      label: t('planning_new_goal', { defaultValue: 'New Goal' }),
+      desc: '',
+      value: 0,
+      currentLabel: '',
+      targetLabel: ''
+    };
+    setRoadmap({ ...roadmap, goals: [...(roadmap.goals || []), newGoal] });
+    setEditingGoalId(newGoal.id);
+  };
+  const updateGoal = (goalId: string, updates: Partial<Goal>) => {
+    if (!roadmap) return;
+    setRoadmap({ ...roadmap, goals: roadmap.goals.map(g => g.id === goalId ? { ...g, ...updates } : g) });
+  };
+  const deleteGoal = (goalId: string) => {
+    if (!roadmap) return;
+    setRoadmap({ ...roadmap, goals: roadmap.goals.filter(g => g.id !== goalId) });
+    if (editingGoalId === goalId) setEditingGoalId(null);
+  };
+
+  // --- MILESTONES MANAGEMENT ---
+  const addMilestone = () => {
+    if (!roadmap) return;
+    const newMilestone: Milestone = {
+      id: `m${Date.now()}`,
+      label: t('planning_new_milestone', { defaultValue: 'New Milestone' }),
+      week: t('planning_week_number', { week: currentWeek, defaultValue: `Week ${currentWeek}` }),
+      status: 'future'
+    };
+    setRoadmap({ ...roadmap, milestones: [...(roadmap.milestones || []), newMilestone] });
+  };
+  const updateMilestone = (milestoneId: string, updates: Partial<Milestone>) => {
+    if (!roadmap) return;
+    setRoadmap({ ...roadmap, milestones: roadmap.milestones.map(m => m.id === milestoneId ? { ...m, ...updates } : m) });
+  };
+  const deleteMilestone = (milestoneId: string) => {
+    if (!roadmap) return;
+    setRoadmap({ ...roadmap, milestones: roadmap.milestones.filter(m => m.id !== milestoneId) });
+  };
+
   // Legacy updateBlock for simple fields (kcal, rationale, etc.) - no validation needed
   const updateBlock = (blockId: string, updates: Partial<RoadmapBlock>) => {
     if (!roadmap) return;
@@ -787,7 +833,6 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
               </div>
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800 uppercase tracking-widest">{t('planning_active_phase')}</span>
-                <button className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><Icon name="settings" /></button>
               </div>
             </div>
 
@@ -929,7 +974,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                               </div>
                             ))}
                             <button 
-                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...prev.secondaryObjectives, 'New Objective'] } : null)}
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...(prev.secondaryObjectives || []), 'New Objective'] } : null)}
                               className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
                             >
                               + Add Objective
@@ -1117,7 +1162,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                             </div>
                           ))}
                           <button 
-                            onClick={() => setDraftStratData(prev => prev ? { ...prev, successCriteria: [...prev.successCriteria, 'New Criteria'] } : null)}
+                            onClick={() => setDraftStratData(prev => prev ? { ...prev, successCriteria: [...(prev.successCriteria || []), 'New Criteria'] } : null)}
                             className="text-[9px] font-bold text-orange-500 uppercase tracking-widest mt-1 hover:underline"
                           >
                             + Add Criteria
@@ -1144,7 +1189,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                             </div>
                           ))}
                           <button 
-                            onClick={() => setDraftStratData(prev => prev ? { ...prev, kpis: [...prev.kpis, 'New KPI'] } : null)}
+                            onClick={() => setDraftStratData(prev => prev ? { ...prev, kpis: [...(prev.kpis || []), 'New KPI'] } : null)}
                             className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
                           >
                             + Add KPI
@@ -1495,11 +1540,73 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 <Icon name="flag" className="text-emerald-500" />
                 {t('goals_targets')}
               </h3>
+              <button
+                onClick={addGoal}
+                className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest flex items-center gap-1"
+              >
+                <Icon name="add" className="text-[16px]" /> {t('planning_add_goal', { defaultValue: 'Add Goal' })}
+              </button>
             </div>
+            {roadmap.goals.length === 0 && (
+              <div className="p-8 text-center text-slate-300 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl uppercase text-[10px] font-bold tracking-widest">
+                {t('planning_no_goals', { defaultValue: 'No goals defined yet' })}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {roadmap.goals.map((goal) => (
+              {roadmap.goals.map((goal) => editingGoalId === goal.id ? (
+                <div key={goal.id} className="bg-white dark:bg-slate-800 rounded-2xl p-5 border-2 border-emerald-500 ring-4 ring-emerald-500/5 flex flex-col gap-3">
+                  <input
+                    className="text-sm font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
+                    value={goal.label}
+                    placeholder={t('planning_goal_label', { defaultValue: 'Goal name' })}
+                    onChange={(e) => updateGoal(goal.id, { label: e.target.value })}
+                  />
+                  <select
+                    className="text-xs font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
+                    value={goal.type}
+                    onChange={(e) => updateGoal(goal.id, { type: e.target.value as Goal['type'] })}
+                  >
+                    <option value="physical">{t('physical', { defaultValue: 'Physical' })}</option>
+                    <option value="nutrition">{t('nutrition', { defaultValue: 'Nutrition' })}</option>
+                    <option value="training">{t('training', { defaultValue: 'Training' })}</option>
+                    <option value="mindset">{t('mindset', { defaultValue: 'Mindset' })}</option>
+                  </select>
+                  <input
+                    className="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
+                    value={goal.desc}
+                    placeholder={t('planning_goal_desc', { defaultValue: 'Description' })}
+                    onChange={(e) => updateGoal(goal.id, { desc: e.target.value })}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      className="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
+                      value={goal.currentLabel}
+                      placeholder={t('planning_goal_current', { defaultValue: 'Current' })}
+                      onChange={(e) => updateGoal(goal.id, { currentLabel: e.target.value })}
+                    />
+                    <input
+                      className="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-emerald-500"
+                      value={goal.targetLabel}
+                      placeholder={t('planning_goal_target', { defaultValue: 'Target' })}
+                      onChange={(e) => updateGoal(goal.id, { targetLabel: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('planning_progress', { defaultValue: 'Progress' })}: {goal.value}%</label>
+                    <input
+                      type="range" min="0" max="100" value={goal.value}
+                      onChange={(e) => updateGoal(goal.id, { value: parseInt(e.target.value) || 0 })}
+                      className="w-full accent-emerald-500"
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button onClick={() => deleteGoal(goal.id)} className="flex-1 py-2 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-100">{t('delete', { defaultValue: 'Delete' })}</button>
+                    <button onClick={() => setEditingGoalId(null)} className="flex-1 py-2 rounded-lg bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-600">{t('done', { defaultValue: 'Done' })}</button>
+                  </div>
+                </div>
+              ) : (
                 <div key={goal.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 relative group cursor-pointer hover:border-emerald-500 transition-all hover:shadow-md">
-                  <button className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-slate-400 hover:text-emerald-500 bg-white rounded-lg shadow-sm border border-slate-100"><Icon name="edit" className="text-[16px]" /></button>
+                  <button onClick={() => setEditingGoalId(goal.id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-slate-400 hover:text-emerald-500 bg-white rounded-lg shadow-sm border border-slate-100"><Icon name="edit" className="text-[16px]" /></button>
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <Icon name={goal.type === 'physical' ? 'accessibility' : goal.type === 'nutrition' ? 'restaurant_menu' : goal.type === 'training' ? 'fitness_center' : 'psychology'} className={`text-[20px] ${goal.type === 'physical' ? 'text-blue-500' : goal.type === 'nutrition' ? 'text-amber-500' : goal.type === 'training' ? 'text-purple-500' : 'text-rose-500'}`} />
@@ -1533,23 +1640,48 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <Icon name="timeline" className="text-slate-400" />
                   {t('key_milestones')}
                 </h3>
-                <button className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ {t('planning_add_milestone', { defaultValue: 'Add Milestone' })}</button>
+                <button onClick={addMilestone} className="text-[10px] font-semibold text-emerald-500 hover:text-emerald-600 transition-colors uppercase tracking-widest">+ {t('planning_add_milestone', { defaultValue: 'Add Milestone' })}</button>
               </div>
+              {roadmap.milestones.length === 0 && (
+                <div className="p-6 text-center text-slate-300 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl uppercase text-[10px] font-bold tracking-widest">
+                  {t('planning_no_milestones', { defaultValue: 'No milestones yet' })}
+                </div>
+              )}
               <div className="space-y-3">
                 {roadmap.milestones.map((m) => (
-                  <div key={m.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${m.status === 'next' ? 'bg-white dark:bg-[#1e293b] border-emerald-500 ring-4 ring-emerald-500/5' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'}`}>
-                    <div className="flex items-center gap-4">
-                      <div className={`w-2.5 h-2.5 rounded-full ${m.status === 'done' ? 'bg-green-500' : m.status === 'next' ? 'bg-emerald-500 shadow-lg shadow-emerald-500/40' : 'bg-slate-300 dark:bg-slate-600'}`} />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white leading-none mb-1.5">{m.label}</p>
-                        <p className={`text-[10px] font-semibold uppercase tracking-widest ${m.status === 'next' ? 'text-emerald-500' : 'text-slate-400'}`}>{m.week}</p>
+                  <div key={m.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all group ${m.status === 'next' ? 'bg-white dark:bg-[#1e293b] border-emerald-500 ring-4 ring-emerald-500/5' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'}`}>
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${m.status === 'done' ? 'bg-green-500' : m.status === 'next' ? 'bg-emerald-500 shadow-lg shadow-emerald-500/40' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                      <div className="flex-1 min-w-0">
+                        <input
+                          className="text-sm font-bold text-slate-900 dark:text-white leading-none mb-1.5 bg-transparent border-none p-0 focus:ring-0 outline-none w-full"
+                          value={m.label}
+                          onChange={(e) => updateMilestone(m.id, { label: e.target.value })}
+                        />
+                        <input
+                          className={`text-[10px] font-semibold uppercase tracking-widest bg-transparent border-none p-0 focus:ring-0 outline-none w-full ${m.status === 'next' ? 'text-emerald-500' : 'text-slate-400'}`}
+                          value={m.week}
+                          onChange={(e) => updateMilestone(m.id, { week: e.target.value })}
+                        />
                       </div>
                     </div>
-                    {m.status !== 'done' && (
-                      <button className="px-3 py-1.5 text-[9px] font-semibold bg-white dark:bg-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 uppercase tracking-widest shadow-sm">
-                        <Icon name="task" className="text-[14px]" /> {t('planning_connect')}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <select
+                        className="px-2 py-1.5 text-[9px] font-bold bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 outline-none uppercase tracking-widest"
+                        value={m.status}
+                        onChange={(e) => updateMilestone(m.id, { status: e.target.value as Milestone['status'] })}
+                      >
+                        <option value="future">{t('planning_status_future', { defaultValue: 'Future' })}</option>
+                        <option value="next">{t('planning_status_next', { defaultValue: 'Next' })}</option>
+                        <option value="done">{t('planning_status_done', { defaultValue: 'Done' })}</option>
+                      </select>
+                      <button
+                        onClick={() => deleteMilestone(m.id)}
+                        className="p-1.5 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Icon name="delete" className="text-[16px]" />
                       </button>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>

@@ -153,48 +153,21 @@ export default function App() {
                 await assignPlanningDraft(selectedClientId, templateId, settings);
               }
 
-              // 2. Generate initial roadmap structure for routing
+              // 2. Generate an EMPTY roadmap scaffold for routing — no invented
+              //    phases, macros or assumptions. The coach builds the blocks in
+              //    PlanningDetail. Only real user-chosen settings are carried over.
               const generatedDraft = {
-                status: 'DRAFT',
+                status: 'Draft',
                 currentWeek: 1,
-                totalWeeks: settings.duration,
-                nutrition: [
-                  { 
-                    id: 'n1', title: `${t('planning_phase_label', { phase: 1 })}: ${settings.nutritionApproach}`, startWeek: 1, endWeek: 4, type: 'nutrition',
-                    duration: 4, order: 1,
-                    colorToken: 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400',
-                    kcal: '2000', macros: '40/30/30', freq: t('planning_default_meals_frequency'), water: '3.0 L',
-                    stratData: { 
-                      summary: `${t('planning_initial_phase_summary')} ${templateId}`,
-                      primaryObjective: settings.primaryGoal,
-                      secondaryObjectives: [], kpis: [], successCriteria: [], coachNotes: '', risksAndConstraints: [],
-                      kcal: '2000', macros: '40/30/30', freq: t('planning_default_meals_frequency'), water: '3.0 L'
-                    }
-                  }
-                ],
-                training: [
-                  { 
-                    id: 't1', title: `${t('planning_phase_label', { phase: 1 })}: ${t('planning_foundation')}`, startWeek: 1, endWeek: 4, type: 'training',
-                    duration: 4, order: 1,
-                    colorToken: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
-                    focus: t('planning_hypertrophy'), sessions: settings.trainingFreq, deload: t('active'),
-                    stratData: { 
-                      summary: t('planning_foundation_building'),
-                      primaryObjective: t('planning_hypertrophy'),
-                      secondaryObjectives: [], kpis: [], successCriteria: [], coachNotes: '', risksAndConstraints: [],
-                      trainingFocus: t('planning_hypertrophy'), sessions: settings.trainingFreq, deload: t('active'),
-                      intensityTargets: [t('planning_rpe_7_8')]
-                    }
-                  }
-                ],
+                totalWeeks: settings.duration || 12,
+                nutrition: [],
+                training: [],
                 goals: [],
-                milestones: [
-                  { id: 'm1', label: t('planning_program_start'), week: t('planning_week_number', { week: 1 }), status: 'next' }
-                ],
+                milestones: [],
                 assumptions: {
-                  steps: '10,000',
-                  sleep: '8h',
-                  constraints: t('none')
+                  steps: '',
+                  sleep: '',
+                  constraints: ''
                 }
               };
               setDraftPlanning(generatedDraft);
