@@ -6,15 +6,22 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set. Cannot start without a valid Stripe key.');
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' as any })
+  : null;
+
+if (!stripe) {
+  console.warn('[stripe] STRIPE_SECRET_KEY is not set — billing endpoints will return 503.');
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia' as any,
-});
-
 const router = Router();
+
+router.use((req, res, next) => {
+  if (!stripe) {
+    return res.status(503).json({ error: 'Stripe is not configured on this server.' });
+  }
+  next();
+});
 
 // 1. Create Checkout Session
 router.post('/create-checkout-session', verifyManager, async (req: any, res) => {
@@ -40,14 +47,14 @@ router.post('/create-checkout-session', verifyManager, async (req: any, res) => 
     let customerId = subData?.stripe_customer_id;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await stripe!.customers.create({
         email: userEmail,
         metadata: { userId },
       });
       customerId = customer.id;
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripe!.checkout.sessions.create({
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
@@ -70,7 +77,7 @@ router.post('/webhook', async (req: any, res) => {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(
+    event = stripe!.webhooks.constructEvent(
       req.body, // This MUST be the raw body (Buffer)
       sig,
       process.env.STRIPE_WEBHOOK_SECRET || ''
@@ -111,7 +118,7 @@ router.post('/webhook', async (req: any, res) => {
         const customerId = session.customer as string;
 
         if (userId) {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const subscription = await stripe!.subscriptions.retrieve(subscriptionId);
           const planTier = getPlanTier(subscription.items.data[0].price.id);
 
           await supabaseAdmin.from('manager_subscriptions').upsert({

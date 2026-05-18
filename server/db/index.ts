@@ -13,8 +13,11 @@ if (process.env.NODE_ENV !== 'production') {
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
-// NOTE: SUPABASE_SERVICE_ROLE_KEY must NOT have the VITE_ prefix — VITE_ vars are bundled into the client
-const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// NOTE: prefer SUPABASE_SERVICE_ROLE_KEY (no VITE_ prefix). The VITE_ fallback exists only
+// so a misnamed Vercel env var doesn't crash the whole serverless function — but a service
+// role key should never carry the VITE_ prefix, since VITE_ vars can be bundled into the client.
+const supabaseServiceRole =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Validate Supabase configuration
 if (!supabaseUrl) {
