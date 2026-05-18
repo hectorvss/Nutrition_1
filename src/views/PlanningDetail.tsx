@@ -342,21 +342,25 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const handleSave = async () => {
+  // `nextStatus`: 'Draft' keeps it private; 'Active' publishes it to the client.
+  const handleSave = async (nextStatus?: 'Draft' | 'Active') => {
     if (saveStatus === 'saving') return;
-    
+
     setSaveStatus('saving');
     try {
       if (!roadmap) {
         throw new Error("No roadmap data to save");
       }
-      
+
+      const resolvedStatus = nextStatus || roadmap.status || 'Draft';
+
       // Ensure we have a complete structure
       const payload = {
         ...getInitialData(t),
         ...roadmap,
-        // Preserve the roadmap's own status; default to Draft for new roadmaps.
-        status: roadmap.status || 'Draft',
+        status: resolvedStatus,
+        // Persist the freshly derived current week so the client view stays in sync.
+        currentWeek,
         updated_at: new Date().toISOString(),
         // Ensure arrays are never stripped
         goals: roadmap.goals || [],
@@ -367,16 +371,20 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
       const response = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
         method: 'POST',
-        body: JSON.stringify(payload)
+        // The backend reads `body.data_json || body`; sending data_json
+        // explicitly keeps the persisted blob clean and predictable.
+        body: JSON.stringify({ data_json: payload, status: resolvedStatus })
       });
 
       if (!response || response.error) {
         throw new Error(response?.error || "Server failed to save roadmap");
       }
-      
+
+      // Reflect the new status locally so the header updates immediately.
+      setRoadmap(prev => prev ? { ...prev, status: resolvedStatus } : prev);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
-      
+
       // reload context
       await reloadClients();
     } catch (e: any) {
@@ -386,12 +394,31 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
     }
   };
 
+  // The roadmap horizon: number of weeks. Defaults to 12 but follows the
+  // configured totalWeeks so blocks can span the whole program.
+  const planWeeks = (roadmap && roadmap.totalWeeks > 0) ? roadmap.totalWeeks : 12;
+
+  // Live "current week": derived from the program start date when available
+  // (roadmap.currentWeek alone is never recomputed and would stay stuck at 1).
+  const currentWeek = useMemo(() => {
+    if (!roadmap) return 1;
+    const startStr = roadmap.trajectoryGoals?.programStartDate;
+    if (startStr) {
+      const start = new Date(startStr);
+      if (!isNaN(start.getTime())) {
+        const weeks = Math.floor((Date.now() - start.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+        return Math.min(Math.max(weeks, 1), planWeeks);
+      }
+    }
+    return Math.min(Math.max(roadmap.currentWeek || 1, 1), planWeeks);
+  }, [roadmap, planWeeks]);
+
   const findFirstGap = (blocks: RoadmapBlock[]): number | null => {
     const occupied = new Set<number>();
     blocks.forEach(b => {
       for (let i = b.startWeek; i <= b.endWeek; i++) occupied.add(i);
     });
-    for (let w = 1; w <= 12; w++) {
+    for (let w = 1; w <= planWeeks; w++) {
       if (!occupied.has(w)) return w;
     }
     return null;
@@ -480,7 +507,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
     const proposed = { ...currentBlock, ...updates };
     
     // Basic Range Validation
-    if (proposed.startWeek < 1 || proposed.endWeek > 12 || proposed.startWeek > proposed.endWeek) {
+    if (proposed.startWeek < 1 || proposed.endWeek > planWeeks || proposed.startWeek > proposed.endWeek) {
       setEditError(t('planning_invalid_range', { start: proposed.startWeek, end: proposed.endWeek }));
       return false;
     }
@@ -570,8 +597,12 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             </nav>
 
             <div className="relative bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-amber-200 dark:border-amber-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 overflow-hidden">
-              <div className="absolute top-0 right-0 bg-amber-400 text-amber-900 text-[10px] font-bold px-4 py-1 rounded-bl-lg shadow-sm z-10 uppercase tracking-wider">
-                {t('planning_editing_draft')}
+              <div className={`absolute top-0 right-0 text-[10px] font-bold px-4 py-1 rounded-bl-lg shadow-sm z-10 uppercase tracking-wider ${
+                /active|live/i.test(roadmap.status || '') ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-amber-900'
+              }`}>
+                {/active|live/i.test(roadmap.status || '')
+                  ? t('planning_published', { defaultValue: 'Published' })
+                  : t('planning_editing_draft')}
               </div>
               
               <div className="flex items-center gap-4 relative z-10">
@@ -593,28 +624,43 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <span className="font-bold text-sm">{t('planning_program_status', { status: roadmap.status })}</span>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <button className="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-sm transition-colors border border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => {
+                      if (window.confirm(t('planning_discard_confirm', { defaultValue: 'Discard unsaved changes and leave?' }))) {
+                        onNavigate('planning');
+                      }
+                    }}
+                    className="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-sm transition-colors border border-slate-200 dark:border-slate-700"
+                  >
                     {t('discard')}
                   </button>
-                  <button 
-                    onClick={handleSave} 
+                  <button
+                    onClick={() => handleSave('Draft')}
                     disabled={saveStatus === 'saving'}
-                    className={`flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 min-w-[120px] ${
+                    className={`flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 min-w-[120px] disabled:opacity-60 ${
                       saveStatus === 'saved' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
                       saveStatus === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
-                      'bg-emerald-500 hover:bg-emerald-600 text-white'
+                      'bg-slate-800 hover:bg-slate-900 text-white'
                     }`}
                   >
                     {saveStatus === 'saving' && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                     {saveStatus === 'saved' && <Icon name="check_circle" className="text-white" />}
                     {saveStatus === 'error' && <Icon name="error" className="text-white" />}
-                    
+
                     <span>
-                      {saveStatus === 'saving' ? t('saving') : 
-                       saveStatus === 'saved' ? t('saved') : 
-                       saveStatus === 'error' ? t('error') : 
+                      {saveStatus === 'saving' ? t('saving') :
+                       saveStatus === 'saved' ? t('saved') :
+                       saveStatus === 'error' ? t('error') :
                        t('planning_save_draft')}
                     </span>
+                  </button>
+                  <button
+                    onClick={() => handleSave('Active')}
+                    disabled={saveStatus === 'saving'}
+                    className="flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-60"
+                  >
+                    <Icon name="rocket_launch" className="text-[18px]" />
+                    <span>{t('planning_publish', { defaultValue: 'Publish' })}</span>
                   </button>
                 </div>
               </div>
@@ -648,8 +694,8 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
               <div className="min-w-[1000px]">
                 {/* Week Labels */}
                 <div className="flex justify-between px-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <span key={i} className="w-1/12 text-center">{t('planning_week_label_short', { week: i + 1 })}</span>
+                  {Array.from({ length: planWeeks }).map((_, i) => (
+                    <span key={i} style={{ width: `${100 / planWeeks}%` }} className="text-center">{t('planning_week_label_short', { week: i + 1 })}</span>
                   ))}
                 </div>
 
@@ -657,15 +703,20 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
                   <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">{t('nutrition')}</h4>
                   <div className="flex gap-1 h-12 relative">
+                    {roadmap.nutrition.length === 0 && (
+                      <div className="flex-1 flex items-center justify-center text-[10px] font-bold uppercase tracking-widest text-slate-300 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                        {t('planning_no_nutrition_phases', { defaultValue: 'No nutrition phases yet' })}
+                      </div>
+                    )}
                     {roadmap.nutrition.map((block) => (
-                      <div 
+                      <div
                         key={block.id}
                         onClick={() => setSelectedBlockId(block.id)}
-                        style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.colorToken} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
+                        style={{ width: `${((block.endWeek - block.startWeek + 1) / planWeeks) * 100}%` }}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.colorToken} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === planWeeks ? 'rounded-r-xl' : ''}`}
                       >
                         <span className="text-sm font-bold truncate px-2">{block.title}</span>
-                        {block.startWeek <= roadmap.currentWeek && block.endWeek >= roadmap.currentWeek && (
+                        {block.startWeek <= currentWeek && block.endWeek >= currentWeek && (
                           <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-emerald-500 rotate-45 z-10 shrink-0 shadow-sm" />
                         )}
                         <button 
@@ -688,12 +739,17 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 <div className="relative bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
                   <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">{t('training')}</h4>
                   <div className="flex gap-1 h-12">
+                    {roadmap.training.length === 0 && (
+                      <div className="flex-1 flex items-center justify-center text-[10px] font-bold uppercase tracking-widest text-slate-300 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                        {t('planning_no_training_blocks', { defaultValue: 'No training blocks yet' })}
+                      </div>
+                    )}
                     {roadmap.training.map((block) => (
-                      <div 
+                      <div
                         key={block.id}
                         onClick={() => setSelectedBlockId(block.id)}
-                        style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
-                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.colorToken} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === 12 ? 'rounded-r-xl' : ''}`}
+                        style={{ width: `${((block.endWeek - block.startWeek + 1) / planWeeks) * 100}%` }}
+                        className={`group relative flex items-center justify-center cursor-pointer transition-all border ${block.id === selectedBlockId ? 'ring-2 ring-emerald-500/50 scale-[0.99] z-10' : 'hover:scale-[0.99]'} ${block.colorToken} ${block.startWeek === 1 ? 'rounded-l-xl' : ''} ${block.endWeek === planWeeks ? 'rounded-r-xl' : ''}`}
                       >
                         <span className="text-sm font-bold truncate px-2">{block.title}</span>
                         <button 
@@ -725,7 +781,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('planning_block_strategic_details', { defaultValue: 'Block Strategic Details' })}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    {t('planning_strategy_roadmap_week_intelligence', { week: roadmap.currentWeek })}
+                    {t('planning_strategy_roadmap_week_intelligence', { week: currentWeek })}
                   </p>
                 </div>
               </div>
@@ -976,11 +1032,52 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                                 />
                               </div>
                             ))}
-                            <button 
-                              onClick={() => setDraftStratData(prev => prev ? { ...prev, risksAndConstraints: [...prev.risksAndConstraints, 'New Risk'] } : null)}
+                            <button
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, risksAndConstraints: [...(prev.risksAndConstraints || []), 'New Risk'] } : null)}
                               className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-1 hover:underline"
                             >
                               + Add Risk
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Training objectives — were previously uneditable, causing data loss on training blocks */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                            <Icon name="target" className="text-sm" /> {t('planning_primary_objective', { defaultValue: 'Primary Objective' })}
+                          </h5>
+                          <textarea
+                            className="w-full text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 leading-relaxed outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500 resize-none h-32 transition-all"
+                            value={draftStratData?.primaryObjective || ''}
+                            onChange={(e) => setDraftStratData(prev => prev ? { ...prev, primaryObjective: e.target.value } : null)}
+                          />
+                        </div>
+                        <div>
+                          <h5 className="text-[10px] font-bold text-slate-500 mb-2 flex items-center gap-2 uppercase tracking-widest">
+                            <Icon name="assignment" className="text-sm" /> {t('planning_secondary_objectives', { defaultValue: 'Secondary Objectives' })}
+                          </h5>
+                          <div className="space-y-2">
+                            {(draftStratData?.secondaryObjectives || []).map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
+                                <input
+                                  className="w-full bg-transparent border-none p-0 focus:ring-0 outline-none font-medium"
+                                  value={item}
+                                  onChange={(e) => {
+                                    const newItems = [...(draftStratData?.secondaryObjectives || [])];
+                                    newItems[idx] = e.target.value;
+                                    setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: newItems } : null);
+                                  }}
+                                />
+                              </div>
+                            ))}
+                            <button
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...(prev.secondaryObjectives || []), 'New Objective'] } : null)}
+                              className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
+                            >
+                              + Add Objective
                             </button>
                           </div>
                         </div>
@@ -1553,14 +1650,14 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                         onChange={(e) => {
                           const val = parseInt(e.target.value);
                           const duration = (draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1);
-                          setDraftBlockValues({ 
-                            ...draftBlockValues, 
-                            startWeek: val, 
-                            endWeek: Math.min(val + duration, 12) 
+                          setDraftBlockValues({
+                            ...draftBlockValues,
+                            startWeek: val,
+                            endWeek: Math.min(val + duration, planWeeks)
                           });
                         }}
                       >
-                        {Array.from({ length: 12 }).map((_, i) => (
+                        {Array.from({ length: planWeeks }).map((_, i) => (
                           <option key={i + 1} value={i + 1}>{t('planning_week_label', { week: i + 1 })}</option>
                         ))}
                       </select>
@@ -1572,13 +1669,13 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                         value={(draftBlockValues.endWeek || 1) - (draftBlockValues.startWeek || 1) + 1}
                         onChange={(e) => {
                           const dur = parseInt(e.target.value);
-                          setDraftBlockValues({ 
-                            ...draftBlockValues, 
-                            endWeek: Math.min((draftBlockValues.startWeek || 1) + dur - 1, 12) 
+                          setDraftBlockValues({
+                            ...draftBlockValues,
+                            endWeek: Math.min((draftBlockValues.startWeek || 1) + dur - 1, planWeeks)
                           });
                         }}
                       >
-                        {Array.from({ length: 12 }).map((_, i) => (
+                        {Array.from({ length: planWeeks }).map((_, i) => (
                           <option key={i + 1} value={i + 1}>{i + 1} {t('weeks_label')}</option>
                         ))}
                       </select>
@@ -1590,7 +1687,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                         value={draftBlockValues.endWeek}
                         onChange={(e) => setDraftBlockValues({ ...draftBlockValues, endWeek: parseInt(e.target.value) })}
                       >
-                        {Array.from({ length: 12 }).map((_, i) => (
+                        {Array.from({ length: planWeeks }).map((_, i) => (
                           <option key={i + 1} disabled={i + 1 < (draftBlockValues.startWeek || 1)} value={i + 1}>{t('planning_week_label', { week: i + 1 })}</option>
                         ))}
                       </select>

@@ -54,6 +54,22 @@ export default function Tasks({ onNavigate }: TasksProps) {
   const { tasks, completedTasks, markTaskAsDone, markTaskAsPending } = useTask();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
+  // Tasks mid-completion: brief green "confirm" beat before the card animates out.
+  const [completingIds, setCompletingIds] = useState<Set<string | number>>(new Set());
+
+  const handleComplete = (taskId: string | number) => {
+    if (completingIds.has(taskId)) return;
+    setCompletingIds(prev => new Set(prev).add(taskId));
+    // Short confirmation beat, then remove — that state change triggers the exit animation.
+    window.setTimeout(() => {
+      markTaskAsDone(taskId);
+      setCompletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+    }, 260);
+  };
 
   // Derived counts for Stats
   const overdueCount = tasks.filter(t => t.status === 'overdue').length;
@@ -179,22 +195,26 @@ export default function Tasks({ onNavigate }: TasksProps) {
                       <AnimatePresence mode="popLayout">
                         {prioTasks.map((task) => {
                           const isCompleted = task.status === 'completed' || task.status === 'archived';
+                          const isCompleting = completingIds.has(task.id);
                           return (
-                            <motion.div 
+                            <motion.div
                               layout
                               key={task.id}
                               initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ 
-                                opacity: 0, 
-                                x: 50,
-                                scale: 0.95,
-                                transition: { duration: 0.2 } 
+                              animate={{
+                                opacity: 1,
+                                y: 0,
+                                scale: isCompleting ? 0.985 : 1,
                               }}
-                              transition={{ 
-                                type: "spring", 
-                                stiffness: 500, 
-                                damping: 40,
+                              exit={{
+                                opacity: 0,
+                                scale: 0.9,
+                                transition: { duration: 0.2, ease: 'easeOut' }
+                              }}
+                              transition={{
+                                type: "spring",
+                                stiffness: 400,
+                                damping: 32,
                                 opacity: { duration: 0.2 }
                               }}
                               onClick={() => {
@@ -224,7 +244,11 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                   onNavigate('create-task', { taskId: task.id });
                                 }
                               }}
-                              className={`group relative bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 ${config.borderInactive}`}
+                              className={`group relative rounded-2xl p-4 sm:p-6 shadow-sm transition-colors duration-200 cursor-pointer border border-l-4 ${
+                                isCompleting
+                                  ? 'bg-emerald-50 border-emerald-300 border-l-emerald-500'
+                                  : `bg-white border-slate-200 hover:shadow-md ${config.borderInactive}`
+                              }`}
                             >
                               <div className="flex items-start gap-3 sm:gap-4">
                                 <div className="flex-1 min-w-0">
@@ -249,15 +273,24 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                       <span className="text-[11px] sm:text-xs text-slate-400 truncate">{task.program}</span>
                                     </div>
                                     {!isCompleted && (
-                                      <button 
+                                      <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          markTaskAsDone(task.id);
+                                          handleComplete(task.id);
                                         }}
-                                        className={`w-12 h-12 ${config.dotFill} text-white rounded-full flex items-center justify-center hover:scale-110 hover:brightness-110 transition-all shadow-lg active:scale-95 cursor-pointer group/btn`}
+                                        disabled={isCompleting}
+                                        className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg cursor-pointer group/btn transition-all duration-200 ${
+                                          isCompleting
+                                            ? 'bg-emerald-500 text-white scale-110'
+                                            : `${config.dotFill} text-white hover:scale-110 hover:brightness-110 active:scale-95`
+                                        }`}
                                         title={t('mark_as_complete')}
                                       >
-                                        <CheckCircle2 className="w-6 h-6 group-hover/btn:scale-110 transition-transform" />
+                                        <CheckCircle2
+                                          className={`w-6 h-6 transition-transform duration-200 ${
+                                            isCompleting ? 'fill-white text-emerald-500 scale-110' : 'group-hover/btn:scale-110'
+                                          }`}
+                                        />
                                       </button>
                                     )}
                                   </div>

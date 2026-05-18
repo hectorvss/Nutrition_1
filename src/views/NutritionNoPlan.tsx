@@ -158,10 +158,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     const fetchTemplates = async () => {
       try {
         setIsLoadingTemplates(true);
-        const response = await fetch('/api/manager/nutrition-templates', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-        });
-        const data = await response.json();
+        const data = await fetchWithAuth('/manager/nutrition-templates');
         setTemplates(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching templates in NoPlan:', err);

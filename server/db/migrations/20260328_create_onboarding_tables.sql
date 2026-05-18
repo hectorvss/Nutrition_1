@@ -12,9 +12,11 @@ CREATE TABLE IF NOT EXISTS public.onboarding_templates (
 );
 
 -- 2. Create Client Onboarding Assignments Table
+-- NOTE: client_id references profiles(user_id) — the submissions/assignments
+-- carry the profile FK so PostgREST can embed the profile directly.
 CREATE TABLE IF NOT EXISTS public.client_onboarding_assignments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    client_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
     template_id UUID NOT NULL REFERENCES public.onboarding_templates(id) ON DELETE CASCADE,
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     is_active BOOLEAN DEFAULT TRUE
@@ -28,7 +30,7 @@ WHERE (is_active = TRUE);
 -- 3. Create Client Onboarding Submissions Table
 CREATE TABLE IF NOT EXISTS public.client_onboarding_submissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    client_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
     template_id UUID NOT NULL REFERENCES public.onboarding_templates(id),
     template_version INT DEFAULT 1,
     answers_json JSONB NOT NULL DEFAULT '{}'::jsonb,

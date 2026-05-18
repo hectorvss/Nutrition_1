@@ -1,23 +1,32 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { processTrigger } from './automations.js';
+import { runWorkflowsForEvent } from './workflows.js';
 import { verifyManager as _verifyManager, verifyClient as _verifyClient } from '../middleware/auth.js';
 
 const router = Router();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FIXED CHECK-IN QUESTIONS — the canonical data-collection contract.
+// Every question here is required + is_fixed + locked: it is injected into every
+// check-in the client fills, can never be removed by the manager, and uses a
+// STABLE id (the "metric key") that the KPI layer reads directly. Each id maps
+// 1:1 to a dashboard KPI. Do not rename these ids without updating profile-stats
+// and /analytics extraction.
+// ─────────────────────────────────────────────────────────────────────────────
+const SCALE_META = { min: 1, max: 10, step: 1 };
+
 const FIXED_CHECKIN_QUESTIONS = [
   {
-    id: 'measurements_step',
-    title: 'Weekly Measurements',
-    subtitle: 'Track your physical progress',
+    id: 'body_metrics_step',
+    title: 'Body Metrics',
+    subtitle: 'These power your weight, body-fat and measurement charts',
     meta: { icon: 'monitoring' },
+    locked: true,
     questions: [
-      {
-        id: 'measurements',
-        title: 'Body Measurements (cm)',
-        type: 'measurement_group',
-        options: ['weight', 'waist', 'hip', 'thigh_r', 'arm_r']
-      }
+      { id: 'weight', title: 'Current Weight (kg)', type: 'number', unit: 'kg', required: true, is_fixed: true, locked: true },
+      { id: 'body_fat', title: 'Body Fat %', type: 'number', unit: '%', required: true, is_fixed: true, locked: true },
+      { id: 'measurements', title: 'Body Measurements (cm)', type: 'measurement_group', options: ['waist', 'hip', 'chest', 'arm_r', 'thigh_r'], required: true, is_fixed: true, locked: true }
     ]
   },
   {
@@ -25,29 +34,57 @@ const FIXED_CHECKIN_QUESTIONS = [
     title: 'Nutrition Adherence',
     subtitle: 'How consistently did you follow your fuel plan?',
     meta: { icon: 'restaurant' },
+    locked: true,
     questions: [
       {
         id: 'nutrition_adherence_score',
         type: 'slider',
-        title: 'Plan Adherence',
+        title: 'Plan Adherence (1-10)',
         subtitle: 'On a scale of 1-10, how closely did you follow the plan?',
         required: true,
         is_fixed: true,
-        meta: { min: 1, max: 10, step: 1 }
+        locked: true,
+        meta: SCALE_META
       }
     ]
   },
   {
     id: 'macros_step',
-    title: 'Macros & Fatigue',
-    subtitle: 'Nutrition and recovery tracking',
+    title: 'Daily Macros',
+    subtitle: 'Your average daily nutrition intake',
     meta: { icon: 'analytics' },
+    locked: true,
     questions: [
-      { id: 'protein', title: 'Avg. Daily Protein (g)', type: 'number', unit: 'g', required: true },
-      { id: 'carbs', title: 'Avg. Daily Carbs (g)', type: 'number', unit: 'g', required: true },
-      { id: 'fats', title: 'Avg. Daily Fats (g)', type: 'number', unit: 'g', required: true },
-      { id: 'calories', title: 'Avg. Daily Calories (kcal)', type: 'number', unit: 'kcal', required: true },
-      { id: 'fatigue', title: 'Fatigue Level (1-10)', type: 'select', options: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'], required: true }
+      { id: 'protein', title: 'Avg. Daily Protein (g)', type: 'number', unit: 'g', required: true, is_fixed: true, locked: true },
+      { id: 'carbs', title: 'Avg. Daily Carbs (g)', type: 'number', unit: 'g', required: true, is_fixed: true, locked: true },
+      { id: 'fats', title: 'Avg. Daily Fats (g)', type: 'number', unit: 'g', required: true, is_fixed: true, locked: true },
+      { id: 'calories', title: 'Avg. Daily Calories (kcal)', type: 'number', unit: 'kcal', required: true, is_fixed: true, locked: true }
+    ]
+  },
+  {
+    id: 'wellbeing_step',
+    title: 'Wellbeing & Recovery',
+    subtitle: 'Rate each from 1 (lowest) to 10 (highest)',
+    meta: { icon: 'self_improvement' },
+    locked: true,
+    questions: [
+      { id: 'energy_level', title: 'Energy Level (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'stress_level', title: 'Stress Level (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'mood_score', title: 'Mood (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'motivation_level', title: 'Motivation (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'fatigue', title: 'Fatigue Level (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'sleep_hours', title: 'Avg. Sleep per Night (hours)', type: 'number', unit: 'h', required: true, is_fixed: true, locked: true },
+      { id: 'sleep_quality_score', title: 'Sleep Quality (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META }
+    ]
+  },
+  {
+    id: 'activity_step',
+    title: 'Daily Activity',
+    subtitle: 'Movement outside of your training sessions',
+    meta: { icon: 'directions_run' },
+    locked: true,
+    questions: [
+      { id: 'steps', title: 'Avg. Daily Steps', type: 'number', unit: 'steps', required: true, is_fixed: true, locked: true }
     ]
   }
 ];
@@ -1100,7 +1137,9 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     if (assignment?.template) {
       const template = assignment.template as any;
       if (template && !Array.isArray(template)) {
-        // Return template exactly as stored — no injection needed
+        // Inject the fixed (required, non-deletable) questions so the client
+        // always collects the canonical KPI variables.
+        template.template_schema = injectFixedQuestions(template.template_schema);
         return res.json(template);
       }
     }
@@ -1124,7 +1163,7 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     if (defaultError) throw defaultError;
 
     if (defaultTemplate) {
-      // Return template exactly as stored — no injection needed
+      defaultTemplate.template_schema = injectFixedQuestions(defaultTemplate.template_schema);
       return res.json(defaultTemplate);
     }
 
@@ -1133,7 +1172,10 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     //    backed by a valid template_id.
     if (manager?.manager_id) {
       const general = await resolveGeneralCheckinTemplate(manager.manager_id);
-      if (general) return res.json(general);
+      if (general) {
+        general.template_schema = injectFixedQuestions(general.template_schema);
+        return res.json(general);
+      }
     }
 
     res.json(null);
@@ -1191,7 +1233,10 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
       return res.status(403).json({ error: 'Security violation: Template manager mismatch' });
     }
 
-    // 3. Insert into client_checkin_submissions with snapshot
+    // 3. Insert into client_checkin_submissions with snapshot.
+    //    Snapshot the schema WITH the fixed questions injected, so the saved
+    //    submission matches exactly what the client filled.
+    const injectedSchema = injectFixedQuestions(template.template_schema);
     const { data, error } = await supabaseAdmin
       .from('client_checkin_submissions')
       .insert({
@@ -1200,7 +1245,8 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
         template_version: template.version || 1,
         template_snapshot_json: {
           ...template,
-          templateSchema: template.template_schema
+          template_schema: injectedSchema,
+          templateSchema: injectedSchema
         },
         answers_json,
         submitted_at: new Date().toISOString()
@@ -1283,6 +1329,9 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
 
     if (clientData?.manager_id) {
       await processTrigger(clientData.manager_id, 'checkin-submitted', { clientId, submissionId: data.id });
+      runWorkflowsForEvent(clientData.manager_id, 'trigger.checkin_submitted', { clientId }).catch(err => {
+        console.error('Workflow trigger error (checkin_submitted):', err);
+      });
     }
 
     res.json(data);

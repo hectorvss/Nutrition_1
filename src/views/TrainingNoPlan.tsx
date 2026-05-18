@@ -133,7 +133,7 @@ const PRESETS = [
     recommended: ['Maintenance']
   },
   {
-    id: 'resistencia',
+    id: 'p7',
     title: 'Resistencia',
     level: 'Endurance',
     levelColor: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900',
@@ -234,13 +234,37 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
   const selectedPreset = allPresets.find(p => p.id === selectedId) || recommendedPreset;
 
+  // Editable program settings (frequency / focus) — kept in sync with the
+  // currently selected preset and persisted into the saved program.
+  const [freqOverride, setFreqOverride] = useState<string>(selectedPreset.freqValue);
+  const [focusOverride, setFocusOverride] = useState<string>(selectedPreset.focusValue);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setFreqOverride(selectedPreset.freqValue);
+    setFocusOverride(selectedPreset.focusValue);
+  }, [selectedId]);
+
   const handleConfirm = async () => {
+    if (!client?.id) {
+      setSaveError(t('error_loading_data'));
+      return;
+    }
+    setSaveError(null);
+    setIsSaving(true);
     try {
       const selectedProgram = allPresets.find(p => p.id === selectedId) || recommendedPreset;
       let dataJson: any;
 
+      const parsedFreq = parseInt(freqOverride, 10) || undefined;
+
       if ((selectedProgram as any).isDbTemplate) {
-        dataJson = (selectedProgram as any).data_json;
+        dataJson = {
+          ...((selectedProgram as any).data_json || {}),
+          focus: focusOverride,
+          frequency: parsedFreq
+        };
       } else {
         const template = PROGRAM_TEMPLATES[selectedId];
         const prog = trainingPrograms.find(p => p.id === selectedId) || trainingPrograms[0];
@@ -248,8 +272,8 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
         dataJson = {
           name: prog.name,
           level: prog.level,
-          focus: prog.focus,
-          frequency: prog.frequency,
+          focus: focusOverride || prog.focus,
+          frequency: parsedFreq || prog.frequency,
           duration: prog.duration,
           schedule: prog.schedule,
           description: prog.description,
@@ -270,8 +294,11 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
 
       await reloadClients();
       onStartPlan(null, finalPlanData);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error applying training program:', err);
+      setSaveError(err?.message || t('plan_save_error_alert'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -474,11 +501,15 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('weekly_frequency')}</label>
                   <div className="grid grid-cols-4 gap-2">
                     {['2x', '3x', '4x', '5x'].map((freq) => {
-                      const isFreqSelected = selectedPreset.freqValue === freq;
+                      const isFreqSelected = freqOverride === freq;
                       return (
-                        <button key={freq} className={`p-2 rounded-lg border text-sm transition-colors ${
-                          isFreqSelected 
-                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold ring-1 ring-emerald-500/50' 
+                        <button
+                          key={freq}
+                          type="button"
+                          onClick={() => setFreqOverride(freq)}
+                          className={`p-2 rounded-lg border text-sm transition-colors ${
+                          isFreqSelected
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold ring-1 ring-emerald-500/50'
                             : 'border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 font-medium'
                         }`}>
                           {freq}
@@ -490,11 +521,14 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('primary_focus')}</label>
-                  <select 
+                  <select
                     className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white text-sm focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium py-2.5 px-3"
-                    value={selectedPreset.focusValue}
-                    onChange={() => {}}
+                    value={focusOverride}
+                    onChange={(e) => setFocusOverride(e.target.value)}
                   >
+                    {!['Full Body Strength', 'Hypertrophy', 'Endurance', 'Mobility'].includes(focusOverride) && (
+                      <option value={focusOverride}>{focusOverride}</option>
+                    )}
                     <option value="Full Body Strength">{t('training_focus_full_body_strength')}</option>
                     <option value="Hypertrophy">{t('training_focus_hypertrophy')}</option>
                     <option value="Endurance">{t('training_focus_endurance')}</option>
@@ -521,12 +555,19 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                   </div>
                 </div>
 
-                <button 
+                {saveError && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-xl text-xs font-medium mt-2">
+                    <span className="material-symbols-outlined text-[16px]">error</span>
+                    <span>{saveError}</span>
+                  </div>
+                )}
+                <button
                   onClick={handleConfirm}
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 mt-4 group"
+                  disabled={isSaving}
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 mt-4 group"
                 >
-                  <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">assignment_add</span>
-                  {t('assign_btn')}
+                  <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">{isSaving ? 'sync' : 'assignment_add'}</span>
+                  {isSaving ? t('saving_btn') : t('assign_btn')}
                 </button>
               </div>
 

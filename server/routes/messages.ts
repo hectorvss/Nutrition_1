@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { authenticate } from '../middleware/auth.js';
+import { runWorkflowsForEvent } from './workflows.js';
 
 const router = Router();
 
@@ -246,6 +247,14 @@ router.post('/', async (req: any, res) => {
       .single();
 
     if (error) throw error;
+
+    // Advanced Workflows: a client message can trigger 'message_received' workflows.
+    if (isClientToManager) {
+      runWorkflowsForEvent(receiver_id, 'trigger.message_received',
+        { clientId: sender_id, messageId: message.id }).catch(err =>
+        console.error('Workflow trigger error (message_received):', err));
+    }
+
     res.json(message);
   } catch (error: any) {
     console.error('Error sending message:', error);

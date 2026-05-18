@@ -9,8 +9,9 @@ interface FoodCreateProps {
 export default function FoodCreate({ onBack }: FoodCreateProps) {
   const { addFood } = useFoodContext();
   const { t } = useLanguage();
+  const FOOD_CATEGORIES = ['Protein', 'Carbs', 'Fruit', 'Vegetables', 'Fats', 'Dairy', 'Grains'];
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('General');
+  const [category, setCategory] = useState('Protein');
   const [servingAmount, setServingAmount] = useState('100');
   const [servingUnit, setServingUnit] = useState('g');
   const [calories, setCalories] = useState('');
@@ -18,18 +19,28 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
   const [carbs, setCarbs] = useState('');
   const [fats, setFats] = useState('');
 
-  const handleSave = () => {
-    if (!name.trim()) return;
-    addFood({
-      name: name.trim(),
-      category,
-      calories: parseFloat(calories) || 0,
-      protein: parseFloat(protein) || 0,
-      carbs: parseFloat(carbs) || 0,
-      fats: parseFloat(fats) || 0,
-      servingSize: `${servingAmount}${servingUnit}`,
-    });
-    onBack();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim() || isSaving) return;
+    setIsSaving(true);
+    try {
+      await addFood({
+        name: name.trim(),
+        category,
+        calories: parseFloat(calories) || 0,
+        protein: parseFloat(protein) || 0,
+        carbs: parseFloat(carbs) || 0,
+        fats: parseFloat(fats) || 0,
+        servingSize: `${servingAmount}${servingUnit}`,
+      });
+      onBack();
+    } catch (err) {
+      console.error('Error saving food:', err);
+      alert(t('error_loading_data'));
+    } finally {
+      setIsSaving(false);
+    }
   };
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
@@ -79,11 +90,23 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-2">{t('category_label')}</label>
+                    <select
+                      value={category}
+                      onChange={e => setCategory(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm"
+                    >
+                      {FOOD_CATEGORIES.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-900 mb-2">
                       {t('brand_label')} <span className="text-slate-500 font-normal">{t('optional_label')}</span>
                     </label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full px-4 py-2.5 rounded-xl border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm"
                       placeholder={t('brand_label')}
                     />
@@ -179,9 +202,9 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
                 >
                   {t('cancel')}
                 </button>
-                <button onClick={handleSave} disabled={!name.trim()} className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
+                <button onClick={handleSave} disabled={!name.trim() || isSaving} className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">save</span>
-                  {t('save_to_database')}
+                  {isSaving ? t('saving_dots') : t('save_to_database')}
                 </button>
               </div>
             </div>

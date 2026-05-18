@@ -461,6 +461,8 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [strengthWeekOffset, setStrengthWeekOffset] = useState(0);
   const [visiblePRs, setVisiblePRs] = useState(4);
   const [visibleWorkouts, setVisibleWorkouts] = useState(4);
+  const [weightRange, setWeightRange] = useState<'3M' | '6M' | '1Y'>('3M');
+  const [showBodyFat, setShowBodyFat] = useState(false);
 
   // ─── Delete modal state ──────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -639,6 +641,20 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     );
   };
 
+  // Weight history filtered by the selected time range (3M / 6M / 1Y).
+  const getFilteredWeightData = () => {
+    const history = stats?.weightHistory || [];
+    if (history.length === 0) return [];
+    const cutoff = new Date();
+    if (weightRange === '3M') cutoff.setMonth(cutoff.getMonth() - 3);
+    else if (weightRange === '6M') cutoff.setMonth(cutoff.getMonth() - 6);
+    else cutoff.setFullYear(cutoff.getFullYear() - 1);
+    return history.filter((h: any) => {
+      const d = new Date(h.date);
+      return !isNaN(d.getTime()) && d >= cutoff;
+    });
+  };
+
   const renderNutrition = () => (
     <div className="space-y-6">
       {isLoading ? (
@@ -681,34 +697,51 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('overlay_body_fat')}</span>
-                <div className="w-8 h-4 bg-slate-200 dark:bg-slate-700 rounded-full relative cursor-pointer">
-                  <div className="absolute left-1 top-1 w-2 h-2 bg-white rounded-full"></div>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowBodyFat(prev => !prev)}
+                  className={`w-8 h-4 rounded-full relative cursor-pointer transition-colors ${showBodyFat ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                >
+                  <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${showBodyFat ? 'left-5' : 'left-1'}`}></div>
+                </button>
               </div>
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                {['3M', '6M', '1Y'].map(p => (
-                  <button key={p} className={`px-3 py-1 text-[10px] font-bold rounded-md ${p === '3M' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>{p}</button>
+                {(['3M', '6M', '1Y'] as const).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setWeightRange(p)}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-md transition-colors ${weightRange === p ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
+                  >{p}</button>
                 ))}
               </div>
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats?.weightHistory || []}>
+              <AreaChart data={getFilteredWeightData()}>
                 <defs>
                   <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
+                  <linearGradient id="colorBodyFat" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}} />
                 <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
-                <Tooltip 
+                {showBodyFat && <YAxis yAxisId="bf" hide domain={['dataMin - 5', 'dataMax + 5']} />}
+                <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)', color: 'var(--tw-colors-slate-900)' }}
                   labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
                 />
-                <Area type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
+                {showBodyFat && <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '10px' }} />}
+                <Area name={t('weight')} type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" connectNulls />
+                {showBodyFat && (
+                  <Area name={t('body_fat')} yAxisId="bf" type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorBodyFat)" connectNulls />
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -721,27 +754,38 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">{t('avg_7_days')}</span>
             </div>
             <div className="space-y-6">
-              {[
-                { label: 'PROTEIN', percent: stats?.macros?.protein || 0, color: 'bg-emerald-500' },
-                { label: 'CARBS', percent: stats?.macros?.carbs || 0, color: 'bg-blue-400' },
-                { label: 'FATS', percent: stats?.macros?.fats || 0, color: 'bg-amber-400' },
-              ].map((macro, idx) => (
-                <div key={idx}>
-                  <div className="flex justify-between items-end mb-2">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{macro.label}</span>
+              {(() => {
+                const m = stats?.macros || {};
+                const rows = [
+                  { label: 'PROTEIN', grams: m.protein || 0, color: 'bg-emerald-500' },
+                  { label: 'CARBS', grams: m.carbs || 0, color: 'bg-blue-400' },
+                  { label: 'FATS', grams: m.fats || 0, color: 'bg-amber-400' },
+                ];
+                const total = rows.reduce((s, r) => s + r.grams, 0);
+                return rows.map((macro, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between items-end mb-2">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{macro.label}</span>
+                      </div>
+                      <span className="text-xs font-bold text-emerald-500">{macro.grams} g</span>
                     </div>
-                    <span className="text-xs font-bold text-emerald-500">{macro.percent}%</span>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                      <div className={`${macro.color} h-2 rounded-full`} style={{ width: `${total > 0 ? (macro.grams / total) * 100 : 0}%` }}></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                    <div className={`${macro.color} h-2 rounded-full`} style={{ width: `${macro.percent}%` }}></div>
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
-            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('daily_caloric_avg')}</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-white">{stats?.macros?.calories || 0} kcal</span>
+            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('daily_caloric_avg')}</span>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{stats?.macros?.calories || 0} kcal</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('plan_adherence')}</span>
+                <span className="text-sm font-bold text-emerald-500">{stats?.macros?.adherenceScore != null ? `${stats.macros.adherenceScore}%` : '--'}</span>
+              </div>
             </div>
           </div>
 
@@ -757,13 +801,16 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                 </span>
               ))}
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('dietary_style')}</p>
-              <div className="flex gap-2">
-                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{t('low_carb')}</span>
-                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{t('high_protein')}</span>
+            {stats?.dietaryStyle?.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('dietary_style')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {stats.dietaryStyle.map((style: string, idx: number) => (
+                    <span key={idx} className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{style}</span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -1232,11 +1279,11 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('nutrition')}</span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.macros?.protein ? t('high') : (stats?.adherenceRate || 0) + '%'}</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.macros?.adherenceScore ? `${stats.macros.adherenceScore}%` : '--'}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t('training')}</span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.training?.workoutCount ? Math.round((stats.training.workoutCount / 5) * 100) + '%' : '0%'}</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">{stats?.training?.workoutCount ? `${stats.training.workoutCount} ${t('sessions')}` : '--'}</span>
             </div>
           </div>
         </div>

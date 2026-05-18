@@ -10,6 +10,7 @@ export default function ClientNutrition() {
   const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [nutritionPlan, setNutritionPlan] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { user } = useAuth();
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 
@@ -30,8 +31,9 @@ export default function ClientNutrition() {
             setViewState('daily');
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching client plans:', err);
+        if (mounted) setLoadError(err?.message || t('error_loading_data'));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -44,6 +46,18 @@ export default function ClientNutrition() {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-6 text-center">
+        <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/20 rounded-2xl flex items-center justify-center mb-6 text-rose-400">
+          <span className="material-symbols-outlined text-4xl">error</span>
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('error_loading_data')}</h2>
+        <p className="text-slate-500 max-w-sm">{loadError}</p>
       </div>
     );
   }
@@ -67,18 +81,35 @@ export default function ClientNutrition() {
     ? (planDays[selectedDay]?.meals || []) 
     : (nutritionPlan.data_json?.meals || []);
 
-  const totalCalories = meals.reduce((acc: number, m: any) =>
-    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0), 0
-  );
-  const totalProtein = meals.reduce((acc: number, m: any) =>
-    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.protein || 0) * (i.quantity || 1)), 0), 0
-  );
-  const totalCarbs = meals.reduce((acc: number, m: any) =>
-    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.carbs || 0) * (i.quantity || 1)), 0), 0
-  );
-  const totalFats = meals.reduce((acc: number, m: any) =>
-    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.fats || 0) * (i.quantity || 1)), 0), 0
-  );
+  // Compute totals from food items AND from general-mode macro categories,
+  // so the macro panel is correct regardless of which mode the plan uses.
+  let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFats = 0;
+  meals.forEach((m: any) => {
+    (m.items || []).forEach((i: any) => {
+      const qty = i.multiplier || i.quantity || 1;
+      totalCalories += (i.calories || 0) * qty;
+      totalProtein += (i.protein || 0) * qty;
+      totalCarbs += (i.carbs || 0) * qty;
+      totalFats += (i.fats || 0) * qty;
+    });
+    (m.categories || []).forEach((cat: any) => {
+      const lbl = (cat.label || '').toLowerCase();
+      if (cat.id === 'p' || lbl.includes('protein') || lbl.includes('proteí')) totalProtein += cat.amount || 0;
+      else if (cat.id === 'c' || lbl.includes('carb') || lbl.includes('hidrato')) totalCarbs += cat.amount || 0;
+      else if (cat.id === 'f' || lbl.includes('fat') || lbl.includes('grasa')) totalFats += cat.amount || 0;
+    });
+  });
+  // If no per-item calories (general mode), derive calories from macros.
+  if (totalCalories === 0 && (totalProtein > 0 || totalCarbs > 0 || totalFats > 0)) {
+    totalCalories = totalProtein * 4 + totalCarbs * 4 + totalFats * 9;
+  }
+
+  // Macro ring segment lengths (circumference for r=40 is 2*PI*40 ≈ 251).
+  const ringCirc = 2 * Math.PI * 40;
+  const macroKcal = totalProtein * 4 + totalCarbs * 4 + totalFats * 9 || 1;
+  const proteinSeg = (totalProtein * 4 / macroKcal) * ringCirc;
+  const carbsSeg = (totalCarbs * 4 / macroKcal) * ringCirc;
+  const fatsSeg = (totalFats * 9 / macroKcal) * ringCirc;
 
   const daysConfig = [
     { id: 'monday', name: t('monday') },
@@ -158,7 +189,7 @@ export default function ClientNutrition() {
               <div className="flex-1 w-full space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="bg-slate-50 dark:bg-slate-800 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border border-slate-100 dark:border-slate-700">
-                    {idx % 3 === 0 ? t('training') : t('rest_day')}
+                    {dayData?.tag || (dCals === 0 ? t('rest_day') : t('active_plan'))}
                   </span>
                   <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
                     <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{pPct}% P</span>
@@ -235,9 +266,13 @@ export default function ClientNutrition() {
           <div className="relative w-44 h-44 flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle className="stroke-slate-100 dark:stroke-slate-800" cx="50" cy="50" fill="transparent" r="40" strokeWidth="10" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#3b82f6" strokeDasharray="80 171" strokeDashoffset="0" strokeWidth="10" strokeLinecap="round" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#10b981" strokeDasharray="100 151" strokeDashoffset="-85" strokeWidth="10" strokeLinecap="round" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#f59e0b" strokeDasharray="71 180" strokeDashoffset="-185" strokeWidth="10" strokeLinecap="round" />
+              {totalCalories > 0 && (
+                <>
+                  <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#3b82f6" strokeDasharray={`${proteinSeg} ${ringCirc}`} strokeDashoffset="0" strokeWidth="10" strokeLinecap="round" />
+                  <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#10b981" strokeDasharray={`${carbsSeg} ${ringCirc}`} strokeDashoffset={`-${proteinSeg}`} strokeWidth="10" strokeLinecap="round" />
+                  <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#f59e0b" strokeDasharray={`${fatsSeg} ${ringCirc}`} strokeDashoffset={`-${proteinSeg + carbsSeg}`} strokeWidth="10" strokeLinecap="round" />
+                </>
+              )}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalCalories)}</span>
@@ -353,9 +388,13 @@ export default function ClientNutrition() {
           <div className="relative w-44 h-44 flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle className="stroke-slate-100 dark:stroke-slate-800" cx="50" cy="50" fill="transparent" r="40" strokeWidth="10" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#3b82f6" strokeDasharray={`${(totalProtein*4/(totalCalories||1))*251} 251`} strokeDashoffset="0" strokeWidth="10" strokeLinecap="round" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#10b981" strokeDasharray={`${(totalCarbs*4/(totalCalories||1))*251} 251`} strokeDashoffset={`-${(totalProtein*4/(totalCalories||1))*251}`} strokeWidth="10" strokeLinecap="round" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#f59e0b" strokeDasharray={`${(totalFats*9/(totalCalories||1))*251} 251`} strokeDashoffset={`-${((totalProtein*4+totalCarbs*4)/(totalCalories||1))*251}`} strokeWidth="10" strokeLinecap="round" />
+              {totalCalories > 0 && (
+                <>
+                  <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#3b82f6" strokeDasharray={`${proteinSeg} ${ringCirc}`} strokeDashoffset="0" strokeWidth="10" strokeLinecap="round" />
+                  <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#10b981" strokeDasharray={`${carbsSeg} ${ringCirc}`} strokeDashoffset={`-${proteinSeg}`} strokeWidth="10" strokeLinecap="round" />
+                  <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#f59e0b" strokeDasharray={`${fatsSeg} ${ringCirc}`} strokeDashoffset={`-${proteinSeg + carbsSeg}`} strokeWidth="10" strokeLinecap="round" />
+                </>
+              )}
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalCalories)}</span>
@@ -405,13 +444,15 @@ export default function ClientNutrition() {
               kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0))}
               icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
               iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
-              items={(m.items || []).map((i: any) => ({
-                name: i.name,
-                sub: `${i.servingSize} × ${i.quantity}`,
-                kcal: Math.round((i.calories || 0) * (i.quantity || 1)),
-                amount: `${Math.round(i.quantity * 100) / 100} ${t('units')}`,
-                img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200'
-              }))}
+              items={(m.items || []).map((i: any) => {
+                const qty = i.multiplier || i.quantity || 1;
+                return {
+                  name: i.name,
+                  sub: `${i.servingSize || ''} × ${qty}`.trim(),
+                  kcal: Math.round((i.calories || 0) * qty),
+                  amount: `${Math.round(qty * 100) / 100} ${t('units')}`,
+                };
+              })}
               servingLabel={t('serving')}
             />
           ))}
@@ -560,8 +601,8 @@ function ExampleMealBlock({ title, time, kcal, icon, iconBg, items, servingLabel
       <div className="pl-[76px] space-y-4">
         {items.map((item: any, i: number) => (
           <div key={i} className="p-3 pr-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-5 hover:shadow-md transition-all group/item">
-            <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
-              <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
+              <span className="text-2xl">🥗</span>
             </div>
             <div className="flex-1">
               <p className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{item.name}</p>

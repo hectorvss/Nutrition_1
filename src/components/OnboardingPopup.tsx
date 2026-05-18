@@ -85,16 +85,48 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
     return () => { mounted = false; };
   }, []);
 
+  // True only if a conditional question is currently visible (or has no condition).
+  const isQuestionVisible = (q: any): boolean => {
+    if (q.hidden) return false;
+    if (!q.conditional) return true;
+    const { field, operator, value } = q.conditional;
+    const fieldValue = answers[field];
+    if (operator === 'equals') return fieldValue === value;
+    if (operator === 'not_equals') return fieldValue !== value;
+    if (operator === 'contains') return (fieldValue || []).includes(value);
+    return true;
+  };
+
+  // True if the question has a usable answer, accounting for composite types
+  // (measurement_group / photo_group store their values under derived keys).
+  const isQuestionAnswered = (q: any): boolean => {
+    if (q.type === 'measurement_group') {
+      return (q.options || []).some((opt: string) => {
+        const v = answers[opt];
+        return v !== undefined && v !== null && v !== '';
+      });
+    }
+    if (q.type === 'photo_group') {
+      return ['front', 'side', 'back'].some(pos => {
+        const v = answers[`${q.id}_${pos}`];
+        return v !== undefined && v !== null && v !== '';
+      });
+    }
+    const answer = answers[q.id];
+    if (Array.isArray(answer)) return answer.length > 0;
+    return answer !== undefined && answer !== null && answer !== '';
+  };
+
   const handleNext = () => {
     const templateSchema = activeAssignment?.template?.templateSchema || [];
     const stepData = templateSchema[currentStepIndex];
 
-    // Basic validation for required fields in the current step
+    // Validate required fields in the current step. Conditional questions that
+    // are not currently shown are skipped so the client never gets stuck.
     const hasMissingRequired = (stepData?.questions || []).some((q: any) => {
       if (!q.required) return false;
-      const answer = answers[q.id];
-      return answer === undefined || answer === null || answer === '' ||
-        (Array.isArray(answer) && answer.length === 0);
+      if (!isQuestionVisible(q)) return false;
+      return !isQuestionAnswered(q);
     });
 
     if (hasMissingRequired) {

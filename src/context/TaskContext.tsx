@@ -198,15 +198,17 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Manual (DB-persisted) task
+    // Manual (DB-persisted) task — optimistic: update the UI instantly so the
+    // completion animation never waits on the network; roll back only on error.
+    setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
     try {
       await fetchWithAuth(`/manager/tasks/${taskId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'completed' })
       });
-      setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
     } catch (error) {
       console.error('Failed to mark manual task as done:', error);
+      setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'pending' } : t));
     }
   };
 
@@ -222,14 +224,16 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    // Optimistic: restore the task instantly, roll back on error.
+    setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'pending' } : t));
     try {
       await fetchWithAuth(`/manager/tasks/${taskId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'pending' })
       });
-      setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'pending' } : t));
     } catch (error) {
       console.error('Failed to mark manual task as pending:', error);
+      setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
     }
   };
 

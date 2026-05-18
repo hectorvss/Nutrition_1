@@ -165,8 +165,17 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
                     </div>
                     
                     <div className="flex md:justify-center items-center gap-2">
-                      <button className="text-emerald-500 hover:bg-emerald-50 p-2 rounded-xl transition-all" title={t('add_to_program')}>
-                        <span className="material-symbols-outlined text-[24px]">add_circle</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(t('confirm_delete_exercise') || `${exercise.name}?`)) {
+                            deleteExercise(exercise.id);
+                          }
+                        }}
+                        className="text-red-400 hover:bg-red-50 hover:text-red-600 p-2 rounded-xl transition-all"
+                        title={t('delete')}
+                      >
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                     </div>

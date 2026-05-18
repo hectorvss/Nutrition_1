@@ -326,10 +326,10 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500">
-                      {client.full_name?.[0] || 'C'}
+                      {(client.name || client.full_name)?.[0] || 'C'}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{client.full_name}</p>
+                      <p className="text-sm font-bold text-slate-900">{client.name || client.full_name}</p>
                       <p className="text-xs text-slate-500 font-medium">{client.email}</p>
                     </div>
                   </div>

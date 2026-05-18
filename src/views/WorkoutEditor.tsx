@@ -140,7 +140,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
       }
     };
     loadProgram();
-  }, [clientId, isBlank]);
+  }, [clientId, isBlank, dayId, initialPlanData]);
 
   const saveProgram = async () => {
     if (!clientId) return;

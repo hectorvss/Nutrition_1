@@ -155,7 +155,7 @@ export default function Automations() {
   };
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-950">
+    <div className="h-full bg-slate-50 dark:bg-slate-950">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}
@@ -163,7 +163,7 @@ export default function Automations() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="min-h-full"
+          className="h-full"
         >
           {renderView()}
         </motion.div>

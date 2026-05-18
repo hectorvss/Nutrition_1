@@ -97,6 +97,16 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
 
           {/* Client List */}
           <div className="flex-1 overflow-y-auto">
+            {clients.length === 0 && (
+              <div className="p-16 text-center text-slate-400">
+                <span className="material-symbols-outlined text-5xl opacity-30 mb-2">group_off</span>
+                <p className="font-bold uppercase tracking-widest text-[11px]">
+                  {globalClients.length === 0
+                    ? t('no_clients_yet', { defaultValue: 'No clients yet' })
+                    : t('no_results', { defaultValue: 'No clients match your filters' })}
+                </p>
+              </div>
+            )}
             <div className="divide-y divide-slate-100">
               {clients.map((client) => (
                 <div 
@@ -110,10 +120,16 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                   <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
                     <div className="flex gap-5 items-center flex-1 w-full">
                       <div className="relative flex-shrink-0">
-                        <div 
-                          className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm border border-slate-100" 
-                          style={{ backgroundImage: `url("${client.avatar}")` }}
-                        ></div>
+                        {client.avatar ? (
+                          <div
+                            className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm border border-slate-100"
+                            style={{ backgroundImage: `url("${client.avatar}")` }}
+                          ></div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center shadow-sm border border-slate-100 text-slate-300">
+                            <span className="material-symbols-outlined text-[32px]">person</span>
+                          </div>
+                        )}
                         {client.online && (
                           <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
                         )}

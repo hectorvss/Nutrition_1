@@ -70,11 +70,11 @@ export default function OnboardingDashboard({ initialClientId, initialSubmission
         />
       )}
       
-      {viewMode === 'review' && selectedClientId && selectedSubmissionId && (
+      {viewMode === 'review' && selectedSubmissionId && (
         <OnboardingReview
-          clientId={selectedClientId}
+          clientId={selectedClientId || ''}
           submissionId={selectedSubmissionId}
-          onBack={handleBackToHistory}
+          onBack={selectedClientId ? handleBackToHistory : handleBackToList}
         />
       )}
       

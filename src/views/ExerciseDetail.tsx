@@ -14,6 +14,8 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
   const exercise = exercises.find(e => e.name === exerciseName);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Editable fields state
   const [name, setName] = useState("");
@@ -36,7 +38,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
       setCategory(exercise.category);
       setSubcategory(exercise.subcategory || "");
       setType(exercise.type);
-      setDifficultyLevel(exercise.difficultyLevel);
+      setDifficultyLevel(exercise.level);
       setMusclesStr(exercise.muscleGroups?.join(', ') || "");
       setSecondaryMusclesStr(exercise.secondaryMuscles?.join(', ') || "");
       setEquipmentStr(exercise.tools?.join(', ') || "");
@@ -49,21 +51,27 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
 
   const handleSave = async () => {
     if (!exercise) return;
-    
-    await updateExercise(exercise.id, {
-      name,
-      category,
-      subcategory,
-      type,
-      difficultyLevel,
-      muscleGroups: musclesStr.split(',').map(s => s.trim()).filter(Boolean),
-      secondaryMuscles: secondaryMusclesStr.split(',').map(s => s.trim()).filter(Boolean),
-      tools: equipmentStr.split(',').map(s => s.trim()).filter(Boolean),
-      video_url: videoUrl,
-      description: notes
-    });
-    
-    setIsEditing(false);
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await updateExercise(exercise.id, {
+        name,
+        category,
+        subcategory,
+        type,
+        level: difficultyLevel,
+        muscleGroups: musclesStr.split(',').map(s => s.trim()).filter(Boolean),
+        secondaryMuscles: secondaryMusclesStr.split(',').map(s => s.trim()).filter(Boolean),
+        tools: equipmentStr.split(',').map(s => s.trim()).filter(Boolean),
+        video_url: videoUrl,
+        description: notes
+      });
+      setIsEditing(false);
+    } catch (err: any) {
+      setSaveError(err?.message || t('error_loading_data'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -120,18 +128,25 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 >
                   {t('cancel')}
                 </button>
-                <button 
-                  onClick={handleSave} 
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-semibold text-sm"
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-semibold text-sm"
                 >
-                  <span className="material-symbols-outlined text-[20px]">save</span>
-                  {t('save_changes')}
+                  <span className="material-symbols-outlined text-[20px]">{isSaving ? 'sync' : 'save'}</span>
+                  {isSaving ? t('saving') : t('save_changes')}
                 </button>
               </>
             )}
           </div>
         </div>
 
+        {saveError && (
+          <div className="mx-8 mt-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-xl text-sm font-medium">
+            <span className="material-symbols-outlined text-[18px]">error</span>
+            <span>{saveError}</span>
+          </div>
+        )}
         <div className="flex-1 overflow-hidden">
           <div className="p-8 overflow-y-auto custom-scrollbar space-y-8 h-full">
             {/* General Information */}

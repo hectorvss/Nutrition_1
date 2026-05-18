@@ -16,20 +16,28 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
   const [secondaryMuscles, setSecondaryMuscles] = useState('');
   const [tools, setTools] = useState('');
   const [level, setLevel] = useState<'Beginner'|'Intermediate'|'Advanced'>('Beginner');
+  const [instructions, setInstructions] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
-    addExercise({
-      name: name.trim(),
-      category,
-      type,
-      muscleGroups: primaryMuscle ? [primaryMuscle.trim()] : ['Full Body'],
-      secondaryMuscles: secondaryMuscles ? secondaryMuscles.split(',').map(s => s.trim()) : [],
-      tools: tools ? tools.split(',').map(s => s.trim()) : ['Bodyweight'],
-      level,
-      icon: 'fitness_center',
-    });
-    onBack();
+    setIsSaving(true);
+    try {
+      await addExercise({
+        name: name.trim(),
+        category,
+        type,
+        description: instructions.trim() || undefined,
+        muscleGroups: primaryMuscle ? [primaryMuscle.trim()] : ['Full Body'],
+        secondaryMuscles: secondaryMuscles ? secondaryMuscles.split(',').map(s => s.trim()) : [],
+        tools: tools ? tools.split(',').map(s => s.trim()) : ['Bodyweight'],
+        level,
+        icon: 'fitness_center',
+      });
+      onBack();
+    } finally {
+      setIsSaving(false);
+    }
   };
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
@@ -55,9 +63,9 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               >
                 {t('cancel')}
               </button>
-              <button onClick={handleSave} disabled={!name.trim()} className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/25 flex items-center gap-2 font-bold text-sm">
-                <span className="material-symbols-outlined text-[20px]">save</span>
-                {t('add_to_library')}
+              <button onClick={handleSave} disabled={!name.trim() || isSaving} className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/25 flex items-center gap-2 font-bold text-sm">
+                <span className="material-symbols-outlined text-[20px]">{isSaving ? 'sync' : 'save'}</span>
+                {isSaving ? t('saving') : t('add_to_library')}
               </button>
             </div>
           </div>
@@ -103,7 +111,9 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_instructions')}</label>
-                    <textarea 
+                    <textarea
+                      value={instructions}
+                      onChange={e => setInstructions(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
                       placeholder={t('exercise_instructions_placeholder')}
                     ></textarea>
@@ -162,7 +172,11 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('difficulty_level')}</label>
-                    <select className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all appearance-none">
+                    <select
+                      value={level}
+                      onChange={e => setLevel(e.target.value as any)}
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all appearance-none"
+                    >
                       <option value="Beginner">{t('beginner_level')}</option>
                       <option value="Intermediate">{t('intermediate_level')}</option>
                       <option value="Advanced">{t('advanced_level')}</option>

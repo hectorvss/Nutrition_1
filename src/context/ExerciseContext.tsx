@@ -82,6 +82,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
       await fetchExercises();
     } catch (err) {
       console.error('Error adding exercise:', err);
+      throw err;
     }
   };
 
@@ -96,6 +97,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
       setExercises(prev => prev.filter(e => e.id !== id));
     } catch (err) {
       console.error('Error deleting exercise:', err);
+      throw err;
     }
   };
 
@@ -123,6 +125,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
       await fetchExercises();
     } catch (err) {
       console.error('Error updating exercise:', err);
+      throw err;
     }
   };
 

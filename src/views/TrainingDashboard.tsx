@@ -137,7 +137,10 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                           if (!client.trainingPlanAssigned) {
                             onNavigate('assign-program', client.id);
                           } else {
-                            onNavigate('workout-editor', client.id);
+                            // Weekly programs must be edited day-by-day via the
+                            // weekly view; going straight to the editor with no
+                            // dayId would show an empty editor.
+                            onNavigate('weekly-view', client);
                           }
                         }}
                         className={`px-6 py-2.5 rounded-xl transition-all text-sm font-bold flex items-center gap-2 whitespace-nowrap border ${

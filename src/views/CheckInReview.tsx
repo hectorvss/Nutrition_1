@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ChevronRight, 
-  Flag, 
-  History, 
-  FileText, 
-  Camera, 
+  ChevronRight,
+  Flag,
+  Camera,
   Check, 
   Mic,
   Paperclip,
@@ -221,16 +219,6 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
               {t('date')}: {new Date(check_in.date).toLocaleDateString(locale)}
             </p>
           </div>
-        </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
-            <History className="w-4 h-4" />
-            {t('history_badge')}
-          </button>
-          <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
-            <FileText className="w-4 h-4" />
-            {t('export_btn')}
-          </button>
         </div>
       </div>
 

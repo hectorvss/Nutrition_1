@@ -91,7 +91,14 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         const data = await fetchWithAuth('/client/plans');
         if (!mounted) return;
         if (data && data.training && data.training.length > 0) {
-          setTrainingProgram(data.training[0]);
+          // Ignore placeholder programs that were only created to mark the
+          // client as "assigned" (data_json === { is_new: true }) — they have
+          // no real workout content yet.
+          const realPlan = data.training.find((p: any) => {
+            const dj = p?.data_json || {};
+            return dj.weeklySchedule || (Array.isArray(dj.blocks) && dj.blocks.length > 0);
+          });
+          setTrainingProgram(realPlan || data.training[0]);
         }
       } catch (err) {
         console.error('Error fetching client training plans:', err);
@@ -107,26 +114,36 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         if (Array.isArray(history)) {
           setAllLogs(prev => {
             const newLogs = { ...prev };
-            history.forEach(log => {
-              if (log.day_key) {
-                // Formatting for consistency with ExerciseLogs structure
-                const exerciseLogs: ExerciseLogs = {};
-                log.exercises?.forEach((ex: any, idx: number) => {
-                  exerciseLogs[`0-${idx}`] = { 
-                    name: ex.name,
-                    muscle_group: ex.muscle_group,
-                    sets_logged: ex.sets_logged || [],
-                    notes: ex.notes || ''
-                  };
-                });
-                
-                if (!newLogs[log.day_key] || Object.keys(newLogs[log.day_key].exerciseLogs).length === 0) {
-                  newLogs[log.day_key] = {
-                    exerciseLogs,
-                    rpe: String(log.session_rpe || ''),
-                    notes: log.notes || ''
-                  };
-                }
+            // history is newest-first; process oldest-first so the most recent
+            // log for a given day wins.
+            [...history].reverse().forEach(log => {
+              if (!log.day_key) return;
+              // The component reads logs under `${weekOffset}-${day}`. The
+              // server always timestamps logs to "now", so a fetched log
+              // belongs to the current week => weekOffset 0.
+              const stateKey = `0-${log.day_key}`;
+
+              // Rebuild the per-exercise map. Saved logs preserve the
+              // original block/exercise position via `ex.key` when available;
+              // fall back to a flat `0-idx` key for older logs.
+              const exerciseLogs: ExerciseLogs = {};
+              (log.exercises || []).forEach((ex: any, idx: number) => {
+                const key = typeof ex.key === 'string' ? ex.key : `0-${idx}`;
+                exerciseLogs[key] = {
+                  name: ex.name,
+                  muscle_group: ex.muscle_group,
+                  sets_logged: ex.sets_logged || [],
+                  notes: ex.notes || ''
+                };
+              });
+
+              // Only seed from history if there is no unsaved local draft.
+              if (!newLogs[stateKey] || Object.keys(newLogs[stateKey].exerciseLogs).length === 0) {
+                newLogs[stateKey] = {
+                  exerciseLogs,
+                  rpe: String(log.session_rpe || ''),
+                  notes: log.notes || ''
+                };
               }
             });
             return newLogs;
@@ -247,28 +264,23 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     return { monday, sunday };
   };
 
-  const getLoggedAtDate = (dayKey: string): string => {
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const targetIdx = days.indexOf(dayKey.toLowerCase());
-    if (targetIdx === -1) return new Date().toISOString();
-
-    const { monday } = getWeekRange(weekOffset);
-    const targetDate = new Date(monday);
-    targetDate.setDate(monday.getDate() + targetIdx);
-    
-    return targetDate.toISOString();
-  };
-
   const handleSaveSession = async () => {
     if (!trainingProgram) return;
     setIsSaving(true);
     setSaveSuccess(false);
     try {
-      const exercisesToSave = (Object.values(exerciseLogs) as ExerciseLog[]).filter(ex =>
-        ex.sets_logged.some(s => s.weight || s.reps)
-      );
-      
-      const loggedAt = isWeekly ? getLoggedAtDate(selectedDay) : new Date().toISOString();
+      // Keep the block/exercise position (`key`) so a fetched log can be
+      // re-mapped onto the right exercise row after a reload.
+      const exercisesToSave = (Object.entries(exerciseLogs) as [string, ExerciseLog][])
+        .filter(([, ex]) => ex.sets_logged.some(s => s.weight || s.reps))
+        .map(([key, ex]) => ({ ...ex, key }));
+
+      if (exercisesToSave.length === 0) {
+        setSaveError(t('failed_sync_database'));
+        setTimeout(() => setSaveError(null), 6000);
+        setIsSaving(false);
+        return;
+      }
 
       await fetchWithAuth('/client/workout-logs', {
         method: 'POST',
@@ -278,8 +290,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           day_key: selectedDay,
           exercises: exercisesToSave,
           notes: sessionNotes,
-          session_rpe: sessionRPE ? Number(sessionRPE) : null,
-          logged_at: loggedAt
+          session_rpe: sessionRPE ? Number(sessionRPE) : null
         })
       });
       setSaveSuccess(true);

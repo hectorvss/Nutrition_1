@@ -84,12 +84,27 @@ export default function Nutrition() {
                   const data = await fetchWithAuth(`/manager/nutrition-templates/${templateId}`);
                   if (data && data.data_json) {
                     setInitialPlanData({ data_json: data.data_json });
+                    // Persist the template as the client's plan so the
+                    // assignment actually sticks (manager ↔ client sync).
+                    if (selectedClient?.id) {
+                      try {
+                        await fetchWithAuth(`/manager/clients/${selectedClient.id}/nutrition-plan`, {
+                          method: 'POST',
+                          body: JSON.stringify({
+                            name: data.name || 'Nutrition Plan',
+                            data_json: data.data_json
+                          })
+                        });
+                      } catch (saveErr) {
+                        console.error('Failed to persist template assignment:', saveErr);
+                      }
+                    }
                   }
                 } catch (err) {
                   console.error('Failed to load template:', err);
                 }
               }
-              
+
               setCurrentView('weekly-view');
             }}
           />

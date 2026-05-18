@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Search, 
-  Filter, 
-  Plus, 
-  BookOpen, 
+import React, { useState, useMemo } from 'react';
+import {
+  ArrowLeft,
+  Search,
+  Filter,
+  Plus,
+  BookOpen,
   ChevronRight,
   MoreVertical,
   Flame,
   PieChart
 } from 'lucide-react';
-import { foodCategories } from '../constants/foods';
 import { useFoodContext } from '../context/FoodContext';
 import { useLanguage } from '../context/LanguageContext';
+import FoodCreate from './FoodCreate';
 interface FoodLibraryProps {
   onBack: () => void;
 }
@@ -20,9 +20,29 @@ interface FoodLibraryProps {
 
 export default function FoodLibrary({ onBack }: FoodLibraryProps) {
   const { t } = useLanguage();
-  const { foods } = useFoodContext();
+  const { foods, isLoading } = useFoodContext();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [showCreate, setShowCreate] = useState(false);
+
+  // Categories derived from the real food data — names and counts always match.
+  const foodCategories = useMemo(() => {
+    const counts: Record<string, number> = {};
+    foods.forEach(f => {
+      const c = (f.category || 'General').trim();
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    return [
+      { name: 'All Categories', count: foods.length },
+      ...Object.entries(counts)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([name, count]) => ({ name, count }))
+    ];
+  }, [foods]);
+
+  if (showCreate) {
+    return <FoodCreate onBack={() => setShowCreate(false)} />;
+  }
 
   return (
     <div className="w-full p-4 md:p-6 lg:p-8 h-full flex flex-col overflow-hidden">
@@ -39,7 +59,10 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
             {t('food_recipe_library')}
           </h2>
         </div>
-        <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-bold">
+        <button
+          onClick={() => setShowCreate(true)}
+          className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-bold"
+        >
           <Plus className="w-5 h-5" />
           {t('add_custom_food')}
         </button>
@@ -82,13 +105,31 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
 
           {/* Grid */}
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
+            {(() => {
+              const visibleFoods = foods.filter(food => {
+                const matchSearch = !search || food.name.toLowerCase().includes(search.toLowerCase());
+                const matchCat = activeCategory === 'all' || food.category === activeCategory;
+                return matchSearch && matchCat;
+              });
+              if (isLoading) {
+                return (
+                  <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+                    <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                    <p className="text-sm font-medium">{t('loading')}</p>
+                  </div>
+                );
+              }
+              if (visibleFoods.length === 0) {
+                return (
+                  <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+                    <BookOpen className="w-12 h-12 opacity-20" />
+                    <p className="text-sm font-medium">{t('no_foods_match_search')}</p>
+                  </div>
+                );
+              }
+              return (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {foods
-                .filter(food => {
-                  const matchSearch = !search || food.name.toLowerCase().includes(search.toLowerCase());
-                  const matchCat = activeCategory === 'all' || food.category === activeCategory;
-                  return matchSearch && matchCat;
-                })
+              {visibleFoods
                 .map((food) => (
                 <div key={food.id} className="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-xl hover:border-emerald-500/30 transition-all cursor-pointer relative overflow-hidden">
                   <div className="flex justify-between items-start mb-4">
@@ -132,6 +173,8 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
                 </div>
               ))}
             </div>
+              );
+            })()}
           </div>
         </div>
       </div>

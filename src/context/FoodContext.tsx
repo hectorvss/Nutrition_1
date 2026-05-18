@@ -88,6 +88,7 @@ export const FoodProvider = ({ children }: { children: ReactNode }) => {
       await fetchFoods();
     } catch (err) {
       console.error('Error adding food:', err);
+      throw err;
     }
   };
 

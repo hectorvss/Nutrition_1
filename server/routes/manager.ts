@@ -3,6 +3,7 @@ import { supabase, supabaseAdmin } from '../db/index.js';
 import Stripe from 'stripe';
 import { google } from 'googleapis';
 import { processTrigger } from './automations.js';
+import { runWorkflowsForEvent } from './workflows.js';
 
 const router = Router();
 // ... (rest of the code until POST /clients)
@@ -577,9 +578,12 @@ router.post('/clients', async (req: any, res) => {
       }
     }
 
-    // 5. Trigger "Welcome Message" automation
+    // 5. Trigger "Welcome Message" automation + any Advanced Workflows
     processTrigger(managerId, 'new-client', { clientId }).catch(err => {
       console.error('Trigger error (new-client):', err);
+    });
+    runWorkflowsForEvent(managerId, 'trigger.new_client', { clientId }).catch(err => {
+      console.error('Workflow trigger error (new_client):', err);
     });
 
     res.json({ success: true, client_id: clientId });
@@ -1831,6 +1835,8 @@ router.get('/analytics', async (req: any, res) => {
       recentSubmissionsRes,
       perfSubmissionsRes,
       allSubmissionsRes,
+      workoutLogsRes,
+      nutritionPlansRes,
     ] = await Promise.all([
       // Performance metrics: check_ins last 60 days — filtered by clientIds (no join needed)
       clientIds.length > 0
@@ -1863,6 +1869,14 @@ router.get('/analytics', async (req: any, res) => {
       // All dynamic submissions for cohort analysis (lightweight: client_id + date)
       clientIds.length > 0
         ? supabaseAdmin.from('client_checkin_submissions').select('client_id, submitted_at').in('client_id', clientIds)
+        : Promise.resolve({ data: [], error: null }),
+      // Workout logs last 30 days — for real training volume
+      clientIds.length > 0
+        ? supabaseAdmin.from('workout_logs').select('logged_at, exercises, client_id').in('client_id', clientIds).gte('logged_at', thirtyDaysAgo.toISOString())
+        : Promise.resolve({ data: [], error: null }),
+      // Nutrition plans — for the calorie-goal line
+      clientIds.length > 0
+        ? supabaseAdmin.from('nutrition_plans').select('data_json, client_id').in('client_id', clientIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -1934,14 +1948,16 @@ router.get('/analytics', async (req: any, res) => {
     let nutrition = {
       avgFruitVeg: 0,
       avgHydration: 0,
+      consistency: 0,
       alcoholAlerts: 0,
       supplementAdherence: 0,
       calories: { intake: [0,0,0,0,0,0,0], goal: [0,0,0,0,0,0,0] },
       topDeficits: [] as any[],
+      // Micronutrient tracking has no data source in the current check-in flow.
       microTrends: {
-        iron: [85, 88, 86, 89, 90, 88, 92],
-        vitD: [70, 72, 75, 74, 78, 80, 82],
-        magnesium: [92, 90, 93, 91, 94, 95, 96]
+        iron: [] as number[],
+        vitD: [] as number[],
+        magnesium: [] as number[]
       }
     };
 
@@ -1955,7 +1971,7 @@ router.get('/analytics', async (req: any, res) => {
 
     if (last30DaysCheckIns.length > 0) {
       const count = last30DaysCheckIns.length;
-      let sumFruit = 0, sumHydration = 0, sumSupps = 0, sumComp = 0, sumVol = 0, sumRPE = 0;
+      let sumHydration = 0, sumSupps = 0, sumComp = 0, sumRPE = 0, sumNutrition = 0;
 
       const mapping: Record<string, number> = {
         'Perfect (>95%)': 100, 'Mostly (>80%)': 85, 'Somewhat (50-80%)': 65, 'Little (<50%)': 30, 'None': 0,
@@ -1978,14 +1994,14 @@ router.get('/analytics', async (req: any, res) => {
         const hydrateVal = mapping[d.waterIntake] ?? Number(d.hydration_percent || 0);
         const stressVal = mapping[d.stress] ?? 0;
         
-        sumFruit += 1; // Simplified for new flow
+        sumNutrition += nutVal;
         sumHydration += hydrateVal;
         if (d.alcoholIntake && d.alcoholIntake !== 'None') nutrition.alcoholAlerts++;
         if (d.supplements && d.supplements !== 'None') sumSupps++;
         
         if (dayIdx !== -1) {
-          caloriesByDay[dayIdx].intake += nutVal;
-          caloriesByDay[dayIdx].goal += 100; // Normalized goal
+          // Real reported daily calories (fixed check-in metric `calories`).
+          caloriesByDay[dayIdx].intake += Number(d.calories || 0);
           caloriesByDay[dayIdx].count++;
         }
 
@@ -1999,24 +2015,21 @@ router.get('/analytics', async (req: any, res) => {
           };
         }
         
-        // Detailed Training Aggregation
+        // Detailed Training Aggregation (volume is computed separately from workout_logs)
         sumComp += traVal;
-        sumVol += Number(d.weight || 0); // Use weight as volume proxy or placeholder
         sumRPE += mapping[d.trainingIntensity] ?? 0;
 
         if (dayIdx !== -1) {
-          trainingByDay[dayIdx].volume += Number(d.weight || 0);
           trainingByDay[dayIdx].intensity += mapping[d.trainingIntensity] ?? 0;
           trainingByDay[dayIdx].count++;
         }
       });
 
-      nutrition.avgFruitVeg = 100; // Placeholder
       nutrition.avgHydration = Math.round(sumHydration / count);
+      nutrition.consistency = Math.round(sumNutrition / count);
       nutrition.supplementAdherence = Math.round((sumSupps / count) * 100);
       
       nutrition.calories.intake = caloriesByDay.map(d => d.count > 0 ? Math.round(d.intake / d.count) : 0);
-      nutrition.calories.goal = caloriesByDay.map(d => 100);
       
       nutrition.topDeficits = Object.values(clientDeficits)
         .sort((a,b) => b.deficit - a.deficit)
@@ -2029,11 +2042,58 @@ router.get('/analytics', async (req: any, res) => {
         }));
 
       training.avgCompletion = Math.round(sumComp / count);
-      training.totalVolume = Math.round(sumVol / count);
       training.avgRPE = Number((sumRPE / count).toFixed(1));
-
-      training.volumeTrends = trainingByDay.map(d => d.count > 0 ? Math.round(d.volume / d.count) : 0);
       training.intensityTrends = trainingByDay.map(d => d.count > 0 ? Number((d.intensity / d.count).toFixed(1)) : 0);
+    }
+
+    // Real training volume — sum of weight × reps across all sets, from workout_logs.
+    {
+      const sessionVolume = (log: any): number => {
+        let v = 0;
+        for (const ex of (log.exercises || [])) {
+          for (const s of (ex.sets_logged || [])) {
+            v += (Number(s.weight) || 0) * (Number(s.reps) || 0);
+          }
+        }
+        return v;
+      };
+      const logs = workoutLogsRes.data || [];
+      const volByDay = last7Days.map(() => 0);
+      let totalVol = 0;
+      logs.forEach((log: any) => {
+        const v = sessionVolume(log);
+        totalVol += v;
+        const day = (log.logged_at || '').split('T')[0];
+        const idx = last7Days.indexOf(day);
+        if (idx !== -1) volByDay[idx] += v;
+      });
+      training.totalVolume = logs.length > 0 ? Math.round(totalVol / logs.length) : 0;
+      training.volumeTrends = volByDay;
+    }
+
+    // Calorie goal line — average daily calorie target across the clients' nutrition plans.
+    {
+      const sumMeals = (meals: any[]): number =>
+        (meals || []).reduce((t: number, m: any) =>
+          t + (m.items || []).reduce((s: number, i: any) =>
+            s + (Number(i.calories) || 0) * (Number(i.quantity) || 1), 0), 0);
+      const planDailyCalories = (dj: any): number => {
+        let data = dj;
+        if (typeof data === 'string') { try { data = JSON.parse(data); } catch { return 0; } }
+        if (!data) return 0;
+        if (data.type === 'weekly' && data.days) {
+          const vals = Object.values(data.days).map((d: any) => sumMeals(d?.meals)).filter((v: number) => v > 0);
+          return vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
+        }
+        return sumMeals(data.meals);
+      };
+      const planVals = (nutritionPlansRes.data || [])
+        .map((p: any) => planDailyCalories(p.data_json))
+        .filter((v: number) => v > 0);
+      const avgGoal = planVals.length
+        ? Math.round(planVals.reduce((a: number, b: number) => a + b, 0) / planVals.length)
+        : 0;
+      nutrition.calories.goal = last7Days.map(() => avgGoal);
     }
 
     // 4. Cohort Analysis Logic (uses allClientData + allCheckIns already fetched)
@@ -2079,6 +2139,15 @@ router.get('/analytics', async (req: any, res) => {
 
     // 5. Compliance Score Calculation (Weighted aggregation of adherence)
     const complianceScore = training.avgCompletion * 0.4 + nutrition.avgHydration * 0.3 + (retentionRate) * 0.3;
+
+    // Check-in reliability: % of active clients who submitted a check-in in the last 7 days.
+    const checkedInClientIds = new Set(
+      (checkIns || []).filter(ci => last7Days.includes(ci.date)).map(ci => ci.client_id)
+    );
+    const checkInReliability = activeClients > 0
+      ? Math.round((checkedInClientIds.size / activeClients) * 100)
+      : 0;
+    const activePrograms = allPrograms.length;
 
     // 6. Recent Activity & Attention Required (recentCheckIns + recentMessages from Promise.all above)
     const activity = [
@@ -2250,7 +2319,7 @@ router.get('/analytics', async (req: any, res) => {
 
     const muscleFrequency = Object.entries(muscleFreq).map(([label, count]) => ({
       label,
-      percentage: totalExercises > 0 ? Math.round((count / totalExercises) * 100) : (label === 'Legs' ? 30 : 20)
+      percentage: totalExercises > 0 ? Math.round((count / totalExercises) * 100) : 0
     }));
 
     res.json({
@@ -2264,11 +2333,15 @@ router.get('/analytics', async (req: any, res) => {
         ltv: totalClients ? Math.round((revenue * 6) / totalClients) : 0,
         monthlyRevenue,
         cohorts,
-        complianceScore: Math.round(complianceScore || 0)
+        complianceScore: Math.round(complianceScore || 0),
+        workoutAdherence: training.avgCompletion,
+        nutritionConsistency: nutrition.consistency,
+        checkInReliability
       },
       nutrition,
       training: {
         ...training,
+        activePrograms,
         distribution: trainingDistribution,
         muscleFrequency
       },
@@ -2313,11 +2386,12 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       .order('date', { ascending: true });
 
     // 3. Weight & Body Fat History
-    const weightHistory = (checkIns || []).map(ci => ({
-      date: ci.date,
-      weight: (ci.data_json as any)?.weight || null,
-      bodyFat: (ci.data_json as any)?.body_fat || null
-    })).filter(w => w.weight !== null);
+    // Coerce a possibly-string numeric field to a real number, or null when blank/non-numeric.
+    const num = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      return isNaN(n) ? null : n;
+    };
 
     // 4. Latest Measurements (From legacy and dynamic)
     const { data: dynamicCheckIns } = await supabaseAdmin
@@ -2335,19 +2409,31 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     const lastCheckInAny = allCheckInsCombined.length > 0 ? allCheckInsCombined[allCheckInsCombined.length - 1] : null;
     const prevCheckInAny = allCheckInsCombined.length > 1 ? allCheckInsCombined[allCheckInsCombined.length - 2] : null;
 
+    // 3. Weight & Body Fat history — from ALL check-ins (legacy + dynamic submissions),
+    //    reading the canonical fixed metric keys `weight` / `body_fat`.
+    const weightHistory = allCheckInsCombined.map(ci => ({
+      date: ci.date,
+      weight: num(ci.answers?.weight),
+      bodyFat: num(ci.answers?.body_fat ?? ci.answers?.bodyFat)
+    })).filter(w => w.weight !== null);
+
     const measurements: any = lastCheckInAny ? (lastCheckInAny.answers.measurements || {}) : {};
     const prevMeasurements: any = prevCheckInAny ? (prevCheckInAny.answers.measurements || {}) : {};
     
-    // Attempt to extract from top-level dynamic questions if not in .measurements
+    // Attempt to extract from top-level questions if not in .measurements.
+    // The legacy check-in form uses flat keys: waist, hips, chest, arms, thighs.
     const extractM = (a: any) => {
       if (!a) return {};
-      const m = a.measurements || {};
-      if (Object.keys(m).length === 0) {
-        if (a.waist || a.Waist) m.waist = a.waist || a.Waist || a['Waist (cm)'];
-        if (a.hip || a.Hip) m.hip = a.hip || a.Hip || a['Hip (cm)'];
-        if (a.thigh_r || a.Thigh || a['Right Thigh']) m.thigh_r = a.thigh_r || a.Thigh || a['Right Thigh'] || a['Right Thigh (cm)'];
-        if (a.arm_r || a.Arm || a['Right Arm']) m.arm_r = a.arm_r || a.Arm || a['Right Arm'] || a['Right Arm (cm)'];
-      }
+      const m: any = { ...(a.measurements || {}) };
+      const pick = (...keys: string[]) => {
+        for (const k of keys) { const v = num(a[k]); if (v !== null) return v; }
+        return undefined;
+      };
+      if (m.waist === undefined) m.waist = pick('waist', 'Waist', 'Waist (cm)');
+      if (m.hip === undefined) m.hip = pick('hip', 'hips', 'Hip', 'Hips', 'Hip (cm)');
+      if (m.thigh_r === undefined) m.thigh_r = pick('thigh_r', 'thighs', 'Thigh', 'Right Thigh', 'Right Thigh (cm)');
+      if (m.arm_r === undefined) m.arm_r = pick('arm_r', 'arms', 'Arm', 'Right Arm', 'Right Arm (cm)');
+      Object.keys(m).forEach(k => { if (m[k] === undefined) delete m[k]; });
       return m;
     };
 
@@ -2383,10 +2469,13 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       .gte('submitted_at', sevenDaysAgo.toISOString())
       .order('submitted_at', { ascending: false });
 
-    let avgProteinAdherence = 0;
-    let avgCarbsAdherence = 0;
-    let avgFatsAdherence = 0;
+    // Average daily macro INTAKE (grams / kcal) from the fixed check-in keys
+    // `protein` / `carbs` / `fats` / `calories`, plus the 1-10 plan-adherence score.
+    let avgProteinIntake = 0;
+    let avgCarbsIntake = 0;
+    let avgFatsIntake = 0;
     let dailyCaloricAvg = 0;
+    let avgAdherenceScore = 0;
 
     // Combine both legacy and dynamic check-ins
     const allRecentCheckIns = [
@@ -2395,21 +2484,16 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     ];
 
     if (allRecentCheckIns.length > 0) {
-      let totalP = 0, totalC = 0, totalF = 0, totalKcal = 0;
-      let countP = 0, countC = 0, countF = 0, countKcal = 0;
-
-      allRecentCheckIns.forEach(ci => {
-        const d = ci.data;
-        if (d.protein_intake && d.protein_goal) { totalP += (d.protein_intake / d.protein_goal); countP++; }
-        if (d.carbs_intake && d.carbs_goal) { totalC += (d.carbs_intake / d.carbs_goal); countC++; }
-        if (d.fats_intake && d.fats_goal) { totalF += (d.fats_intake / d.fats_goal); countF++; }
-        if (d.calories_intake) { totalKcal += d.calories_intake; countKcal++; }
-      });
-
-      avgProteinAdherence = countP > 0 ? Math.round((totalP / countP) * 100) : 0;
-      avgCarbsAdherence = countC > 0 ? Math.round((totalC / countC) * 100) : 0;
-      avgFatsAdherence = countF > 0 ? Math.round((totalF / countF) * 100) : 0;
-      dailyCaloricAvg = countKcal > 0 ? Math.round(totalKcal / countKcal) : 0;
+      const avg = (key: string) => {
+        const vals = allRecentCheckIns.map(ci => num(ci.data?.[key])).filter((v): v is number => v !== null);
+        return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      };
+      avgProteinIntake = Math.round(avg('protein'));
+      avgCarbsIntake = Math.round(avg('carbs'));
+      avgFatsIntake = Math.round(avg('fats'));
+      dailyCaloricAvg = Math.round(avg('calories'));
+      // nutrition_adherence_score is 1-10 → scale to 0-100%
+      avgAdherenceScore = Math.round(Math.min(Math.max(avg('nutrition_adherence_score') * 10, 0), 100));
     }
 
     // 6. Recent Activity — id was validated as UUID earlier (route ownership check), so safe in .or().
@@ -2648,24 +2732,33 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       if (sensations.length >= 10) break; // Limit to 10 latest sensations
     }
 
-    // 10. Mindset Stats & History
-    const latestCheckIn = (checkIns && checkIns.length > 0) ? checkIns[checkIns.length - 1] : null;
-    const latestData = (latestCheckIn?.data_json as any) || {};
-    
+    // 10. Mindset Stats & History — from ALL check-ins (legacy + dynamic submissions),
+    //     reading the canonical fixed 1-10 metric keys.
+    const latestData = lastCheckInAny?.answers || {};
+
+    const mEnergy = (d: any) => num(d?.energy_level ?? d?.energy);
+    const mStress = (d: any) => num(d?.stress_level ?? d?.stress);
+    const mMood = (d: any) => num(d?.mood_score ?? d?.mood);
+    const mMotivation = (d: any) => num(d?.motivation_level ?? d?.motivation);
+    const mSleep = (d: any) => num(d?.sleep_hours ?? d?.sleep ?? d?.sleepQuantity);
+
     const mindset = {
-      energy: latestData.energy_level || '--',
-      stress: latestData.stress_level || '--',
-      mood: latestData.mood_score || '--',
-      motivation: latestData.motivation_level || '--',
-      sleep: latestData.sleep_hours || latestData.sleep || latestData.sleep_quality || '--',
-      history: (checkIns || []).map(ci => ({
-        date: ci.date,
-        energy: (ci.data_json as any)?.energy_level || null,
-        stress: (ci.data_json as any)?.stress_level || null,
-        mood: (ci.data_json as any)?.mood_score || null,
-        motivation: (ci.data_json as any)?.motivation_level || null,
-        sleep: (ci.data_json as any)?.sleep_hours || (ci.data_json as any)?.sleep || null
-      })).filter(h => h.energy || h.stress || h.mood || h.motivation || h.sleep)
+      energy: mEnergy(latestData) ?? '--',
+      stress: mStress(latestData) ?? '--',
+      mood: mMood(latestData) ?? '--',
+      motivation: mMotivation(latestData) ?? '--',
+      sleep: mSleep(latestData) ?? '--',
+      history: allCheckInsCombined.map(ci => {
+        const d = ci.answers as any;
+        return {
+          date: ci.date,
+          energy: mEnergy(d),
+          stress: mStress(d),
+          mood: mMood(d),
+          motivation: mMotivation(d),
+          sleep: mSleep(d)
+        };
+      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null || h.sleep !== null)
     };
 
     // 11. Documents (Filtered real data from messages and submissions)
@@ -2723,16 +2816,22 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
 
     let allergies = (client.clients_profiles as any)?.metadata?.allergies || [];
     let supplementation = (client.clients_profiles as any)?.metadata?.supplementation || [];
+    let dietaryStyle: string[] = (client.clients_profiles as any)?.metadata?.dietary_style || [];
     if (latestOnboarding?.answers_json) {
       const answers = latestOnboarding.answers_json as any;
       const onboardingAllergies = answers.allergies || answers.Allergies || answers['Do you have any allergies?'];
       if (onboardingAllergies) {
          allergies = Array.isArray(onboardingAllergies) ? onboardingAllergies : [onboardingAllergies];
       }
-      
+
       const onboardingSupps = answers.supplementation || answers.Supplementation || answers['Are you taking any supplements?'];
       if (onboardingSupps && (!supplementation || supplementation.length === 0)) {
          supplementation = Array.isArray(onboardingSupps) ? onboardingSupps : [onboardingSupps];
+      }
+
+      const onboardingDiet = answers.dietary_style || answers.dietType || answers.diet_type || answers.diet || answers['Dietary preference'];
+      if (onboardingDiet && (!dietaryStyle || dietaryStyle.length === 0)) {
+         dietaryStyle = Array.isArray(onboardingDiet) ? onboardingDiet : [onboardingDiet];
       }
     }
 
@@ -2757,10 +2856,11 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         return Math.min(Math.round((days.size / 30) * 100), 100);
       })(),
       macros: {
-        protein: avgProteinAdherence,
-        carbs: avgCarbsAdherence,
-        fats: avgFatsAdherence,
-        calories: dailyCaloricAvg
+        protein: avgProteinIntake,
+        carbs: avgCarbsIntake,
+        fats: avgFatsIntake,
+        calories: dailyCaloricAvg,
+        adherenceScore: avgAdherenceScore
       },
       training: {
         weeklyVolume,
@@ -2779,6 +2879,7 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       documents,
       allergies: allergies.length > 0 ? allergies : ['None'],
       supplementation: supplementation.length > 0 ? supplementation : ['None'],
+      dietaryStyle,
       nutritionPlan: nutritionPlans && nutritionPlans.length > 0 ? nutritionPlans[0] : null,
       trainingPlan: trainingPrograms && trainingPrograms.length > 0 ? trainingPrograms[0] : null
     });

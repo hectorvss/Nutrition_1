@@ -76,107 +76,127 @@ interface RoadmapData {
   };
 }
 
-// --- MOCK DATA GENERATOR ---
-const getInitialData = (t: (key: string, vars?: Record<string, any>) => string): RoadmapData => ({
-  status: 'LIVE',
-  startDate: '2023-10-01',
-  endDate: '2024-01-15',
-  currentWeek: 5,
+// --- EMPTY SCAFFOLD ---
+// No mock data: a client without a published roadmap sees a real empty state.
+const getEmptyData = (): RoadmapData => ({
+  status: 'Empty',
+  startDate: '',
+  endDate: '',
+  currentWeek: 1,
   totalWeeks: 12,
-  nutrition: [
-    { 
-      id: 'n1', title: t('maintenance'), startWeek: 1, endWeek: 4, type: 'nutrition', color: 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800 text-blue-600',
-      kcal: '2,650', macros: '30/40/30', deficit: '0', water: '3.0', 
-      rationale: t('roadmap_mock_rationale_maintenance'),
-      timing: [t('roadmap_mock_timing_pre_40_60'), t('roadmap_mock_timing_post_40_80')],
-      micros: [{ label: 'Magnesium', value: '400mg' }]
-    },
-    { 
-      id: 'n2', title: t('roadmap_mock_deficit_500'), startWeek: 5, endWeek: 8, type: 'nutrition', color: 'bg-amber-50 dark:bg-amber-900/30 border-[#17cf54] border-y border-x-2 text-amber-700',
-      kcal: '2,150', macros: '40/30/30', deficit: '-500', water: '3.5',
-      rationale: t('roadmap_mock_rationale_deficit'),
-      timing: [t('roadmap_mock_timing_pre_30_40'), t('roadmap_mock_timing_post_40_50')],
-      micros: [{ label: 'Zinc', value: '15mg' }]
-    },
-    { 
-      id: 'n3', title: t('maintenance'), startWeek: 9, endWeek: 12, type: 'nutrition', color: 'bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-800 text-green-600',
-      kcal: '2,400', macros: '35/35/30', deficit: '0', water: '3.2',
-      rationale: t('roadmap_mock_rationale_reverse'),
-      timing: [t('roadmap_mock_timing_pre_35_50'), t('roadmap_mock_timing_post_40_60')],
-      micros: [{ label: 'Vitamin D', value: '5000 IU' }]
-    },
-  ],
-  training: [
-    { 
-      id: 't1', title: t('roadmap_mock_hypertrophy_base_4x'), startWeek: 1, endWeek: 6, type: 'training', color: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-100 text-indigo-600',
-      focus: t('hypertrophy'), sessions: t('roadmap_mock_sessions_4_lift_days'), intensity: 'RPE 7-9', tempo: '3-0-1-0',
-      loading: t('roadmap_mock_loading_linear_periodization'),
-      scope: t('roadmap_mock_scope_posterior_chain'),
-      recovery: t('roadmap_mock_recovery_prioritize_sleep')
-    },
-    { 
-      id: 't2', title: t('roadmap_mock_strength_peak_3x'), startWeek: 7, endWeek: 12, type: 'training', color: 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-800 text-rose-600',
-      focus: t('strength'), sessions: t('roadmap_mock_sessions_3_lift_days'), intensity: 'RPE 8-10', tempo: '2-0-X-0',
-      loading: t('roadmap_mock_loading_wave_loading'),
-      scope: t('roadmap_mock_scope_compound_lifts'),
-      recovery: t('roadmap_mock_recovery_extended_rest')
-    },
-  ],
-  goals: [
-    { id: 'g1', type: 'physical', label: t('roadmap_mock_goal_weight_140'), desc: t('roadmap_mock_goal_desc_lose_fat_keep_muscle'), value: 60, targetValue: '140 lbs', currentValue: '150 lbs' },
-    { id: 'g2', type: 'nutrition', label: t('roadmap_mock_goal_adherence_90'), desc: t('roadmap_mock_goal_desc_macro_accuracy'), value: 85, targetValue: '90%+', currentValue: t('roadmap_mock_consistent') },
-    { id: 'g3', type: 'training', label: t('roadmap_mock_goal_frequency_4x_week'), desc: t('roadmap_mock_goal_desc_complete_hypertrophy'), value: 100, targetValue: '100%', currentValue: t('roadmap_mock_goal_current_sessions_16_16') },
-    { id: 'g4', type: 'mindset', label: t('roadmap_mock_goal_sleep_7_5'), desc: t('roadmap_mock_goal_desc_sleep_hygiene'), value: 70, targetValue: '7.5h+', currentValue: t('roadmap_mock_goal_current_sleep_6_5') },
-  ],
-  assumptions: {
-    steps: '10,000 - 12,000',
-    sleep: t('roadmap_mock_sleep_minimum'),
-    constraints: t('roadmap_mock_constraints_dairy_free')
-  }
+  nutrition: [],
+  training: [],
+  goals: [],
+  assumptions: { steps: '', sleep: '', constraints: '' }
+});
+
+// The manager editor (PlanningDetail) saves blocks with `colorToken` + a
+// `stratData` object plus partial legacy fields. This view renders a slightly
+// different shape (`color`, `intensity`, `tempo`, `timing`, `micros`, ...).
+// Normalize both schemas here so whatever the coach saved is actually shown.
+const normalizeBlock = (b: any): RoadmapBlock => {
+  const strat = b.stratData || {};
+  return {
+    id: b.id,
+    title: b.title || '',
+    startWeek: b.startWeek ?? 1,
+    endWeek: b.endWeek ?? 1,
+    type: b.type,
+    color: b.color || b.colorToken || 'bg-slate-50 border-slate-100 text-slate-600',
+    // Nutrition
+    kcal: b.kcal ?? strat.kcal,
+    macros: b.macros ?? strat.macros,
+    deficit: b.deficit ?? strat.deficit,
+    water: b.water ?? strat.water,
+    rationale: b.rationale ?? strat.summary,
+    timing: Array.isArray(b.timing) ? b.timing : (Array.isArray(strat.secondaryObjectives) ? strat.secondaryObjectives : []),
+    micros: Array.isArray(b.micros) ? b.micros : [],
+    // Training
+    focus: b.focus ?? strat.trainingFocus,
+    sessions: b.sessions ?? strat.sessions,
+    intensity: b.intensity ?? strat.trainingIntensity ?? (Array.isArray(strat.intensityTargets) ? strat.intensityTargets.join(', ') : undefined),
+    tempo: b.tempo ?? strat.tempo,
+    loading: b.loading ?? strat.trainingVolume,
+    scope: b.scope ?? strat.primaryObjective,
+    recovery: b.recovery ?? strat.cardio ?? strat.coachNotes,
+  };
+};
+
+const normalizeGoal = (g: any): Goal => ({
+  id: g.id,
+  type: g.type,
+  label: g.label || '',
+  desc: g.desc || '',
+  value: typeof g.value === 'number' ? g.value : 0,
+  targetValue: g.targetValue ?? g.targetLabel ?? '',
+  currentValue: g.currentValue ?? g.currentLabel ?? '',
 });
 
 export default function ClientRoadmap() {
   const { t } = useLanguage();
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedNutritionId, setSelectedNutritionId] = useState<string | null>(null);
   const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null);
 
+  const loadRoadmap = async () => {
+    setLoadError(null);
+    try {
+      const data = await fetchWithAuth('/client/roadmap');
+      // Backend returns a record with a `data_json` column (or a default
+      // { data_json: {...}, status: 'Empty' } object when none exists).
+      const rawJson = data?.data_json
+        ? (typeof data.data_json === 'string' ? JSON.parse(data.data_json) : data.data_json)
+        : null;
+
+      const empty = getEmptyData();
+      const roadmapData: RoadmapData = rawJson
+        ? {
+            ...empty,
+            ...rawJson,
+            // Record-level status overrides any stale status inside data_json.
+            status: data?.status || rawJson.status || empty.status,
+            nutrition: Array.isArray(rawJson.nutrition) ? rawJson.nutrition.map(normalizeBlock) : [],
+            training: Array.isArray(rawJson.training) ? rawJson.training.map(normalizeBlock) : [],
+            goals: Array.isArray(rawJson.goals) ? rawJson.goals.map(normalizeGoal) : [],
+            totalWeeks: rawJson.totalWeeks || empty.totalWeeks,
+            currentWeek: rawJson.currentWeek || empty.currentWeek,
+          }
+        : empty;
+
+      setRoadmap(roadmapData);
+
+      const currentWeek = roadmapData.currentWeek || 1;
+      const currentNut = roadmapData.nutrition.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
+      const currentTra = roadmapData.training.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
+
+      setSelectedNutritionId(currentNut?.id || roadmapData.nutrition[0]?.id || null);
+      setSelectedTrainingId(currentTra?.id || roadmapData.training[0]?.id || null);
+    } catch (error: any) {
+      // fetchWithAuth throws on non-ok responses. Surface a real error
+      // state instead of silently showing invented data.
+      console.error('Error loading roadmap:', error);
+      setLoadError(error?.message || t('error_loading_data', { defaultValue: 'Error loading data' }));
+      setRoadmap(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    const loadRoadmap = async () => {
-      try {
-        const data = await fetchWithAuth('/client/roadmap');
-        const rawJson = data?.data_json;
-        const roadmapData: RoadmapData = rawJson && rawJson.nutrition
-          ? { ...rawJson, nutrition: rawJson.nutrition || [], training: rawJson.training || [] }
-          : getInitialData(t);
-        if (!mounted) return;
-        setRoadmap(roadmapData);
-
-        const currentWeek = roadmapData.currentWeek || 1;
-        const currentNut = (roadmapData.nutrition || []).find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-        const currentTra = (roadmapData.training || []).find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-
-        setSelectedNutritionId(currentNut?.id || (roadmapData.nutrition?.[0]?.id || null));
-        setSelectedTrainingId(currentTra?.id || (roadmapData.training?.[0]?.id || null));
-      } catch (error) {
-        console.error('Error loading roadmap:', error);
-        if (!mounted) return;
-        const initial = getInitialData(t);
-        setRoadmap(initial);
-        setSelectedNutritionId(initial.nutrition[0].id);
-        setSelectedTrainingId(initial.training[0].id);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
     loadRoadmap();
-    return () => { mounted = false; };
   }, []);
 
   const activeNutrition = useMemo(() => roadmap?.nutrition.find(b => b.id === selectedNutritionId), [roadmap, selectedNutritionId]);
   const activeTraining = useMemo(() => roadmap?.training.find(b => b.id === selectedTrainingId), [roadmap, selectedTrainingId]);
+
+  // A roadmap with no phases — OR one still in Draft status — is treated as
+  // "not yet published": the client should not see unfinished coach drafts.
+  const isDraftStatus = !!roadmap && /draft|empty/i.test(roadmap.status || '');
+  const isEmptyRoadmap = !!roadmap &&
+    (isDraftStatus || (roadmap.nutrition.length === 0 && roadmap.training.length === 0));
+  const safeTotalWeeks = (roadmap && roadmap.totalWeeks > 0) ? roadmap.totalWeeks : 12;
 
   if (loading) return (
     <div className="p-10 flex items-center justify-center min-h-[400px]">
@@ -186,7 +206,34 @@ export default function ClientRoadmap() {
       </div>
     </div>
   );
+  if (loadError) return (
+    <div className="p-10 flex items-center justify-center min-h-[400px]">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <span className="material-symbols-outlined text-5xl text-rose-400">error</span>
+        <p className="text-sm font-medium text-rose-500">{loadError}</p>
+        <button
+          onClick={() => { setLoading(true); loadRoadmap(); }}
+          className="px-5 py-2.5 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 transition-colors"
+        >
+          {t('retry', { defaultValue: 'Retry' })}
+        </button>
+      </div>
+    </div>
+  );
+
   if (!roadmap) return null;
+
+  if (isEmptyRoadmap) return (
+    <div className="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-slate-950 gap-4 p-10 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+        <MapIcon className="w-8 h-8" />
+      </div>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('strategic_roadmap')}</h2>
+      <p className="text-sm text-slate-500 max-w-sm">
+        {t('roadmap_not_ready', { defaultValue: 'Your coach has not published a strategic roadmap yet. It will appear here once it is ready.' })}
+      </p>
+    </div>
+  );
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans selection:bg-emerald-100 selection:text-emerald-900">
@@ -227,15 +274,15 @@ export default function ClientRoadmap() {
             <div className="overflow-x-auto pb-6 no-scrollbar relative">
               <div className="min-w-[1240px] space-y-6 relative">
                  <div className="flex justify-between px-4 text-[11px] font-bold text-slate-300 uppercase tracking-[0.2em]">
-                  {Array.from({ length: roadmap.totalWeeks }).map((_, i) => (
-                    <span key={i} style={{ width: `${100 / roadmap.totalWeeks}%` }} className={`text-center ${i + 1 === roadmap.currentWeek ? 'text-[#17cf54] font-black' : ''}`}>{t('planning_week_label_short', { week: i + 1 })}</span>
+                  {Array.from({ length: safeTotalWeeks }).map((_, i) => (
+                    <span key={i} style={{ width: `${100 / safeTotalWeeks}%` }} className={`text-center ${i + 1 === roadmap.currentWeek ? 'text-[#17cf54] font-black' : ''}`}>{t('planning_week_label_short', { week: i + 1 })}</span>
                   ))}
                 </div>
 
                 {/* Today Indicator Line */}
-                <div 
+                <div
                   className="absolute top-0 bottom-0 w-px bg-[#17cf54] z-20 pointer-events-none"
-                  style={{ left: `${((roadmap.currentWeek - 0.5) / (roadmap.totalWeeks || 12)) * 100}%` }}
+                  style={{ left: `${(Math.min(Math.max(roadmap.currentWeek, 1), safeTotalWeeks) - 0.5) / safeTotalWeeks * 100}%` }}
                 >
                   <div className="absolute top-0 -translate-x-1/2 bg-[#17cf54] text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg shadow-emerald-500/20 tracking-tighter uppercase leading-none">{t('today')}</div>
                 </div>
@@ -248,7 +295,7 @@ export default function ClientRoadmap() {
                         <motion.div 
                           key={block.id}
                           layoutId={block.id}
-                          style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
+                          style={{ width: `${((block.endWeek - block.startWeek + 1) / safeTotalWeeks) * 100}%` }}
                           onClick={() => setSelectedNutritionId(block.id)}
                           className={`border rounded-2xl flex items-center justify-center text-xs font-bold cursor-pointer transition-all relative ${block.color} ${selectedNutritionId === block.id ? 'ring-2 ring-[#17cf54] shadow-md z-10' : 'opacity-80 hover:opacity-100'}`}
                         >
@@ -266,7 +313,7 @@ export default function ClientRoadmap() {
                         <motion.div 
                           key={block.id}
                           layoutId={block.id}
-                          style={{ width: `${((block.endWeek - block.startWeek + 1) / 12) * 100}%` }}
+                          style={{ width: `${((block.endWeek - block.startWeek + 1) / safeTotalWeeks) * 100}%` }}
                           onClick={() => setSelectedTrainingId(block.id)}
                           className={`border rounded-2xl flex items-center justify-center text-xs font-bold cursor-pointer transition-all relative ${block.color} ${selectedTrainingId === block.id ? 'ring-2 ring-[#17cf54] shadow-md z-10' : 'opacity-80 hover:opacity-100'}`}
                         >
@@ -436,6 +483,7 @@ export default function ClientRoadmap() {
           </div>
 
           {/* Goals */}
+          {roadmap.goals.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {roadmap.goals.map(goal => (
               <div key={goal.id} className="bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col">
@@ -459,6 +507,7 @@ export default function ClientRoadmap() {
               </div>
             ))}
           </div>
+          )}
 
           <div className="h-12"></div>
         </div>

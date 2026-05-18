@@ -302,8 +302,8 @@ function BusinessAnalytics({ data }: any) {
             </div>
           </div>
           <div className="flex flex-col gap-6 flex-1 justify-center">
-            <ProgressBar label={t('workout_adherence')} value={`${data?.training?.avgCompletion || 0}%`} percentage={data?.training?.avgCompletion || 0} color="bg-emerald-500" />
-            <ProgressBar label={t('nutrition_consistency')} value={`${data?.nutrition?.consistency || 0}%`} percentage={data?.nutrition?.consistency || 0} color="bg-blue-500" />
+            <ProgressBar label={t('workout_adherence')} value={`${data?.workoutAdherence || 0}%`} percentage={data?.workoutAdherence || 0} color="bg-emerald-500" />
+            <ProgressBar label={t('nutrition_consistency')} value={`${data?.nutritionConsistency || 0}%`} percentage={data?.nutritionConsistency || 0} color="bg-blue-500" />
             <ProgressBar label={t('checkin_reliability')} value={`${data?.checkInReliability || 0}%`} percentage={data?.checkInReliability || 0} color="bg-purple-500" />
           </div>
           <p className="mt-6 text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
@@ -471,15 +471,15 @@ function NutritionAnalytics({ data }: any) {
                 <line key={y} x1="0" y1={y} x2="600" y2={y} stroke="#f1f5f9" strokeDasharray="4 4" strokeWidth="1" />
               ))}
               <path 
-                d={data?.nutrition?.microTrends?.iron?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')} 
+                d={data?.microTrends?.iron?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')}
                 fill="none" stroke="#f59e0b" strokeLinecap="round" strokeWidth="3"
               />
-              <path 
-                d={data?.nutrition?.microTrends?.vitD?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')} 
+              <path
+                d={data?.microTrends?.vitD?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')}
                 fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="3"
               />
-              <path 
-                d={data?.nutrition?.microTrends?.magnesium?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')} 
+              <path
+                d={data?.microTrends?.magnesium?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')}
                 fill="none" stroke="#a855f7" strokeLinecap="round" strokeWidth="3"
               />
             </svg>
@@ -502,8 +502,8 @@ function NutritionAnalytics({ data }: any) {
             <button className="text-emerald-600 text-xs font-semibold hover:underline">{t('view_all')}</button>
           </div>
           <div className="flex flex-col gap-4 overflow-y-auto">
-            {data?.nutrition?.topDeficits && data.nutrition.topDeficits.length > 0 ? (
-              data.nutrition.topDeficits.map((client: any, idx: number) => (
+            {data?.topDeficits && data.topDeficits.length > 0 ? (
+              data.topDeficits.map((client: any, idx: number) => (
                 <DeficitClient 
                   key={idx}
                   name={client.name}
@@ -634,10 +634,10 @@ function TrainingAnalytics({ data }: any) {
             <div className="relative w-40 h-40 flex-shrink-0">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" fill="transparent" r="40" stroke="#f1f5f9" strokeWidth="12"></circle>
-                {data?.training?.distribution?.map((item: any, idx: number) => {
+                {data?.distribution?.map((item: any, idx: number) => {
                   const colors = ['#3b82f6', '#f59e0b', '#a855f7', '#10b981'];
-                  const total = data.training.distribution.reduce((acc: number, cur: any) => acc + cur.value, 0);
-                  const prevValues = data.training.distribution.slice(0, idx).reduce((acc: number, cur: any) => acc + cur.value, 0);
+                  const total = data.distribution.reduce((acc: number, cur: any) => acc + cur.value, 0);
+                  const prevValues = data.distribution.slice(0, idx).reduce((acc: number, cur: any) => acc + cur.value, 0);
                   return (
                     <circle 
                       key={idx}
@@ -657,7 +657,7 @@ function TrainingAnalytics({ data }: any) {
               </div>
             </div>
             <div className="flex-1 space-y-3">
-              {data?.training?.distribution?.map((item: any, idx: number) => {
+              {data?.distribution?.map((item: any, idx: number) => {
                 const colors = ['bg-blue-500', 'bg-amber-500', 'bg-purple-500', 'bg-emerald-500'];
                 return (
                   <DistributionItem key={idx} color={colors[idx % colors.length]} label={item.label} value={`${item.value}%`} />
@@ -674,7 +674,7 @@ function TrainingAnalytics({ data }: any) {
             </button>
           </div>
           <div className="flex flex-col h-full justify-center space-y-4">
-            {data?.training?.muscleFrequency?.map((item: any, idx: number) => {
+            {data?.muscleFrequency?.map((item: any, idx: number) => {
               const colors = ['bg-emerald-500', 'bg-cyan-500', 'bg-rose-500', 'bg-violet-500', 'bg-amber-500', 'bg-orange-500'];
               return (
                 <FrequencyItem key={idx} label={item.label} percentage={item.percentage} color={colors[idx % colors.length]} />

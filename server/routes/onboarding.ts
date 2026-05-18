@@ -4,41 +4,52 @@ import { verifyManager, verifyClient } from '../middleware/auth.js';
 
 const router = Router();
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FIXED ONBOARDING QUESTIONS — the one-time baseline data-collection contract.
+// Required + is_fixed + locked: injected into every onboarding flow, never
+// removable, and use STABLE ids read directly by the KPI / profile layer.
+// ─────────────────────────────────────────────────────────────────────────────
 const FIXED_ONBOARDING_QUESTIONS = [
   {
     id: 'core_info',
     title: 'Core Information',
     subtitle: 'Basic data for your profile',
-    type: 'info_card',
+    locked: true,
     questions: [
-      { id: 'height', title: 'Current Height (cm)', type: 'number', unit: 'cm', required: true },
-      { id: 'weight', title: 'Current Weight (kg)', type: 'number', unit: 'kg', required: true },
-      { id: 'goal', title: 'Primary Goal', type: 'text', required: true },
-      { id: 'target_weight', title: 'Target Weight (kg)', type: 'number', unit: 'kg', required: false },
-      { id: 'body_fat', title: 'Estimated Body Fat %', type: 'number', unit: '%', required: false }
+      { id: 'age', title: 'Age', type: 'number', unit: 'years', required: true, is_fixed: true, locked: true },
+      { id: 'gender', title: 'Gender', type: 'single_choice', options: ['Male', 'Female', 'Other'], required: true, is_fixed: true, locked: true },
+      { id: 'height', title: 'Current Height (cm)', type: 'number', unit: 'cm', required: true, is_fixed: true, locked: true },
+      { id: 'weight', title: 'Current Weight (kg)', type: 'number', unit: 'kg', required: true, is_fixed: true, locked: true },
+      { id: 'goal', title: 'Primary Goal', type: 'text', required: true, is_fixed: true, locked: true },
+      { id: 'target_weight', title: 'Target Weight (kg)', type: 'number', unit: 'kg', required: true, is_fixed: true, locked: true },
+      { id: 'body_fat', title: 'Estimated Body Fat %', type: 'number', unit: '%', required: true, is_fixed: true, locked: true }
     ]
   },
   {
     id: 'dietary_info',
     title: 'Dietary & Health',
     subtitle: 'Nutritional preferences and health status',
-    type: 'info_card',
+    locked: true,
     questions: [
-      { id: 'dietary_style', title: 'Dietary Style', type: 'select', options: ['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Omnivore', 'No preference'], required: true },
-      { id: 'allergies', title: 'Allergies / Intolerances', type: 'long_text', required: true, placeholder: 'List any allergies or intolerances...' },
-      { id: 'supplementation', title: 'Current Supplementation', type: 'long_text', required: false, placeholder: 'List supplements you are currently taking...' }
+      { id: 'dietary_style', title: 'Dietary Style', type: 'single_choice', options: ['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Omnivore', 'No preference'], required: true, is_fixed: true, locked: true },
+      { id: 'allergies', title: 'Allergies / Intolerances', type: 'long_text', required: true, is_fixed: true, locked: true, placeholder: 'List any allergies or intolerances...' },
+      { id: 'supplementation', title: 'Current Supplementation', type: 'long_text', required: true, is_fixed: true, locked: true, placeholder: 'List supplements you are currently taking, or "None"...' }
     ]
   },
   {
     id: 'measurements_step',
     title: 'Initial Measurements',
     subtitle: 'Base metrics for progress tracking',
+    locked: true,
     questions: [
       {
-        id: 'initial_measurements',
+        id: 'measurements',
         title: 'Measurements (cm)',
         type: 'measurement_group',
-        options: ['waist', 'hip', 'thigh_r', 'arm_r']
+        options: ['waist', 'hip', 'chest', 'arm_r', 'thigh_r'],
+        required: true,
+        is_fixed: true,
+        locked: true
       }
     ]
   }
@@ -140,6 +151,40 @@ router.delete('/manager/templates/:id', verifyManager, async (req: any, res) => 
     if (error) throw error;
     res.json({ success: true });
   } catch (error: any) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Duplicate a template (own template or a global one) into a new manager-owned copy
+router.post('/manager/templates/:id/duplicate', verifyManager, async (req: any, res) => {
+  const managerId = req.user.id;
+  const { id } = req.params;
+  try {
+    const { data: original, error: fetchErr } = await supabaseAdmin
+      .from('onboarding_templates')
+      .select('*')
+      .eq('id', id)
+      .or(`manager_id.eq.${managerId},manager_id.is.null`)
+      .maybeSingle();
+
+    if (fetchErr || !original) return res.status(404).json({ error: 'Template not found' });
+
+    const { data, error } = await supabaseAdmin
+      .from('onboarding_templates')
+      .insert({
+        manager_id: managerId,
+        name: `${original.name} (Copy)`,
+        description: original.description,
+        template_schema: original.template_schema,
+        is_default: false,
+        version: 1
+      })
+      .select().single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error duplicating onboarding template:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -261,9 +306,46 @@ router.get('/manager/submissions', verifyManager, async (req: any, res) => {
       .order('submitted_at', { ascending: false });
 
     if (error) throw error;
-    res.json(data || []);
+
+    // Prefer the template snapshot taken at submission time over the live template.
+    const result = (data || []).map((s: any) => ({
+      ...s,
+      template: s.template_snapshot_json || s.template
+    }));
+    res.json(result);
   } catch (error: any) {
     console.error('Error fetching onboarding submissions:', error);
+    res.status(500).json({ error: 'Server error', message: error.message });
+  }
+});
+
+// Get a single submission by id (scoped to the manager's own clients)
+router.get('/manager/submissions/:id', verifyManager, async (req: any, res) => {
+  const managerId = req.user.id;
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('client_onboarding_submissions')
+      .select('*, client:profiles!client_id(full_name, avatar_url), template:onboarding_templates(id, name, template_schema)')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Submission not found' });
+
+    // Verify the submission's client belongs to this manager.
+    const { data: owner } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', data.client_id)
+      .eq('manager_id', managerId)
+      .maybeSingle();
+
+    if (!owner) return res.status(404).json({ error: 'Submission not found or access denied' });
+
+    res.json({ ...data, template: data.template_snapshot_json || data.template });
+  } catch (error: any) {
+    console.error('Error fetching onboarding submission:', error);
     res.status(500).json({ error: 'Server error', message: error.message });
   }
 });
@@ -309,9 +391,27 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
       return res.status(400).json({ error: 'No active onboarding assignment found.' });
     }
 
+    // Snapshot the template at submission time, so the manager always reviews
+    // the answers against the exact schema the client filled in — even if the
+    // template is edited afterwards.
+    const { data: template } = await supabaseAdmin
+      .from('onboarding_templates')
+      .select('*')
+      .eq('id', assignment.template_id)
+      .maybeSingle();
+
     const { data, error } = await supabaseAdmin
       .from('client_onboarding_submissions')
-      .insert({ client_id: clientId, template_id: assignment.template_id, answers_json, submitted_at: new Date().toISOString() })
+      .insert({
+        client_id: clientId,
+        template_id: assignment.template_id,
+        template_version: template?.version || 1,
+        template_snapshot_json: template
+          ? { ...template, templateSchema: template.template_schema }
+          : null,
+        answers_json,
+        submitted_at: new Date().toISOString()
+      })
       .select().single();
 
     if (error) throw error;

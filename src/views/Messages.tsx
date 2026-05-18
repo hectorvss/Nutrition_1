@@ -76,6 +76,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
   const [selectedRecipients, setSelectedRecipients] = useState<any[]>([]);
   const [showRecipientResults, setShowRecipientResults] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'needs_reply'>('all');
+  const [chatSearch, setChatSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('chatFavorites') || '[]'); } catch { return []; }
   });
@@ -404,6 +405,11 @@ export default function Messages({ onNavigate }: MessagesProps) {
     }
   };
 
+  // Quick-action buttons prefill the message input with a ready-to-edit template.
+  const insertQuickMessage = (template: string) => {
+    setNewMessage(prev => (prev.trim() ? `${prev.trim()} ${template}` : template));
+  };
+
   const handleClearChat = async () => {
     if (!activeRecipient) return;
     if (!window.confirm(t('confirm_clear_chat', { name: activeRecipient.name }))) return;
@@ -439,6 +445,10 @@ export default function Messages({ onNavigate }: MessagesProps) {
 
     const filteredClients = sortedClients.filter(client => {
       const latest = latestMessages[client.id];
+      // Text search by client name
+      if (chatSearch.trim() && !client.name.toLowerCase().includes(chatSearch.trim().toLowerCase())) {
+        return false;
+      }
       if (filterType === 'all') return true;
       if (filterType === 'unread') return latest && latest.unreadCount && latest.unreadCount > 0;
       if (filterType === 'needs_reply') return latest && latest.sender_id !== user?.id; // last message sent by client
@@ -465,10 +475,12 @@ export default function Messages({ onNavigate }: MessagesProps) {
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center pt-2">
               <div className="relative w-full sm:w-96">
                 <Search className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" />
-                <input 
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all" 
-                  placeholder={t('search_clients_messages')} 
+                <input
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all"
+                  placeholder={t('search_clients_messages')}
                   type="text"
+                  value={chatSearch}
+                  onChange={(e) => setChatSearch(e.target.value)}
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar w-full sm:w-auto">
@@ -683,11 +695,36 @@ export default function Messages({ onNavigate }: MessagesProps) {
                       <button onClick={() => imageInputRef.current?.click()} className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all">
                         <ImageIcon className="w-5 h-5" />
                       </button>
-                      <button className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all">
-                        <Star className="w-5 h-5" />
+                      <button
+                        type="button"
+                        title={t('mark_as_favorite')}
+                        onClick={() => {
+                          if (selectedRecipients.length === 0) return;
+                          const ids = selectedRecipients.map(r => r.id);
+                          const allFav = ids.every(id => favorites.includes(id));
+                          const updated = allFav
+                            ? favorites.filter(id => !ids.includes(id))
+                            : Array.from(new Set([...favorites, ...ids]));
+                          setFavorites(updated);
+                          localStorage.setItem('chatFavorites', JSON.stringify(updated));
+                        }}
+                        className={`p-2.5 rounded-xl hover:bg-slate-50 transition-all ${
+                          selectedRecipients.length > 0 && selectedRecipients.every(r => favorites.includes(r.id))
+                            ? 'text-amber-400'
+                            : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                      >
+                        <Star className={`w-5 h-5 ${
+                          selectedRecipients.length > 0 && selectedRecipients.every(r => favorites.includes(r.id)) ? 'fill-amber-400' : ''
+                        }`} />
                       </button>
                       <div className="h-4 w-px bg-slate-200 mx-2"></div>
-                      <button className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all">
+                      <button
+                        type="button"
+                        title={t('open_calendar')}
+                        onClick={() => onNavigate?.('calendar')}
+                        className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
+                      >
                         <Calendar className="w-5 h-5" />
                       </button>
                     </div>
@@ -757,15 +794,22 @@ export default function Messages({ onNavigate }: MessagesProps) {
                       <UserPlus className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+                  <div
+                    onClick={() => setSelectedRecipients(clients.filter(c => c.nutritionPlanAssigned))}
+                    className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
                     <div className="w-11 h-11 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-inner">
                       <GroupsIcon className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-bold text-slate-900">{t('nutrition_plans_group')}</h4>
-                      <p className="text-xs text-slate-500 font-medium">{t('members_count', { count: 8 })}</p>
+                      <p className="text-xs text-slate-500 font-medium">{t('members_count', { count: clients.filter(c => c.nutritionPlanAssigned).length })}</p>
                     </div>
-                    <button className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-400 group-hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRecipients(clients.filter(c => c.nutritionPlanAssigned));
+                      }}
+                      className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-400 group-hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all">
                       <UserPlus className="w-4 h-4" />
                     </button>
                   </div>
@@ -810,13 +854,20 @@ export default function Messages({ onNavigate }: MessagesProps) {
                  <User className="w-4 h-4" />
                  <span>{t('view_coach_profile')}</span>
                </button>
-               <button className="px-4 py-2 bg-[#F0FDF4] text-[#22C55E] rounded-xl text-sm font-bold hover:bg-[#DCFCE7] transition-colors flex items-center space-x-2">
+               <button
+                 onClick={() => onNavigate?.('check-ins')}
+                 className="px-4 py-2 bg-[#F0FDF4] text-[#22C55E] rounded-xl text-sm font-bold hover:bg-[#DCFCE7] transition-colors flex items-center space-x-2">
                  <Calendar className="w-4 h-4" />
                  <span>{t('book_checkin')}</span>
                </button>
              </>
            ) : (
-             <button className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center space-x-2">
+             <button
+               onClick={() => {
+                 if (activeRecipient?.id) onNavigate?.('clients', { clientId: activeRecipient.id });
+                 else onNavigate?.('clients');
+               }}
+               className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center space-x-2">
                <User className="w-4 h-4" />
                <span>{t('client_details')}</span>
              </button>
@@ -980,13 +1031,22 @@ export default function Messages({ onNavigate }: MessagesProps) {
 
       {/* Quick Actions */}
       <div className="px-6 py-2 flex space-x-2 overflow-x-auto no-scrollbar">
-        <button className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
+        <button
+          type="button"
+          onClick={() => insertQuickMessage(t('quick_weekly_checkin_msg'))}
+          className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
           <span>{t('quick_weekly_checkin')}</span>
         </button>
-        <button className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
+        <button
+          type="button"
+          onClick={() => insertQuickMessage(t('quick_ask_meal_msg'))}
+          className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
           <span>{t('quick_ask_meal')}</span>
         </button>
-        <button className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
+        <button
+          type="button"
+          onClick={() => insertQuickMessage(t('quick_request_plan_change_msg'))}
+          className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
           <span>{t('quick_request_plan_change')}</span>
         </button>
       </div>

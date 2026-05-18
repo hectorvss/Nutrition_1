@@ -199,21 +199,32 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         'Almuerzo': 'Sun', 'Lunch': 'Sun',
         'Cena': 'Moon', 'Dinner': 'Moon'
       };
-      const mealsToSave = meals.map(m => ({
-        ...m,
-        icon: undefined,
-        iconName: mNames[m.name] || 'Cookie'
-      }));
+      // Strip the React component (icon) before persisting; preserve any
+      // existing iconName, only fall back to a name-based guess.
+      const mealsToSave = meals.map(m => {
+        const { icon, ...rest } = m as any;
+        return {
+          ...rest,
+          iconName: (m as any).iconName || mNames[m.name] || 'Cookie'
+        };
+      });
 
-      let finalDataJson = { ...fullPlanData, mode };
+      let finalDataJson: any = { ...(fullPlanData || {}), mode };
 
-      if (selectedDay) {
+      // A plan is "weekly" if a day is selected OR the existing plan already
+      // has a weekly structure. In that case never write a root-level `meals`
+      // array (it would shadow / clobber the per-day data).
+      const isWeekly = !!selectedDay || !!finalDataJson.days || finalDataJson.type === 'weekly';
+
+      if (isWeekly) {
         if (!finalDataJson.days) finalDataJson.days = {};
-        // Update specific day in weekly structure
-        finalDataJson.days[selectedDay] = { meals: mealsToSave };
         finalDataJson.type = 'weekly';
+        // Only overwrite the day currently being edited.
+        const dayToSave = selectedDay || 'monday';
+        finalDataJson.days[dayToSave] = { meals: mealsToSave };
+        delete finalDataJson.meals;
       } else {
-        // Fallback for non-weekly or new plans
+        // Single-day / new plan
         finalDataJson.meals = mealsToSave;
       }
 
@@ -938,9 +949,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
             <div className="space-y-4">
               {[
-                { label: t('protein'), value: totalProtein, color: totalItems === 0 ? 'bg-slate-300' : 'bg-blue-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
-                { label: t('carbs'), value: totalCarbs, color: totalItems === 0 ? 'bg-slate-300' : 'bg-emerald-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
-                { label: t('fats'), value: totalFats, color: totalItems === 0 ? 'bg-slate-300' : 'bg-amber-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
+                { label: t('protein'), value: totalProtein, kcalPerG: 4, color: totalItems === 0 ? 'bg-slate-300' : 'bg-blue-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
+                { label: t('carbs'), value: totalCarbs, kcalPerG: 4, color: totalItems === 0 ? 'bg-slate-300' : 'bg-emerald-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
+                { label: t('fats'), value: totalFats, kcalPerG: 9, color: totalItems === 0 ? 'bg-slate-300' : 'bg-amber-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
               ].map((macro) => (
                 <div key={macro.label} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-3">
@@ -953,7 +964,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   <div className="text-right">
                     <p className={`text-sm font-bold ${macro.textColor}`}>{Math.round(macro.value * 10) / 10}g</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                      {totalCalories > 0 ? Math.round((macro.value * (macro.label === 'Fats' ? 9 : 4) / totalCalories) * 100) : 0}%
+                      {totalCalories > 0 ? Math.round((macro.value * macro.kcalPerG / totalCalories) * 100) : 0}%
                     </p>
                   </div>
                 </div>

@@ -126,6 +126,11 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
     onSelect(selectedTemplateId, settings);
   };
 
+  // "Custom Strategy" = start from a blank roadmap (no template applied).
+  const handleCreateCustom = () => {
+    onSelect('custom', settings);
+  };
+
   return (
     <div className="flex flex-col w-full min-h-screen bg-slate-50 font-sans selection:bg-emerald-100 selection:text-emerald-900">
       {/* Breadcrumb & Header */}
@@ -140,7 +145,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             <li>
               <div className="flex items-center">
                 <ArrowRight className="w-4 h-4 text-slate-400 mx-1" />
-                <span className="text-slate-800 font-bold">{client?.name || 'Sarah Jenkins'}</span>
+                <span className="text-slate-800 font-bold">{client?.name || t('not_defined', { defaultValue: 'Client' })}</span>
               </div>
             </li>
           </ol>
@@ -150,14 +155,20 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
           <div className="absolute top-0 right-0 px-4 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-xl shadow-sm">{t('setup_required')}</div>
           
           <div className="relative flex-shrink-0">
-            <div 
-              className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-inner border-2 border-slate-50" 
-              style={{ backgroundImage: `url("${client?.avatar || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop'}")` }} 
-            />
+            {client?.avatar ? (
+              <div
+                className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-inner border-2 border-slate-50"
+                style={{ backgroundImage: `url("${client.avatar}")` }}
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center shadow-inner border-2 border-slate-50 text-slate-300">
+                <Icon name="person" className="text-[32px]" />
+              </div>
+            )}
             <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{client?.name || 'Sarah Jenkins'}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{client?.name || t('not_defined', { defaultValue: 'Client' })}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 font-medium">
               <span className="flex items-center gap-1">
                 <Icon name="target" className="text-slate-400" />
@@ -193,7 +204,8 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
             {/* Create New Roadmap Card (Mirroring Nutrition's "Create New Plan") */}
-            <button 
+            <button
+              onClick={handleCreateCustom}
               className="group w-full flex items-center justify-between p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
