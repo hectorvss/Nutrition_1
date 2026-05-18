@@ -26,6 +26,17 @@ import { useCalendar, getEventPresentationInfo, EventType } from '../context/Cal
 
 type ViewMode = 'Month' | 'Week' | 'Day';
 
+// Literal Tailwind classes per event type so the JIT compiler does not purge them.
+const MONTH_EVENT_CLASSES: Record<EventType, string> = {
+  'Video Call': 'bg-blue-50 border-blue-200 text-blue-700',
+  'In-Person': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  'Training': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  'Nutrition': 'bg-orange-50 border-orange-200 text-orange-700',
+  'Internal': 'bg-purple-50 border-purple-200 text-purple-700',
+  'Training Analysis': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+};
+const MONTH_EVENT_FALLBACK = 'bg-slate-50 border-slate-200 text-slate-700';
+
 // --- New Deterministic Rendering Engine ---
 const ROW_HEIGHT_DAY = 128;
 const ROW_HEIGHT_WEEK = 96;
@@ -277,6 +288,11 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
 
   const weekDates = getWeekDates(currentDate);
 
+  // The "now" indicator should only render when the visible range includes today.
+  const todayStr = new Date().toDateString();
+  const dayViewIsToday = currentDate.toDateString() === todayStr;
+  const weekViewHasToday = weekDates.some(d => d.current);
+
   const hours = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
 
   const currentDayEvents = getEventsForDate(getLocalDateString(currentDate));
@@ -340,10 +356,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                     </div>
                     <div className="mt-1 space-y-1">
                       {dayEvents.slice(0, 3).map((ev, eIdx) => {
-                        const info = getEventPresentationInfo(ev.type);
+                        const chipClass = MONTH_EVENT_CLASSES[ev.type as EventType] || MONTH_EVENT_FALLBACK;
                         return (
-                        <motion.div 
-                          key={eIdx} 
+                        <motion.div
+                          key={eIdx}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.95, backgroundColor: 'rgba(52, 211, 153, 0.2)' }}
                           transition={{ duration: 0.1 }}
@@ -351,7 +367,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                             e.stopPropagation();
                             onNavigate('create-task', { taskId: ev.id, returnTo: 'Month', currentDate: dayObj.dateStr });
                           }}
-                          className={`text-[10px] font-bold px-2 py-1 rounded truncate bg-opacity-30 border ${info.color.split(' ')[0]} border-${info.color.split(' ')[0].split('-')[1]}-200 text-${info.color.split(' ')[0].split('-')[1]}-700 cursor-pointer shadow-sm hover:z-10`}
+                          className={`text-[10px] font-bold px-2 py-1 rounded truncate border ${chipClass} cursor-pointer shadow-sm hover:z-10`}
                         >
                           {ev.time} {ev.title}
                         </motion.div>
@@ -412,13 +428,15 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
               ))}
 
               {/* Current Time Indicator */}
-              <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${(now.getHours() * 96) + (now.getMinutes() * (96 / 60))}px` }}>
-                <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 shadow-sm"></div>
-                <div className="flex-1 h-px bg-red-500"></div>
-                <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">
-                   {now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}
+              {weekViewHasToday && (
+                <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${(now.getHours() * 96) + (now.getMinutes() * (96 / 60))}px` }}>
+                  <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 shadow-sm"></div>
+                  <div className="flex-1 h-px bg-red-500"></div>
+                  <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-2">
+                     {now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Lunch Break removed as requested */}
 
@@ -552,10 +570,12 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
               })()}
 
               {/* Current Time Line */}
-              <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${(now.getHours() * 128) + (now.getMinutes() * (128 / 60))}px` }}>
-                <div className="w-3 h-3 rounded-full bg-red-500 -ml-1.5 shadow-md border-2 border-white"></div>
-                <div className="flex-1 h-0.5 bg-red-500"></div>
-              </div>
+              {dayViewIsToday && (
+                <div className="absolute left-0 right-0 z-20 flex items-center pointer-events-none" style={{ top: `${(now.getHours() * 128) + (now.getMinutes() * (128 / 60))}px` }}>
+                  <div className="w-3 h-3 rounded-full bg-red-500 -ml-1.5 shadow-md border-2 border-white"></div>
+                  <div className="flex-1 h-0.5 bg-red-500"></div>
+                </div>
+              )}
             </div>
           </div>
         </div>

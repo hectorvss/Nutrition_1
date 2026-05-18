@@ -50,6 +50,13 @@ export interface ClientData {
   lastCheckInDate?: string;
   isUnreviewed?: boolean;
   check_ins?: any[];
+
+  // Signals used by the automated task rules (Tasks screen)
+  unreadMessages?: number;
+  oldestUnreadAt?: string | null;
+  lastActivityAt?: string | null;
+  lastWorkoutAt?: string | null;
+  planUpdatedAt?: string | null;
 }
 
 interface ClientContextType {
@@ -204,6 +211,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
              gender: c.gender || 'Unknown',
              status: c.status || 'Active',
              isAtRisk: c.isAtRisk || false,
+             riskStatus: c.riskStatus || null,
              weight: (dj as any).weight || c.clients_profiles?.[0]?.weight || null,
              goal: c.clients_profiles?.[0]?.goal || c.goal || 'Not Set',
              notes: c.clients_profiles?.[0]?.notes || c.notes || '',
@@ -219,6 +227,11 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
              lastCheckInDate: c.lastCheckInDate || null,
              isUnreviewed: c.isUnreviewed || false,
              check_ins: c.check_ins || [],
+             unreadMessages: c.unreadMessages || 0,
+             oldestUnreadAt: c.oldestUnreadAt || null,
+             lastActivityAt: c.lastActivityAt || null,
+             lastWorkoutAt: c.lastWorkoutAt || null,
+             planUpdatedAt: c.planUpdatedAt || null,
              
              // Extract roadmap data if available
              ...(() => {

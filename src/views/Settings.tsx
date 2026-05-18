@@ -42,6 +42,7 @@ type SettingsTab = 'general' | 'profile' | 'security' | 'billing' | 'integration
 export default function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const { t } = useLanguage();
+  const { logout } = useAuth();
 
   const tabs = [
     { id: 'general', label: t('general'), icon: Smartphone },
@@ -100,7 +101,7 @@ export default function Settings() {
 
           <div className="mt-8 pt-6 border-t border-slate-200">
             <button
-              onClick={useAuth().logout}
+              onClick={logout}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
             >
               <LogOut className="w-5 h-5" />
@@ -316,22 +317,25 @@ function ProfileSettings() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (overrides?: Partial<any>) => {
     setSaving(true);
     setError(null);
     setSuccess(false);
+    // Merge overrides explicitly so callers don't depend on the (possibly stale)
+    // `profile` state value captured by an earlier closure.
+    const payload = { ...profile, ...(overrides || {}) };
     try {
       const response = await fetchWithAuth('/manager/profile', {
         method: 'POST',
-        body: JSON.stringify(profile)
+        body: JSON.stringify(payload)
       });
-      
+
       if (response) {
         // Update global context immediately
         setGlobalProfile({
-          full_name: response.full_name || profile.full_name,
-          professional_title: response.professional_title || profile.professional_title,
-          avatar_url: response.avatar_url || profile.avatar_url
+          full_name: response.full_name || payload.full_name,
+          professional_title: response.professional_title || payload.professional_title,
+          avatar_url: response.avatar_url ?? payload.avatar_url
         });
         setSuccess(true);
       }
@@ -408,10 +412,10 @@ function ProfileSettings() {
                 >
                   {t('change')}
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     setProfile((p: any) => ({ ...p, avatar_url: '' }));
-                    handleSave();
+                    handleSave({ avatar_url: '' });
                   }}
                   className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
@@ -577,8 +581,8 @@ function ProfileSettings() {
         >
           {t('discard_changes')}
         </button>
-        <button 
-          onClick={handleSave}
+        <button
+          onClick={() => handleSave()}
           disabled={saving}
           className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-colors shadow-sm shadow-emerald-500/30 flex items-center gap-2"
         >

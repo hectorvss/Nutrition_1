@@ -76,36 +76,6 @@ interface ClientDetailProps {
 
 type Tab = 'Information' | 'Nutrition' | 'Training' | 'Planning' | 'Mindset';
 
-const weightData = [
-  { date: 'Aug 1', weight: 78 },
-  { date: 'Aug 15', weight: 76.5 },
-  { date: 'Sep 1', weight: 75.2 },
-  { date: 'Sep 15', weight: 74.1 },
-  { date: 'Oct 1', weight: 72.8 },
-  { date: 'Oct 15', weight: 71.5 },
-  { date: 'Today', weight: 68.5 },
-];
-
-const strengthData = [
-  { date: 'Aug 1', volume: 10000 },
-  { date: 'Aug 15', volume: 11200 },
-  { date: 'Sep 1', volume: 12500 },
-  { date: 'Sep 15', volume: 13100 },
-  { date: 'Oct 1', volume: 13800 },
-  { date: 'Oct 15', volume: 14100 },
-  { date: 'Today', volume: 14250 },
-];
-
-const mindsetData = [
-  { date: 'Mon', mood: 7, stress: 6, motivation: 8, energy: 6 },
-  { date: 'Tue', mood: 7.2, stress: 5.8, motivation: 8.1, energy: 6.2 },
-  { date: 'Wed', mood: 7.5, stress: 5.5, motivation: 8.3, energy: 6.5 },
-  { date: 'Thu', mood: 7.3, stress: 6.2, motivation: 8.2, energy: 6.1 },
-  { date: 'Fri', mood: 7.6, stress: 5.9, motivation: 8.4, energy: 6.3 },
-  { date: 'Sat', mood: 7.8, stress: 5.7, motivation: 8.5, energy: 6.4 },
-  { date: 'Sun', mood: 7.8, stress: 6.2, motivation: 8.5, energy: 6.4 },
-];
-
 interface WorkoutLogItemProps {
   workout: any;
   isExpanded: boolean;
@@ -499,15 +469,24 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [onboardingError, setOnboardingError] = useState<string | null>(null);
+  const [accessExpiration, setAccessExpiration] = useState('');
+  const [savingExpiration, setSavingExpiration] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
       setIsLoading(true);
+      setStatsError(null);
       try {
         const data = await fetchWithAuth(`/manager/clients/${clientId}/profile-stats`);
         setStats(data);
+        if (data?.accessExpiration) {
+          setAccessExpiration(String(data.accessExpiration).split('T')[0]);
+        }
       } catch (error) {
         console.error('Error fetching client stats:', error);
+        setStatsError(t('error_loading_data'));
       } finally {
         setIsLoading(false);
       }
@@ -518,17 +497,19 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   useEffect(() => {
     const fetchOnboarding = async () => {
       setIsLoadingOnboarding(true);
+      setOnboardingError(null);
       try {
         const submissions = await fetchWithAuth('/onboarding/manager/submissions');
         const clientSubmission = (submissions || [])
           .filter((s: any) => s.client_id === clientId)
           .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())[0];
-        
+
         if (clientSubmission) {
           setOnboardingSubmission(clientSubmission);
         }
       } catch (error) {
         console.error('Error fetching onboarding info:', error);
+        setOnboardingError(t('error_loading_data'));
       } finally {
         setIsLoadingOnboarding(false);
       }
@@ -555,6 +536,19 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       setIsDeleting(false);
     }
   };
+  const handleSaveExpiration = async (value: string) => {
+    setSavingExpiration(true);
+    try {
+      await fetchWithAuth(`/manager/clients/${clientId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ access_expiration: value || null })
+      });
+    } catch (error) {
+      console.error('Error saving access expiration:', error);
+    } finally {
+      setSavingExpiration(false);
+    }
+  };
   const handleUpdateWorkoutLog = async (logId: string, updatedData: any) => {
     try {
       await fetchWithAuth(`/manager/clients/${clientId}/workout-logs/${logId}`, {
@@ -577,6 +571,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     age: '--',
     location: '--',
     gender: '--',
+    status: 'Active',
     progress: 0
   };
 
@@ -586,6 +581,15 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
           <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
           <p className="text-sm font-medium">{t('loading_general_information')}</p>
+        </div>
+      );
+    }
+
+    if (onboardingError) {
+      return (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-red-200 dark:border-red-800/50 text-slate-400">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+          <p className="text-lg font-medium text-slate-600 dark:text-slate-300">{onboardingError}</p>
         </div>
       );
     }
@@ -718,9 +722,9 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
             <div className="space-y-6">
               {[
-                { label: 'PROTEIN', percent: stats?.macros?.protein || 90, color: 'bg-emerald-500' },
-                { label: 'CARBS', percent: stats?.macros?.carbs || 85, color: 'bg-blue-400' },
-                { label: 'FATS', percent: stats?.macros?.fats || 92, color: 'bg-amber-400' },
+                { label: 'PROTEIN', percent: stats?.macros?.protein || 0, color: 'bg-emerald-500' },
+                { label: 'CARBS', percent: stats?.macros?.carbs || 0, color: 'bg-blue-400' },
+                { label: 'FATS', percent: stats?.macros?.fats || 0, color: 'bg-amber-400' },
               ].map((macro, idx) => (
                 <div key={idx}>
                   <div className="flex justify-between items-end mb-2">
@@ -1154,190 +1158,10 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   );
 
   const renderPlanning = () => (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div className="xl:col-span-2 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Projected Goal Date', value: 'Dec 15', sub: 'On Track', icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { label: 'Target Delta', value: '-4.5 kg', sub: '', icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' },
-            { label: 'Current Mesocycle', value: '2/4', sub: '', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-            { label: 'Success Probability', value: '88%', sub: 'High Confidence', icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-          ].map((stat, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
-                <stat.icon className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-sm font-bold text-slate-900">{stat.value}</span>
-                  {stat.sub && <span className="text-[10px] font-bold text-emerald-500 ml-1">{stat.sub}</span>}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900">Adherence Snapshot (7-Day)</h3>
-            <button className="text-xs font-bold text-emerald-600 hover:underline">Details</button>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: 'Nutrition', value: '78%', change: '+2%', icon: Utensils, color: 'text-emerald-500' },
-              { label: 'Training', value: '85%', change: '+5%', icon: Dumbbell, color: 'text-emerald-500' },
-              { label: 'Avg Steps', value: '8.2k', sub: '/9k', change: '-4%', icon: Activity, color: 'text-red-500' },
-            ].map((stat, idx) => (
-              <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div className="flex justify-between items-start mb-4">
-                  <stat.icon className="w-5 h-5 text-slate-400" />
-                  <span className={`text-[10px] font-bold ${stat.color}`}>{stat.change}</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900">{stat.value}<span className="text-sm text-slate-400 font-medium">{stat.sub}</span></p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-bold text-slate-900">Master Roadmap</h3>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase">Plan: Live</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Info className="w-4 h-4 text-slate-300 cursor-help" />
-              <button className="text-xs font-bold text-emerald-600 hover:underline">Edit Plan</button>
-            </div>
-          </div>
-          <div className="space-y-8">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Nutrition Focus</p>
-              <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
-                <div className="w-1/3 bg-red-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-red-700">Deficit</span>
-                  <span className="text-[8px] font-bold text-red-400 uppercase">Wk 1-4</span>
-                </div>
-                <div className="w-1/3 bg-blue-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-blue-700">Maintenance</span>
-                  <span className="text-[8px] font-bold text-blue-400 uppercase">Wk 5-8</span>
-                </div>
-                <div className="w-1/3 bg-emerald-50 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-emerald-700">Surplus</span>
-                  <span className="text-[8px] font-bold text-emerald-400 uppercase">Wk 9-12</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Training Block</p>
-              <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
-                <div className="w-1/4 bg-purple-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-purple-700">Metabolic</span>
-                  <span className="text-[8px] font-bold text-purple-400 uppercase">Wk 1-3</span>
-                </div>
-                <div className="w-[41.6%] bg-indigo-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-indigo-700">Strength Base</span>
-                  <span className="text-[8px] font-bold text-indigo-400 uppercase">Wk 4-8</span>
-                </div>
-                <div className="w-[33.3%] bg-amber-50 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-amber-700">Hypertrophy</span>
-                  <span className="text-[8px] font-bold text-amber-400 uppercase">Wk 9-12</span>
-                </div>
-              </div>
-            </div>
-            <div className="relative pt-4">
-              <div className="h-0.5 bg-slate-100 w-full rounded-full"></div>
-              <div className="absolute top-2 left-[25%] flex flex-col items-center -ml-1.5">
-                <div className="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-sm"></div>
-                <span className="text-[8px] font-bold text-emerald-600 mt-1 uppercase">Current</span>
-              </div>
-              <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-3 uppercase tracking-wider">
-                <span>Oct</span>
-                <span>Nov</span>
-                <span>Dec</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-md font-bold text-slate-900">Next 7 Days</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Action center</p>
-            </div>
-            <button className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-colors">
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="space-y-3">
-            {[
-              { title: 'Weekly Check-in', time: 'Tomorrow, 9:00 AM', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { title: 'Progress Photos', time: 'Friday, EOD', icon: Camera, color: 'text-purple-600', bg: 'bg-purple-50' },
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full ${item.bg} ${item.color} flex items-center justify-center`}>
-                    <item.icon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">{item.title}</p>
-                    <p className="text-[10px] font-bold text-slate-400">{item.time}</p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <button className="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
-                  <button className="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors"><MessageSquare className="w-4 h-4" /></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-md font-bold text-slate-900">Risks & Deviations</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Auto-detected alerts</p>
-            </div>
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
-          </div>
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-amber-600 rotate-90" />
-                  <span className="text-xs font-bold text-slate-900">Weight Plateau</span>
-                </div>
-                <span className="text-[8px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded uppercase">High</span>
-              </div>
-              <p className="text-[10px] font-medium text-slate-600 mb-4">No change in 7-day moving average.</p>
-              <button className="w-full py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 hover:bg-slate-50 flex items-center justify-between px-3">
-                Adjust Calories
-                <Utensils className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="p-4 rounded-xl bg-amber-50 border border-amber-100">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Moon className="w-4 h-4 text-amber-600" />
-                  <span className="text-xs font-bold text-slate-900">Sleep Down</span>
-                </div>
-                <span className="text-[8px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded uppercase">Med</span>
-              </div>
-              <p className="text-[10px] font-medium text-slate-600 mb-4">Avg 5.5h last 3 nights.</p>
-              <button className="w-full py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 hover:bg-slate-50 flex items-center justify-between px-3">
-                {t('send_checkin_message')}
-                <MessageSquare className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
+      <Target className="w-12 h-12 mx-auto mb-4 opacity-20" />
+      <p className="text-lg font-medium text-slate-600 dark:text-slate-300">{t('no_planning_data_title')}</p>
+      <p className="text-sm mt-2 max-w-sm mx-auto">{t('no_planning_data_desc')}</p>
     </div>
   );
 
@@ -1349,7 +1173,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           { label: 'STRESS', value: stats?.mindset?.stress || '--', status: stats?.mindset?.stress > 7 ? 'High' : 'Normal', icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
           { label: 'MOTIVATION', value: stats?.mindset?.motivation || '--', status: stats?.mindset?.motivation > 7 ? 'High' : 'Low', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
           { label: 'ENERGY', value: stats?.mindset?.energy || '--', status: stats?.mindset?.energy > 7 ? 'High' : 'Low', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
-          { label: 'SLEEP', value: stats?.mindset?.sleep || '7.2h', status: 'Avg', icon: Moon, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'mood' },
+          { label: 'SLEEP', value: stats?.mindset?.sleep || '--', status: 'Avg', icon: Moon, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'sleep' },
           { label: 'BURNOUT RISK', value: stats?.mindset?.stress > 8 ? 'High' : 'Low', status: '', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'stress' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
@@ -1366,7 +1190,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <div className="h-16 w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={stats?.mindset?.history || []}>
-                  <Line type="monotone" dataKey={stat.dataKey} stroke={stat.color.replace('text-', '').replace('-500', '')} strokeWidth={2} dot={false} connectNulls />
+                  <Line type="monotone" dataKey={stat.dataKey} stroke={({ 'text-blue-500': '#3b82f6', 'text-red-500': '#ef4444', 'text-purple-500': '#a855f7', 'text-amber-500': '#f59e0b', 'text-emerald-500': '#10b981' } as Record<string, string>)[stat.color] || '#10b981'} strokeWidth={2} dot={false} connectNulls />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -1513,7 +1337,14 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('access_expiration_date')}</label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm text-slate-600 focus:ring-emerald-500 focus:border-emerald-500 outline-none" type="date" defaultValue="2024-12-31" />
+              <input
+                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm text-slate-600 focus:ring-emerald-500 focus:border-emerald-500 outline-none disabled:opacity-50"
+                type="date"
+                value={accessExpiration}
+                disabled={savingExpiration}
+                onChange={(e) => setAccessExpiration(e.target.value)}
+                onBlur={(e) => handleSaveExpiration(e.target.value)}
+              />
             </div>
           </div>
           <div className="mt-auto pt-6 border-t border-slate-100">
@@ -1573,7 +1404,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     const displayAge = onboardingAnswers.edad || onboardingAnswers.age || client.age || '--';
     const displayLocation = onboardingAnswers.localizacion || onboardingAnswers.location || client.location || t('unknown');
     const displayPlan = client.planFamilyLabel || client.plan || t('no_plan');
-    const joinDate = client.created_at ? new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2023';
+    const joinDate = client.created_at ? new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
 
     return (
     <>
@@ -1594,8 +1425,14 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               <div className="text-center sm:text-left">
                 <div className="flex items-center justify-center sm:justify-start gap-3 mb-1">
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{client.name}</h1>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50">
-                    {t('active')}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                    client.status === 'Archived'
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                      : client.status === 'Pending'
+                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'
+                      : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'
+                  }`}>
+                    {client.status === 'Archived' ? t('archived') : client.status === 'Pending' ? t('pending') : t('active')}
                   </span>
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium uppercase tracking-tight text-[10px] font-black">
@@ -1677,6 +1514,13 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
               </button>
             ))}
           </div>
+
+          {statsError && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 p-4 rounded-xl mb-6 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span className="text-sm font-medium">{statsError}</span>
+            </div>
+          )}
 
           {activeTab === 'Information' && renderInformation()}
           {activeTab === 'Nutrition' && renderNutrition()}

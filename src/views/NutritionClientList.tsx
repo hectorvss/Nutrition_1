@@ -18,7 +18,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
   const { t } = useLanguage();
   const { clients: globalClients } = useClient();
 
-  const clients = globalClients.map((client, idx) => {
+  const clients = globalClients.map((client) => {
     const hasPlan = client.nutritionPlanAssigned;
     const goalRaw = client.goal || 'Not Set';
     const goalLabel = goalRaw === 'Weight Loss' ? t('weight_loss_goal') :
@@ -26,21 +26,22 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                      goalRaw === 'Maintenance' ? t('maintenance_goal') :
                      goalRaw === 'Keto Diet' ? t('keto_diet_goal') :
                      goalRaw;
-    
+
     return {
       id: client.id,
       name: client.name,
       avatar: client.avatar,
       initials: client.name.substring(0, 2).toUpperCase(),
       goal: goalLabel,
-      target: hasPlan ? (goalRaw === 'Weight Loss' ? '-0.5kg/week' : '+0.2kg/week') : t('pending_setup'),
-      macros: hasPlan ? { p: 40, c: 35, f: 25 } : null,
-      macroValues: hasPlan ? { p: '150g', c: '130g', f: '40g' } : null,
-      adherence: hasPlan ? Math.floor(Math.random() * 30 + 70) : null,
-      streak: hasPlan ? t('high_streak') : null,
+      goalRaw,
+      // Real plan-derived data is not yet wired up; show honest empty states.
+      target: hasPlan ? null : t('pending_setup'),
+      macros: null,
+      macroValues: null,
+      adherence: null,
+      streak: null,
       status: hasPlan ? t('active_plan_status') : t('new_client_status'),
       statusType: hasPlan ? 'normal' : 'warning',
-      online: idx === 0 || idx === 2,
       nutritionPlanAssigned: hasPlan,
     };
   });
@@ -98,9 +99,6 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                         {client.initials}
                       </div>
                     )}
-                    {client.online && (
-                      <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-3 h-3 rounded-full border-2 border-white shadow-sm"></div>
-                    )}
                   </div>
                   <div>
                     <h3 className="font-bold text-base text-slate-900 group-hover:text-emerald-600 transition-colors">{client.name}</h3>
@@ -115,16 +113,16 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                 <div className="col-span-3">
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${
-                      client.goal === 'Weight Loss' ? 'bg-blue-50 text-blue-700' :
-                      client.goal === 'Muscle Gain' ? 'bg-purple-50 text-purple-700' :
-                      client.goal === 'Maintenance' ? 'bg-emerald-50 text-emerald-700' :
-                      client.goal === 'Keto Diet' ? 'bg-orange-50 text-orange-700' :
+                      client.goalRaw === 'Weight Loss' ? 'bg-blue-50 text-blue-700' :
+                      client.goalRaw === 'Muscle Gain' ? 'bg-purple-50 text-purple-700' :
+                      client.goalRaw === 'Maintenance' ? 'bg-emerald-50 text-emerald-700' :
+                      client.goalRaw === 'Keto Diet' ? 'bg-orange-50 text-orange-700' :
                       'bg-slate-100 text-slate-600'
                     }`}>
                       {client.goal}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-1">{client.target}</p>
+                  <p className="text-[11px] text-slate-400 mt-1">{client.target || '—'}</p>
                 </div>
 
                 {/* Macros */}

@@ -57,7 +57,7 @@ export default function Automations() {
   const startEdit = (automation: Automation) => {
     setWizard({
       triggerId: automation.trigger_id,
-      triggerName: automation.name,
+      triggerName: automation.trigger || automation.trigger_id,
       message: automation.message,
       automationName: automation.name,
       deliveryRules: {

@@ -18,7 +18,8 @@ import {
   ChevronRight,
   FileText,
   Dumbbell,
-  Zap
+  Zap,
+  RotateCcw
 } from 'lucide-react';
 
 export interface DeprecatedTask {
@@ -50,7 +51,7 @@ import { useLanguage } from '../context/LanguageContext';
 
 export default function Tasks({ onNavigate }: TasksProps) {
   const { t } = useLanguage();
-  const { tasks, completedTasks, markTaskAsDone } = useTask();
+  const { tasks, completedTasks, markTaskAsDone, markTaskAsPending } = useTask();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
 
@@ -107,7 +108,17 @@ export default function Tasks({ onNavigate }: TasksProps) {
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                  <button 
+                  <div className="relative flex-1 sm:flex-none">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={t('search')}
+                      className="w-full sm:w-64 pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-700 placeholder:text-slate-400 transition-all"
+                    />
+                  </div>
+                  <button
                     onClick={() => onNavigate('task-intelligence')}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
                   >
@@ -119,12 +130,11 @@ export default function Tasks({ onNavigate }: TasksProps) {
             </div>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               {[
                 { label: t('overdue_label'), value: `${overdueCount} ${t('tasks_unit')}`, icon: AlertTriangle, color: 'text-red-500 bg-red-50' },
                 { label: t('due_today_label'), value: `${todayCount} ${t('tasks_unit')}`, icon: Calendar, color: 'text-emerald-500 bg-emerald-50' },
                 { label: t('completed_label'), value: `${completedTasks.length} ${t('done_unit')}`, icon: CheckCircle2, color: 'text-purple-500 bg-purple-50' },
-                { label: t('inbox_label'), value: t('new_messages_unit', { count: 12 }), icon: Mail, color: 'text-blue-500 bg-blue-50' },
               ].map((stat, idx) => (
                 <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -188,12 +198,28 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                 opacity: { duration: 0.2 }
                               }}
                               onClick={() => {
-                                if (task.type === 'WEEKLY CHECK-IN' || task.type === 'OVERDUE CHECK-IN') {
-                                  onNavigate('check-ins', { clientId: task.clientId || task.id });
-                                } else if (task.type === 'PLAN UPDATE' || task.type === 'MISSING PLAN') {
-                                  onNavigate('planning', { clientId: task.clientId || task.id });
-                                } else if (task.type === 'AUTOMATIC ALERT') {
-                                  onNavigate('planning', { clientId: task.clientId || task.id });
+                                // Direct-message tasks open the conversation with that client.
+                                if (task.type === 'DIRECT MESSAGE') {
+                                  if (task.clientId) onNavigate('messages', { clientId: task.clientId });
+                                  else onNavigate('messages');
+                                  return;
+                                }
+                                const isClientView =
+                                  task.type === 'WEEKLY CHECK-IN' || task.type === 'OVERDUE CHECK-IN' ||
+                                  task.type === 'PLAN UPDATE' || task.type === 'MISSING PLAN' ||
+                                  task.type === 'AUTOMATIC ALERT';
+                                if (isClientView) {
+                                  // Only navigate to a client-scoped view when we actually
+                                  // have a clientId; the task id is not a client id.
+                                  if (!task.clientId) {
+                                    onNavigate('create-task', { taskId: task.id });
+                                    return;
+                                  }
+                                  const target =
+                                    (task.type === 'WEEKLY CHECK-IN' || task.type === 'OVERDUE CHECK-IN')
+                                      ? 'check-ins'
+                                      : 'planning';
+                                  onNavigate(target, { clientId: task.clientId });
                                 } else {
                                   onNavigate('create-task', { taskId: task.id });
                                 }
@@ -282,11 +308,24 @@ export default function Tasks({ onNavigate }: TasksProps) {
                         </div>
                         <h3 className="text-base sm:text-lg font-bold text-slate-400 mb-1 truncate line-through">{task.title}</h3>
                         <p className="text-xs sm:text-sm text-slate-300 mb-4 line-clamp-2">{task.desc}</p>
-                        <div className="flex items-center gap-2">
-                          {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full opacity-50" referrerPolicy="no-referrer" />}
-                          <span className="text-[11px] sm:text-xs font-bold text-slate-400 truncate">{task.client}</span>
-                          <span className="text-[11px] sm:text-xs text-slate-300 shrink-0">•</span>
-                          <span className="text-[11px] sm:text-xs text-slate-300 truncate">{task.program}</span>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full opacity-50" referrerPolicy="no-referrer" />}
+                            <span className="text-[11px] sm:text-xs font-bold text-slate-400 truncate">{task.client}</span>
+                            <span className="text-[11px] sm:text-xs text-slate-300 shrink-0">•</span>
+                            <span className="text-[11px] sm:text-xs text-slate-300 truncate">{task.program}</span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markTaskAsPending(task.id);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg text-[11px] sm:text-xs font-bold shadow-sm hover:bg-slate-50 hover:text-slate-700 transition-all shrink-0"
+                            title={t('mark_as_pending')}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>{t('mark_as_pending')}</span>
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -26,23 +26,30 @@ export default function ClientCheckIns() {
     }
   };
 
-  const loadActiveTemplate = async () => {
-    try {
-      const data = await fetchWithAuth('/check-ins/client/active-template');
-      if (data) {
-        setActiveTemplate({
-          ...data,
-          templateSchema: data.template_schema || data.templateSchema || []
-        });
-      }
-    } catch (err) {
-      console.error('Error loading active template:', err);
-    }
-  };
-
   useEffect(() => {
-    loadCheckIns();
-    loadActiveTemplate();
+    let mounted = true;
+    const load = async () => {
+      try {
+        const [data, template] = await Promise.all([
+          fetchWithAuth('/check-ins/client/check-ins'),
+          fetchWithAuth('/check-ins/client/active-template')
+        ]);
+        if (!mounted) return;
+        setCheckIns(data || []);
+        if (template) {
+          setActiveTemplate({
+            ...template,
+            templateSchema: template.template_schema || template.templateSchema || []
+          });
+        }
+      } catch (err) {
+        console.error('Error loading check-ins data:', err);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
   }, []);
 
   if (isLoading) {
@@ -158,7 +165,7 @@ export default function ClientCheckIns() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{checkIns.length > 0 ? new Date(checkIns[0].date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : '—'}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">{checkIns.length > 0 && (checkIns[0].date || checkIns[0].created_at) ? new Date(checkIns[0].date || checkIns[0].created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : '—'}</p>
                   <p className="text-xs text-slate-400">{t('date')}</p>
                 </div>
               </div>
@@ -176,7 +183,7 @@ export default function ClientCheckIns() {
                       let count = 0;
                       for (let i = 0; i < 7; i++) {
                         const d = new Date(); d.setDate(d.getDate() - i);
-                        if (checkIns.some(c => c.date.split('T')[0] === d.toISOString().split('T')[0])) count++;
+                        if (checkIns.some(c => (c.date || c.created_at || '').split('T')[0] === d.toISOString().split('T')[0])) count++;
                       }
                       return checkIns.length > 0 ? Math.round((count / 7) * 100) + '%' : '—';
                     })()}
@@ -209,7 +216,7 @@ export default function ClientCheckIns() {
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900 dark:text-white text-lg">
-                          {t('checkin')}: {new Date(ci.date).toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' })}
+                          {t('checkin')}: {(ci.date || ci.created_at) ? new Date(ci.date || ci.created_at).toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' }) : '—'}
                         </h3>
                         <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                           <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(ci.created_at || ci.date).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true })}</span>

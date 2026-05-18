@@ -16,6 +16,7 @@ export default function Training() {
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [initialPlanData, setInitialPlanData] = useState<any>(null);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   const handleNavigate = (view: TrainingView, clientId?: string | any) => {
     if (clientId) {
@@ -78,6 +79,7 @@ export default function Training() {
             onBack={() => setCurrentView('client-list')}
             onAssign={async (pid, dataJson) => {
               try {
+                setAssignError(null);
                 await fetchWithAuth(`/manager/clients/${selectedClient.id}/training-program`, {
                   method: 'POST',
                   body: JSON.stringify({
@@ -88,8 +90,9 @@ export default function Training() {
                 setSelectedClient({ ...selectedClient, trainingPlanAssigned: true });
                 setInitialPlanData(null);
                 setCurrentView('weekly-view');
-              } catch (error) {
+              } catch (error: any) {
                 console.error('Error assigning program:', error);
+                setAssignError(error?.message || 'Error assigning program');
               }
             }}
             onCreateScratch={() => setCurrentView('workout-editor')}
@@ -132,6 +135,15 @@ export default function Training() {
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
+      {assignError && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl shadow-lg">
+          <span className="material-symbols-outlined text-[20px]">error</span>
+          <span className="text-sm font-medium">{assignError}</span>
+          <button onClick={() => setAssignError(null)} className="text-red-400 hover:text-red-600 font-bold">
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentView}

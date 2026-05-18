@@ -32,6 +32,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   const [planData, setPlanData] = useState<any>(initialPlanData || null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
   const [dragOverDayId, setDragOverDayId] = useState<string | null>(null);
@@ -47,12 +48,14 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       if (!client?.id) return;
       try {
         setIsLoading(true);
+        setLoadError(null);
         const data = await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`);
         if (data && data.data_json) {
           setPlanData(data);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching nutrition plan:', error);
+        setLoadError(error?.message || t('error_loading_data'));
       } finally {
         setIsLoading(false);
       }
@@ -185,6 +188,9 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       return { h, p: true };
     });
 
+    // Use a real tag from the plan if present; otherwise just label it an active day.
+    const realTag: string | undefined = dayData.tag;
+
     return {
       id: day.id,
       name: day.name,
@@ -193,8 +199,8 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       carbs: cPct,
       fats: fPct,
       weekViewLabel: t('meals_count', { count: meals.length }),
-      tag: dayIdx % 3 === 0 ? t('training_day') : t('rest_day_label'),
-      tagColor: dayIdx % 3 === 0 ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-blue-50 text-blue-600 border-blue-100',
+      tag: realTag || t('active_plan'),
+      tagColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
       bars
     };
   });
@@ -231,7 +237,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">flag</span>
-                Goal: {client?.goal || 'Fat Loss'}
+                {t('goal')}: {client?.goal || 'Not Set'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
               <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
@@ -241,13 +247,15 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
             </div>
           </div>
           
-          <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
-            <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              {t('week')} 1 / 12
+          {(planData?.data_json?.currentWeek && planData?.data_json?.totalWeeks) && (
+            <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
+              <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                {t('week')} {planData.data_json.currentWeek} / {planData.data_json.totalWeeks}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -304,7 +312,12 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
               <p className="text-sm font-medium">{t('loading_distribution')}</p>
             </div>
-          ) : processedDays.map((day, dayIdx) => (
+          ) : loadError ? (
+            <div className="py-20 flex flex-col items-center justify-center text-rose-500 gap-3">
+              <span className="material-symbols-outlined text-4xl">error</span>
+              <p className="text-sm font-medium">{loadError}</p>
+            </div>
+          ) : processedDays.map((day) => (
             <div 
               key={day.id}
               className={`relative transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.01] -translate-y-1' : ''}`}

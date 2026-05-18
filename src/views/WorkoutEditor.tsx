@@ -78,6 +78,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   const [fullPlanData, setFullPlanData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Load existing program on mount
   React.useEffect(() => {
@@ -106,6 +107,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
 
       if (!clientId) return;
       setIsLoading(true);
+      setLoadError(null);
       try {
         const data = await fetchWithAuth(`/manager/clients/${clientId}/training-program`);
         if (data && data.data_json) {
@@ -126,34 +128,13 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
           } else {
             setBlocks([]);
           }
-        } else if (!isBlank) {
-          // If no data found and not blank, use defaults
-          setBlocks([
-            {
-              id: 1, name: 'Mobility & Warm-up', subtitle: 'Warm-up Protocol', icon: 'arrow_warm_up', iconBg: 'bg-orange-50 text-orange-600',
-              exercises: [
-                { id: '1', exerciseId: 'e1', name: 'Shoulder Circles', type: 'Bodyweight', weight: '-', sets: '2', reps: '30s', rir: '-', rest: '0s' },
-                { id: '2', exerciseId: 'e2', name: "World's Greatest Stretch", type: 'Bodyweight', weight: '-', sets: '1', reps: '5/side', rir: '-', rest: '0s' }
-              ]
-            },
-            {
-              id: 2, name: 'Strength Block', subtitle: 'Heavy Load', icon: 'fitness_center', iconBg: 'bg-blue-50 text-blue-600',
-              exercises: [
-                { id: '3', exerciseId: 'e3', name: 'Back Squats', type: 'Barbell', weight: '60 kg', sets: '3', reps: '5', rir: '2', rest: '180s' },
-                { id: '4', exerciseId: 'e4', name: 'Bench Press', type: 'Barbell', weight: '75% 1RM', sets: '3', reps: '5', rir: '1', rest: '120s' }
-              ]
-            },
-            {
-              id: 3, name: 'Cool Down & Stretching', subtitle: 'Static Holds', icon: 'self_improvement', iconBg: 'bg-teal-50 text-teal-600',
-              exercises: [
-                { id: '5', exerciseId: 'e5', name: 'Pigeon Stretch', type: 'Stretch', weight: '-', sets: '2m', reps: 'Each', rir: '-', rest: '0s' },
-                { id: '6', exerciseId: 'e6', name: "Child's Pose", type: 'Stretch', weight: '-', sets: '1', reps: '60s', rir: '-', rest: '0s' }
-              ]
-            }
-          ]);
+        } else {
+          // No plan found: start with an empty editor, never inject mock exercises.
+          setBlocks([]);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading training program:', err);
+        setLoadError(err?.message || t('error_loading_data'));
       } finally {
         setIsLoading(false);
       }
@@ -178,13 +159,10 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
         } else {
           // Create new workout for this day
           workoutId = `w_${Date.now()}`;
-          const dayNameMap: Record<string, string> = {
-            monday: 'Lunes', tuesday: 'Martes', wednesday: 'Miércoles',
-            thursday: 'Jueves', friday: 'Viernes', saturday: 'Sábado', sunday: 'Domingo'
-          };
+          const dayName = t(dayId);
           workouts.push({
             id: workoutId,
-            name: `Entrenamiento ${dayNameMap[dayId] || dayId}`,
+            name: `${t('training')} ${dayName}`,
             blocks
           });
           newDataJson.weeklySchedule[dayId] = workoutId;
@@ -307,8 +285,8 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
       ...prev,
       {
         id: Date.now(),
-        name: 'New Training Block',
-        subtitle: 'Custom Block',
+        name: t('new_training_block'),
+        subtitle: t('custom_block_sub'),
         icon: icons[idx % icons.length],
         iconBg: colors[idx % colors.length],
         exercises: []
@@ -391,6 +369,12 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
         <div className="w-full flex flex-col lg:flex-row gap-8">
           {/* Left Column: Workout Blocks */}
           <div className="flex-1 flex flex-col gap-6 pr-2 pb-20">
+            {loadError && (
+              <div className="bg-red-50 border border-red-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center gap-3">
+                <span className="material-symbols-outlined text-4xl text-red-400">error</span>
+                <p className="text-sm font-bold text-red-600">{loadError}</p>
+              </div>
+            )}
             {blocks.map((block) => {
               const isDropTarget = dragOverBlockId === block.id;
 

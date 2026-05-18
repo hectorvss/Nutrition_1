@@ -35,6 +35,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
   const [coachNotes, setCoachNotes] = useState('');
   const [nextWeekFocus, setNextWeekFocus] = useState('');
   const [publishingState, setPublishingState] = useState<'idle' | 'publishing' | 'marking_reviewed'>('idle');
+  const [sendViaEmail, setSendViaEmail] = useState(false);
 
   useEffect(() => {
     const loadCheckIn = async () => {
@@ -56,7 +57,7 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
       }
     };
     loadCheckIn();
-  }, [clientId, checkInId]);
+  }, [clientId, checkInId, isClient]);
 
   const handlePublish = async () => {
     if (!coachNotes.trim()) return;
@@ -75,7 +76,8 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
           receiver_id: clientId,
           content: coachNotes,
           attachment_type: 'check_in',
-          attachment_url: checkInId
+          attachment_url: checkInId,
+          send_email: sendViaEmail
         })
       });
 
@@ -397,9 +399,6 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
               </div>
               {t('coach_assessment')}
             </h2>
-            <button className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors shadow-sm bg-white dark:bg-slate-900 ring-1 ring-slate-950/5">
-              {t('load_template')}
-            </button>
           </div>
           
           <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -448,15 +447,17 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                 <div className="flex items-center justify-between px-1">
                    <label className="flex items-center gap-3 cursor-pointer group">
                      <div className="relative flex items-center">
-                        <input type="checkbox" className="peer sr-only" />
+                        <input
+                          type="checkbox"
+                          className="peer sr-only"
+                          checked={sendViaEmail}
+                          onChange={(e) => setSendViaEmail(e.target.checked)}
+                        />
                         <div className="w-5 h-5 border-2 border-slate-200 dark:border-slate-700 rounded-lg group-hover:border-slate-300 transition-all"></div>
                         <Check className="absolute w-3.5 h-3.5 text-emerald-500 opacity-0 peer-checked:opacity-100 left-0.5 transition-opacity" />
                      </div>
                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">{t('send_via_email')}</span>
                    </label>
-                   <button className="text-[12px] font-bold text-red-500 hover:text-red-600 transition-colors">
-                     {t('clarification_needed')}
-                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

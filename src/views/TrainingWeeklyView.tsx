@@ -6,7 +6,6 @@ import { useLanguage } from '../context/LanguageContext';
 interface DayTraining {
   id: string;
   name: string;
-  nameEn: string;
   workoutName: string;
   intensity: string;
   intensityColor: string;
@@ -18,15 +17,7 @@ interface DayTraining {
   isRestDay: boolean;
 }
 
-const DAYS_CONFIG = [
-  { id: 'monday', name: 'Lunes', nameEn: 'Monday' },
-  { id: 'tuesday', name: 'Martes', nameEn: 'Tuesday' },
-  { id: 'wednesday', name: 'Miércoles', nameEn: 'Wednesday' },
-  { id: 'thursday', name: 'Jueves', nameEn: 'Thursday' },
-  { id: 'friday', name: 'Viernes', nameEn: 'Friday' },
-  { id: 'saturday', name: 'Sábado', nameEn: 'Saturday' },
-  { id: 'sunday', name: 'Domingo', nameEn: 'Sunday' },
-];
+const DAY_IDS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 
 interface TrainingWeeklyViewProps {
   client: any;
@@ -43,6 +34,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
   const [dragOverDayId, setDragOverDayId] = useState<string | null>(null);
 
@@ -62,12 +54,14 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       if (!client?.id) return;
       try {
         setIsLoading(true);
+        setLoadError(null);
         const data = await fetchWithAuth(`/manager/clients/${client.id}/training-program`);
         if (data && data.data_json) {
           setPlanData(data);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching training program:', error);
+        setLoadError(error?.message || t('error_loading_data'));
       } finally {
         setIsLoading(false);
       }
@@ -166,7 +160,8 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
     setDragOverDayId(null);
   };
   
-  const processedDays: DayTraining[] = DAYS_CONFIG.map((day) => {
+  const processedDays: DayTraining[] = DAY_IDS.map((dayId) => {
+    const day = { id: dayId, name: t(dayId) };
     if (planData && planData.data_json) {
       const dataJson = planData.data_json;
       const weeklySchedule = dataJson.weeklySchedule || {};
@@ -189,8 +184,8 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
           intensityColor: isStrength ? 'bg-orange-500' : isMobility ? 'bg-blue-400' : 'bg-emerald-500',
           duration: planData.duration ? `${planData.duration} ${t('min_label')}` : `60 ${t('min_label')}`,
           volume: `${totalSetsNum} ${t('sets_label')}`,
-          tag: isMobility ? 'Movilidad' : 'Entrenamiento',
-          tagColor: isMobility 
+          tag: isMobility ? t('mobility_label') : t('training_day'),
+          tagColor: isMobility
             ? 'bg-blue-50 text-blue-600 border-blue-100' 
             : 'bg-emerald-50 text-emerald-600 border-emerald-100',
           exercises: allExercises,
@@ -266,13 +261,15 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                 {isSaving ? t('saving_btn') : t('save_changes')}
               </button>
             )}
-            <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 mt-2 sm:mt-0">
-              <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
-              <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Week 1 / 12
+            {(planData?.data_json?.currentWeek && planData?.data_json?.totalWeeks) && (
+              <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 mt-2 sm:mt-0">
+                <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
+                <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  {t('week')} {planData.data_json.currentWeek} / {planData.data_json.totalWeeks}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -330,6 +327,11 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
               <p className="text-sm font-medium">{t('loading_weekly_distribution')}</p>
             </div>
+          ) : loadError ? (
+            <div className="py-20 flex flex-col items-center justify-center text-rose-500 gap-3">
+              <span className="material-symbols-outlined text-4xl">error</span>
+              <p className="text-sm font-medium">{loadError}</p>
+            </div>
           ) : processedDays.map((day) => (
             <div 
               key={day.id} 
@@ -354,7 +356,6 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                 <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 pb-4 sm:pb-0 sm:pr-4">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-bold text-lg text-slate-900 leading-tight">{day.name}</h3>
-                    <span className="text-xs text-slate-400 font-medium">/ {day.nameEn}</span>
                   </div>
                   <div className={`flex items-center gap-1.5 font-bold text-xl ${day.isRestDay ? 'text-slate-300' : 'text-emerald-600'}`}>
                     <span className="material-symbols-outlined text-lg">{day.isRestDay ? 'bedtime' : 'fitness_center'}</span>

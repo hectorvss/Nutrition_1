@@ -1,24 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string) => void }> = ({ onNavigate }) => {
   const { t } = useLanguage();
   const { clients: globalClients } = useClient();
-  
-  const clients = globalClients.map((client, idx) => {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'in_progress' | 'no_plan'>('all');
+
+  const allClients = globalClients.map((client) => {
     const hasPlan = client.trainingPlanAssigned;
     return {
       id: client.id,
       name: client.name,
       avatar: client.avatar,
       status: hasPlan ? t('in_progress_status') : t('no_plan_status'),
-      frequency: `4${t('per_week')}`,
-      phase: `${t('phase_label')} 1: ${t('training_phase_hypertrophy')}`, // Placeholder until backend sends real phase
-      lastSession: hasPlan ? t('yesterday') : '-',
-      online: idx === 0 || idx === 1,
       trainingPlanAssigned: hasPlan
     };
+  });
+
+  const inProgressCount = allClients.filter(c => c.trainingPlanAssigned).length;
+  const noPlanCount = allClients.filter(c => !c.trainingPlanAssigned).length;
+
+  const clients = allClients.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' ? true :
+      statusFilter === 'in_progress' ? c.trainingPlanAssigned :
+      !c.trainingPlanAssigned;
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -41,25 +51,47 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center pt-2">
               <div className="relative w-full sm:w-96">
                 <span className="material-symbols-outlined text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 text-[20px]">search</span>
-                <input 
-                  className="w-full pl-12 pr-4 py-3 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all font-medium" 
-                  placeholder={t('search_client_placeholder')} 
+                <input
+                  className="w-full pl-12 pr-4 py-3 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all font-medium"
+                  placeholder={t('search_client_placeholder')}
                   type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full sm:w-auto">
-                <button className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/10 text-sm font-bold transition-all whitespace-nowrap">{t('all_clients')}</button>
-                <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap ${
+                    statusFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {t('all_clients')}
+                  <span className="ml-2 bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-lg font-black">{allClients.length}</span>
+                </button>
+                <button
+                  onClick={() => setStatusFilter('in_progress')}
+                  className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+                    statusFilter === 'in_progress'
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
                   {t('in_progress_status')}
-                  <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-black">8</span>
+                  <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-black">{inProgressCount}</span>
                 </button>
-                <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  {t('needs_update_label')}
-                  <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-lg font-black">4</span>
-                </button>
-                <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  {t('drafts_label')}
-                  <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-lg font-black">2</span>
+                <button
+                  onClick={() => setStatusFilter('no_plan')}
+                  className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+                    statusFilter === 'no_plan'
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {t('no_plan_status')}
+                  <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-lg font-black">{noPlanCount}</span>
                 </button>
               </div>
             </div>
@@ -79,47 +111,27 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                   <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
                     <div className="flex gap-5 items-center flex-1 w-full">
                       <div className="relative flex-shrink-0">
-                        <div 
-                          className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm border border-slate-100" 
+                        <div
+                          className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm border border-slate-100"
                           style={{ backgroundImage: `url("${client.avatar}")` }}
                         ></div>
-                        {client.online && (
-                          <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
-                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3 mb-1.5">
                           <h3 className="font-bold text-lg text-slate-900">{client.name}</h3>
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
                             client.status === t('in_progress_status') ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            client.status === t('needs_update_status') ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                            client.status === t('draft_status_label') ? 'bg-slate-100 text-slate-500 border-slate-200' :
                             client.status === t('no_plan_status') ? 'bg-amber-50 text-amber-600 border-amber-100' :
                             'bg-red-50 text-red-600 border-red-100'
                           }`}>
                             {client.status}
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500 font-medium">
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[16px] text-slate-400">sync</span>
-                            <span>{client.frequency}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[16px] text-slate-400">bolt</span>
-                            <span>{t('focus_label')}: {client.phase.split(': ')[1] || client.phase}</span>
-                          </div>
-                        </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end pl-[5.25rem] md:pl-0">
-                      <div className="flex flex-col items-end text-right">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('last_session_label')}</span>
-                        <span className="text-xs font-bold text-slate-600">{client.lastSession}</span>
-                      </div>
-                      
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!client.trainingPlanAssigned) {

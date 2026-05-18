@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ClientView } from '../../ClientApp';
 import { fetchWithAuth } from '../../api';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface ClientSidebarProps {
   currentView: ClientView;
@@ -14,6 +15,7 @@ interface ClientSidebarProps {
 
 export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose, showOnboardingReminder, onOpenOnboarding }: ClientSidebarProps) {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const navItems = [
     { id: 'dashboard', label: t('today'), icon: 'calendar_today' },
@@ -26,18 +28,21 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
   ];
 
   useEffect(() => {
+    // Don't poll if there's no authenticated user
+    if (!user) return;
+    let mounted = true;
     const fetchUnread = async () => {
       try {
         const data = await fetchWithAuth(`/messages/unread-count?t=${new Date().getTime()}`);
-        setUnreadCount(data?.unreadCount || 0);
+        if (mounted) setUnreadCount(data?.unreadCount || 0);
       } catch (e) {
         // ignore silently
       }
     };
     fetchUnread();
     const interval = setInterval(fetchUnread, 15000);
-    return () => clearInterval(interval);
-  }, []);
+    return () => { mounted = false; clearInterval(interval); };
+  }, [user]);
 
   return (
     <>
@@ -96,7 +101,18 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
           })}
         </nav>
 
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
+          {/* Onboarding reminder: shown when the client still has a pending onboarding */}
+          {showOnboardingReminder && onOpenOnboarding && (
+            <button
+              onClick={onOpenOnboarding}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors bg-[#17cf54]/10 text-[#17cf54] font-semibold hover:bg-[#17cf54]/20"
+            >
+              <span className="material-symbols-outlined">assignment</span>
+              <span className="flex-1 text-left">{t('complete_setup')}</span>
+              <span className="w-2 h-2 rounded-full bg-[#17cf54] animate-pulse"></span>
+            </button>
+          )}
           <button
             onClick={() => onNavigate('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${

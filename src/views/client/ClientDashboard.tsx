@@ -17,6 +17,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     const fetchData = async () => {
       try {
         const [plansData, checkInsData, profileData] = await Promise.all([
@@ -24,22 +25,25 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
           fetchWithAuth('/check-ins/client/check-ins'),
           fetchWithAuth('/client/profile')
         ]);
-        
+
+        if (!mounted) return;
         setPlans(plansData);
         setCheckIns(checkInsData || []);
-        
+
         if (profileData?.manager_id) {
           const conversation = await fetchWithAuth(`/messages/${profileData.manager_id}`);
+          if (!mounted) return;
           const coachMessages = conversation.filter((m: any) => m.sender_id === profileData.manager_id);
           setMessages(coachMessages.reverse());
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
     fetchData();
+    return () => { mounted = false; };
   }, []);
 
   if (isLoading) {
@@ -92,10 +96,11 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const sorted = [...todayMeals].sort((a: any, b: any) => {
-      const parse = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+      const parse = (t: string) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + m; };
       return parse(a.time) - parse(b.time);
     });
     return sorted.find((meal: any) => {
+      if (!meal.time) return false;
       const [h, m] = meal.time.split(':').map(Number);
       return h * 60 + m > currentMinutes;
     }) || sorted[0];
@@ -139,7 +144,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{t(greetingKey)}, {user?.email.split('@')[0]}</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{t(greetingKey)}, {user?.email?.split('@')[0]}</h1>
           <p className="text-slate-500 dark:text-slate-400 capitalize">{formattedDate}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -238,7 +243,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('meals_today')}</h2>
                 {todayMeals.length > 0 && (
-                  <p className="text-sm text-slate-500 mt-0.5">{todayMeals.length} {t('view_meals')} • {Math.round(todayMeals.reduce((a: number, m: any) => a + (m.items || []).reduce((s: number, i: any) => s + (i.calories * (i.quantity || 1)), 0), 0))} {t('kcal_total')}</p>
+                  <p className="text-sm text-slate-500 mt-0.5">{todayMeals.length} {t('view_meals')} • {Math.round(todayMeals.reduce((a: number, m: any) => a + (m.items || []).reduce((s: number, i: any) => s + ((i.calories || 0) * (i.quantity || 1)), 0), 0))} {t('kcal_total')}</p>
                 )}
               </div>
               {todayMeals.length > 0 && (
@@ -251,8 +256,8 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {todayMeals.map((meal: any, idx: number) => {
                   const isNext = meal.name === nextMeal?.name && meal.time === nextMeal?.time;
-                  const mealKcal = Math.round((meal.items || []).reduce((a: number, i: any) => a + (i.calories * (i.quantity || 1)), 0));
-                  const mealProtein = Math.round((meal.items || []).reduce((a: number, i: any) => a + (i.protein * (i.quantity || 1)), 0));
+                  const mealKcal = Math.round((meal.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0));
+                  const mealProtein = Math.round((meal.items || []).reduce((a: number, i: any) => a + ((i.protein || 0) * (i.quantity || 1)), 0));
                   return (
                     <div key={idx} className={`p-4 ${isNext ? 'bg-[#17cf54]/5' : ''}`}>
                       <div className="flex items-center justify-between mb-2">

@@ -46,12 +46,16 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
+  // In edit mode the form can't be populated until the task is found in `events`
+  // (which may load asynchronously). Track this so we can show a loader.
+  const [isEditLoaded, setIsEditLoaded] = useState(!editId);
 
   // Load task for editing
   useEffect(() => {
     if (editId) {
       const task = events.find(e => e.id === editId);
       if (task) {
+        setIsEditLoaded(true);
         setTitle(task.title || '');
         setDescription(task.desc || '');
         // Map backend types back to frontend categories
@@ -234,6 +238,12 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
             </div>
           </header>
 
+          {!isEditLoaded ? (
+            <div className="p-20 flex flex-col items-center justify-center gap-4">
+              <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm font-medium text-slate-500">{t('loading')}</p>
+            </div>
+          ) : (
           <div className="p-4 md:p-10 bg-slate-50/50">
             <form className="w-full space-y-8" onSubmit={handleSave}>
               {/* General Details */}
@@ -349,15 +359,10 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                           checked={category === cat.id}
                           onChange={() => {
                             setCategory(cat.id as any);
-                            // Auto-generate links if client is selected
-                            if (selectedClientId && cat.id !== 'Call' && cat.id !== 'Admin') {
-                              const base = window.location.origin;
-                              const path = cat.id.toLowerCase();
-                              setLinkUrl(`${base}/${path}/${selectedClientId}`);
-                            } else {
-                              // Clear for Call or Admin to allow clean manual input
-                              setLinkUrl('');
-                            }
+                            // Only the Call category uses a manually-entered meeting URL.
+                            // Other categories don't have a real link target, so clear it
+                            // instead of fabricating an invalid route.
+                            setLinkUrl('');
                           }}
                         />
                         <div className={`flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 bg-slate-50 transition-all h-24 ${cat.activeClass}`}>
@@ -503,6 +508,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
 
             </form>
           </div>
+          )}
         </div>
       </div>
     </div>

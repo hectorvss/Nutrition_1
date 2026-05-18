@@ -265,7 +265,7 @@ router.get('/clients', async (req: any, res) => {
         created_at,
         status,
         profiles!user_id (full_name, avatar_url),
-        clients_profiles!user_id (weight, goal, notes),
+        clients_profiles!user_id (weight, goal, notes, gender, age),
         check_ins (id, date, reviewed_at, data_json),
         client_checkin_submissions!client_id (id, submitted_at, reviewed_at, answers_json),
         workout_logs!client_id (logged_at),
@@ -284,11 +284,28 @@ router.get('/clients', async (req: any, res) => {
     // Fetch related plans separately since direct joins may lack foreign key mapping in cache
     const clientIds = clients.map(c => c.id);
 
-    const [roadmapsRes, nutritionRes, trainingRes] = await Promise.all([
+    const [roadmapsRes, nutritionRes, trainingRes, unreadMsgRes] = await Promise.all([
       supabaseAdmin.from('roadmaps').select('*').in('client_id', clientIds),
-      supabaseAdmin.from('nutrition_plans').select('id, client_id').in('client_id', clientIds),
-      supabaseAdmin.from('training_programs').select('id, client_id').in('client_id', clientIds)
+      supabaseAdmin.from('nutrition_plans').select('id, client_id, name, created_at').in('client_id', clientIds),
+      supabaseAdmin.from('training_programs').select('id, client_id').in('client_id', clientIds),
+      // Unread messages received by this manager from each client (powers the "unread DM" task rule)
+      supabaseAdmin.from('messages')
+        .select('sender_id, created_at')
+        .eq('receiver_id', req.user.id)
+        .in('sender_id', clientIds)
+        .eq('deleted_by_receiver', false)
+        .or('is_read.eq.false,is_read.is.null')
+        .order('created_at', { ascending: true })
     ]);
+
+    // Aggregate unread messages per client: count + timestamp of the oldest unread message
+    const unreadBySender: Record<string, { count: number; oldest: string }> = {};
+    (unreadMsgRes.data || []).forEach((m: any) => {
+      if (!unreadBySender[m.sender_id]) {
+        unreadBySender[m.sender_id] = { count: 0, oldest: m.created_at };
+      }
+      unreadBySender[m.sender_id].count++;
+    });
 
     // Attach related data to client objects
     (clients as any[]).forEach(c => {
@@ -333,17 +350,37 @@ router.get('/clients', async (req: any, res) => {
         try { dj = JSON.parse(dj); } catch (e) { dj = {}; }
       }
 
-      const planName = 'Shared Programs';
-
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       
       const lastCheckInDate = latestCheckIn ? new Date(latestCheckIn.date) : null;
       const lastWorkoutDate = latestWorkout ? new Date(latestWorkout.logged_at) : null;
       
-      const isAtRisk = (lastCheckInDate && lastCheckInDate < weekAgo) || 
+      // New clients get a 7-day grace period before they can be flagged At Risk.
+      const createdRecently = c.created_at && new Date(c.created_at) > weekAgo;
+      const isAtRisk = !createdRecently && (
+                       (lastCheckInDate && lastCheckInDate < weekAgo) ||
                        (lastWorkoutDate && lastWorkoutDate < weekAgo) ||
-                       (!lastCheckInDate && !lastWorkoutDate); // Never checked in or logged
+                       (!lastCheckInDate && !lastWorkoutDate)); // Never checked in or logged
+
+      // Last activity = most recent of any check-in or workout log (proxy for "app activity")
+      const activityDates = [lastCheckInDate, lastWorkoutDate].filter((d): d is Date => !!d);
+      const lastActivityAt = activityDates.length > 0
+        ? new Date(Math.max(...activityDates.map(d => d.getTime()))).toISOString()
+        : null;
+
+      const unread = unreadBySender[c.id];
+
+      const progressValue = mapAdherence(dj.nutritionAdherence, dj);
+      const progressLabel = !latestCheckIn ? 'No Data'
+        : progressValue >= 80 ? 'On Track'
+        : progressValue >= 50 ? 'Stalled'
+        : 'Regression';
+
+      const latestNutritionPlan = (c.nutrition_plans || [])
+        .slice()
+        .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())[0];
+      const planName = latestNutritionPlan?.name || 'No Plan';
 
       return {
         id: c.id,
@@ -351,6 +388,7 @@ router.get('/clients', async (req: any, res) => {
         created_at: c.created_at,
         status: c.status || 'Active',
         isAtRisk,
+        riskStatus: isAtRisk ? 'overdue' : null,
         name: c.profiles?.full_name || c.profiles?.[0]?.full_name || c.email.split('@')[0],
         avatar: c.profiles?.avatar_url || c.profiles?.[0]?.avatar_url || null,
         gender: c.clients_profiles?.gender || c.clients_profiles?.[0]?.gender || 'Unknown',
@@ -363,7 +401,13 @@ router.get('/clients', async (req: any, res) => {
         planningAssigned: !!(c.roadmaps && c.roadmaps.length > 0),
         roadmaps: c.roadmaps || [],
         plan_name: planName,
-        progress: mapAdherence(dj.nutritionAdherence, dj),
+        progress: progressValue,
+        progressLabel,
+        lastActivityAt,
+        lastWorkoutAt: lastWorkoutDate ? lastWorkoutDate.toISOString() : null,
+        planUpdatedAt: latestNutritionPlan?.created_at || null,
+        unreadMessages: unread?.count || 0,
+        oldestUnreadAt: unread?.oldest || null,
         lastCheckInDate: latestCheckIn?.date || null,
         lastCheckIn: latestCheckIn ? (() => {
           const diff = now.getTime() - lastCheckInDate!.getTime();
@@ -373,13 +417,20 @@ router.get('/clients', async (req: any, res) => {
           return `${days} days ago`;
         })() : 'Never',
         nextAppointment: (() => {
+          const taskDate = (t: any) => {
+            if (!t.date) return null;
+            const d = new Date(`${t.date}T${t.time || '00:00'}`);
+            return isNaN(d.getTime()) ? null : d;
+          };
           const futureTasks = (c.tasks || [])
-            .filter((t: any) => new Date(`${t.date}T${t.time}`) >= now)
-            .sort((a: any, b: any) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
-          
+            .map((t: any) => ({ t, when: taskDate(t) }))
+            .filter((x: any) => x.when && x.when >= now)
+            .sort((a: any, b: any) => a.when.getTime() - b.when.getTime());
+
           if (futureTasks.length === 0) return 'Not Scheduled';
-          const next = futureTasks[0];
-          return `${new Date(next.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} ${next.time.substring(0, 5)}`;
+          const next = futureTasks[0].t;
+          const time = (next.time || '00:00').substring(0, 5);
+          return `${new Date(next.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })} ${time}`;
         })(),
         isUnreviewed: latestCheckIn ? !(latestCheckIn.reviewed_at || latestCheckIn.data_json?.reviewed_at) : false,
         check_ins: allCheckIns
@@ -424,9 +475,54 @@ router.patch('/clients/:id/status', async (req: any, res) => {
   }
 });
 
+// Update general client fields (e.g. access expiration date)
+router.patch('/clients/:id', async (req: any, res) => {
+  const { id } = req.params;
+  const managerId = req.user.id;
+  const { access_expiration } = req.body;
+
+  try {
+    if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid client id format' });
+    }
+
+    // Verify the client belongs to this manager.
+    const { data: clientOwner } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT')
+      .maybeSingle();
+    if (!clientOwner) return res.status(404).json({ error: 'Client not found or access denied' });
+
+    if (access_expiration !== undefined) {
+      // Merge into clients_profiles.metadata (jsonb) without clobbering other keys.
+      const { data: existing } = await supabaseAdmin
+        .from('clients_profiles')
+        .select('metadata')
+        .eq('user_id', id)
+        .maybeSingle();
+      const metadata = { ...((existing?.metadata as any) || {}), access_expiration: access_expiration || null };
+      if (existing) {
+        const { error: upErr } = await supabaseAdmin.from('clients_profiles').update({ metadata }).eq('user_id', id);
+        if (upErr) throw upErr;
+      } else {
+        const { error: insErr } = await supabaseAdmin.from('clients_profiles').insert({ user_id: id, metadata });
+        if (insErr) throw insErr;
+      }
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error updating client:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 // Create a new client under this manager
 router.post('/clients', async (req: any, res) => {
-  const { email, password, profile } = req.body;
+  const { email, password, profile, name } = req.body;
   const managerId = req.user.id;
 
   try {
@@ -449,14 +545,31 @@ router.post('/clients', async (req: any, res) => {
     // We just need to link it to the manager.
     await supabaseAdmin.from('users').update({ manager_id: managerId }).eq('id', clientId);
 
-    // 3. Create the client profile
+    // 3. Store the display name / phone in profiles (the source GET /clients reads).
+    const fullName = (name || profile?.full_name || '').trim();
+    const phone = (profile?.phone || '').trim();
+    if (fullName || phone) {
+      const profilePayload: any = { user_id: clientId };
+      if (fullName) profilePayload.full_name = fullName;
+      if (phone) profilePayload.phone_number = phone;
+      const { error: nameError } = await supabaseAdmin
+        .from('profiles')
+        .upsert(profilePayload, { onConflict: 'user_id' });
+      if (nameError) {
+        console.error('Error saving client name/phone:', nameError);
+      }
+    }
+
+    // 4. Create the client profile
     if (profile) {
       const { error: profileError } = await supabaseAdmin.from('clients_profiles').insert({
         user_id: clientId,
         weight: profile.weight,
         goal: profile.goal,
         notes: profile.notes,
-        height: profile.height
+        height: profile.height,
+        gender: profile.gender,
+        age: profile.age
       });
 
       if (profileError) {
@@ -464,7 +577,7 @@ router.post('/clients', async (req: any, res) => {
       }
     }
 
-    // 4. Trigger "Welcome Message" automation
+    // 5. Trigger "Welcome Message" automation
     processTrigger(managerId, 'new-client', { clientId }).catch(err => {
       console.error('Trigger error (new-client):', err);
     });
@@ -2544,13 +2657,15 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       stress: latestData.stress_level || '--',
       mood: latestData.mood_score || '--',
       motivation: latestData.motivation_level || '--',
+      sleep: latestData.sleep_hours || latestData.sleep || latestData.sleep_quality || '--',
       history: (checkIns || []).map(ci => ({
         date: ci.date,
         energy: (ci.data_json as any)?.energy_level || null,
         stress: (ci.data_json as any)?.stress_level || null,
         mood: (ci.data_json as any)?.mood_score || null,
-        motivation: (ci.data_json as any)?.motivation_level || null
-      })).filter(h => h.energy || h.stress || h.mood || h.motivation)
+        motivation: (ci.data_json as any)?.motivation_level || null,
+        sleep: (ci.data_json as any)?.sleep_hours || (ci.data_json as any)?.sleep || null
+      })).filter(h => h.energy || h.stress || h.mood || h.motivation || h.sleep)
     };
 
     // 11. Documents (Filtered real data from messages and submissions)
@@ -2627,7 +2742,20 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       goal: (client.clients_profiles as any)?.goal || 'TBD',
       bodyFat: weightHistory.length > 0 ? weightHistory[weightHistory.length - 1].bodyFat : '--',
       activeDays: (checkIns?.length || 0) + (recentDynamicCheckIns?.length || 0),
-      adherenceRate: checkIns ? Math.round(((checkIns?.length || 0) / 30) * 100) : 0, 
+      accessExpiration: (client.clients_profiles as any)?.metadata?.access_expiration || null,
+      adherenceRate: (() => {
+        // % of the last 30 days that have at least one check-in (legacy + dynamic).
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const days = new Set<string>();
+        (checkIns || []).forEach(ci => {
+          if (ci.date && new Date(ci.date) >= thirtyDaysAgo) days.add(String(ci.date).split('T')[0]);
+        });
+        (dynamicCheckIns || []).forEach(ci => {
+          if (ci.submitted_at && new Date(ci.submitted_at) >= thirtyDaysAgo) days.add(String(ci.submitted_at).split('T')[0]);
+        });
+        return Math.min(Math.round((days.size / 30) * 100), 100);
+      })(),
       macros: {
         protein: avgProteinAdherence,
         carbs: avgCarbsAdherence,

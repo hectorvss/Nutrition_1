@@ -22,6 +22,8 @@ export default function AddClient({ onBack }: AddClientProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [sendEmail, setSendEmail] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { reloadClients } = useClient();
@@ -59,9 +61,10 @@ export default function AddClient({ onBack }: AddClientProps) {
          body: JSON.stringify({
             email,
             password: tempPassword,
+            send_email: sendEmail,
             profile: {
-               // Sticking first mapping in notes for simplicity, full app could expand schema
-               notes: `Name: ${firstName} ${lastName}`,
+               full_name: `${firstName} ${lastName}`.trim(),
+               phone: phone || undefined,
             }
          })
        });
@@ -148,8 +151,10 @@ export default function AddClient({ onBack }: AddClientProps) {
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('phone_number')}</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                      <input 
-                        type="tel" 
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                         placeholder="+1 (555) 000-0000"
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 placeholder:text-slate-400 transition-all"
                       />
@@ -168,9 +173,15 @@ export default function AddClient({ onBack }: AddClientProps) {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-bold text-slate-500">{t('send_email_toggle')}</span>
-                  <div className="w-12 h-6 bg-emerald-500 rounded-full relative cursor-pointer shadow-inner">
-                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div>
-                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={sendEmail}
+                    onClick={() => setSendEmail(v => !v)}
+                    className={`w-12 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors ${sendEmail ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${sendEmail ? 'right-1' : 'left-1'}`}></div>
+                  </button>
                 </div>
               </div>
               <div className="p-8">

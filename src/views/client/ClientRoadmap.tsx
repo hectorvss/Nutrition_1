@@ -143,31 +143,37 @@ export default function ClientRoadmap() {
   const [selectedTrainingId, setSelectedTrainingId] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    const loadRoadmap = async () => {
+      try {
+        const data = await fetchWithAuth('/client/roadmap');
+        const rawJson = data?.data_json;
+        const roadmapData: RoadmapData = rawJson && rawJson.nutrition
+          ? { ...rawJson, nutrition: rawJson.nutrition || [], training: rawJson.training || [] }
+          : getInitialData(t);
+        if (!mounted) return;
+        setRoadmap(roadmapData);
+
+        const currentWeek = roadmapData.currentWeek || 1;
+        const currentNut = (roadmapData.nutrition || []).find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
+        const currentTra = (roadmapData.training || []).find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
+
+        setSelectedNutritionId(currentNut?.id || (roadmapData.nutrition?.[0]?.id || null));
+        setSelectedTrainingId(currentTra?.id || (roadmapData.training?.[0]?.id || null));
+      } catch (error) {
+        console.error('Error loading roadmap:', error);
+        if (!mounted) return;
+        const initial = getInitialData(t);
+        setRoadmap(initial);
+        setSelectedNutritionId(initial.nutrition[0].id);
+        setSelectedTrainingId(initial.training[0].id);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
     loadRoadmap();
+    return () => { mounted = false; };
   }, []);
-
-  const loadRoadmap = async () => {
-    try {
-      const data = await fetchWithAuth('/client/roadmap');
-      const roadmapData = data.data_json && data.data_json.nutrition ? data.data_json : getInitialData(t);
-      setRoadmap(roadmapData);
-      
-      const currentWeek = roadmapData.currentWeek || 1;
-      const currentNut = roadmapData.nutrition.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-      const currentTra = roadmapData.training.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-
-      setSelectedNutritionId(currentNut?.id || (roadmapData.nutrition[0]?.id || null));
-      setSelectedTrainingId(currentTra?.id || (roadmapData.training[0]?.id || null));
-    } catch (error) {
-      console.error('Error loading roadmap:', error);
-      const initial = getInitialData(t);
-      setRoadmap(initial);
-      setSelectedNutritionId(initial.nutrition[0].id);
-      setSelectedTrainingId(initial.training[0].id);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const activeNutrition = useMemo(() => roadmap?.nutrition.find(b => b.id === selectedNutritionId), [roadmap, selectedNutritionId]);
   const activeTraining = useMemo(() => roadmap?.training.find(b => b.id === selectedTrainingId), [roadmap, selectedTrainingId]);
@@ -229,7 +235,7 @@ export default function ClientRoadmap() {
                 {/* Today Indicator Line */}
                 <div 
                   className="absolute top-0 bottom-0 w-px bg-[#17cf54] z-20 pointer-events-none"
-                  style={{ left: `${((roadmap.currentWeek - 0.5) / 12) * 100}%` }}
+                  style={{ left: `${((roadmap.currentWeek - 0.5) / (roadmap.totalWeeks || 12)) * 100}%` }}
                 >
                   <div className="absolute top-0 -translate-x-1/2 bg-[#17cf54] text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg shadow-emerald-500/20 tracking-tighter uppercase leading-none">{t('today')}</div>
                 </div>

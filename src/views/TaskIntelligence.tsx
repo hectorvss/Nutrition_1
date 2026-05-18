@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ArrowLeft, 
   History, 
@@ -21,6 +21,8 @@ interface TaskIntelligenceProps {
 export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) {
   const { t } = useLanguage();
   const { rules, updateRule, saveRules } = useTask();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleToggle = (id: string, current: boolean) => {
     updateRule(id, { enabled: !current });
@@ -31,9 +33,18 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
     updateRule(id, { priority: newPriority as any, priorityColor });
   };
 
-  const handleSave = () => {
-    saveRules();
-    onNavigate('tasks'); // go back after save
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await saveRules();
+      onNavigate('tasks'); // go back only after a successful save
+    } catch (error) {
+      console.error('Failed to save task rules:', error);
+      setSaveError(t('task_save_error'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Group rules by category for the UI
@@ -67,15 +78,22 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
               <History className="w-4 h-4" />
               {t('history', { defaultValue: 'History' })}
             </button>
-            <button 
+            <button
               onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all"
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
-              {t('save_changes')}
+              {isSaving ? t('saving') : t('save_changes')}
             </button>
           </div>
         </header>
+
+        {saveError && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-medium">
+            {saveError}
+          </div>
+        )}
 
         {/* Main Card */}
         <div className="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-sm">

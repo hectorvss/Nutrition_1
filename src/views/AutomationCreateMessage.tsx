@@ -261,8 +261,8 @@ export default function AutomationCreateMessage({
                             onChange={e => updateRule('frequency', e.target.value as any)}
                             className="w-24 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
                           >
-                            <option>{t('every')}</option>
-                            <option>{t('once')}</option>
+                            <option value="Every">{t('every')}</option>
+                            <option value="Once">{t('once')}</option>
                           </select>
                           {rules.frequency === 'Every' && (
                             <div className="flex-1 flex items-center gap-2">
@@ -278,9 +278,9 @@ export default function AutomationCreateMessage({
                                 onChange={e => updateRule('frequencyUnit', e.target.value as any)}
                                 className="flex-1 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
                               >
-                                <option>{t('days')}</option>
-                                <option>{t('weeks')}</option>
-                                <option>{t('months')}</option>
+                                <option value="Days">{t('days')}</option>
+                                <option value="Weeks">{t('weeks')}</option>
+                                <option value="Months">{t('months')}</option>
                               </select>
                             </div>
                           )}
@@ -447,11 +447,13 @@ export default function AutomationCreateMessage({
                             {rules.activation_conditions.filter(c => c.enabled).map((c, i) => (
                               <div key={i} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800 group">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase w-20">If {c.type}:</span>
-                                <select 
+                                <select
                                   value={c.operator}
                                   onChange={e => {
-                                    const next = [...rules.activation_conditions];
-                                    next[rules.activation_conditions.indexOf(c)].operator = e.target.value as any;
+                                    const idx = rules.activation_conditions.indexOf(c);
+                                    const next = rules.activation_conditions.map((cond, ci) =>
+                                      ci === idx ? { ...cond, operator: e.target.value as any } : cond
+                                    );
                                     updateRule('activation_conditions', next);
                                   }}
                                   className="bg-transparent border-none p-0 text-xs font-bold text-emerald-600 dark:text-emerald-400 focus:ring-0 cursor-pointer"
@@ -464,8 +466,10 @@ export default function AutomationCreateMessage({
                                   type="text"
                                   value={c.value}
                                   onChange={e => {
-                                    const next = [...rules.activation_conditions];
-                                    next[rules.activation_conditions.indexOf(c)].value = e.target.value;
+                                    const idx = rules.activation_conditions.indexOf(c);
+                                    const next = rules.activation_conditions.map((cond, ci) =>
+                                      ci === idx ? { ...cond, value: e.target.value } : cond
+                                    );
                                     updateRule('activation_conditions', next);
                                   }}
                                   className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs w-20 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"

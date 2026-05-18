@@ -118,10 +118,10 @@ export default function Messages({ onNavigate }: MessagesProps) {
       } else {
         setActiveRecipient(null);
       }
-    } else if (user?.role === 'CLIENT' && !activeRecipient) {
-      // Clients talk to "Dr. Smith" (the manager)
+    } else if (user?.role === 'CLIENT' && !activeRecipient && user.manager_id) {
+      // Clients talk to their assigned manager.
       setActiveRecipient({
-         id: user.manager_id || 'manager-id',
+         id: user.manager_id,
          name: t('your_coach'),
          avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBQBDNBbswmATmE2r_-gt71uWBTuLrTIArtoJ_1v6CiveQXTQptNKbdaU5h_h-SgJwHbQZFGVB1Py0fDRW8xkKDvoXSyp70zlpmG83dZIjSXtb5K8O77LJaIESdN9x5QRK6RGatr2Tz1KoCrHph7TKWXjLNp87eTjNRBcl0dKKj3uBaW0N8c0AsMibzJV5J50zY6wsT5RTjnNypeYfZoBBeNCcHvuZDiL7BiKBln8U2X_do4wuk8OpIHTA-QANHy3Y3QtDUDgjv4MG7',
          role: 'MANAGER'
@@ -133,7 +133,7 @@ export default function Messages({ onNavigate }: MessagesProps) {
     if (!activeRecipient) return;
     try {
       const data = await fetchWithAuth(`/messages/${activeRecipient.id}`);
-      setMessages(data);
+      setMessages(data || []);
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -306,6 +306,9 @@ export default function Messages({ onNavigate }: MessagesProps) {
         const ALLOWED_AUDIO_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'];
         if (!ALLOWED_AUDIO_TYPES.includes(audioBlob.type)) {
           console.error('Invalid audio MIME type:', audioBlob.type);
+          setErrorStatus(t('send_message_error'));
+          setIsSending(false);
+          setUploading(false);
           return;
         }
         setUploading(true);
@@ -830,14 +833,28 @@ export default function Messages({ onNavigate }: MessagesProps) {
 
       {/* Messages Scroll Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-        <div className="flex justify-center">
-          <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[11px] font-bold uppercase rounded-full tracking-wider">{t('today')}</span>
-        </div>
-
-        {messages.map((msg) => {
+        {messages.map((msg, idx) => {
           const isOwn = msg.sender_id === user?.id;
+          const msgDate = new Date(msg.created_at);
+          const prevDate = idx > 0 ? new Date(messages[idx - 1].created_at) : null;
+          const isNewDay = !prevDate || msgDate.toDateString() !== prevDate.toDateString();
+          const today = new Date();
+          const yesterday = new Date();
+          yesterday.setDate(today.getDate() - 1);
+          const dateLabel =
+            msgDate.toDateString() === today.toDateString()
+              ? t('today')
+              : msgDate.toDateString() === yesterday.toDateString()
+                ? t('yesterday')
+                : msgDate.toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' });
           return (
-            <div key={msg.id} className={`flex items-start space-x-3 ${isOwn ? 'justify-end' : 'max-w-2xl'}`}>
+            <React.Fragment key={msg.id}>
+            {isNewDay && (
+              <div className="flex justify-center">
+                <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[11px] font-bold uppercase rounded-full tracking-wider">{dateLabel}</span>
+              </div>
+            )}
+            <div className={`flex items-start space-x-3 ${isOwn ? 'justify-end' : 'max-w-2xl'}`}>
               {!isOwn && (
                 <img 
                   alt="Avatar" 
@@ -949,13 +966,14 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 </div>
               </div>
               {isOwn && (
-                <img 
-                  alt="Me" 
-                  className="w-8 h-8 rounded-full object-cover mt-1" 
-                  src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.email}&background=random`} 
+                <img
+                  alt="Me"
+                  className="w-8 h-8 rounded-full object-cover mt-1"
+                  src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.email}&background=random`}
                 />
               )}
             </div>
+            </React.Fragment>
           );
         })}
       </div>

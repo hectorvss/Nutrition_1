@@ -50,7 +50,7 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
       }
     };
     fetchData();
-  }, [clientId]);
+  }, [clientId, isClient]);
 
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);

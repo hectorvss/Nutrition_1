@@ -101,125 +101,21 @@ interface RoadmapData {
   trajectoryGoals?: TrajectoryGoals;
 }
 
-// --- INITIAL DATA FACTORY ---
-const getInitialData = (t: (key: string, vars?: Record<string, any>) => string): RoadmapData => ({
-  status: 'LIVE',
-  currentWeek: 4,
+// --- EMPTY SCAFFOLD FACTORY ---
+// A brand-new roadmap starts empty: no invented phases, KPIs or calories.
+// Arrays are always present (never undefined) so the editor never crashes.
+const getInitialData = (_t: (key: string, vars?: Record<string, any>) => string): RoadmapData => ({
+  status: 'Draft',
+  currentWeek: 1,
   totalWeeks: 12,
-  nutrition: [
-    { 
-      id: 'n1', title: t('maintenance'), startWeek: 1, endWeek: 4, type: 'nutrition', 
-      duration: 4, order: 1,
-      colorToken: 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
-      kcal: '2,450', macros: '35/35/30', freq: '4 Meals', water: '3.0 L',
-      rationale: t('planning_mock_rationale_baseline'),
-      stratData: {
-        summary: t('planning_mock_summary_maintenance'),
-        primaryObjective: t('planning_mock_obj_metabolic_stabilization'),
-        secondaryObjectives: [t('planning_mock_obj_gut_health'), t('planning_mock_obj_sleep_optimization')],
-        kpis: ['Weight Stability (+/- 0.5kg)', 'Energy Levels 8/10'],
-        successCriteria: [t('planning_mock_success_consistent_digestion'), t('planning_mock_success_recovery_improved')],
-        coachNotes: t('planning_mock_note_fat_sensitive'),
-        risksAndConstraints: [t('planning_mock_risk_weekend_travel')],
-        kcal: '2,450', macros: '35/35/30', freq: '4 Meals', water: '3.0 L'
-      }
-    },
-    { 
-      id: 'n2', title: t('roadmap_mock_deficit_500'), startWeek: 5, endWeek: 8, type: 'nutrition', 
-      duration: 4, order: 2,
-      colorToken: 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400',
-      kcal: '2,150', macros: '40/30/30', freq: '4 Meals', water: '3.5 L',
-      deficit: '-500',
-      rationale: t('planning_mock_rationale_aggressive_fat_loss'),
-      focusItems: [t('planning_mock_focus_timing_prepost'), t('planning_mock_focus_electrolytes')],
-      stratData: {
-        summary: t('planning_mock_summary_deficit'),
-        primaryObjective: t('planning_mock_obj_fat_loss_rate'),
-        secondaryObjectives: [t('planning_mock_obj_preserve_lean_mass'), t('planning_mock_obj_maintain_training_intensity')],
-        kpis: ['Waist Circumference', 'Bio-feedback scores'],
-        successCriteria: [t('planning_mock_success_visible_definition'), t('planning_mock_success_hunger_managed')],
-        coachNotes: t('planning_mock_note_increase_fiber_w7'),
-        risksAndConstraints: [t('planning_mock_risk_work_stress')],
-        kcal: '2,150', macros: '40/30/30', freq: '4 Meals', water: '3.5 L'
-      }
-    },
-    { 
-      id: 'n3', title: t('maintenance'), startWeek: 9, endWeek: 12, type: 'nutrition', 
-      duration: 4, order: 3,
-      colorToken: 'bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400',
-      kcal: '2,300', macros: '35/35/30', freq: '4 Meals', water: '3.2 L',
-      rationale: t('planning_mock_rationale_reverse_diet'),
-      stratData: {
-        summary: t('planning_mock_summary_reverse'),
-        primaryObjective: t('planning_mock_obj_metabolic_adaptation'),
-        secondaryObjectives: [t('planning_mock_obj_long_term_habits')],
-        kpis: ['Strength Maintenance'],
-        successCriteria: [t('planning_mock_success_progress_kept'), t('planning_mock_success_calories_increased')],
-        coachNotes: t('planning_mock_note_add_carbs'),
-        risksAndConstraints: [],
-        kcal: '2,300', macros: '35/35/30', freq: '4 Meals', water: '3.2 L'
-      }
-    },
-  ],
-  training: [
-    { 
-      id: 't1', title: t('roadmap_mock_hypertrophy_base_4x'), startWeek: 1, endWeek: 6, type: 'training', 
-      duration: 6, order: 1,
-      colorToken: 'bg-purple-100 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
-      focus: t('hypertrophy'), sessions: t('planning_mock_sessions_4'), deload: t('active'),
-      intensityTargets: ['RPE 7-9 (Technical)', 'Rest: 60-90s'],
-      stratData: {
-        summary: t('planning_mock_summary_foundation'),
-        primaryObjective: t('planning_mock_obj_hypertrophy_work_capacity'),
-        secondaryObjectives: [t('planning_mock_obj_squat_depth'), t('planning_mock_obj_core_stability')],
-        trainingVolume: 'Moderate (12-15 sets/muscle)',
-        trainingIntensity: 'RPE 7-8',
-        cardio: 'LISS 30min 2x/week',
-        kpis: ['Total Volume Load', 'Rest intervals'],
-        successCriteria: [t('planning_mock_success_form_consistency'), t('planning_mock_success_no_joint_pain')],
-        coachNotes: t('planning_mock_note_mind_muscle'),
-        risksAndConstraints: [t('planning_mock_risk_avoid_failure')],
-        trainingFocus: t('hypertrophy'), sessions: t('planning_mock_sessions_4'), deload: t('active'),
-        intensityTargets: ['RPE 7-9 (Technical)', 'Rest: 60-90s']
-      }
-    },
-    { 
-      id: 't2', title: t('roadmap_mock_strength_peak_3x'), startWeek: 7, endWeek: 12, type: 'training', 
-      duration: 6, order: 2,
-      colorToken: 'bg-rose-100 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400',
-      focus: t('strength'), sessions: t('planning_mock_sessions_3'), deload: t('passive'),
-      intensityTargets: ['RPE 8-10', 'Rest: 120-180s'],
-      stratData: {
-        summary: t('planning_mock_summary_strength_peak'),
-        primaryObjective: t('planning_mock_obj_absolute_strength'),
-        secondaryObjectives: [t('planning_mock_obj_neurological_adaptation')],
-        trainingVolume: 'Low (6-10 sets/muscle)',
-        trainingIntensity: 'RPE 9-10',
-        cardio: 'LISS 20min 1x/week',
-        kpis: ['1RM Projected', 'Bar Speed'],
-        successCriteria: [t('planning_mock_success_prs_achieved'), t('planning_mock_success_peak_recovered')],
-        coachNotes: t('planning_mock_note_sleep_recovery'),
-        risksAndConstraints: [t('planning_mock_risk_cns_fatigue')],
-        trainingFocus: t('strength'), sessions: t('planning_mock_sessions_3'), deload: t('passive'),
-        intensityTargets: ['RPE 8-10', 'Rest: 120-180s']
-      }
-    },
-  ],
-  goals: [
-    { id: 'g1', type: 'physical', label: t('physical'), desc: t('roadmap_mock_goal_desc_lose_fat_keep_muscle'), value: 60, currentLabel: '150 lbs', targetLabel: t('planning_mock_target_140_lbs') },
-    { id: 'g2', type: 'nutrition', label: t('nutrition'), desc: t('planning_mock_desc_adherence_macros'), value: 85, currentLabel: t('roadmap_mock_consistent'), targetLabel: t('planning_mock_target_90_plus') },
-    { id: 'g3', type: 'training', label: t('training'), desc: t('roadmap_mock_goal_desc_complete_hypertrophy'), value: 100, currentLabel: t('roadmap_mock_goal_current_sessions_16_16'), targetLabel: t('planning_mock_target_100') },
-    { id: 'g4', type: 'mindset', label: t('mindset'), desc: t('planning_mock_desc_sleep_stress'), value: 70, currentLabel: t('roadmap_mock_goal_current_sleep_6_5'), targetLabel: t('planning_mock_target_7_5h') },
-  ],
-  milestones: [
-    { id: 'm1', label: t('planning_mock_milestone_program_start'), week: 'Oct 01', status: 'done' },
-    { id: 'm2', label: t('planning_mock_milestone_phase2_review'), week: t('planning_mock_week_nov15_next'), status: 'next' },
-    { id: 'm3', label: t('planning_mock_milestone_begin_strength_peak'), week: 'Dec 15', status: 'future' },
-  ],
+  nutrition: [],
+  training: [],
+  goals: [],
+  milestones: [],
   assumptions: {
-    steps: '10,000 - 12,000',
-    sleep: t('roadmap_mock_sleep_minimum'),
-    constraints: t('planning_mock_constraints_protein_distribution')
+    steps: '',
+    sleep: '',
+    constraints: ''
   }
 });
 
@@ -341,6 +237,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [draftBlockValues, setDraftBlockValues] = useState<Partial<RoadmapBlock> | null>(null);
@@ -405,34 +302,39 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   };
 
   const loadRoadmap = async () => {
+    setLoadError(null);
     try {
       const data = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`);
-      
+
       // The backend returns a record with a 'data_json' column
       let remoteRoadmap = null;
       if (data && data.data_json) {
         remoteRoadmap = typeof data.data_json === 'string' ? JSON.parse(data.data_json) : data.data_json;
       }
 
-      // Use initialRoadmap (draft) if provided, otherwise remote data, otherwise default
+      // Use initialRoadmap (draft) if provided, otherwise remote data,
+      // otherwise an EMPTY scaffold for a brand-new roadmap (no mock data).
       const roadmapData = initialRoadmap || remoteRoadmap || getInitialData(t);
-      
+
       // Ensure we merge with structural defaults to prevent TypeErrors
-      const finalRoadmap = {
+      const finalRoadmap: RoadmapData = {
         ...getInitialData(t),
         ...roadmapData,
         // Preserve status from the record level if available
         status: data?.status || roadmapData.status || 'Draft'
       };
-      
+
       setRoadmap(finalRoadmap);
-      
-      // Default selection to current phase
-      const currentWeek = roadmapData.currentWeek || 4;
-      const currentNut = roadmapData.nutrition.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
-      setSelectedBlockId(currentNut?.id || roadmapData.nutrition[0]?.id || null);
-    } catch (error) {
-      setRoadmap(getInitialData(t));
+
+      // Default selection to current phase (when phases exist)
+      const currentWeek = finalRoadmap.currentWeek || 1;
+      const currentNut = finalRoadmap.nutrition.find(b => currentWeek >= b.startWeek && currentWeek <= b.endWeek);
+      setSelectedBlockId(currentNut?.id || finalRoadmap.nutrition[0]?.id || null);
+    } catch (error: any) {
+      // On failure, surface an error state instead of loading mock data.
+      console.error('Error loading roadmap:', error);
+      setLoadError(error?.message || t('error_loading_data'));
+      setRoadmap(null);
     } finally {
       setLoading(false);
     }
@@ -453,8 +355,8 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
       const payload = {
         ...getInitialData(t),
         ...roadmap,
-        // Status should be preserved or defaulted to LIVE if we are in Detail view
-        status: roadmap.status || 'LIVE',
+        // Preserve the roadmap's own status; default to Draft for new roadmaps.
+        status: roadmap.status || 'Draft',
         updated_at: new Date().toISOString(),
         // Ensure arrays are never stripped
         goals: roadmap.goals || [],
@@ -462,8 +364,6 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
         nutrition: roadmap.nutrition || [],
         training: roadmap.training || []
       };
-
-      console.log('DEBUG: Saving Roadmap Payload:', payload);
 
       const response = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
         method: 'POST',
@@ -626,7 +526,24 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
     });
   };
 
-  if (loading || !roadmap) return null;
+  if (loading) return null;
+
+  if (loadError) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-[#0f172a] gap-4 p-8">
+        <span className="material-symbols-outlined text-5xl text-rose-400">error</span>
+        <p className="text-sm font-medium text-rose-500">{loadError}</p>
+        <button
+          onClick={() => { setLoading(true); loadRoadmap(); }}
+          className="px-5 py-2.5 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 transition-colors"
+        >
+          {t('retry', { defaultValue: 'Retry' })}
+        </button>
+      </div>
+    );
+  }
+
+  if (!roadmap) return null;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-[#0f172a] font-sans selection:bg-emerald-100 selection:text-emerald-900">

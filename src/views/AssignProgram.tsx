@@ -22,17 +22,25 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
   };
   const [selectedProgramId, setSelectedProgramId] = useState<string>(trainingPrograms[0].id);
   const selectedProgram = trainingPrograms.find(p => p.id === selectedProgramId) || trainingPrograms[0];
+  const [frequency, setFrequency] = useState<number>(trainingPrograms[0].frequency);
+  const [focus, setFocus] = useState<string>(trainingPrograms[0].focus);
+
+  // When the selected program changes, sync the editable settings to its defaults.
+  React.useEffect(() => {
+    setFrequency(selectedProgram.frequency);
+    setFocus(selectedProgram.focus);
+  }, [selectedProgramId]);
 
   const handleAssign = async () => {
     // Get the template for the selected program
     const template = PROGRAM_TEMPLATES[selectedProgramId];
-    
+
     // Prepare the data_json structure
     const dataJson = {
       name: selectedProgram.name,
       level: selectedProgram.level,
-      focus: selectedProgram.focus,
-      frequency: selectedProgram.frequency,
+      focus: focus,
+      frequency: frequency,
       duration: selectedProgram.duration,
       schedule: selectedProgram.schedule,
       description: selectedProgram.description,
@@ -71,10 +79,14 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                   <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
                     <div className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-[16px] text-emerald-500">flag</span>
-                      {t('goal')}: {client.phase === 'Not Assigned' ? t('muscle_gain') : client.phase}
+                      {t('goal')}: {(client as any).goal || t('not_assigned')}
                     </div>
-                    <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
-                    <div className="text-slate-400">32 yrs</div>
+                    {(client as any).age && (
+                      <>
+                        <div className="w-1.5 h-1.5 bg-slate-200 rounded-full"></div>
+                        <div className="text-slate-400">{(client as any).age} {t('years_short')}</div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -232,11 +244,13 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('weekly_frequency')}</label>
                     <div className="grid grid-cols-4 gap-2">
                       {[2, 3, 4, 5].map(freq => (
-                        <button 
+                        <button
                           key={freq}
+                          type="button"
+                          onClick={() => setFrequency(freq)}
                           className={`py-3 rounded-xl border-2 text-sm font-bold transition-all ${
-                            selectedProgram.frequency === freq 
-                              ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                            frequency === freq
+                              ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                               : 'bg-white border-slate-100 text-slate-600 hover:border-emerald-200'
                           }`}
                         >
@@ -249,11 +263,15 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('primary_focus')}</label>
                     <div className="relative">
-                      <select className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3.5 pl-4 pr-10 text-sm font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 appearance-none outline-none transition-all">
-                        <option>{selectedProgram.focus}</option>
-                        <option>{t('training_phase_hypertrophy')}</option>
-                        <option>{t('training_focus_endurance')}</option>
-                        <option>{t('training_focus_mobility')}</option>
+                      <select
+                        value={focus}
+                        onChange={e => setFocus(e.target.value)}
+                        className="w-full rounded-2xl border-2 border-slate-100 bg-slate-50 py-3.5 pl-4 pr-10 text-sm font-bold text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 appearance-none outline-none transition-all"
+                      >
+                        <option value={selectedProgram.focus}>{selectedProgram.focus}</option>
+                        <option value={t('training_phase_hypertrophy')}>{t('training_phase_hypertrophy')}</option>
+                        <option value={t('training_focus_endurance')}>{t('training_focus_endurance')}</option>
+                        <option value={t('training_focus_mobility')}>{t('training_focus_mobility')}</option>
                       </select>
                       <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
                     </div>

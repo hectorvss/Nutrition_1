@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   ArrowRight, 
@@ -59,31 +59,50 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadActiveOnboarding();
-  }, []);
-
-  const loadActiveOnboarding = async () => {
-    try {
-      const data = await fetchWithAuth('/onboarding/client/active');
-      if (data && data.template) {
-        // Normalize schema
-        data.template.templateSchema = data.template.template_schema || data.template.templateSchema || [];
-        setActiveAssignment(data);
-      } else {
-        onComplete();
+    let mounted = true;
+    const loadActiveOnboarding = async () => {
+      try {
+        const data = await fetchWithAuth('/onboarding/client/active');
+        if (!mounted) return;
+        if (data && data.template) {
+          // Normalize schema
+          data.template.templateSchema = data.template.template_schema || data.template.templateSchema || [];
+          setActiveAssignment(data);
+        } else {
+          onComplete();
+        }
+      } catch (err) {
+        console.error('Failed to load onboarding:', err);
+        // onComplete(); // Don't close if error, maybe show retry
+      } finally {
+        if (mounted) setLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to load onboarding:', err);
-      // onComplete(); // Don't close if error, maybe show retry
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    loadActiveOnboarding();
+    return () => { mounted = false; };
+  }, []);
 
   const handleNext = () => {
     const templateSchema = activeAssignment?.template?.templateSchema || [];
+    const stepData = templateSchema[currentStepIndex];
+
+    // Basic validation for required fields in the current step
+    const hasMissingRequired = (stepData?.questions || []).some((q: any) => {
+      if (!q.required) return false;
+      const answer = answers[q.id];
+      return answer === undefined || answer === null || answer === '' ||
+        (Array.isArray(answer) && answer.length === 0);
+    });
+
+    if (hasMissingRequired) {
+      setValidationError(t('please_answer_required_before_continue'));
+      return;
+    }
+    setValidationError(null);
+
     if (currentStepIndex < templateSchema.length - 1) {
       setCurrentStepIndex(currentStepIndex + 1);
     } else {
@@ -93,6 +112,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
 
   const handleBack = () => {
     if (currentStepIndex > 0) {
+      setValidationError(null);
       setCurrentStepIndex(currentStepIndex - 1);
     }
   };
@@ -212,7 +232,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
                     <CheckInStepRenderer 
                       step={currentStep}
                       answers={answers}
-                      onUpdateAnswer={(key, val) => setAnswers(prev => ({ ...prev, [key]: val }))}
+                      onUpdateAnswer={(key, val) => { setAnswers(prev => ({ ...prev, [key]: val })); setValidationError(null); }}
                       onToggleArrayItem={(key, item) => {
                         const current = answers[key] || [];
                         const newVal = current.includes(item) 
@@ -226,6 +246,13 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
                 </div>
               </motion.div>
             </AnimatePresence>
+
+            {validationError && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl flex items-center gap-3 text-red-600 dark:text-red-400 text-sm font-bold">
+                <span className="material-symbols-outlined">error</span>
+                {validationError}
+              </div>
+            )}
 
             {/* Navigation (Check-in Parity) */}
             <div className="flex justify-end pt-4">

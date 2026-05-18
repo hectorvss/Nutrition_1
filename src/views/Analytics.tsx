@@ -42,19 +42,23 @@ export default function Analytics() {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('business');
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  const loadAnalytics = async () => {
+    try {
+      setIsLoading(true);
+      setLoadError(false);
+      const result = await fetchWithAuth('/manager/analytics');
+      setData(result);
+    } catch (error) {
+      console.error('Failed to load analytics:', error);
+      setLoadError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadAnalytics = async () => {
-      try {
-        setIsLoading(true);
-        const result = await fetchWithAuth('/manager/analytics');
-        setData(result);
-      } catch (error) {
-        console.error('Failed to load analytics:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadAnalytics();
   }, []);
 
@@ -64,6 +68,25 @@ export default function Analytics() {
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-slate-500 font-medium">{t('loading_analytics')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="p-10 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="w-6 h-6 text-red-500" />
+          </div>
+          <p className="text-slate-600 font-semibold">{t('error_loading_data')}</p>
+          <button
+            onClick={loadAnalytics}
+            className="px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition-colors"
+          >
+            {t('retry')}
+          </button>
         </div>
       </div>
     );
@@ -153,60 +176,48 @@ function BusinessAnalytics({ data }: any) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 pt-2">
-        <StatCard 
-          title={t('analytics_total_clients')} 
-          value={data?.totalClients || "0"} 
-          change="+12%" 
-          isPositive={true} 
-          icon={<Users className="w-6 h-6" />} 
-          iconBg="bg-blue-50" 
-          iconColor="text-blue-600" 
+        <StatCard
+          title={t('analytics_total_clients')}
+          value={data?.totalClients || "0"}
+          icon={<Users className="w-6 h-6" />}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
         />
-        <StatCard 
-          title={t('analytics_monthly_rev')} 
-          value={data?.revenue >= 1000 ? `$${(data.revenue / 1000).toFixed(1)}k` : `$${data?.revenue || '0'}`} 
-          change="+8.5%" 
-          isPositive={true} 
-          icon={<DollarSign className="w-6 h-6" />} 
-          iconBg="bg-emerald-50" 
-          iconColor="text-emerald-600" 
+        <StatCard
+          title={t('analytics_monthly_rev')}
+          value={data?.revenue >= 1000 ? `$${(data.revenue / 1000).toFixed(1)}k` : `$${data?.revenue || '0'}`}
+          icon={<DollarSign className="w-6 h-6" />}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
           showChart={true}
         />
-        <StatCard 
-          title={t('analytics_retention')} 
-          value={`${data?.retention || "0"}%`} 
-          change={`${data?.retention >= 90 ? '+0.0%' : '-1.2%'}`} 
-          isPositive={data?.retention >= 90} 
-          icon={<Heart className="w-6 h-6" />} 
-          iconBg="bg-purple-50" 
-          iconColor="text-purple-600" 
+        <StatCard
+          title={t('analytics_retention')}
+          value={`${data?.retention || "0"}%`}
+          icon={<Heart className="w-6 h-6" />}
+          iconBg="bg-purple-50"
+          iconColor="text-purple-600"
         />
-        <StatCard 
-          title={t('analytics_avg_ltv')} 
-          value={`$${data?.ltv || "0"}`} 
-          change="+5.4%" 
-          isPositive={true} 
-          icon={<Award className="w-6 h-6" />} 
-          iconBg="bg-amber-50" 
-          iconColor="text-amber-600" 
+        <StatCard
+          title={t('analytics_avg_ltv')}
+          value={`$${data?.ltv || "0"}`}
+          icon={<Award className="w-6 h-6" />}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-600"
         />
-        <StatCard 
-          title={t('analytics_churn_rate')} 
-          value={`${data?.churnRate || "0"}%`} 
-          change={data?.churnRate > 5 ? "+1.1%" : "-0.5%"} 
-          isPositive={data?.churnRate <= 5} 
-          icon={<UserMinus className="w-6 h-6" />} 
-          iconBg="bg-red-50" 
-          iconColor="text-red-600" 
+        <StatCard
+          title={t('analytics_churn_rate')}
+          value={`${data?.churnRate || "0"}%`}
+          icon={<UserMinus className="w-6 h-6" />}
+          iconBg="bg-red-50"
+          iconColor="text-red-600"
         />
-        <StatCard 
-          title={t('analytics_new_leads')} 
-          value={data?.newLeads || "0"} 
-          change="+15%" 
-          isPositive={true} 
-          icon={<UserPlus className="w-6 h-6" />} 
-          iconBg="bg-teal-50" 
-          iconColor="text-teal-600" 
+        <StatCard
+          title={t('analytics_new_leads')}
+          value={data?.newLeads || "0"}
+          icon={<UserPlus className="w-6 h-6" />}
+          iconBg="bg-teal-50"
+          iconColor="text-teal-600"
         />
       </div>
 
@@ -292,8 +303,8 @@ function BusinessAnalytics({ data }: any) {
           </div>
           <div className="flex flex-col gap-6 flex-1 justify-center">
             <ProgressBar label={t('workout_adherence')} value={`${data?.training?.avgCompletion || 0}%`} percentage={data?.training?.avgCompletion || 0} color="bg-emerald-500" />
-            <ProgressBar label={t('nutrition_consistency')} value={`${data?.nutrition?.avgHydration || 0}%`} percentage={data?.nutrition?.avgHydration || 0} color="bg-blue-500" />
-            <ProgressBar label={t('checkin_reliability')} value={`${data?.retention || 0}%`} percentage={data?.retention || 0} color="bg-purple-500" />
+            <ProgressBar label={t('nutrition_consistency')} value={`${data?.nutrition?.consistency || 0}%`} percentage={data?.nutrition?.consistency || 0} color="bg-blue-500" />
+            <ProgressBar label={t('checkin_reliability')} value={`${data?.checkInReliability || 0}%`} percentage={data?.checkInReliability || 0} color="bg-purple-500" />
           </div>
           <p className="mt-6 text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
             {t('compliance_note')}
@@ -353,24 +364,20 @@ function NutritionAnalytics({ data }: any) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-        <StatCard 
-          title={t('avg_fruit_veg')} 
-          value={data?.avgFruitVeg || "0"} 
+        <StatCard
+          title={t('avg_fruit_veg')}
+          value={data?.avgFruitVeg || "0"}
           unit={t('serv_day')}
-          change="+0.8" 
-          isPositive={true} 
-          icon={<Utensils className="w-6 h-6" />} 
-          iconBg="bg-green-50" 
-          iconColor="text-green-600" 
+          icon={<Utensils className="w-6 h-6" />}
+          iconBg="bg-green-50"
+          iconColor="text-green-600"
         />
-        <StatCard 
-          title={t('hydration_goal')} 
-          value={`${data?.avgHydration || "0"}%`} 
-          change="+5%" 
-          isPositive={true} 
-          icon={<Droplets className="w-6 h-6" />} 
-          iconBg="bg-blue-50" 
-          iconColor="text-blue-600" 
+        <StatCard
+          title={t('hydration_goal')}
+          value={`${data?.avgHydration || "0"}%`}
+          icon={<Droplets className="w-6 h-6" />}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
         />
         <StatCard 
           title={t('alcohol_frequency')} 
@@ -383,15 +390,12 @@ function NutritionAnalytics({ data }: any) {
           iconColor="text-red-600" 
           changeLabel={data?.alcoholAlerts > 0 ? t('analytics_reports_this_month', { count: data.alcoholAlerts }) : t('analytics_no_alerts')}
         />
-        <StatCard 
-          title={t('supplements_logged')} 
-          value={`${data?.supplementAdherence || "0"}%`} 
-          change="+12%" 
-          isPositive={true} 
-          icon={<Pill className="w-6 h-6" />} 
-          iconBg="bg-purple-50" 
-          iconColor="text-purple-600" 
-          changeLabel={t('analytics_adherence_rate')}
+        <StatCard
+          title={t('supplements_logged')}
+          value={`${data?.supplementAdherence || "0"}%`}
+          icon={<Pill className="w-6 h-6" />}
+          iconBg="bg-purple-50"
+          iconColor="text-purple-600"
         />
       </div>
 
@@ -524,45 +528,36 @@ function TrainingAnalytics({ data }: any) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
-        <StatCard 
-          title={t('workout_completion')} 
-          value={`${data?.avgCompletion || "0"}%`} 
-          change="+4%" 
-          isPositive={true} 
-          icon={<CheckCircle2 className="w-6 h-6" />} 
-          iconBg="bg-blue-50" 
-          iconColor="text-blue-600" 
+        <StatCard
+          title={t('workout_completion')}
+          value={`${data?.avgCompletion || "0"}%`}
+          icon={<CheckCircle2 className="w-6 h-6" />}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
         />
-        <StatCard 
-          title={t('volume_lifted')} 
-          value={`${(data?.totalVolume / 1000).toFixed(1)}k`} 
+        <StatCard
+          title={t('volume_lifted')}
+          value={`${((data?.totalVolume || 0) / 1000).toFixed(1)}k`}
           unit="kg"
-          change="+12.5%" 
-          isPositive={true} 
-          icon={<Dumbbell className="w-6 h-6" />} 
-          iconBg="bg-orange-50" 
-          iconColor="text-orange-600" 
+          icon={<Dumbbell className="w-6 h-6" />}
+          iconBg="bg-orange-50"
+          iconColor="text-orange-600"
           showChart={true}
           chartColor="text-orange-500"
         />
-        <StatCard 
-          title={t('active_programs')} 
-          value="68" 
-          change={t('analytics_new_programs_change')} 
-          isPositive={true} 
-          icon={<ListChecks className="w-6 h-6" />} 
-          iconBg="bg-purple-50" 
-          iconColor="text-purple-600" 
-          changeLabel={t('analytics_this_month')}
+        <StatCard
+          title={t('active_programs')}
+          value={data?.activePrograms ?? "0"}
+          icon={<ListChecks className="w-6 h-6" />}
+          iconBg="bg-purple-50"
+          iconColor="text-purple-600"
         />
-        <StatCard 
-          title={t('rpe_score')} 
-          value={data?.avgRPE || "0"} 
-          change="0.0" 
-          isNeutral={true}
-          icon={<Gauge className="w-6 h-6" />} 
-          iconBg="bg-red-50" 
-          iconColor="text-red-600" 
+        <StatCard
+          title={t('rpe_score')}
+          value={data?.avgRPE || "0"}
+          icon={<Gauge className="w-6 h-6" />}
+          iconBg="bg-red-50"
+          iconColor="text-red-600"
         />
       </div>
 
@@ -717,16 +712,18 @@ function StatCard({ title, value, unit, change, isPositive, isNeutral, icon, ico
           </svg>
         </div>
       )}
-      <div className="flex items-center gap-2 relative z-10">
-        <span className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
-          isNeutral ? 'text-slate-500 bg-slate-100' :
-          isPositive ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'
-        }`}>
-          {!isNeutral && (isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />)}
-          {change}
-        </span>
-        <span className="text-xs text-slate-400">{resolvedChangeLabel}</span>
-      </div>
+      {(change !== undefined && change !== null && change !== '') && (
+        <div className="flex items-center gap-2 relative z-10">
+          <span className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
+            isNeutral ? 'text-slate-500 bg-slate-100' :
+            isPositive ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'
+          }`}>
+            {!isNeutral && (isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />)}
+            {change}
+          </span>
+          <span className="text-xs text-slate-400">{resolvedChangeLabel}</span>
+        </div>
+      )}
     </div>
   );
 }

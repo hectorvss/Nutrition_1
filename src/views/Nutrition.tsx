@@ -6,6 +6,7 @@ import NutritionPlanDetail from './NutritionPlanDetail';
 import NutritionNoPlan from './NutritionNoPlan';
 import NutritionWeeklyView from './NutritionWeeklyView';
 import FoodLibrary from './FoodLibrary';
+import { fetchWithAuth } from '../api';
 
 type NutritionView = 'client-list' | 'plan-templates' | 'plan-detail' | 'food-library' | 'no-plan' | 'weekly-view';
 
@@ -80,10 +81,7 @@ export default function Nutrition() {
               if (!isNew && templateId && (typeof templateId === 'string' || typeof templateId === 'number') && templateId !== 'custom') {
                 try {
                   // Fetch the template from the backend
-                  const response = await fetch(`/api/manager/nutrition-templates/${templateId}`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-                  });
-                  const data = await response.json();
+                  const data = await fetchWithAuth(`/manager/nutrition-templates/${templateId}`);
                   if (data && data.data_json) {
                     setInitialPlanData({ data_json: data.data_json });
                   }

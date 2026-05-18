@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 
 const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: string) => void }> = ({ onNavigate }) => {
   const { t } = useLanguage();
   const { clients: globalClients } = useClient();
-  
-  const clients = globalClients.map((client) => {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'drafting' | 'active'>('all');
+
+  const allClients = globalClients.map((client) => {
     const hasActivePlan = client.planningAssigned;
     return {
       id: client.id,
@@ -18,6 +20,18 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
       roadmapProgress: hasActivePlan ? t('roadmap_live') : t('roadmap_needs_setup'),
       planFamilyLabel: client.planFamilyLabel
     };
+  });
+
+  const draftingCount = allClients.filter(c => c.status === 'NO_PLAN').length;
+  const activeCount = allClients.filter(c => c.status === 'ACTIVE').length;
+
+  const clients = allClients.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === 'all' ? true :
+      statusFilter === 'drafting' ? c.status === 'NO_PLAN' :
+      c.status === 'ACTIVE';
+    return matchesSearch && matchesStatus;
   });
 
   return (
@@ -36,23 +50,46 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center pt-2">
               <div className="relative w-full sm:w-96">
                 <span className="material-symbols-outlined text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 text-[20px]">search</span>
-                <input 
-                  className="w-full pl-12 pr-4 py-3 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all font-medium" 
-                  placeholder={t('search_client_placeholder', { defaultValue: 'Search client by name...' })} 
-
+                <input
+                  className="w-full pl-12 pr-4 py-3 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all font-medium"
+                  placeholder={t('search_client_placeholder', { defaultValue: 'Search client by name...' })}
                   type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full sm:w-auto">
-                <button className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/10 text-sm font-bold transition-all whitespace-nowrap">{t('all_clients', { defaultValue: 'All Clients' })}</button>
-                <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
-                  {t('drafting', { defaultValue: 'Drafting' })}
-                  <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">4</span>
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap ${
+                    statusFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {t('all_clients', { defaultValue: 'All Clients' })}
                 </button>
-                <button className="px-5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2">
+                <button
+                  onClick={() => setStatusFilter('drafting')}
+                  className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+                    statusFilter === 'drafting'
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {t('drafting', { defaultValue: 'Drafting' })}
+                  <span className="bg-emerald-100 text-emerald-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">{draftingCount}</span>
+                </button>
+                <button
+                  onClick={() => setStatusFilter('active')}
+                  className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+                    statusFilter === 'active'
+                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
                   {t('active_roadmap', { defaultValue: 'Active Roadmap' })}
-
-                  <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">12</span>
+                  <span className="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded-lg font-semibold">{activeCount}</span>
                 </button>
               </div>
             </div>
@@ -97,21 +134,12 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                             <span className="material-symbols-outlined text-[16px] text-slate-400">map</span>
                             <span>{t('roadmap_label', { defaultValue: 'Roadmap' })}: {client.planFamilyLabel || t('not_defined', { defaultValue: 'Not Defined' })}</span>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[16px] text-slate-400">calendar_today</span>
-                            <span>{t('timeline_label', { defaultValue: 'Timeline' })}: 12 {t('weeks_unit', { defaultValue: 'Weeks' })}</span>
-                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end pl-[5.25rem] md:pl-0">
-                      <div className="flex flex-col items-end text-right">
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1">{t('last_update')}</span>
-                        <span className="text-xs font-bold text-slate-600">2 {t('days_ago', { defaultValue: 'days ago' })}</span>
-                      </div>
-                      
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           const view = client.status === 'ACTIVE' ? 'planning-detail' : 'planning-template-selector';

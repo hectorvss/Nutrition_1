@@ -27,16 +27,16 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
     const loadSubmission = async () => {
       setIsLoading(true);
       try {
-        console.log('DEBUG: OnboardingReview fetching submissionId:', submissionId);
-        // We can use a generic search or a specific submission details endpoint
-        // For simplicity, let's assume the submissions endpoint returns everything for now
-        // But better to have a specific one. Let's try to find it in the list first.
-        const all = await fetchWithAuth('/onboarding/manager/submissions');
-        const submission = (all || []).find((s: any) => s.id === submissionId);
-        
-        if (submission) {
-          setData(submission);
+        // Prefer a per-id endpoint when available; fall back to scanning the list.
+        let submission: any = null;
+        try {
+          submission = await fetchWithAuth(`/onboarding/manager/submissions/${submissionId}`);
+        } catch (byIdErr) {
+          const all = await fetchWithAuth('/onboarding/manager/submissions');
+          submission = (all || []).find((s: any) => s.id === submissionId) || null;
         }
+        // `data` stays null when nothing matched, which renders the "not found" state.
+        setData(submission);
       } catch (err) {
         console.error('Error loading onboarding review:', err);
       } finally {

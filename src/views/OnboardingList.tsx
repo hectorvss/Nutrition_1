@@ -21,22 +21,34 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
   const [searchQuery, setSearchQuery] = useState('');
   
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [completedClientIds, setCompletedClientIds] = useState<Set<string>>(new Set());
   const [isAssignmentsLoading, setIsAssignmentsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
-  const [isAssigning, setIsAssigning] = useState(false);
+  // Track the in-progress assignment per client id so other rows stay enabled.
+  const [assigningClientId, setAssigningClientId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadAssignments() {
       setIsAssignmentsLoading(true);
       try {
-        const data = await fetchWithAuth('/onboarding/manager/assignments');
+        const [data, submissions] = await Promise.all([
+          fetchWithAuth('/onboarding/manager/assignments'),
+          fetchWithAuth('/onboarding/manager/submissions').catch(() => [])
+        ]);
         const map: Record<string, string> = {};
         (data || []).forEach((a: any) => {
           map[a.client_id] = a.template?.name || t('assigned');
         });
         setAssignments(map);
+
+        const completed = new Set<string>();
+        (submissions || []).forEach((s: any) => {
+          const cid = s.client_id || s.client?.id;
+          if (cid) completed.add(cid);
+        });
+        setCompletedClientIds(completed);
       } catch (err) {
         console.error('Error loading onboarding assignments:', err);
       } finally {
@@ -60,7 +72,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
 
   const handleAssign = async (templateId: string) => {
     if (!selectedClient) return;
-    setIsAssigning(true);
+    setAssigningClientId(selectedClient.id);
     try {
       await fetchWithAuth('/onboarding/manager/assign', {
         method: 'POST',
@@ -77,23 +89,24 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
       console.error('Assignment error:', err);
       alert(`${t('error_assigning_onboarding_flow')}: ${err.message || t('unknown_error')}`);
     } finally {
-      setIsAssigning(false);
+      setAssigningClientId(null);
     }
   };
 
   const isLoading = isClientsLoading || isAssignmentsLoading;
 
   const enrichedClients = (clients || []).map((c) => {
-    // In a real app we'd fetch the submission status for each client
-    // For now, we'll use the check_ins presence as a proxy or just the assignment
+    const hasOnboarding = !!assignments[c.id];
+    const hasCompleted = completedClientIds.has(c.id);
     return {
       id: c.id,
       name: c.name || t('unknown_client'),
       email: c.email || '',
       avatar: c.avatar,
       initials: (c.name || 'C').substring(0, 2).toUpperCase(),
-      hasOnboarding: !!assignments[c.id],
-      status: assignments[c.id] ? t('pending') : t('not_started')
+      hasOnboarding,
+      hasCompleted,
+      status: hasCompleted ? t('completed') : hasOnboarding ? t('pending') : t('not_started')
     };
   });
 
@@ -101,8 +114,9 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
     const clientName = client.name || '';
     const matchesSearch = clientName.toLowerCase().includes(searchQuery.toLowerCase());
     if (filter === 'All') return matchesSearch;
-    if (filter === 'Pending') return matchesSearch && client.hasOnboarding;
-    if (filter === 'Completed') return false; // This would need submissions data
+    // Pending = assigned but not yet submitted.
+    if (filter === 'Pending') return matchesSearch && client.hasOnboarding && !client.hasCompleted;
+    if (filter === 'Completed') return matchesSearch && client.hasCompleted;
     return matchesSearch;
   });
 
@@ -197,6 +211,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                     </div>
                     <div className="flex items-center gap-2">
                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+                        client.hasCompleted ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
                         client.hasOnboarding ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-slate-400 bg-slate-50 border-slate-200'
                        }`}>
                           {client.status}
@@ -237,13 +252,13 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                 </div>
               ) : (
                 availableTemplates.map((tpl) => (
-                  <button 
+                  <button
                     key={tpl.id}
                     onClick={() => handleAssign(tpl.id)}
-                    disabled={isAssigning}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left group
-                      ${assignments[selectedClient?.id] === tpl.name 
-                        ? 'bg-emerald-50 border-emerald-200 ring-1 ring-emerald-500/20' 
+                    disabled={assigningClientId === selectedClient?.id}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left group disabled:opacity-60
+                      ${assignments[selectedClient?.id] === tpl.name
+                        ? 'bg-emerald-50 border-emerald-200 ring-1 ring-emerald-500/20'
                         : 'bg-white border-slate-100 hover:border-emerald-200 hover:bg-slate-50'}`}
                   >
                     <div>
@@ -252,7 +267,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                       </p>
                       {tpl.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">{t('recommended')}</span>}
                     </div>
-                    {isAssigning ? (
+                    {assigningClientId === selectedClient?.id ? (
                        <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
                     ) : assignments[selectedClient?.id] === tpl.name ? (
                       <span className="material-symbols-outlined text-emerald-500">check_circle</span>

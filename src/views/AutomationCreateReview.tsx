@@ -72,15 +72,16 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
   const handleActivate = () => {
     const payload = {
       name: automationName || wizardData.triggerName,
-      desc: wizardData.triggerName,
-      trigger: wizardData.triggerName,
-      triggerId: wizardData.triggerId,
+      description: wizardData.triggerName,
+      trigger_id: wizardData.triggerId,
       message: wizardData.message,
-      deliveryRules: wizardData.deliveryRules,
+      delivery_rules: wizardData.deliveryRules,
       enabled: true,
-      iconName: wizardData.iconName,
-      iconBg: wizardData.iconBg,
-      iconColor: wizardData.iconColor,
+      icon_info: {
+        iconName: wizardData.iconName,
+        iconBg: wizardData.iconBg,
+        iconColor: wizardData.iconColor,
+      },
     };
     if (wizardData.editingId) {
       updateAutomation(wizardData.editingId, payload);

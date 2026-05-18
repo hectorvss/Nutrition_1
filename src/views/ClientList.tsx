@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../api';
-import { 
-  Search, 
-  Download, 
-  Plus, 
-  Mail, 
-  Share2, 
-  Archive, 
-  MoreVertical, 
+import {
+  Plus,
+  Archive,
+  MoreVertical,
   AlertTriangle,
   TrendingDown,
   CalendarDays,
@@ -40,19 +36,33 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
   const [filter, setFilter] = useState<'All' | 'Active' | 'At Risk' | 'Archived'>('All');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
 
   const filteredClients = clients.filter(client => {
     // Search filter
     if (searchQuery && !client.name.toLowerCase().includes(searchQuery.toLowerCase()) && !client.email.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-    
+
     // Status filter
     if (filter === 'Active') return client.status === 'Active';
     if (filter === 'Archived') return client.status === 'Archived';
     if (filter === 'At Risk') return client.isAtRisk;
     return true; // All
   });
+
+  // ─── Pagination ────────────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(filteredClients.length / perPage));
+  const currentPage = Math.min(page, totalPages);
+  const pagedClients = filteredClients.slice((currentPage - 1) * perPage, currentPage * perPage);
+  const rangeStart = filteredClients.length === 0 ? 0 : (currentPage - 1) * perPage + 1;
+  const rangeEnd = Math.min(currentPage * perPage, filteredClients.length);
+
+  // Reset to first page whenever the filtered set changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, filter, perPage]);
 
   // ─── Delete confirmation modal ─────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -82,10 +92,10 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
   };
 
   const toggleSelectAll = () => {
-    if (selectedClients.length === clients.length) {
+    if (selectedClients.length === filteredClients.length) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(clients.map(c => c.id.toString()));
+      setSelectedClients(filteredClients.map(c => c.id.toString()));
     }
   };
 
@@ -181,41 +191,13 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                 <div className="flex items-center gap-4 text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400">
                     <span className="bg-emerald-500/10 px-2.5 py-1 rounded-lg">{selectedClients.length} {t('selected')}</span>
-                    <button 
+                    <button
                       onClick={() => setSelectedClients([])}
                       className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 font-medium ml-1"
                     >
                       {t('clear_selection')}
                     </button>
                   </div>
-                  <div className="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('filters_label')}:</span>
-                    <div className="flex gap-2">
-                      <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-[10px] font-bold flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                        Tag: High Priority 
-                        <X className="w-3 h-3 hover:text-red-500 cursor-pointer" />
-                      </span>
-                      <span className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-[10px] font-bold flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                        Last Check-in: &gt; 7 days 
-                        <X className="w-3 h-3 hover:text-red-500 cursor-pointer" />
-                      </span>
-                    </div>
-                    <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline ml-1">{t('reset_all')}</button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:border-emerald-500 dark:hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors text-xs font-bold shadow-sm">
-                    <Mail className="w-3.5 h-3.5" />
-                    Message ({selectedClients.length})
-                  </button>
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 hover:border-emerald-500 dark:hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors text-xs font-bold shadow-sm">
-                    <Share2 className="w-3.5 h-3.5" />
-                    Export ({selectedClients.length})
-                  </button>
-                  <button className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
             )}
@@ -234,7 +216,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-sm">
-                  {filteredClients.map((client) => (
+                  {pagedClients.map((client) => (
                     <tr 
                       key={client.id} 
                       className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors relative"
@@ -342,19 +324,31 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
             <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <p className="text-xs font-bold text-slate-400">
-                  {t('showing')} <span className="text-slate-900 dark:text-white">1-{filteredClients.length}</span> {t('of_total')} <span className="text-slate-900 dark:text-white">{filteredClients.length}</span> {t('clients_label').toLowerCase()}
+                  {t('showing')} <span className="text-slate-900 dark:text-white">{rangeStart}-{rangeEnd}</span> {t('of_total')} <span className="text-slate-900 dark:text-white">{filteredClients.length}</span> {t('clients_label').toLowerCase()}
                 </p>
-                <select className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 py-1.5 pr-8 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none shadow-sm">
-                  <option>10 {t('per_page')}</option>
-                  <option>20 {t('per_page')}</option>
-                  <option>50 {t('per_page')}</option>
+                <select
+                  value={perPage}
+                  onChange={(e) => setPerPage(Number(e.target.value))}
+                  className="text-xs font-bold border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 py-1.5 pr-8 text-slate-600 dark:text-slate-300 focus:border-emerald-500 focus:ring-emerald-500 outline-none shadow-sm"
+                >
+                  <option value={10}>10 {t('per_page')}</option>
+                  <option value={20}>20 {t('per_page')}</option>
+                  <option value={50}>50 {t('per_page')}</option>
                 </select>
               </div>
               <div className="flex gap-2">
-                <button className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-400 cursor-not-allowed shadow-sm">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm disabled:text-slate-300 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-900"
+                >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm disabled:text-slate-300 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-900"
+                >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

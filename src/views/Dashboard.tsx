@@ -34,6 +34,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [activity, setActivity] = useState<any[]>([]);
   const [attentionCheckIns, setAttentionCheckIns] = useState<any[]>([]);
   const [activeCount, setActiveCount] = useState(0);
+  const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [analyticsError, setAnalyticsError] = useState(false);
 
@@ -48,6 +49,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         if (data.business && typeof data.business.activeClients === 'number') {
           setActiveCount(data.business.activeClients);
         }
+        if (data.business && typeof data.business.newLeads === 'number') {
+          setNewLeadsCount(data.business.newLeads);
+        }
       } catch (error) {
         console.error('Failed to load analytics:', error);
         setAnalyticsError(true);
@@ -58,10 +62,26 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     loadAnalytics();
   }, []);
 
+  // Sort by priority (overdue first) then by real date when available;
+  // localeCompare on free-text timeLabel produced an arbitrary order.
+  const attentionPriority = (item: any) => {
+    if (item.status === 'overdue') return 0;
+    if (item.type === 'CHECK_IN') return 1;
+    return 2;
+  };
+  const attentionTime = (item: any) => {
+    const d = item.dueDate || item.createdAt || item.created_at || item.date;
+    const ts = d ? new Date(d).getTime() : NaN;
+    return Number.isNaN(ts) ? 0 : ts;
+  };
   const combinedAttention = [
     ...attentionCheckIns,
-    ...tasks.filter(t => t.status !== 'pending').map(t => ({...t, type: 'TASK'}))
-  ].sort((a,b) => (b.timeLabel || '').localeCompare(a.timeLabel || ''));
+    ...tasks.filter(t => t.status !== 'completed').map(t => ({...t, type: 'TASK'}))
+  ].sort((a,b) => {
+    const p = attentionPriority(a) - attentionPriority(b);
+    if (p !== 0) return p;
+    return attentionTime(b) - attentionTime(a);
+  });
 
   const quickActions = [
     { id: 'add-client', label: t('add_new_client'), icon: UserPlus, color: 'bg-emerald-50 text-emerald-600' },
@@ -257,7 +277,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2 text-sm opacity-90">
-                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold">+3</span>
+                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold">+{newLeadsCount}</span>
                 <span>{t('since_last_month')}</span>
               </div>
             </div>

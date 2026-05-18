@@ -12,6 +12,7 @@ import {
   PieChart
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { fetchWithAuth } from '../api';
 
 interface NutritionPlanTemplatesProps {
   client?: any;
@@ -23,26 +24,23 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
   const { t } = useLanguage();
   const [templates, setTemplates] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [macroSplit, setMacroSplit] = React.useState('balanced');
 
   React.useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch('/api/manager/nutrition-templates', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
-        });
-        const data = await response.json();
+        const data = await fetchWithAuth('/manager/nutrition-templates');
         if (Array.isArray(data)) {
           // Map backend fields to frontend UI expectations
-          const formatted = data.map(t => ({
-            id: t.key || t.id,
-            name: t.name,
-            calories: t.target_calories || 0,
-            desc: t.description || '',
-            type: t.name.includes('Bulk') || t.name.includes('Gain') ? 'High Carb' : 'Balanced', // heuristic
-            typeColor: t.name.includes('Bulk') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600',
-            macros: t.data_json?.macros || { p: 30, c: 40, f: 30 },
-            weekView: [80, 80, 80, 80, 80, 80, 80], // placeholder for list icon
-            stats: `${t.data_json?.meals?.length || 3} ${t('meals')}`
+          const formatted = data.map(tpl => ({
+            id: tpl.key || tpl.id,
+            name: tpl.name,
+            calories: tpl.target_calories || 0,
+            desc: tpl.description || '',
+            // Use the real template type when the backend provides it; otherwise omit it.
+            type: tpl.data_json?.type || tpl.type || null,
+            macros: tpl.data_json?.macros || null,
+            mealCount: tpl.data_json?.meals?.length ?? null,
           }));
           setTemplates(formatted);
         }
@@ -131,36 +129,35 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                     {/* Macros Bar */}
                     <div className="flex-1 w-full space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className={`${template.typeColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide`}>
-                          {template.type}
-                        </span>
-                        <div className="flex gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>{template.macros.p}% P</span>
-                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>{template.macros.c}% C</span>
-                          <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>{template.macros.f}% F</span>
+                        {template.type ? (
+                          <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide">
+                            {template.type}
+                          </span>
+                        ) : <span />}
+                        {template.macros && (
+                          <div className="flex gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                            <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>{template.macros.p}% P</span>
+                            <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>{template.macros.c}% C</span>
+                            <span className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>{template.macros.f}% F</span>
+                          </div>
+                        )}
+                      </div>
+                      {template.macros && (
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
+                          <div className="bg-blue-500 h-full" style={{ width: `${template.macros.p}%` }}></div>
+                          <div className="bg-emerald-500 h-full" style={{ width: `${template.macros.c}%` }}></div>
+                          <div className="bg-amber-500 h-full" style={{ width: `${template.macros.f}%` }}></div>
                         </div>
-                      </div>
-                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
-                        <div className="bg-blue-500 h-full" style={{ width: `${template.macros.p}%` }}></div>
-                        <div className="bg-emerald-500 h-full" style={{ width: `${template.macros.c}%` }}></div>
-                        <div className="bg-amber-500 h-full" style={{ width: `${template.macros.f}%` }}></div>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Week View Chart */}
+                    {/* Meal count */}
                     <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('week_view_label')}</span>
-                        <span className="text-[10px] font-bold text-slate-500">{template.stats}</span>
-                      </div>
-                      <div className="flex gap-1 h-8 items-end justify-between">
-                        {template.weekView.map((h: number, i: number) => (
-                          <div 
-                            key={i} 
-                            className={`w-1.5 rounded-t-sm transition-all ${i >= 5 ? 'bg-emerald-500/60' : 'bg-slate-200'}`} 
-                            style={{ height: `${h}%` }}
-                          ></div>
-                        ))}
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('meals')}</span>
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {template.mealCount !== null ? template.mealCount : '—'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -221,11 +218,15 @@ export default function NutritionPlanTemplates({ client, onBack, onSelect }: Nut
                 <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">{t('macro_split')}</label>
                 <div className="relative">
                   <PieChart className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <select className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer">
-                    <option>{t('balanced_option')}</option>
-                    <option>{t('low_carb_option')}</option>
-                    <option selected>{t('high_carb_option')}</option>
-                    <option>{t('ketogenic_option')}</option>
+                  <select
+                    value={macroSplit}
+                    onChange={e => setMacroSplit(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all appearance-none font-bold cursor-pointer"
+                  >
+                    <option value="balanced">{t('balanced_option')}</option>
+                    <option value="low_carb">{t('low_carb_option')}</option>
+                    <option value="high_carb">{t('high_carb_option')}</option>
+                    <option value="ketogenic">{t('ketogenic_option')}</option>
                   </select>
                   <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 rotate-90 pointer-events-none" />
                 </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useProfile } from '../context/ProfileContext';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 
@@ -18,6 +19,8 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Zap } from 'lucide-react';
+import { X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface SidebarProps {
   currentView: string;
@@ -26,10 +29,12 @@ interface SidebarProps {
 
 export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: SidebarProps & { isOpen?: boolean, onClose?: () => void }) {
   const { profile } = useProfile();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (!user) return;
     const fetchUnread = async () => {
       try {
         const data = await fetchWithAuth(`/messages/unread-count?t=${new Date().getTime()}`);
@@ -51,7 +56,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
       clearInterval(interval);
       window.removeEventListener('updateUnreadCount', fetchUnread);
     };
-  }, []);
+  }, [user]);
 
   const menuGroups = [
     {
@@ -211,6 +216,3 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
     </>
   );
 }
-
-import { X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';

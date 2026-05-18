@@ -111,6 +111,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const { reloadClients } = useClient();
   const [meals, setMeals] = useState<MealBlock[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [librarySearch, setLibrarySearch] = useState('');
 
@@ -150,6 +151,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
       if (!client?.id) return;
       setIsLoading(true);
+      setLoadError(null);
       try {
         const data = await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`);
         if (data && data.data_json) {
@@ -178,8 +180,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         } else {
           setMeals(DEFAULT_MEALS);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching nutrition plan:', err);
+        setLoadError(err?.message || t('error_loading_data'));
       } finally {
         setIsLoading(false);
       }
@@ -634,6 +637,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
                   <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
                   <p className="text-sm font-medium">{t('loading_plan')}</p>
+                </div>
+              ) : loadError ? (
+                <div className="py-20 flex flex-col items-center justify-center text-rose-500 gap-3">
+                  <AlertTriangle className="w-12 h-12 opacity-40" />
+                  <p className="text-sm font-medium">{loadError}</p>
                 </div>
               ) : meals.length === 0 ? (
                 <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">

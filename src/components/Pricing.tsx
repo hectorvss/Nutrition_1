@@ -2,13 +2,25 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { CheckCircle2, Verified, Clock, CreditCard } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
+import { fetchWithAuth } from "../api";
 
 interface PricingProps {
   onGetStarted?: () => void;
 }
 
+// Stable plan tiers — never derived from translated labels.
+type PlanTier = 'professional' | 'scale' | 'unlimited';
+
+const PRICE_MAP: Record<PlanTier, { monthly: string; annual: string }> = {
+  professional: { monthly: "price_1TCN9vCR4WvolxlpwC33dk8J", annual: "price_1TCf4PCR4Wvolxlp3MoDzi0J" },
+  scale: { monthly: "price_1TCNAHCR4WvolxlpwpLRfmwX", annual: "price_1TCf52CR4WvolxlpcMMLOVpv" },
+  unlimited: { monthly: "price_1TCNAcCR4WvolxlptLzNYdsz", annual: "price_1TCf5cCR4WvolxlpWGhpOgnI" },
+};
+
 export default function Pricing({ onGetStarted }: PricingProps) {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const [isAnnual, setIsAnnual] = useState(false);
   const isEs = language === 'es';
 
@@ -18,46 +30,31 @@ export default function Pricing({ onGetStarted }: PricingProps) {
 
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleSubscribe = async (planTitle: string) => {
-    setLoading(planTitle);
+  const handleSubscribe = async (tier: PlanTier) => {
+    // A checkout session can only be created for an authenticated manager.
+    // Visitors on the public landing page are routed to sign-up instead.
+    if (!user) {
+      onGetStarted?.();
+      return;
+    }
+
+    setLoading(tier);
     try {
-      // Mock user data - in a real app, get this from auth context
-      const userId = "temp-user-id"; 
-      const userEmail = "user@example.com";
+      const selectedPriceId = isAnnual ? PRICE_MAP[tier].annual : PRICE_MAP[tier].monthly;
 
-      // Map plan to real Stripe Price IDs provided by user
-      const priceMap: Record<string, { monthly: string; annual: string }> = {
-        "Professional": {
-          monthly: "price_1TCN9vCR4WvolxlpwC33dk8J",
-          annual: "price_1TCf4PCR4Wvolxlp3MoDzi0J"
-        },
-        "Scale": {
-          monthly: "price_1TCNAHCR4WvolxlpwpLRfmwX",
-          annual: "price_1TCf52CR4WvolxlpcMMLOVpv"
-        },
-        "Unlimited": {
-          monthly: "price_1TCNAcCR4WvolxlptLzNYdsz",
-          annual: "price_1TCf5cCR4WvolxlpWGhpOgnI"
-        },
-      };
-
-      const selectedPriceId = isAnnual ? priceMap[planTitle].annual : priceMap[planTitle].monthly;
-
-      const response = await fetch('/api/stripe/create-checkout-session', {
+      const data = await fetchWithAuth('/stripe/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           priceId: selectedPriceId,
-          userId,
-          userEmail
+          userId: user.id,
+          userEmail: user.email,
         }),
       });
 
-      const data = await response.json();
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error(data.error || 'Failed to create checkout session');
+        throw new Error(data?.error || 'Failed to create checkout session');
       }
     } catch (error) {
       console.error('Subscription error:', error);
@@ -111,6 +108,7 @@ export default function Pricing({ onGetStarted }: PricingProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-24">
           {[
             {
+              tier: 'professional' as PlanTier,
               title: isEs ? "Profesional" : "Professional",
               monthlyPrice: 39,
               clients: isEs ? "Hasta 20 clientes activos" : "Up to 20 active clients",
@@ -126,6 +124,7 @@ export default function Pricing({ onGetStarted }: PricingProps) {
               accent: false
             },
             {
+              tier: 'scale' as PlanTier,
               title: "Scale",
               monthlyPrice: 79,
               clients: isEs ? "Hasta 60 clientes activos" : "Up to 60 active clients",
@@ -141,6 +140,7 @@ export default function Pricing({ onGetStarted }: PricingProps) {
               accent: false
             },
             {
+              tier: 'unlimited' as PlanTier,
               title: isEs ? "Ilimitado" : "Unlimited",
               monthlyPrice: 99,
               clients: isEs ? "Clientes activos ilimitados" : "Unlimited active clients",
@@ -180,23 +180,23 @@ export default function Pricing({ onGetStarted }: PricingProps) {
                   </li>
                 ))}
               </ul>
-              <button 
-                onClick={() => handleSubscribe(plan.title)}
+              <button
+                onClick={() => handleSubscribe(plan.tier)}
                 disabled={loading !== null}
                 className={`w-full py-4 rounded-full font-bold transition-all duration-300 cursor-pointer border flex items-center justify-center gap-2 ${
-                  loading === plan.title ? 'opacity-70 cursor-wait' : ''
+                  loading === plan.tier ? 'opacity-70 cursor-wait' : ''
                 } ${
-                  idx === 1 
-                  ? 'bg-primary text-on-primary border-primary' 
+                  idx === 1
+                  ? 'bg-primary text-on-primary border-primary'
                   : 'bg-transparent text-primary border-primary hover:bg-primary hover:text-on-primary'
                 }`}
               >
-                {loading === plan.title ? (
+                {loading === plan.tier ? (
                   <Clock className="w-5 h-5 animate-spin" />
                 ) : (
                   <CreditCard className="w-5 h-5" />
                 )}
-                {loading === plan.title ? (isEs ? 'Conectando...' : 'Connecting...') : plan.buttonLabel}
+                {loading === plan.tier ? (isEs ? 'Conectando...' : 'Connecting...') : plan.buttonLabel}
               </button>
             </motion.div>
           ))}

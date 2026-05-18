@@ -14,9 +14,11 @@ export default function ClientNutrition() {
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   useEffect(() => {
+    let mounted = true;
     const fetchMyPlans = async () => {
       try {
         const data = await fetchWithAuth('/client/plans');
+        if (!mounted) return;
         if (data && data.nutrition && data.nutrition.length > 0) {
           const plan = data.nutrition[0];
           setNutritionPlan(plan);
@@ -31,10 +33,11 @@ export default function ClientNutrition() {
       } catch (err) {
         console.error('Error fetching client plans:', err);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
     fetchMyPlans();
+    return () => { mounted = false; };
   }, []);
 
   if (isLoading) {
@@ -64,17 +67,17 @@ export default function ClientNutrition() {
     ? (planDays[selectedDay]?.meals || []) 
     : (nutritionPlan.data_json?.meals || []);
 
-  const totalCalories = meals.reduce((acc: number, m: any) => 
-    acc + (m.items || []).reduce((a: number, i: any) => a + (i.calories * i.quantity), 0), 0
+  const totalCalories = meals.reduce((acc: number, m: any) =>
+    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0), 0
   );
-  const totalProtein = meals.reduce((acc: number, m: any) => 
-    acc + (m.items || []).reduce((a: number, i: any) => a + (i.protein * i.quantity), 0), 0
+  const totalProtein = meals.reduce((acc: number, m: any) =>
+    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.protein || 0) * (i.quantity || 1)), 0), 0
   );
-  const totalCarbs = meals.reduce((acc: number, m: any) => 
-    acc + (m.items || []).reduce((a: number, i: any) => a + (i.carbs * i.quantity), 0), 0
+  const totalCarbs = meals.reduce((acc: number, m: any) =>
+    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.carbs || 0) * (i.quantity || 1)), 0), 0
   );
-  const totalFats = meals.reduce((acc: number, m: any) => 
-    acc + (m.items || []).reduce((a: number, i: any) => a + (i.fats * i.quantity), 0), 0
+  const totalFats = meals.reduce((acc: number, m: any) =>
+    acc + (m.items || []).reduce((a: number, i: any) => a + ((i.fats || 0) * (i.quantity || 1)), 0), 0
   );
 
   const daysConfig = [
@@ -290,8 +293,8 @@ export default function ClientNutrition() {
               key={idx}
               title={m.name} 
               time={m.time} 
-              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + (i.calories * i.quantity), 0))} 
-              icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'} 
+              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0))}
+              icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
               iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
               macros={(m.categories || []).map((c: any) => ({
                 label: c.label,
@@ -350,9 +353,9 @@ export default function ClientNutrition() {
           <div className="relative w-44 h-44 flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle className="stroke-slate-100 dark:stroke-slate-800" cx="50" cy="50" fill="transparent" r="40" strokeWidth="10" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#3b82f6" strokeDasharray={`${(totalProtein*4/totalCalories)*251} 251`} strokeDashoffset="0" strokeWidth="10" strokeLinecap="round" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#10b981" strokeDasharray={`${(totalCarbs*4/totalCalories)*251} 251`} strokeDashoffset={`-${(totalProtein*4/totalCalories)*251}`} strokeWidth="10" strokeLinecap="round" />
-              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#f59e0b" strokeDasharray={`${(totalFats*9/totalCalories)*251} 251`} strokeDashoffset={`-${((totalProtein*4+totalCarbs*4)/totalCalories)*251}`} strokeWidth="10" strokeLinecap="round" />
+              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#3b82f6" strokeDasharray={`${(totalProtein*4/(totalCalories||1))*251} 251`} strokeDashoffset="0" strokeWidth="10" strokeLinecap="round" />
+              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#10b981" strokeDasharray={`${(totalCarbs*4/(totalCalories||1))*251} 251`} strokeDashoffset={`-${(totalProtein*4/(totalCalories||1))*251}`} strokeWidth="10" strokeLinecap="round" />
+              <circle className="drop-shadow-sm transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="#f59e0b" strokeDasharray={`${(totalFats*9/(totalCalories||1))*251} 251`} strokeDashoffset={`-${((totalProtein*4+totalCarbs*4)/(totalCalories||1))*251}`} strokeWidth="10" strokeLinecap="round" />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{Math.round(totalCalories)}</span>
@@ -399,13 +402,13 @@ export default function ClientNutrition() {
               key={idx}
               title={m.name} 
               time={m.time} 
-              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + (i.calories * i.quantity), 0))} 
-              icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'} 
+              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0))}
+              icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
               iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
               items={(m.items || []).map((i: any) => ({
                 name: i.name,
                 sub: `${i.servingSize} × ${i.quantity}`,
-                kcal: Math.round(i.calories * i.quantity),
+                kcal: Math.round((i.calories || 0) * (i.quantity || 1)),
                 amount: `${Math.round(i.quantity * 100) / 100} ${t('units')}`,
                 img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200'
               }))}

@@ -185,6 +185,16 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
 
 type Tab = 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
 
+// Maps Tailwind text-color classes to valid hex values for SVG/recharts strokes
+const STROKE_COLOR_MAP: Record<string, string> = {
+  'text-amber-500': '#f59e0b',
+  'text-purple-500': '#8b5cf6',
+  'text-blue-500': '#3b82f6',
+  'text-red-500': '#ef4444',
+  'text-green-500': '#22c55e',
+  'text-emerald-500': '#10b981',
+};
+
 export default function ClientProgress() {
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -198,23 +208,26 @@ export default function ClientProgress() {
   const [visiblePRs, setVisiblePRs] = useState(4);
   const [visibleWorkouts, setVisibleWorkouts] = useState(4);
   const [strengthRange, setStrengthRange] = useState('1W');
+  const [weightRange, setWeightRange] = useState<'3M' | '6M' | '1Y'>('3M');
 
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     const fetchStats = async () => {
       setIsLoading(true);
       try {
         const data = await fetchWithAuth('/client/profile-stats');
-        setStats(data);
+        if (mounted) setStats(data);
       } catch (error) {
         console.error('Error fetching client stats:', error);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
     fetchStats();
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
@@ -276,6 +289,22 @@ export default function ClientProgress() {
     return stats.training.strengthHistory.filter((h: any) => h.date >= cutoffStr && h.date <= todayStr);
   };
 
+  const getFilteredWeightData = () => {
+    const history = stats?.weightHistory || [];
+    if (history.length === 0) return [];
+    const now = new Date();
+    const cutoff = new Date();
+    if (weightRange === '3M') cutoff.setMonth(now.getMonth() - 3);
+    else if (weightRange === '6M') cutoff.setMonth(now.getMonth() - 6);
+    else if (weightRange === '1Y') cutoff.setFullYear(now.getFullYear() - 1);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    return history.filter((h: any) => {
+      if (!h.date) return true;
+      const d = String(h.date).split('T')[0];
+      return d >= cutoffStr;
+    });
+  };
+
   const renderNutrition = () => (
     <div className="space-y-6">
       {isLoading ? (
@@ -316,14 +345,14 @@ export default function ClientProgress() {
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">{t('goal')}: {stats?.goal || t('tbd')}</p>
             </div>
             <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-              {['3M', '6M', '1Y'].map(p => (
-                <button key={p} className={`px-3 py-1 text-[10px] font-bold rounded-md ${p === '3M' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>{p}</button>
+              {(['3M', '6M', '1Y'] as const).map(p => (
+                <button key={p} onClick={() => setWeightRange(p)} className={`px-3 py-1 text-[10px] font-bold rounded-md ${p === weightRange ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>{p}</button>
               ))}
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats?.weightHistory || []}>
+              <AreaChart data={getFilteredWeightData()}>
                 <defs>
                   <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
@@ -774,7 +803,7 @@ export default function ClientProgress() {
             <div className="h-16 w-full mt-4">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={stats?.mindset?.history || []}>
-                  <Line type="monotone" dataKey={stat.dataKey} stroke={stat.color.replace('text-', '').replace('-500', '')} strokeWidth={2} dot={false} connectNulls />
+                  <Line type="monotone" dataKey={stat.dataKey} stroke={STROKE_COLOR_MAP[stat.color] || '#10b981'} strokeWidth={2} dot={false} connectNulls />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -845,14 +874,14 @@ export default function ClientProgress() {
         <div className="p-6 md:p-8 lg:p-10">
           <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-2xl bg-cover bg-center ring-4 ring-emerald-50 dark:ring-emerald-900/20 shadow-sm" style={{ backgroundImage: `url(${user?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200'})` }}></div>
+              <div className="w-24 h-24 rounded-2xl bg-cover bg-center ring-4 ring-emerald-50 dark:ring-emerald-900/20 shadow-sm" style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.email || 'client'}&background=random")` }}></div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{user?.user_metadata?.full_name || t('my_progress')}</h1>
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{user?.email?.split('@')[0] || t('my_progress')}</h1>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200">{t('active')}</span>
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium capitalize">
-                  {stats?.goal || t('in_progress')} {t('plan')} • {t('active_since')} {new Date(user?.created_at).toLocaleDateString([], { month: 'short', year: 'numeric' })}
+                  {stats?.goal || t('in_progress')} {t('plan')}
                 </p>
                 <div className="flex gap-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                   <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100">

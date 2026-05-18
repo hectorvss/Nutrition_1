@@ -44,10 +44,49 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
       if (isLogin) {
         login(data.token, data.user);
       } else {
-        setIsLogin(true);
-        setError(t('login_account_created'));
+        // After successful signup, auto-login the new account.
+        if (data.token && data.user) {
+          login(data.token, data.user);
+        } else {
+          // Backend did not return a session: log in with the same credentials.
+          const loginResponse = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+          const loginData = await loginResponse.json();
+          if (!loginResponse.ok) {
+            throw new Error(loginData.error || t('login_auth_failed'));
+          }
+          login(loginData.token, loginData.user);
+        }
       }
-      
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError(t('login_auth_failed'));
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || t('login_auth_failed'));
+      }
+      setError(t('login_account_created'));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -138,7 +177,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
                   {t('login_password')}
                 </label>
                 {isLogin && (
-                  <button type="button" className="text-[11px] font-bold text-gray-400 hover:text-black transition-colors bg-transparent border-none cursor-pointer">
+                  <button type="button" onClick={handleForgotPassword} disabled={loading} className="text-[11px] font-bold text-gray-400 hover:text-black transition-colors bg-transparent border-none cursor-pointer disabled:opacity-50">
                     {t('login_forgot')}
                   </button>
                 )}
@@ -191,7 +230,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
         {/* Footer info at left bottom */}
         <div className="absolute bottom-8 left-0 w-full text-center lg:text-left lg:px-20 opacity-30">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-            NutriFit Systems Inc. © 2024
+            NutriFit Systems Inc. © {new Date().getFullYear()}
           </p>
         </div>
       </div>

@@ -36,8 +36,8 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
   
   const activeCount = automations.filter(a => a.enabled).length;
   const filtered = automations.filter(a => 
-    a.name.toLowerCase().includes(search.toLowerCase()) || 
-    a.trigger.toLowerCase().includes(search.toLowerCase())
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
+    (a.trigger_id || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (

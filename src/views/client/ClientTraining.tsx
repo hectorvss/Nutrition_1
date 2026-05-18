@@ -84,23 +84,26 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   }, [allLogs, user?.id]);
 
   useEffect(() => {
+    let mounted = true;
     refreshExercises();
     const fetchMyPlans = async () => {
       try {
         const data = await fetchWithAuth('/client/plans');
+        if (!mounted) return;
         if (data && data.training && data.training.length > 0) {
           setTrainingProgram(data.training[0]);
         }
       } catch (err) {
         console.error('Error fetching client training plans:', err);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
 
     const fetchWorkoutHistory = async () => {
       try {
         const history = await fetchWithAuth('/client/workout-logs');
+        if (!mounted) return;
         if (Array.isArray(history)) {
           setAllLogs(prev => {
             const newLogs = { ...prev };
@@ -136,14 +139,16 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
 
     fetchMyPlans();
     fetchWorkoutHistory();
+    return () => { mounted = false; };
   }, [user?.id, refreshExercises]);
 
   const updateExerciseLog = useCallback((key: string, field: keyof ExerciseLog, value: any) => {
     setAllLogs(prev => {
-      const dayData = prev[selectedDay] || { exerciseLogs: {}, rpe: '', notes: '' };
+      const activeLogKey = `${weekOffset}-${selectedDay}`;
+      const dayData = prev[activeLogKey] || { exerciseLogs: {}, rpe: '', notes: '' };
       return {
         ...prev,
-        [selectedDay]: {
+        [activeLogKey]: {
           ...dayData,
           exerciseLogs: {
             ...dayData.exerciseLogs,
@@ -152,7 +157,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         }
       };
     });
-  }, [selectedDay]);
+  }, [selectedDay, weekOffset]);
 
   const initExerciseLog = useCallback((key: string, name: string, muscle_group: string, defaultSets: any) => {
     setAllLogs(prev => {
@@ -373,7 +378,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
             <li>
               <div className="flex items-center">
                 <span className="material-symbols-outlined text-slate-400 text-lg mx-1">chevron_right</span>
-                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.email.split('@')[0]}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.email?.split('@')[0]}</span>
               </div>
             </li>
           </ol>
@@ -386,7 +391,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
             <div className="absolute -bottom-1 -right-1 bg-[#17cf54] w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email.split('@')[0]}</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email?.split('@')[0]}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">flag</span> {t('goal')}: {t('fat_loss')}
