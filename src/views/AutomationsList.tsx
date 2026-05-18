@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  Search, 
+import {
+  Plus,
+  Search,
   Hand,
   Repeat,
   AlertTriangle,
@@ -13,7 +13,10 @@ import {
   ClipboardCheck,
   UserPlus,
   Smartphone,
-  TrendingUp
+  TrendingUp,
+  ChevronDown,
+  Zap,
+  Workflow
 } from 'lucide-react';
 import { useAutomation, Automation } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
@@ -25,14 +28,16 @@ const iconMap: Record<string, React.ElementType> = {
 
 interface AutomationsListProps {
   onCreateNew: () => void;
+  onCreateWorkflow: () => void;
   onEdit: (automation: Automation) => void;
 }
 
-export default function AutomationsList({ onCreateNew, onEdit }: AutomationsListProps) {
+export default function AutomationsList({ onCreateNew, onCreateWorkflow, onEdit }: AutomationsListProps) {
   const { t } = useLanguage();
   const { automations, toggleAutomation, deleteAutomation } = useAutomation();
   const { clients } = useClient();
   const [search, setSearch] = useState('');
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
   
   const activeCount = automations.filter(a => a.enabled).length;
   const filtered = automations.filter(a => 
@@ -63,13 +68,56 @@ export default function AutomationsList({ onCreateNew, onEdit }: AutomationsList
                 type="text"
               />
             </div>
-            <button 
-              onClick={onCreateNew}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-sm transition-all transform active:scale-95"
-            >
-              <Plus className="w-5 h-5" />
-              {t('new_automation')}
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowCreateMenu(v => !v)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-sm transition-all transform active:scale-95"
+              >
+                <Plus className="w-5 h-5" />
+                {t('new_automation')}
+                <ChevronDown className={`w-4 h-4 transition-transform ${showCreateMenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showCreateMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowCreateMenu(false)} />
+                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-20 overflow-hidden">
+                    <button
+                      onClick={() => { setShowCreateMenu(false); onCreateNew(); }}
+                      className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center shrink-0">
+                        <Zap className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                          {t('simple_automation', { defaultValue: 'Simple Automation' })}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {t('simple_automation_desc', { defaultValue: 'One trigger, one message — the 3-step wizard.' })}
+                        </div>
+                      </div>
+                    </button>
+                    <div className="h-px bg-slate-100 dark:bg-slate-800" />
+                    <button
+                      onClick={() => { setShowCreateMenu(false); onCreateWorkflow(); }}
+                      className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center shrink-0">
+                        <Workflow className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                          {t('advanced_workflow', { defaultValue: 'Advanced Workflow' })}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {t('advanced_workflow_desc', { defaultValue: 'Visual builder with branching, conditions and multiple actions.' })}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 

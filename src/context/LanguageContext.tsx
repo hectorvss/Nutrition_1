@@ -56,8 +56,12 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
     const langDict = translations[language] || translations['es'];
     if (!langDict) return key;
 
-    let text = langDict[key] || key;
-    
+    // Missing key -> fall back to an explicit defaultValue param, else the key itself.
+    let text: string = langDict[key];
+    if (text == null) {
+      text = (params && params.defaultValue != null) ? String(params.defaultValue) : key;
+    }
+
     if (params && typeof text === 'string') {
       Object.entries(params).forEach(([k, v]) => {
         const value = (v !== null && v !== undefined) ? v.toString() : '';

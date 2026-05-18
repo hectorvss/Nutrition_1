@@ -4,9 +4,13 @@ import AutomationsList from './AutomationsList';
 import AutomationCreateTrigger from './AutomationCreateTrigger';
 import AutomationCreateMessage from './AutomationCreateMessage';
 import AutomationCreateReview from './AutomationCreateReview';
+import WorkflowsList from './WorkflowsList';
+import WorkflowBuilder from './WorkflowBuilder';
 import { Automation, AutomationDeliveryRules } from '../context/AutomationContext';
 
-type AutomationsView = 'list' | 'step-trigger' | 'step-message' | 'step-review';
+type AutomationsView =
+  | 'list' | 'step-trigger' | 'step-message' | 'step-review'
+  | 'workflow-list' | 'workflow-builder';
 
 interface WizardData {
   triggerId: string;
@@ -44,6 +48,7 @@ const defaultWizard: WizardData = {
 export default function Automations() {
   const [currentView, setCurrentView] = useState<AutomationsView>('list');
   const [wizard, setWizard] = useState<WizardData>(defaultWizard);
+  const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
 
   const updateWizard = (updates: Partial<WizardData>) => {
     setWizard(prev => ({ ...prev, ...updates }));
@@ -83,9 +88,24 @@ export default function Automations() {
     switch (currentView) {
       case 'list':
         return (
-          <AutomationsList 
+          <AutomationsList
             onCreateNew={startCreate}
+            onCreateWorkflow={() => setCurrentView('workflow-list')}
             onEdit={startEdit}
+          />
+        );
+      case 'workflow-list':
+        return (
+          <WorkflowsList
+            onBack={() => setCurrentView('list')}
+            onOpen={(id) => { setActiveWorkflowId(id); setCurrentView('workflow-builder'); }}
+          />
+        );
+      case 'workflow-builder':
+        return (
+          <WorkflowBuilder
+            workflowId={activeWorkflowId}
+            onBack={() => setCurrentView('workflow-list')}
           />
         );
       case 'step-trigger':
@@ -124,7 +144,13 @@ export default function Automations() {
           />
         );
       default:
-        return <AutomationsList onCreateNew={startCreate} onEdit={startEdit} />;
+        return (
+          <AutomationsList
+            onCreateNew={startCreate}
+            onCreateWorkflow={() => setCurrentView('workflow-list')}
+            onEdit={startEdit}
+          />
+        );
     }
   };
 

@@ -121,8 +121,10 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
 
-  const getTriggerName = (id: string, fallback: string) => t(`trigger_${id}_name`, { defaultValue: fallback });
-  const getTriggerDesc = (id: string, fallback: string) => t(`trigger_${id}_desc`, { defaultValue: fallback });
+  // Translation keys use underscores; trigger ids may contain hyphens (e.g. "weekly-checkin").
+  const triggerKey = (id: string) => id.replace(/-/g, '_');
+  const getTriggerName = (id: string, fallback: string) => t(`trigger_${triggerKey(id)}_name`, { defaultValue: fallback });
+  const getTriggerDesc = (id: string, fallback: string) => t(`trigger_${triggerKey(id)}_desc`, { defaultValue: fallback });
   const getTriggerCategory = (category: string) => t(`trigger_category_${category.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, { defaultValue: category });
 
   const filtered = triggers.filter(t => {

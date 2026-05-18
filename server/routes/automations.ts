@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
+import { resumeWaitingWorkflows, fireScheduledWorkflows } from './workflows.js';
 
 const router = Router();
 
@@ -542,7 +543,11 @@ const cronHandler = async (req: any, res: any) => {
       }
     }
 
-    res.json({ success: true });
+    // Advanced Workflows: resume parked (Wait) runs + fire scheduled workflows.
+    const resumed = await resumeWaitingWorkflows();
+    const scheduled = await fireScheduledWorkflows();
+
+    res.json({ success: true, workflows: { resumed, scheduled } });
   } catch (error: any) {
     console.error('Cron error:', error);
     res.status(500).json({ error: error.message });
