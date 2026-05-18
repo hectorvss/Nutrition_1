@@ -16,6 +16,7 @@ import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn'
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
+import FixedQuestionsPanel from '../components/ui/FixedQuestionsPanel';
 import { Reorder, AnimatePresence } from 'framer-motion';
 
 interface OnboardingFlowEditorProps {
@@ -247,6 +248,9 @@ export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowE
 
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center">
           <div className="w-full max-w-6xl space-y-8 pb-32">
+
+            <FixedQuestionsPanel kind="onboarding" />
+
             {selectedStep && (
               <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
                 <div className="flex items-start justify-between">

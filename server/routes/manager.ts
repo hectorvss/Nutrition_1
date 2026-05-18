@@ -2741,6 +2741,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     const mMood = (d: any) => num(d?.mood_score ?? d?.mood);
     const mMotivation = (d: any) => num(d?.motivation_level ?? d?.motivation);
     const mSleep = (d: any) => num(d?.sleep_hours ?? d?.sleep ?? d?.sleepQuantity);
+    const mSleepQuality = (d: any) => num(d?.sleep_quality_score ?? d?.sleepQuality);
+    const mSteps = (d: any) => num(d?.steps ?? d?.stepCount);
 
     const mindset = {
       energy: mEnergy(latestData) ?? '--',
@@ -2748,6 +2750,8 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       mood: mMood(latestData) ?? '--',
       motivation: mMotivation(latestData) ?? '--',
       sleep: mSleep(latestData) ?? '--',
+      sleepQuality: mSleepQuality(latestData) ?? '--',
+      steps: mSteps(latestData) ?? '--',
       history: allCheckInsCombined.map(ci => {
         const d = ci.answers as any;
         return {
@@ -2756,9 +2760,11 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
           stress: mStress(d),
           mood: mMood(d),
           motivation: mMotivation(d),
-          sleep: mSleep(d)
+          sleep: mSleep(d),
+          sleepQuality: mSleepQuality(d),
+          steps: mSteps(d)
         };
-      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null || h.sleep !== null)
+      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null || h.sleep !== null || h.sleepQuality !== null || h.steps !== null)
     };
 
     // 11. Documents (Filtered real data from messages and submissions)

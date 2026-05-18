@@ -17,6 +17,7 @@ import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn'
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
+import FixedQuestionsPanel from '../components/ui/FixedQuestionsPanel';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 
 interface CheckInTemplateEditorProps {
@@ -288,7 +289,9 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
         {/* CENTER CANVAs */}
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center">
           <div className="w-full max-w-6xl space-y-8 pb-32">
-            
+
+            <FixedQuestionsPanel kind="checkin" />
+
             {selectedStep && (
               <>
                 <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-4">

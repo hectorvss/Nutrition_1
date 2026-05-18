@@ -486,4 +486,10 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
   }
 });
 
+// Manager: the canonical fixed/locked questions injected into every onboarding.
+// Exposed so the flow editor can show them as read-only, non-deletable.
+router.get('/manager/fixed-questions', verifyManager, async (_req: any, res) => {
+  res.json(FIXED_ONBOARDING_QUESTIONS);
+});
+
 export default router;

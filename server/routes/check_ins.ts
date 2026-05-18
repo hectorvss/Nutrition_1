@@ -1413,4 +1413,10 @@ router.delete('/manager/client-submissions/:submissionId', verifyManager, async 
   }
 });
 
+// Manager: the canonical fixed/locked questions injected into every check-in.
+// Exposed so the template editor can show them as read-only, non-deletable.
+router.get('/manager/fixed-questions', verifyManager, async (_req: any, res) => {
+  res.json(FIXED_CHECKIN_QUESTIONS);
+});
+
 export default router;
