@@ -365,9 +365,8 @@ function NutritionAnalytics({ data }: any) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-2">
         <StatCard
-          title={t('avg_fruit_veg')}
-          value={data?.avgFruitVeg || "0"}
-          unit={t('serv_day')}
+          title={t('nutrition_consistency_label', { defaultValue: 'Consistencia Nutricional' })}
+          value={`${data?.consistency || "0"}%`}
           icon={<Utensils className="w-6 h-6" />}
           iconBg="bg-green-50"
           iconColor="text-green-600"
@@ -452,50 +451,7 @@ function NutritionAnalytics({ data }: any) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6">
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">{t('micronutrient_adequacy')}</h3>
-              <p className="text-sm text-slate-500">{t('micronutrient_desc')}</p>
-            </div>
-            <div className="flex items-center gap-4 mt-2 sm:mt-0">
-              <LegendItem color="bg-amber-500" label={t('iron')} />
-              <LegendItem color="bg-blue-500" label={t('vit_d')} />
-              <LegendItem color="bg-purple-500" label={t('magnesium')} />
-            </div>
-          </div>
-          <div className="flex-1 relative min-h-[220px]">
-            <svg className="w-full h-full absolute inset-0" preserveAspectRatio="none" viewBox="0 0 600 200">
-              {[50, 100, 150].map(y => (
-                <line key={y} x1="0" y1={y} x2="600" y2={y} stroke="#f1f5f9" strokeDasharray="4 4" strokeWidth="1" />
-              ))}
-              <path 
-                d={data?.microTrends?.iron?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')}
-                fill="none" stroke="#f59e0b" strokeLinecap="round" strokeWidth="3"
-              />
-              <path
-                d={data?.microTrends?.vitD?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')}
-                fill="none" stroke="#3b82f6" strokeLinecap="round" strokeWidth="3"
-              />
-              <path
-                d={data?.microTrends?.magnesium?.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${i * 100},${200 - (v / 100) * 200}`).join(' ')}
-                fill="none" stroke="#a855f7" strokeLinecap="round" strokeWidth="3"
-              />
-            </svg>
-            <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-slate-400 font-medium px-1">
-              <span>{t('analytics_week_1')}</span>
-              <span>{t('analytics_week_2')}</span>
-              <span>{t('analytics_week_3')}</span>
-              <span>{t('analytics_week_4')}</span>
-            </div>
-            <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-xs text-slate-400 font-medium pr-2">
-              <span>100%</span>
-              <span>50%</span>
-              <span>0%</span>
-            </div>
-          </div>
-        </div>
+      <div className="pb-6">
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-slate-900">{t('top_deficit_clients')}</h3>

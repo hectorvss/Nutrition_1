@@ -78,13 +78,27 @@ const FIXED_CHECKIN_QUESTIONS = [
     ]
   },
   {
+    id: 'training_step',
+    title: 'Training Performance',
+    subtitle: 'Rate your training week from 1 (lowest) to 10 (highest)',
+    meta: { icon: 'fitness_center' },
+    locked: true,
+    questions: [
+      { id: 'training_adherence_score', title: 'Training Adherence (1-10)', subtitle: 'How many of your planned sessions did you complete?', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'training_intensity_score', title: 'Training Intensity (1-10)', subtitle: 'Overall effort / intensity of your sessions', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META }
+    ]
+  },
+  {
     id: 'activity_step',
-    title: 'Daily Activity',
-    subtitle: 'Movement outside of your training sessions',
+    title: 'Activity & Lifestyle',
+    subtitle: 'Movement and habits outside of your training sessions',
     meta: { icon: 'directions_run' },
     locked: true,
     questions: [
-      { id: 'steps', title: 'Avg. Daily Steps', type: 'number', unit: 'steps', required: true, is_fixed: true, locked: true }
+      { id: 'steps', title: 'Avg. Daily Steps', type: 'number', unit: 'steps', required: true, is_fixed: true, locked: true },
+      { id: 'water_intake_score', title: 'Hydration (1-10)', subtitle: 'How well did you hit your daily water goal?', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'alcohol_intake', title: 'Alcohol Intake', type: 'single_choice', options: ['None', 'Low', 'Moderate', 'High'], required: true, is_fixed: true, locked: true },
+      { id: 'supplements_taken', title: 'Supplement Adherence', type: 'single_choice', options: ['All', 'Most', 'Some', 'None'], required: true, is_fixed: true, locked: true }
     ]
   }
 ];

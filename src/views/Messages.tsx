@@ -228,6 +228,8 @@ export default function Messages({ onNavigate }: MessagesProps) {
     if (file) {
       setSelectedFile({ file, type });
     }
+    // Reset so selecting the same file again still fires onChange.
+    e.target.value = '';
   };
 
   const startRecording = async () => {
@@ -596,6 +598,21 @@ export default function Messages({ onNavigate }: MessagesProps) {
   return (
     <div className="flex-1 h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden p-6 md:p-8 lg:p-10">
       <main className="w-full h-full flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {/* Hidden file pickers — mounted unconditionally so the buttons work in
+            both the conversation view and the new-message composer. */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={(e) => handleFileSelect(e, 'file')}
+        />
+        <input
+          type="file"
+          ref={imageInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleFileSelect(e, 'image')}
+        />
         {isComposing ? (
           /* New Message Workspace */
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -669,11 +686,18 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 </div>
 
                 <div className="flex-1 flex flex-col p-6 bg-white relative">
-                  <textarea 
-                    className="w-full h-full resize-none border-none focus:ring-0 p-0 text-lg text-slate-700 placeholder-slate-300 leading-relaxed font-['Manrope']" 
+                  <textarea
+                    className="w-full h-full resize-none border-none focus:ring-0 p-0 text-lg text-slate-700 placeholder-slate-300 leading-relaxed font-['Manrope']"
                     placeholder={t('write_first_message')}
                     value={composingContent}
                     onChange={(e) => setComposingContent(e.target.value)}
+                    onKeyDown={(e) => {
+                      // Enter sends; Shift+Enter inserts a newline.
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendBroadcast();
+                      }
+                    }}
                   />
                   
                   {/* Multi-send files preview */}
@@ -1111,19 +1135,6 @@ export default function Messages({ onNavigate }: MessagesProps) {
 
       {/* Input Area */}
       <footer className="p-4 pb-6 pt-2">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
-          onChange={(e) => handleFileSelect(e, 'file')}
-        />
-        <input 
-          type="file" 
-          ref={imageInputRef} 
-          accept="image/*" 
-          className="hidden" 
-          onChange={(e) => handleFileSelect(e, 'image')}
-        />
         <form onSubmit={handleSendMessage} className="flex items-center space-x-3 p-2 bg-slate-50 border border-slate-200 rounded-2xl focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
           <div className="flex items-center space-x-1 px-2 border-r border-slate-200">
             <button 

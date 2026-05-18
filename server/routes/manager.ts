@@ -1971,7 +1971,9 @@ router.get('/analytics', async (req: any, res) => {
 
     if (last30DaysCheckIns.length > 0) {
       const count = last30DaysCheckIns.length;
-      let sumHydration = 0, sumSupps = 0, sumComp = 0, sumRPE = 0, sumNutrition = 0;
+      let sumHydration = 0, sumSuppAdh = 0, sumComp = 0, sumRPE = 0, sumNutrition = 0;
+      const numVal = (x: any) => { const v = Number(x); return Number.isFinite(v) ? v : null; };
+      const suppMap: Record<string, number> = { All: 100, Most: 75, Some: 40, None: 0 };
 
       const mapping: Record<string, number> = {
         'Perfect (>95%)': 100, 'Mostly (>80%)': 85, 'Somewhat (50-80%)': 65, 'Little (<50%)': 30, 'None': 0,
@@ -1985,20 +1987,41 @@ router.get('/analytics', async (req: any, res) => {
         const d = ci.data_json as any;
         const ciDate = ci.date;
         const dayIdx = last7Days.indexOf(ciDate);
-        
-        // Map qualitative to quantitative if needed, prioritizing numeric adherence_score
-        const adherenceBase = d.nutrition_adherence_score !== undefined ? Number(d.nutrition_adherence_score) * 10 
+
+        // Nutrition adherence — fixed metric `nutrition_adherence_score` (1-10).
+        const adherenceBase = d.nutrition_adherence_score !== undefined ? Number(d.nutrition_adherence_score) * 10
                             : (d.adherence_score !== undefined ? Number(d.adherence_score) * 10 : null);
         const nutVal = adherenceBase ?? (mapping[d.nutritionAdherence] ?? Number(d.nutritionAdherence || 0));
-        const traVal = adherenceBase ?? (mapping[d.trainingAdherence] ?? Number(d.trainingAdherence || 0));
-        const hydrateVal = mapping[d.waterIntake] ?? Number(d.hydration_percent || 0);
-        const stressVal = mapping[d.stress] ?? 0;
-        
+
+        // Training adherence — fixed metric `training_adherence_score` (1-10).
+        const traScore = numVal(d.training_adherence_score);
+        const traVal = (traScore != null && traScore > 0) ? traScore * 10
+                     : (mapping[d.trainingAdherence] ?? Number(d.trainingAdherence || 0));
+
+        // Hydration — fixed metric `water_intake_score` (1-10).
+        const hydScore = numVal(d.water_intake_score);
+        const hydrateVal = (hydScore != null && hydScore > 0) ? hydScore * 10
+                         : (mapping[d.waterIntake] ?? Number(d.hydration_percent || 0));
+
+        // Training intensity / RPE — fixed metric `training_intensity_score` (1-10).
+        const intScore = numVal(d.training_intensity_score);
+        const rpeVal = (intScore != null && intScore > 0) ? intScore
+                     : Math.round((mapping[d.trainingIntensity] ?? 0) / 10);
+
         sumNutrition += nutVal;
         sumHydration += hydrateVal;
-        if (d.alcoholIntake && d.alcoholIntake !== 'None') nutrition.alcoholAlerts++;
-        if (d.supplements && d.supplements !== 'None') sumSupps++;
-        
+
+        // Alcohol — fixed metric `alcohol_intake`.
+        const alcohol = d.alcohol_intake ?? d.alcoholIntake;
+        if (alcohol && alcohol !== 'None') nutrition.alcoholAlerts++;
+
+        // Supplement adherence — fixed metric `supplements_taken` (All/Most/Some/None).
+        if (d.supplements_taken !== undefined) {
+          sumSuppAdh += suppMap[d.supplements_taken] ?? 0;
+        } else if (d.supplements && d.supplements !== 'None') {
+          sumSuppAdh += 100;
+        }
+
         if (dayIdx !== -1) {
           // Real reported daily calories (fixed check-in metric `calories`).
           caloriesByDay[dayIdx].intake += Number(d.calories || 0);
@@ -2008,26 +2031,26 @@ router.get('/analytics', async (req: any, res) => {
         // Track Deficits per Client (using adherence as proxy)
         const deficit = 100 - nutVal;
         if (!clientDeficits[ci.client_id] || deficit > clientDeficits[ci.client_id].deficit) {
-          clientDeficits[ci.client_id] = { 
+          clientDeficits[ci.client_id] = {
             name: (ci.users as any)?.email?.split('@')[0] || 'Client',
             email: (ci.users as any)?.email || '',
-            deficit 
+            deficit
           };
         }
-        
+
         // Detailed Training Aggregation (volume is computed separately from workout_logs)
         sumComp += traVal;
-        sumRPE += mapping[d.trainingIntensity] ?? 0;
+        sumRPE += rpeVal;
 
         if (dayIdx !== -1) {
-          trainingByDay[dayIdx].intensity += mapping[d.trainingIntensity] ?? 0;
+          trainingByDay[dayIdx].intensity += rpeVal;
           trainingByDay[dayIdx].count++;
         }
       });
 
       nutrition.avgHydration = Math.round(sumHydration / count);
       nutrition.consistency = Math.round(sumNutrition / count);
-      nutrition.supplementAdherence = Math.round((sumSupps / count) * 100);
+      nutrition.supplementAdherence = Math.round(sumSuppAdh / count);
       
       nutrition.calories.intake = caloriesByDay.map(d => d.count > 0 ? Math.round(d.intake / d.count) : 0);
       
@@ -3487,6 +3510,77 @@ router.get('/nutrition-templates', async (req: any, res: any) => {
   } catch (error: any) {
     console.error('Error fetching nutrition templates:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new nutrition plan template
+router.post('/nutrition-templates', async (req: any, res: any) => {
+  try {
+    const { name, description, target_calories, data_json } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    const { data: profile } = await supabaseAdmin
+      .from('profiles').select('language').eq('user_id', req.user.id).maybeSingle();
+    const language = profile?.language || 'es';
+    const key = `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const { data, error } = await supabaseAdmin
+      .from('nutrition_templates')
+      .insert({
+        key,
+        name: String(name).trim(),
+        description: description || null,
+        target_calories: Number(target_calories) || 0,
+        data_json: data_json || {},
+        language,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error creating nutrition template:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Update a nutrition template (id may be a UUID or a key slug)
+router.put('/nutrition-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
+
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+    for (const f of ['name', 'description', 'target_calories', 'data_json']) {
+      if (req.body?.[f] !== undefined) patch[f] = req.body[f];
+    }
+    const q = supabaseAdmin.from('nutrition_templates').update(patch);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating nutrition template:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Delete a nutrition template (id may be a UUID or a key slug)
+router.delete('/nutrition-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
+    const q = supabaseAdmin.from('nutrition_templates').delete();
+    const { error } = await (isUuid ? q.eq('id', id) : q.eq('key', id));
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting nutrition template:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 

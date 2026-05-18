@@ -205,6 +205,76 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
     };
   });
 
+  // One day card. Used by both the weekly list and the monthly (4-week) view —
+  // identical UI; drag-reorder is only enabled in the weekly view.
+  const renderDayCard = (day: DayPlan, keyPrefix: string, drag: boolean) => (
+    <div
+      key={`${keyPrefix}${day.id}`}
+      className={`relative transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.01] -translate-y-1' : ''}`}
+      draggable={drag}
+      onDragStart={drag ? (e) => handleDragStart(e, day.id) : undefined}
+      onDragOver={drag ? (e) => handleDragOver(e, day.id) : undefined}
+      onDragLeave={drag ? () => setDragOverDayId(null) : undefined}
+      onDrop={drag ? (e) => handleDrop(e, day.id) : undefined}
+      onDragEnd={drag ? handleDragEnd : undefined}
+    >
+      <button
+        onClick={() => onSelectDay(day.id)}
+        className={`group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
+          dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' :
+          'border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50'
+        }`}
+      >
+        {drag && (
+          <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
+            <span className="material-symbols-outlined text-[24px]">drag_indicator</span>
+          </div>
+        )}
+
+        <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
+          </div>
+          <div className={`flex items-center gap-1.5 font-black text-2xl ${day.calories === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
+            <span className="material-symbols-outlined text-lg">{day.calories === 0 ? 'bedtime' : 'local_fire_department'}</span>
+            {day.calories.toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
+          </div>
+        </div>
+
+        <div className="flex-1 w-full space-y-4">
+          <div className="flex items-center justify-between">
+            <span className={`${day.tagColor} text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border`}>
+              {day.tag}
+            </span>
+            <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{day.protein}% P</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20"></div>{day.carbs}% C</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20"></div>{day.fats}% F</span>
+            </div>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
+            <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.protein}%` }}></div>
+            <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.carbs}%` }}></div>
+            <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.fats}%` }}></div>
+          </div>
+        </div>
+
+        <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
+          <div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('nutrition_label')}</div>
+            <div className="flex items-center gap-2">
+               <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
+                {day.weekViewLabel.split(' ')[0]}
+              </div>
+              <span className="text-xs font-bold text-slate-500 uppercase">{day.weekViewLabel.split(' ')[1] || 'Ingestas'}</span>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
+        </div>
+      </button>
+    </div>
+  );
+
   return (
     <div className="flex flex-col w-full h-full">
       <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6 pb-2">
@@ -317,71 +387,20 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               <span className="material-symbols-outlined text-4xl">error</span>
               <p className="text-sm font-medium">{loadError}</p>
             </div>
-          ) : processedDays.map((day) => (
-            <div 
-              key={day.id}
-              className={`relative transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.01] -translate-y-1' : ''}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, day.id)}
-              onDragOver={(e) => handleDragOver(e, day.id)}
-              onDragLeave={() => setDragOverDayId(null)}
-              onDrop={(e) => handleDrop(e, day.id)}
-              onDragEnd={handleDragEnd}
-            >
-              <button
-                onClick={() => onSelectDay(day.id)}
-                className={`group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
-                  dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' : 
-                  'border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50'
-                }`}
-              >
-                <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
-                  <span className="material-symbols-outlined text-[24px]">drag_indicator</span>
+          ) : viewMode === 'monthly' ? (
+            [0, 1, 2, 3].map((w) => (
+              <div key={`week-${w}`} className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 mt-3 first:mt-0">
+                  <span className="material-symbols-outlined text-emerald-500 text-xl">calendar_view_week</span>
+                  <h3 className="font-black text-sm text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t('week')} {w + 1}</h3>
+                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
                 </div>
-
-                <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
-                  </div>
-                  <div className={`flex items-center gap-1.5 font-black text-2xl ${day.calories === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
-                    <span className="material-symbols-outlined text-lg">{day.calories === 0 ? 'bedtime' : 'local_fire_department'}</span>
-                    {day.calories.toLocaleString()} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
-                  </div>
-                </div>
-
-                <div className="flex-1 w-full space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className={`${day.tagColor} text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border`}>
-                      {day.tag}
-                    </span>
-                    <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
-                      <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{day.protein}% P</span>
-                      <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20"></div>{day.carbs}% C</span>
-                      <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20"></div>{day.fats}% F</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
-                    <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.protein}%` }}></div>
-                    <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.carbs}%` }}></div>
-                    <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${day.fats}%` }}></div>
-                  </div>
-                </div>
-
-                <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
-                  <div>
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('nutrition_label')}</div>
-                    <div className="flex items-center gap-2">
-                       <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
-                        {day.weekViewLabel.split(' ')[0]}
-                      </div>
-                      <span className="text-xs font-bold text-slate-500 uppercase">{day.weekViewLabel.split(' ')[1] || 'Ingestas'}</span>
-                    </div>
-                  </div>
-                  <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
-                </div>
-              </button>
-            </div>
-          ))}
+                {processedDays.map((day) => renderDayCard(day, `w${w}-`, false))}
+              </div>
+            ))
+          ) : (
+            processedDays.map((day) => renderDayCard(day, '', true))
+          )}
         </div>
       </div>
     </div>

@@ -1,10 +1,9 @@
 import React from 'react';
-import { 
-  Search, 
-  ClipboardList, 
+import {
+  Search,
+  ClipboardList,
   AlertCircle,
-  AlertTriangle,
-  ChevronRight
+  AlertTriangle
 } from 'lucide-react';
 
 import { useClient } from '../context/ClientContext';
@@ -148,30 +147,23 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                   )}
                 </div>
 
-                {/* Adherence */}
+                {/* Action */}
                 <div className="col-span-2 flex justify-end">
-                  {client.adherence !== null ? (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-slate-100 shadow-sm group-hover:border-emerald-200 transition-colors">
-                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
-                        client.adherence >= 90 ? 'border-emerald-500 text-emerald-600' :
-                        client.adherence >= 75 ? 'border-slate-200 text-slate-500' :
-                        'border-red-200 text-red-500'
-                      }`}>
-                        {client.adherence}%
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-tighter leading-none">{t('streak_label')}</span>
-                        <span className={`text-[11px] font-bold ${
-                          client.streak === t('perfect_streak') || client.streak === t('high_streak') ? 'text-emerald-600' :
-                          client.streak === t('avg_streak') ? 'text-slate-600' :
-                          'text-red-500'
-                        }`}>{client.streak}</span>
-                      </div>
-                    </div>
+                  {client.nutritionPlanAssigned ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onNavigate('plan-detail', client); }}
+                      className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                    >
+                      {t('view_plan_btn', { defaultValue: 'Ver Plan' })}
+                    </button>
                   ) : (
-                    <div className="opacity-30">
-                      <ChevronRight className="w-5 h-5 text-slate-400" />
-                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onNavigate('plan-detail', client); }}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 transition-colors flex items-center gap-1.5 shadow-sm"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5" />
+                      {t('assign_program_btn', { defaultValue: 'Asignar Plan' })}
+                    </button>
                   )}
                 </div>
               </div>
