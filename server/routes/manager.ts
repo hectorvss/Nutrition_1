@@ -1946,19 +1946,12 @@ router.get('/analytics', async (req: any, res) => {
     const clientDeficits: Record<string, { name: string, email: string, deficit: number }> = {};
 
     let nutrition = {
-      avgFruitVeg: 0,
       avgHydration: 0,
       consistency: 0,
       alcoholAlerts: 0,
       supplementAdherence: 0,
       calories: { intake: [0,0,0,0,0,0,0], goal: [0,0,0,0,0,0,0] },
-      topDeficits: [] as any[],
-      // Micronutrient tracking has no data source in the current check-in flow.
-      microTrends: {
-        iron: [] as number[],
-        vitD: [] as number[],
-        magnesium: [] as number[]
-      }
+      topDeficits: [] as any[]
     };
 
     let training = {

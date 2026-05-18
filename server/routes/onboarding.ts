@@ -69,6 +69,46 @@ const injectFixedQuestions = (schema: any[]) => {
   return [...FIXED_ONBOARDING_QUESTIONS, ...customSchema];
 };
 
+// Returns the ids of every `required` question in `schema` that has no usable
+// answer. Mirrors the client-side validation (conditionals + composite types).
+const findMissingRequired = (schema: any[], answers: any): string[] => {
+  const ans = answers || {};
+  const isVisible = (q: any): boolean => {
+    if (q.hidden) return false;
+    if (!q.conditional) return true;
+    const { field, operator, value } = q.conditional;
+    const fv = ans[field];
+    if (operator === 'equals') return fv === value;
+    if (operator === 'not_equals') return fv !== value;
+    if (operator === 'contains') return Array.isArray(fv) && fv.includes(value);
+    return true;
+  };
+  const isAnswered = (q: any): boolean => {
+    if (q.type === 'measurement_group') {
+      return (q.options || []).some((o: string) => {
+        const v = ans[o]; return v !== undefined && v !== null && v !== '';
+      });
+    }
+    if (q.type === 'photo_group') {
+      return ['front', 'side', 'back'].some(p => {
+        const v = ans[`${q.id}_${p}`]; return v !== undefined && v !== null && v !== '';
+      });
+    }
+    const a = ans[q.id];
+    if (Array.isArray(a)) return a.length > 0;
+    return a !== undefined && a !== null && a !== '';
+  };
+  const missing: string[] = [];
+  for (const step of (schema || [])) {
+    for (const q of (step.questions || [])) {
+      if (!q.required) continue;
+      if (!isVisible(q)) continue;
+      if (!isAnswered(q)) missing.push(q.id);
+    }
+  }
+  return missing;
+};
+
 // --- Onboarding Templates (Manager) ---
 
 // Get all templates (including global ones with manager_id = null)
@@ -400,6 +440,20 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
       .eq('id', assignment.template_id)
       .maybeSingle();
 
+    // Full schema = the manager's questions + the system fixed questions.
+    const injectedSchema = injectFixedQuestions(template?.template_schema || []);
+
+    // Server-side guard: every required question must be answered, so an
+    // onboarding can never be submitted without the mandatory baseline data.
+    const missingRequired = findMissingRequired(injectedSchema, answers_json);
+    if (missingRequired.length > 0) {
+      return res.status(400).json({
+        error: 'Missing required answers',
+        message: 'All required questions must be answered before submitting.',
+        missing: missingRequired
+      });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('client_onboarding_submissions')
       .insert({
@@ -407,7 +461,7 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
         template_id: assignment.template_id,
         template_version: template?.version || 1,
         template_snapshot_json: template
-          ? { ...template, templateSchema: template.template_schema }
+          ? { ...template, template_schema: injectedSchema, templateSchema: injectedSchema }
           : null,
         answers_json,
         submitted_at: new Date().toISOString()

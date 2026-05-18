@@ -288,6 +288,48 @@ const injectFixedQuestions = (schema: any[]) => {
   return [...stepsToInject, ...safeSchema];
 };
 
+// Returns the ids of every `required` question in `schema` that has no usable
+// answer in `answers`. Mirrors the client-side validation: conditional
+// questions that are not currently visible are skipped, and composite types
+// (measurement_group / photo_group) store values under derived keys.
+const findMissingRequired = (schema: any[], answers: any): string[] => {
+  const ans = answers || {};
+  const isVisible = (q: any): boolean => {
+    if (q.hidden) return false;
+    if (!q.conditional) return true;
+    const { field, operator, value } = q.conditional;
+    const fv = ans[field];
+    if (operator === 'equals') return fv === value;
+    if (operator === 'not_equals') return fv !== value;
+    if (operator === 'contains') return Array.isArray(fv) && fv.includes(value);
+    return true;
+  };
+  const isAnswered = (q: any): boolean => {
+    if (q.type === 'measurement_group') {
+      return (q.options || []).some((o: string) => {
+        const v = ans[o]; return v !== undefined && v !== null && v !== '';
+      });
+    }
+    if (q.type === 'photo_group') {
+      return ['front', 'side', 'back'].some(p => {
+        const v = ans[`${q.id}_${p}`]; return v !== undefined && v !== null && v !== '';
+      });
+    }
+    const a = ans[q.id];
+    if (Array.isArray(a)) return a.length > 0;
+    return a !== undefined && a !== null && a !== '';
+  };
+  const missing: string[] = [];
+  for (const step of (schema || [])) {
+    for (const q of (step.questions || [])) {
+      if (!q.required) continue;
+      if (!isVisible(q)) continue;
+      if (!isAnswered(q)) missing.push(q.id);
+    }
+  }
+  return missing;
+};
+
 // Finds the manager's "General Check-in" template, creating it if it doesn't
 // exist. Guarantees the caller always gets a template backed by a real DB row
 // (with a valid UUID id) so client submissions never fail with "Template not found".
@@ -1251,6 +1293,19 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
     //    Snapshot the schema WITH the fixed questions injected, so the saved
     //    submission matches exactly what the client filled.
     const injectedSchema = injectFixedQuestions(template.template_schema);
+
+    // 3a. Server-side guard: every required question must be answered. This
+    //     backs up the UI validation so a check-in can never be submitted
+    //     (even via a direct API call) without the mandatory KPI variables.
+    const missingRequired = findMissingRequired(injectedSchema, answers_json);
+    if (missingRequired.length > 0) {
+      return res.status(400).json({
+        error: 'Missing required answers',
+        message: 'All required questions must be answered before submitting.',
+        missing: missingRequired
+      });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('client_checkin_submissions')
       .insert({
