@@ -612,12 +612,14 @@ function SecuritySettings() {
   useEffect(() => {
     const loadSecurityData = async () => {
       try {
-        const [sessionsData, historyData] = await Promise.all([
-          fetchWithAuth('/manager/sessions'),
-          fetchWithAuth('/manager/login-history')
+        const [sessionsData, historyData, profileData] = await Promise.all([
+          fetchWithAuth('/manager/security/sessions'),
+          fetchWithAuth('/manager/security/history'),
+          fetchWithAuth('/manager/profile')
         ]);
         setSessions(sessionsData || []);
         setHistory(historyData || []);
+        setMfaEnabled(!!profileData?.mfa_enabled);
       } catch (err) {
         console.error('Error loading security data:', err);
       }
@@ -630,12 +632,16 @@ function SecuritySettings() {
       setError(t('passwords_dont_match', { defaultValue: 'Las contraseñas no coinciden' }));
       return;
     }
+    if (newPassword.length < 8) {
+      setError(t('password_min_length', { defaultValue: 'La contraseña debe tener al menos 8 caracteres' }));
+      return;
+    }
     setUpdating(true);
     setError(null);
     try {
-      await fetchWithAuth('/manager/change-password', {
+      await fetchWithAuth('/manager/update-password', {
         method: 'POST',
-        body: JSON.stringify({ password: newPassword })
+        body: JSON.stringify({ newPassword })
       });
       setSuccess(true);
       setNewPassword('');
@@ -650,10 +656,24 @@ function SecuritySettings() {
 
   const handleRevokeSession = async (id: string) => {
     try {
-      await fetchWithAuth(`/manager/sessions/${id}`, { method: 'DELETE' });
+      await fetchWithAuth(`/manager/security/sessions/${id}`, { method: 'DELETE' });
       setSessions(prev => prev.filter(s => s.id !== id));
     } catch (err) {
       console.error('Error revoking session:', err);
+    }
+  };
+
+  const handleToggle2FA = async () => {
+    const next = !mfaEnabled;
+    setMfaEnabled(next); // optimistic
+    try {
+      await fetchWithAuth('/manager/security/2fa/toggle', {
+        method: 'POST',
+        body: JSON.stringify({ enabled: next })
+      });
+    } catch (err) {
+      console.error('Error toggling 2FA:', err);
+      setMfaEnabled(!next); // rollback
     }
   };
 
@@ -740,11 +760,11 @@ function SecuritySettings() {
             </div>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
-            <input 
-              className="sr-only peer" 
-              type="checkbox" 
+            <input
+              className="sr-only peer"
+              type="checkbox"
               checked={mfaEnabled}
-              onChange={() => setMfaEnabled(!mfaEnabled)}
+              onChange={handleToggle2FA}
             />
             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
           </label>
@@ -838,37 +858,97 @@ function SecuritySettings() {
 
 function BillingSettings() {
   const { t } = useLanguage();
+  const [billing, setBilling] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchWithAuth('/manager/billing');
+        setBilling(data);
+      } catch (err) {
+        console.error('Error loading billing:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const openPortal = async () => {
+    setPortalLoading(true);
+    setError(null);
+    try {
+      const r = await fetchWithAuth('/manager/billing/portal', { method: 'POST' });
+      if (r?.url) {
+        window.location.href = r.url;
+      } else {
+        setError(t('billing_unavailable', { defaultValue: 'La gestión de facturación no está disponible.' }));
+      }
+    } catch (err: any) {
+      setError(err?.message || t('billing_unavailable', { defaultValue: 'La gestión de facturación no está disponible.' }));
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const sub = billing?.subscription;
+  const invoices: any[] = billing?.invoices || [];
+  const pm = billing?.paymentMethod;
+  const statusActive = sub?.status === 'active' || sub?.status === 'trialing';
+  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString() : '—';
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>
+      )}
+
+      {/* Current Plan */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-lg font-bold text-slate-900">{t('current_plan')}</h2>
             <p className="text-sm text-slate-500 mt-1">{t('manage_subscription')}</p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full text-xs font-semibold text-emerald-600 w-fit">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            {t('active')}
-          </div>
-        </div>
-        <div className="flex flex-col md:flex-row md:items-center justify-between bg-slate-50 rounded-xl p-6 border border-slate-100">
-          <div className="mb-4 md:mb-0">
-            <h3 className="text-lg font-bold text-slate-900">{t('professional_plan')}</h3>
-            <p className="text-slate-500 text-sm mt-1">{t('professional_plan_desc')}</p>
-            <div className="mt-4 flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-slate-900">$49</span>
-              <span className="text-slate-500 text-sm">/ {t('month', { defaultValue: 'month' })}</span>
+          {sub && (
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold w-fit ${statusActive ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+              <span className={`w-2 h-2 rounded-full ${statusActive ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+              {sub.status || t('active')}
             </div>
-            <p className="text-xs text-slate-400 mt-2">{t('renews_on', { date: 'Oct 24, 2026' })}</p>
-          </div>
-          <div className="flex items-center">
-            <button className="px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 font-medium text-sm hover:bg-slate-50 transition-colors shadow-sm">
-              {t('change_plan')}
+          )}
+        </div>
+        {sub ? (
+          <div className="flex flex-col md:flex-row md:items-center justify-between bg-slate-50 rounded-xl p-6 border border-slate-100">
+            <div className="mb-4 md:mb-0">
+              <h3 className="text-lg font-bold text-slate-900 capitalize">{sub.plan_tier || t('professional_plan')}</h3>
+              <p className="text-xs text-slate-400 mt-2">{t('renews_on', { date: fmtDate(sub.current_period_end) })}</p>
+            </div>
+            <button
+              onClick={openPortal}
+              disabled={portalLoading}
+              className="px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 font-medium text-sm hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+            >
+              {portalLoading ? t('saving') : t('change_plan')}
             </button>
           </div>
-        </div>
+        ) : (
+          <div className="bg-slate-50 rounded-xl p-8 border border-dashed border-slate-200 text-center">
+            <p className="text-sm font-medium text-slate-600">{t('no_active_subscription', { defaultValue: 'No tienes una suscripción activa.' })}</p>
+          </div>
+        )}
       </div>
 
+      {/* Payment Method */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -876,25 +956,29 @@ function BillingSettings() {
             <p className="text-sm text-slate-500 mt-1">{t('update_billing')}</p>
           </div>
         </div>
-        <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center">
-              <img alt="Visa" className="h-4" src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-900 text-sm">{t('visa_ending', { last4: '1234' })}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">{t('default')}</span>
+        {pm ? (
+          <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-slate-500" />
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">{t('expiry', { date: '12/2025' })}</p>
+              <div>
+                <span className="font-semibold text-slate-900 text-sm capitalize">{pm.brand} •••• {pm.last4}</span>
+                <p className="text-xs text-slate-500 mt-0.5">{t('expiry', { date: `${pm.expMonth}/${pm.expYear}` })}</p>
+              </div>
             </div>
+            <button onClick={openPortal} disabled={portalLoading} className="text-emerald-600 text-sm font-semibold hover:text-emerald-700 hover:underline disabled:opacity-50">
+              {t('update')}
+            </button>
           </div>
-          <button className="text-emerald-600 text-sm font-semibold hover:text-emerald-700 hover:underline">
-            {t('update')}
-          </button>
-        </div>
+        ) : (
+          <div className="p-6 border border-dashed border-slate-200 rounded-xl text-center text-sm text-slate-500">
+            {t('no_payment_method', { defaultValue: 'No hay método de pago registrado.' })}
+          </div>
+        )}
       </div>
 
+      {/* Billing History */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -902,42 +986,44 @@ function BillingSettings() {
             <p className="text-sm text-slate-500 mt-1">{t('billing_history_desc')}</p>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-600">
-            <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500">
-              <tr>
-                <th className="px-4 py-3 rounded-l-lg">{t('invoice_date')}</th>
-                <th className="px-4 py-3">{t('plan')}</th>
-                <th className="px-4 py-3">{t('amount')}</th>
-                <th className="px-4 py-3">{t('status')}</th>
-                <th className="px-4 py-3 rounded-r-lg text-right">{t('invoice')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {[
-                { date: 'Sep 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: t('paid') },
-                { date: 'Aug 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: t('paid') },
-                { date: 'Jul 24, 2023', plan: 'Professional Plan', amount: '$49.00', status: t('paid') },
-              ].map((row, i) => (
-                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-4 font-medium text-slate-900">{row.date}</td>
-                  <td className="px-4 py-4">{row.plan}</td>
-                  <td className="px-4 py-4 font-semibold text-slate-900">{row.amount}</td>
-                  <td className="px-4 py-4">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                      {row.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    <button className="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors rounded-full hover:bg-emerald-50">
-                      <Download className="w-5 h-5" />
-                    </button>
-                  </td>
+        {invoices.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 rounded-l-lg">{t('invoice_date')}</th>
+                  <th className="px-4 py-3">{t('amount')}</th>
+                  <th className="px-4 py-3">{t('status')}</th>
+                  <th className="px-4 py-3 rounded-r-lg text-right">{t('invoice')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-4 font-medium text-slate-900">{fmtDate(inv.date)}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-900">{inv.amount.toFixed(2)} {inv.currency}</td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      {inv.pdf ? (
+                        <a href={inv.pdf} target="_blank" rel="noopener noreferrer" className="inline-block p-1.5 text-slate-400 hover:text-emerald-500 transition-colors rounded-full hover:bg-emerald-50">
+                          <Download className="w-5 h-5" />
+                        </a>
+                      ) : <span className="text-slate-300">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-6 border border-dashed border-slate-200 rounded-xl text-center text-sm text-slate-500">
+            {t('no_invoices', { defaultValue: 'Todavía no hay facturas.' })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1010,6 +1096,24 @@ function IntegrationsSettings() {
     }
   };
 
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [testing, setTesting] = useState<string | null>(null);
+
+  const runIntegrationAction = async (key: string, endpoint: string, okText: string) => {
+    setTesting(key);
+    setTestMsg(null);
+    try {
+      const r = await fetchWithAuth(endpoint, { method: 'POST' });
+      const ok = r?.success !== false;
+      setTestMsg({ ok, text: ok ? okText : (r?.message || t('error_loading_data')) });
+    } catch (err: any) {
+      setTestMsg({ ok: false, text: err?.message || t('error_loading_data') });
+    } finally {
+      setTesting(null);
+      setTimeout(() => setTestMsg(null), 6000);
+    }
+  };
+
   if (loading || !settings || !localIntegrations) return (
     <div className="flex items-center justify-center p-12">
       <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -1079,13 +1183,24 @@ function IntegrationsSettings() {
             </div>
           </div>
 
-          <div className="flex justify-end pt-2 gap-2">
-            <button className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100">
+          <div className="flex justify-end pt-2 gap-2 items-center">
+            {testMsg && (
+              <span className={`text-xs font-bold mr-auto ${testMsg.ok ? 'text-emerald-600' : 'text-red-600'}`}>{testMsg.text}</span>
+            )}
+            <button
+              onClick={() => runIntegrationAction('gcal-sync', '/manager/integrations/google-calendar/sync-all', t('settings_saved', { defaultValue: 'OK' }))}
+              disabled={testing !== null}
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 disabled:opacity-50"
+            >
               <Share2 className="w-3 h-3" />
-              {t('sync_existing')}
+              {testing === 'gcal-sync' ? t('saving') : t('sync_existing')}
             </button>
-            <button className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100">
-              {t('test_connection')}
+            <button
+              onClick={() => runIntegrationAction('gcal-test', '/manager/integrations/google-calendar/test', t('connected_stripe', { defaultValue: 'OK' }))}
+              disabled={testing !== null}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 disabled:opacity-50"
+            >
+              {testing === 'gcal-test' ? t('saving') : t('test_connection')}
             </button>
           </div>
         </div>
@@ -1156,8 +1271,12 @@ function IntegrationsSettings() {
           {isSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
           {isSaving ? t('saving') : t('save_all_integrations')}
         </button>
-        <button className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all shadow-lg">
-          {t('test_stripe')}
+        <button
+          onClick={() => runIntegrationAction('stripe-test', '/manager/integrations/stripe/test', t('connected_stripe', { defaultValue: 'OK' }))}
+          disabled={testing !== null}
+          className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all shadow-lg disabled:opacity-50"
+        >
+          {testing === 'stripe-test' ? t('saving') : t('test_stripe')}
         </button>
       </div>
 

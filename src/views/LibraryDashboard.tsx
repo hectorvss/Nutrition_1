@@ -13,14 +13,31 @@ import {
   Trash2,
   Loader2
 } from 'lucide-react';
-import { recipes, supplements } from '../constants/library';
+import { supplements } from '../constants/library';
 import { useFoodContext } from '../context/FoodContext';
 import { useLanguage } from '../context/LanguageContext';
+import { fetchWithAuth } from '../api';
 
 type Tab = 'recipes' | 'food' | 'supplements';
 
+interface Recipe {
+  id: string;
+  title: string;
+  description?: string;
+  image_url?: string;
+  category?: string;
+  prep_time?: number;
+  servings?: number;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  rating?: number;
+  tags?: string[];
+}
+
 interface LibraryDashboardProps {
-  onNavigate: (view: string) => void;
+  onNavigate: (view: string, recipeId?: string) => void;
 }
 
 export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) {
@@ -31,6 +48,40 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
   const [visibleCount, setVisibleCount] = useState(30);
   const observerTarget = useRef<HTMLDivElement>(null);
   const { foods: foodItems, deleteFood, isLoading: isCtxLoading } = useFoodContext();
+
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipesLoading, setRecipesLoading] = useState(true);
+  const [recipesError, setRecipesError] = useState<string | null>(null);
+
+  const loadRecipes = async () => {
+    setRecipesLoading(true);
+    setRecipesError(null);
+    try {
+      const data = await fetchWithAuth('/recipes');
+      setRecipes(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setRecipesError(err.message || 'Error loading recipes');
+    } finally {
+      setRecipesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRecipes();
+  }, []);
+
+  const handleDeleteRecipe = async (id: string) => {
+    try {
+      await fetchWithAuth('/recipes/' + id, { method: 'DELETE' });
+      setRecipes(prev => prev.filter(r => r.id !== id));
+    } catch (err: any) {
+      setRecipesError(err.message || 'Error deleting recipe');
+    }
+  };
+
+  const filteredRecipes = recipes.filter(
+    r => !search || r.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -126,38 +177,54 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
           </div>
         ) : activeTab === 'recipes' && (
           <div className="flex flex-col gap-6">
-            {recipes.map((recipe) => (
-              <div 
-                key={recipe.id} 
-                onClick={() => onNavigate('recipe-detail')}
+            {recipesLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
+                <p className="text-slate-500 font-bold text-lg">{t('loading_library')}</p>
+              </div>
+            ) : (
+              <>
+            {!recipesLoading && filteredRecipes.length === 0 && (
+              <div className="text-center py-20 bg-white rounded-3xl border border-slate-200">
+                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-10 h-10 text-slate-300" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('no_foods_found')}</h3>
+                <p className="text-slate-500">{recipesError || t('library_empty_msg')}</p>
+              </div>
+            )}
+            {filteredRecipes.map((recipe) => (
+              <div
+                key={recipe.id}
+                onClick={() => onNavigate('recipe-detail', recipe.id)}
                 className="group bg-white border border-slate-200 rounded-3xl overflow-hidden flex flex-col sm:flex-row h-auto sm:h-52 hover:shadow-xl hover:border-emerald-500/30 transition-all cursor-pointer"
               >
                 <div className="relative w-full sm:w-72 h-52 sm:h-full flex-shrink-0 overflow-hidden">
-                  <img 
-                    src={recipe.image} 
-                    alt={recipe.title} 
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                  <img
+                    src={recipe.image_url}
+                    alt={recipe.title}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                   <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
                     <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                     <span className="text-xs font-bold text-slate-700">{recipe.rating}</span>
                   </div>
                 </div>
-                
+
                 <div className="p-8 flex flex-col sm:flex-row flex-1 gap-8 items-start sm:items-center">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
                       <h3 className="font-bold text-2xl text-slate-900 tracking-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
                       <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">{recipe.category}</span>
                     </div>
-                    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4">{t('recipe_card_sample_desc')}</p>
+                    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4">{recipe.description || t('recipe_card_sample_desc')}</p>
                     <div className="flex flex-wrap gap-2">
-                      {recipe.tags.map(tag => (
+                      {(recipe.tags || []).map(tag => (
                         <span key={tag} className="px-3 py-1 rounded-lg bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{tag}</span>
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-row sm:flex-col items-center sm:items-end gap-8 sm:gap-6 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-100 pt-6 sm:pt-0 sm:pl-8">
                     <div className="flex flex-row sm:flex-col gap-6 sm:gap-3 text-sm font-bold text-slate-400 mr-auto sm:mr-0 text-right">
                       <div className="flex items-center sm:justify-end gap-2">
@@ -166,11 +233,14 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                       </div>
                       <div className="flex items-center sm:justify-end gap-2">
                         <Clock className="w-5 h-5 text-slate-400" />
-                        <span className="text-slate-700">{recipe.prepTime} min</span>
+                        <span className="text-slate-700">{recipe.prep_time} min</span>
                       </div>
                     </div>
                     <div className="flex gap-3">
-                      <button className="p-3 rounded-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteRecipe(recipe.id); }}
+                        className="p-3 rounded-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+                      >
                         <Heart className="w-6 h-6" />
                       </button>
                       <button className="p-3 rounded-2xl text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center">
@@ -181,8 +251,10 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 </div>
               </div>
             ))}
-            
-            <div 
+              </>
+            )}
+
+            <div
               onClick={() => onNavigate('recipe-create')}
               className="rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 hover:bg-white hover:border-emerald-500/50 transition-all cursor-pointer group p-8 flex items-center justify-center h-24"
             >

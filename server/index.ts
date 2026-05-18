@@ -10,6 +10,7 @@ import stripeRoutes from './routes/stripe.js';
 import automationRoutes from './routes/automations.js';
 import workflowRoutes from './routes/workflows.js';
 import onboardingRoutes from './routes/onboarding.js';
+import recipeRoutes from './routes/recipes.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3005;
@@ -87,6 +88,7 @@ app.use('/api/stripe', stripeRoutes);
 app.use('/api/automations', automationRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/recipes', recipeRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });

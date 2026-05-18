@@ -1663,6 +1663,79 @@ router.post('/settings', verifyManager, async (req: any, res) => {
 });
 
 
+// Get the manager's SaaS subscription, invoices and payment method
+router.get('/billing', async (req: any, res) => {
+  try {
+    const { data: sub } = await supabaseAdmin
+      .from('manager_subscriptions')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    let invoices: any[] = [];
+    let paymentMethod: any = null;
+
+    const platformKey = process.env.STRIPE_SECRET_KEY;
+    if (sub?.stripe_customer_id && platformKey) {
+      try {
+        const stripe = new Stripe(platformKey);
+        const inv = await stripe.invoices.list({ customer: sub.stripe_customer_id, limit: 12 });
+        invoices = inv.data.map(i => ({
+          id: i.id,
+          date: i.created ? new Date(i.created * 1000).toISOString() : null,
+          amount: (i.amount_paid ?? i.amount_due ?? 0) / 100,
+          currency: (i.currency || 'usd').toUpperCase(),
+          status: i.status,
+          pdf: i.invoice_pdf || i.hosted_invoice_url || null
+        }));
+        const cust: any = await stripe.customers.retrieve(sub.stripe_customer_id, {
+          expand: ['invoice_settings.default_payment_method']
+        });
+        const pm: any = cust?.invoice_settings?.default_payment_method;
+        if (pm?.card) {
+          paymentMethod = { brand: pm.card.brand, last4: pm.card.last4, expMonth: pm.card.exp_month, expYear: pm.card.exp_year };
+        }
+      } catch (e: any) {
+        console.error('Billing Stripe fetch error:', e?.message);
+      }
+    }
+
+    res.json({ subscription: sub || null, invoices, paymentMethod });
+  } catch (error: any) {
+    console.error('Error fetching billing:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Create a Stripe Billing Portal session (manage plan / payment method / invoices)
+router.post('/billing/portal', async (req: any, res) => {
+  try {
+    const platformKey = process.env.STRIPE_SECRET_KEY;
+    if (!platformKey) {
+      return res.status(503).json({ error: 'Billing is not configured on this server.' });
+    }
+    const { data: sub } = await supabaseAdmin
+      .from('manager_subscriptions')
+      .select('stripe_customer_id')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (!sub?.stripe_customer_id) {
+      return res.status(404).json({ error: 'No subscription found for this account.' });
+    }
+
+    const stripe = new Stripe(platformKey);
+    const session = await stripe.billingPortal.sessions.create({
+      customer: sub.stripe_customer_id,
+      return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/settings`
+    });
+    res.json({ url: session.url });
+  } catch (error: any) {
+    console.error('Error creating billing portal session:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 // Update manager password
 router.post('/update-password', async (req: any, res) => {
   try {

@@ -52,6 +52,7 @@ export default function App() {
   const [selectedTaskDate, setSelectedTaskDate] = useState<string | null>(null);
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [calendarViewMode, setCalendarViewMode] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -212,7 +213,15 @@ export default function App() {
       case 'training':
         return <Training />;
       case 'library':
-        return <LibraryDashboard onNavigate={(view) => setCurrentView(view as View)} />;
+        return <LibraryDashboard onNavigate={(view, recipeId) => {
+          if (view === 'recipe-detail') {
+            setSelectedRecipeId(recipeId ?? null);
+          } else if (view === 'recipe-create') {
+            // Crear una receta nueva: nunca entrar en modo edición
+            setSelectedRecipeId(null);
+          }
+          setCurrentView(view as View);
+        }} />;
       case 'exercises':
         return <TrainingLibrary onNavigate={(view, name) => {
           if (name) setSelectedActivityName(name);
@@ -221,9 +230,16 @@ export default function App() {
       case 'exercise-detail':
         return <ExerciseDetail exerciseName={selectedActivityName || undefined} onBack={() => setCurrentView('exercises')} />;
       case 'recipe-create':
-        return <RecipeCreate onBack={() => setCurrentView('library')} />;
+        return <RecipeCreate
+          recipeId={selectedRecipeId ?? undefined}
+          onBack={() => { setSelectedRecipeId(null); setCurrentView('library'); }}
+        />;
       case 'recipe-detail':
-        return <RecipeDetail onBack={() => setCurrentView('library')} />;
+        return <RecipeDetail
+          recipeId={selectedRecipeId ?? undefined}
+          onBack={() => setCurrentView('library')}
+          onEdit={(id) => { setSelectedRecipeId(id); setCurrentView('recipe-create'); }}
+        />;
       case 'food-create':
         return <FoodCreate onBack={() => setCurrentView('library')} />;
       case 'supplement-create':
