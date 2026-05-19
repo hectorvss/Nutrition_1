@@ -125,6 +125,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const [supplements, setSupplements] = useState<any[]>([]);
   const [supplementCatalog, setSupplementCatalog] = useState<any[]>([]);
   const [supplementSearch, setSupplementSearch] = useState('');
+  // Inline dose editor for a supplement row.
+  const [editingSuppId, setEditingSuppId] = useState<string | null>(null);
+  const [editingSuppDose, setEditingSuppDose] = useState('');
 
   // Load existing plan on mount
   React.useEffect(() => {
@@ -256,6 +259,21 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
   const removeSupplement = (id: string) => {
     setSupplements(prev => prev.filter(x => x.id !== id));
+  };
+
+  const startEditSuppDose = (s: any) => {
+    setEditingSuppId(s.id);
+    setEditingSuppDose(s.dose || '');
+  };
+
+  const commitEditSuppDose = () => {
+    if (!editingSuppId) return;
+    const dose = editingSuppDose.trim();
+    setSupplements(prev => prev.map(x =>
+      x.id === editingSuppId ? { ...x, dose } : x
+    ));
+    setEditingSuppId(null);
+    setEditingSuppDose('');
   };
 
   const savePlan = async () => {
@@ -623,7 +641,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
             <li>
               <div className="flex items-center">
                 <ArrowRight className="w-4 h-4 text-slate-400 mx-1" />
-                <span className="text-slate-800 font-medium">{client?.name || 'Sarah Jenkins'}</span>
+                <span className="text-slate-800 font-medium">{client?.name || t('client', { defaultValue: 'Client' })}</span>
               </div>
             </li>
             {selectedDay && (
@@ -639,23 +657,29 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           <div className="relative flex-shrink-0">
-            <div 
-              className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm" 
-              style={{ backgroundImage: `url("${client?.avatar || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop'}")` }} 
-            />
+            {client?.avatar ? (
+              <div
+                className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm"
+                style={{ backgroundImage: `url("${client.avatar}")` }}
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 shadow-sm flex items-center justify-center text-emerald-500 font-bold text-xl">
+                {(client?.name || 'C').charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-bold text-slate-900">{client?.name || 'Sarah Jenkins'}</h1>
+            <h1 className="text-xl font-bold text-slate-900">{client?.name || t('client', { defaultValue: 'Client' })}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500">
               <span className="flex items-center gap-1">
                 <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
                 {t('goal')}: {client?.goal || 'Not Set'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">{client?.gender || 'Female'}, {t('age')}: {client?.age || '28'}</span>
+              <span className="flex items-center gap-1">{client?.gender || '—'}, {t('age')}: {client?.age || '--'}</span>
               <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span className="flex items-center gap-1">{t('weight')}: {client?.weight || '68'}kg</span>
+              <span className="flex items-center gap-1">{t('weight')}: {client?.weight ? `${client.weight}kg` : '--'}</span>
             </div>
           </div>
           <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
@@ -795,10 +819,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button className="px-3 py-1.5 rounded-lg bg-slate-50 text-[10px] font-bold text-slate-600 border border-slate-200 hover:border-emerald-500 hover:text-emerald-600 transition-all flex items-center gap-1 uppercase tracking-widest">
-                          <Flame className="w-3.5 h-3.5 text-orange-500" /> 
-                          Macros
-                        </button>
+                        <span className="px-3 py-1.5 rounded-lg bg-slate-50 text-[10px] font-bold text-slate-600 border border-slate-200 flex items-center gap-1 uppercase tracking-widest">
+                          <Flame className="w-3.5 h-3.5 text-orange-500" />
+                          {`P${Math.round(meal.items.reduce((a, i) => a + i.protein * i.quantity, 0))} · C${Math.round(meal.items.reduce((a, i) => a + i.carbs * i.quantity, 0))} · F${Math.round(meal.items.reduce((a, i) => a + i.fats * i.quantity, 0))}`}
+                        </span>
                         <button
                           onClick={() => startEditBlock(meal)}
                           title="Edit block name & time"
@@ -1021,10 +1045,32 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
-                        {s.dose && <span className="text-emerald-500">{s.dose}</span>}
-                        {s.dose && s.timing && <span>·</span>}
+                        {editingSuppId === s.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              autoFocus
+                              value={editingSuppDose}
+                              onChange={e => setEditingSuppDose(e.target.value)}
+                              onBlur={commitEditSuppDose}
+                              onKeyDown={e => { if (e.key === 'Enter') commitEditSuppDose(); }}
+                              placeholder={t('dose', { defaultValue: 'Dosis' })}
+                              className="w-24 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 border border-emerald-400 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-400 normal-case"
+                            />
+                            <button onMouseDown={e => e.preventDefault()} onClick={commitEditSuppDose} className="p-1 bg-emerald-500 text-white rounded-md">
+                              <Check className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEditSuppDose(s)}
+                            className="text-emerald-500 hover:bg-emerald-50 px-1 py-0.5 rounded-md transition-colors"
+                          >
+                            {s.dose || t('set_dose', { defaultValue: '+ Dosis' })}
+                          </button>
+                        )}
+                        {(s.dose || editingSuppId === s.id) && s.timing && <span>·</span>}
                         {s.timing && <span className="text-blue-500">{s.timing}</span>}
-                        {!s.dose && !s.timing && <span>{s.category || t('supplement', { defaultValue: 'Suplemento' })}</span>}
+                        {!s.dose && editingSuppId !== s.id && !s.timing && <span>{s.category || t('supplement', { defaultValue: 'Suplemento' })}</span>}
                       </div>
                     </div>
                     <button
