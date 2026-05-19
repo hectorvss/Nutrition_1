@@ -18,6 +18,8 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
   const [tools, setTools] = useState('');
   const [level, setLevel] = useState<'Beginner'|'Intermediate'|'Advanced'>('Beginner');
   const [instructions, setInstructions] = useState('');
+  const [subcategory, setSubcategory] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -28,13 +30,15 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
         name: name.trim(),
         category,
         type,
+        subcategory: subcategory.trim() || undefined,
+        video_url: videoUrl.trim() || undefined,
         description: instructions.trim() || undefined,
         muscleGroups: primaryMuscle ? [primaryMuscle.trim()] : ['Full Body'],
         secondaryMuscles: secondaryMuscles ? secondaryMuscles.split(',').map(s => s.trim()) : [],
         tools: tools ? tools.split(',').map(s => s.trim()) : ['Bodyweight'],
         level,
         icon: 'fitness_center',
-      });
+      } as any);
       onBack();
     } finally {
       setIsSaving(false);
@@ -109,6 +113,26 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                         <option value="Isolation">{t('isolation_type')}</option>
                       </Select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('subcategory_label', { defaultValue: 'Subcategoría' })}</label>
+                    <input
+                      type="text"
+                      value={subcategory}
+                      onChange={e => setSubcategory(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      placeholder={t('subcategory_placeholder', { defaultValue: 'p. ej. Tracción horizontal' })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('video_url_label', { defaultValue: 'URL del vídeo' })}</label>
+                    <input
+                      type="text"
+                      value={videoUrl}
+                      onChange={e => setVideoUrl(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      placeholder="https://..."
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_instructions')}</label>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Bookmark, Flame, Clock, Users, BookOpen, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Bookmark, Flame, Clock, Users, BookOpen, ChevronRight, Utensils } from 'lucide-react';
 import { Recipe } from '../../types/library';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -17,8 +17,16 @@ export default function RecipeDetail({ recipe, onBack }: RecipeDetailProps) {
         {t('back_to_library')}
       </button>
 
-      <div className="relative h-64 rounded-3xl overflow-hidden mb-8">
-        <img src={recipe.image} alt={recipe.title} className="w-full h-full object-cover" />
+      <div className="relative h-64 rounded-3xl overflow-hidden mb-8 bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center">
+        <Utensils className="w-16 h-16 text-emerald-300" />
+        {((recipe as any).image_url || (recipe as any).image) && (
+          <img
+            src={(recipe as any).image_url || (recipe as any).image}
+            alt={recipe.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
         <div className="absolute bottom-6 left-6 text-white">
           <div className="flex items-center gap-2 mb-2">

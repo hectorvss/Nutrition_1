@@ -13,7 +13,6 @@ import {
   Trash2,
   Loader2
 } from 'lucide-react';
-import { supplements } from '../constants/library';
 import { useFoodContext } from '../context/FoodContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
@@ -41,7 +40,7 @@ interface LibraryDashboardProps {
 }
 
 export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>('recipes');
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -66,8 +65,24 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
     }
   };
 
+  const [supplementsList, setSupplementsList] = useState<any[]>([]);
+  const [supplementsLoading, setSupplementsLoading] = useState(true);
+
+  const loadSupplements = async () => {
+    setSupplementsLoading(true);
+    try {
+      const data = await fetchWithAuth('/manager/supplements');
+      setSupplementsList(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error loading supplements:', err);
+    } finally {
+      setSupplementsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadRecipes();
+    loadSupplements();
   }, []);
 
   const handleDeleteRecipe = async (id: string) => {
@@ -199,12 +214,16 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 onClick={() => onNavigate('recipe-detail', recipe.id)}
                 className="group bg-white border border-slate-200 rounded-3xl overflow-hidden flex flex-col sm:flex-row h-auto sm:h-52 hover:shadow-xl hover:border-emerald-500/30 transition-all cursor-pointer"
               >
-                <div className="relative w-full sm:w-72 h-52 sm:h-full flex-shrink-0 overflow-hidden">
-                  <img
-                    src={recipe.image_url}
-                    alt={recipe.title}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
+                <div className="relative w-full sm:w-72 h-52 sm:h-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center">
+                  <BookOpen className="w-12 h-12 text-emerald-300" />
+                  {recipe.image_url && (
+                    <img
+                      src={recipe.image_url}
+                      alt={recipe.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  )}
                   <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
                     <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                     <span className="text-xs font-bold text-slate-700">{recipe.rating}</span>
@@ -366,60 +385,52 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
           <div className="flex flex-col gap-6">
             <div className="hidden md:grid grid-cols-12 gap-4 px-8 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
               <div className="col-span-5">{t('supplement_col')}</div>
-              <div className="col-span-2">{t('serving_col')}</div>
-              <div className="col-span-2">{t('primary_ingredient')}</div>
-              <div className="col-span-2">{t('best_time')}</div>
-              <div className="col-span-1 text-right">{t('score_col')}</div>
+              <div className="col-span-3">{t('serving_col')}</div>
+              <div className="col-span-4">{t('best_time')}</div>
             </div>
-            
+
             <div className="flex flex-col gap-4">
-              {supplements.map((supp) => (
+              {supplementsLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4">
+                  <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
+                  <p className="text-slate-500 font-bold text-lg">{t('loading_library')}</p>
+                </div>
+              ) : (
+              supplementsList
+                .filter(s => s.language === language)
+                .filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()))
+                .map((supp) => (
                 <div key={supp.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-6">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                     <div className="md:col-span-5 flex items-center gap-6">
-                      <div className="w-16 h-16 shrink-0 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 font-bold text-xl group-hover:scale-110 transition-transform">
-                        {supp.name.charAt(0)}
+                      <div className="w-16 h-16 shrink-0 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                        {supp.emoji || '💊'}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-3 mb-1">
                           <h3 className="font-bold text-xl text-slate-900 truncate group-hover:text-emerald-600 transition-colors">{supp.name}</h3>
-                          <span className="hidden sm:inline-flex px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">{supp.category}</span>
+                          {supp.category && <span className="hidden sm:inline-flex px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">{supp.category}</span>}
                         </div>
-                        <p className="text-sm text-slate-400 font-bold truncate">{supp.brand} • {supp.serving}</p>
+                        {supp.purpose && <p className="text-sm text-slate-400 font-medium line-clamp-1">{supp.purpose}</p>}
                       </div>
                     </div>
-                    
-                    <div className="md:col-span-2 flex flex-col md:block">
+
+                    <div className="md:col-span-3 flex flex-col md:block">
                       <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('serving_col')}</span>
-                      <div className="text-sm font-bold text-slate-700">{supp.serving}</div>
-                      <div className="text-xs text-slate-400 font-bold">{t('daily_label')}</div>
+                      <div className="text-sm font-bold text-slate-700">{supp.recommended_dose || '--'}</div>
                     </div>
-                    
-                    <div className="md:col-span-2 flex flex-col md:block">
-                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('primary_ingredient')}</span>
-                      <div className="text-sm font-bold text-slate-700">{supp.primaryIngredient}</div>
-                      <div className="text-xs text-slate-400 font-bold">{t('micronized_label')}</div>
-                    </div>
-                    
-                    <div className="md:col-span-2 flex flex-col md:block">
+
+                    <div className="md:col-span-4 flex flex-col md:block">
                       <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('best_time')}</span>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        <span className="text-sm font-bold text-slate-700">{supp.bestTime}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="md:col-span-1 flex items-center justify-between md:justify-end">
-                      <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase">{t('score_col')}</span>
-                      <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl">
-                        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                        <span className="text-sm font-bold text-slate-700">{supp.score}</span>
+                        <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span className="text-sm font-bold text-slate-700">{supp.timing || '--'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
-              
+              )))}
+
               <div 
                 onClick={() => onNavigate('supplement-create')}
                 className="bg-white border-2 border-dashed border-slate-200 rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all p-6 cursor-pointer flex items-center justify-center opacity-80 hover:opacity-100"

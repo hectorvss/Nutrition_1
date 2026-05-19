@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Flame, Clock, Plus, Heart } from 'lucide-react';
+import { Star, Flame, Clock, Plus, Heart, Utensils } from 'lucide-react';
 import { Recipe } from '../../types/library';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -19,8 +19,16 @@ export default function RecipeList({ recipes, onSelect, onCreate }: RecipeListPr
           onClick={() => onSelect(recipe)}
           className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row h-auto sm:h-48 cursor-pointer"
         >
-          <div className="relative w-full sm:w-64 h-48 sm:h-full flex-shrink-0">
-            <img src={recipe.image} alt={recipe.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <div className="relative w-full sm:w-64 h-48 sm:h-full flex-shrink-0 bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center">
+            <Utensils className="w-10 h-10 text-emerald-300" />
+            {((recipe as any).image_url || (recipe as any).image) && (
+              <img
+                src={(recipe as any).image_url || (recipe as any).image}
+                alt={recipe.title}
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            )}
             <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
               <span className="text-xs font-bold text-slate-700">{recipe.rating}</span>
