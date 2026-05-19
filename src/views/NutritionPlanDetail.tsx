@@ -121,6 +121,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   // "General mode" was removed — the editor always works with specific foods.
   const [mode] = useState<'general' | 'example'>('example');
 
+  // Supplements attached to this plan + the searchable supplement database.
+  const [supplements, setSupplements] = useState<any[]>([]);
+  const [supplementCatalog, setSupplementCatalog] = useState<any[]>([]);
+  const [supplementSearch, setSupplementSearch] = useState('');
+
   // Load existing plan on mount
   React.useEffect(() => {
     const ICON_MAP: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
@@ -133,6 +138,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           const tpl = await fetchWithAuth(`/manager/nutrition-templates/${templateId}`);
           const json = tpl?.data_json || {};
           setFullPlanData(json);
+          setSupplements(json.supplements || []);
           setMeals((json.meals || []).map((m: any) => ({
             ...m,
             items: (m.items || []).map((i: any) => ({ ...i, quantity: i.multiplier || i.quantity || 1 })),
@@ -151,7 +157,8 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       if (initialPlanData && initialPlanData.data_json) {
         const json = initialPlanData.data_json;
         setFullPlanData(json);
-        
+        setSupplements(json.supplements || []);
+
         let targetMeals = [];
         // Support weekly structure with day-specific selection
         if (json.days) {
@@ -183,6 +190,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         if (data && data.data_json) {
           const json = data.data_json;
           setFullPlanData(json);
+          setSupplements(json.supplements || []);
 
           let targetMeals = [];
           if (json.days) {
@@ -216,6 +224,40 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
     fetchPlan();
   }, [client?.id, initialPlanData, selectedDay, templateId]);
 
+  // Load the supplement database (global catalog + this manager's custom ones).
+  React.useEffect(() => {
+    fetchWithAuth('/manager/supplements')
+      .then(d => setSupplementCatalog(Array.isArray(d) ? d : []))
+      .catch(() => setSupplementCatalog([]));
+  }, []);
+
+  // Search results for the supplement picker (exclude already-added ones).
+  const supplementResults = supplementSearch.trim()
+    ? supplementCatalog
+        .filter(s =>
+          s.name?.toLowerCase().includes(supplementSearch.trim().toLowerCase()) &&
+          !supplements.some(x => x.name === s.name)
+        )
+        .slice(0, 8)
+    : [];
+
+  const addSupplement = (s: any) => {
+    if (supplements.some(x => x.name === s.name)) return;
+    setSupplements(prev => [...prev, {
+      id: s.id || `supp_${Date.now()}`,
+      name: s.name,
+      category: s.category || '',
+      dose: s.recommended_dose || '',
+      timing: s.timing || '',
+      emoji: s.emoji || '💊',
+    }]);
+    setSupplementSearch('');
+  };
+
+  const removeSupplement = (id: string) => {
+    setSupplements(prev => prev.filter(x => x.id !== id));
+  };
+
   const savePlan = async () => {
     // Template mode — persist back to the template.
     if (templateId) {
@@ -225,7 +267,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           const { icon, ...rest } = m as any;
           return { ...rest, iconName: (m as any).iconName || 'Cookie' };
         });
-        const finalDataJson = { ...(fullPlanData || {}), type: 'template', meals: mealsToSave };
+        const finalDataJson = { ...(fullPlanData || {}), type: 'template', meals: mealsToSave, supplements };
         await fetchWithAuth(`/manager/nutrition-templates/${templateId}`, {
           method: 'PUT',
           body: JSON.stringify({ data_json: finalDataJson }),
@@ -277,6 +319,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         // Single-day / new plan
         finalDataJson.meals = mealsToSave;
       }
+
+      // Supplements are plan-level (shared across days).
+      finalDataJson.supplements = supplements;
 
       await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {
         method: 'POST',
@@ -915,6 +960,83 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               </div>
             )}
           </div>
+          </div>
+
+          {/* Supplements */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <div className="p-6 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-900">{t('supplements_card_title', { defaultValue: 'Suplementos' })}</h2>
+              <p className="text-sm text-slate-500">
+                {supplements.length} {t('supplements_count_label', { defaultValue: 'suplementos en el plan' })}
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Search the supplement database */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={supplementSearch}
+                  onChange={e => setSupplementSearch(e.target.value)}
+                  placeholder={t('search_supplement_db', { defaultValue: 'Buscar suplemento en la base de datos...' })}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                />
+                {supplementSearch.trim() && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                    {supplementResults.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-slate-400">{t('no_supplements_found', { defaultValue: 'Sin resultados' })}</div>
+                    ) : supplementResults.map(s => (
+                      <button
+                        key={s.id || s.name}
+                        type="button"
+                        onClick={() => addSupplement(s)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-emerald-50 transition-colors"
+                      >
+                        <span className="text-lg shrink-0">{s.emoji || '💊'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {[s.category, s.recommended_dose, s.timing].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                        <Plus className="w-4 h-4 text-emerald-500 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Supplements added to the plan */}
+              {supplements.length === 0 ? (
+                <div className="py-10 flex flex-col items-center justify-center text-slate-400 gap-2">
+                  <span className="text-3xl">💊</span>
+                  <p className="text-sm font-medium">{t('no_supplements_in_plan', { defaultValue: 'Aún no hay suplementos en el plan' })}</p>
+                </div>
+              ) : (
+                supplements.map(s => (
+                  <div key={s.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center gap-3 hover:shadow-md transition-shadow group/supp">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                      <span className="text-lg">{s.emoji || '💊'}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
+                        {s.dose && <span className="text-emerald-500">{s.dose}</span>}
+                        {s.dose && s.timing && <span>·</span>}
+                        {s.timing && <span className="text-blue-500">{s.timing}</span>}
+                        {!s.dose && !s.timing && <span>{s.category || t('supplement', { defaultValue: 'Suplemento' })}</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeSupplement(s.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-500 rounded-md hover:bg-red-50 opacity-0 group-hover/supp:opacity-100 transition-all shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
