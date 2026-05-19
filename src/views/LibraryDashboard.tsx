@@ -44,6 +44,8 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
   const [activeTab, setActiveTab] = useState<Tab>('recipes');
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [visibleCount, setVisibleCount] = useState(30);
   const observerTarget = useRef<HTMLDivElement>(null);
   const { foods: foodItems, deleteFood, isLoading: isCtxLoading } = useFoodContext();
@@ -94,9 +96,15 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
     }
   };
 
+  const matchesCat = (cat?: string) => !categoryFilter || cat === categoryFilter;
   const filteredRecipes = recipes.filter(
-    r => !search || r.title.toLowerCase().includes(search.toLowerCase())
+    r => (!search || r.title.toLowerCase().includes(search.toLowerCase())) && matchesCat(r.category)
   );
+  // Categories available for the active tab's filter panel.
+  const tabCategories = Array.from(new Set(
+    ((activeTab === 'recipes' ? recipes : activeTab === 'food' ? foodItems : supplementsList) as any[])
+      .map(x => x?.category).filter(Boolean)
+  )).sort() as string[];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -146,6 +154,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
             key={tab}
             onClick={() => {
               if (activeTab === tab) return;
+              setCategoryFilter('');  // categories differ per tab
               setIsLoading(true);
               setTimeout(() => {
                 setActiveTab(tab);
@@ -176,12 +185,52 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
             type="text"
           />
         </div>
-        <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
+        <button
+          onClick={() => setShowFilters(v => !v)}
+          className={`flex items-center gap-2 px-6 py-3.5 border rounded-2xl text-sm font-bold transition-all shadow-sm ${
+            showFilters || categoryFilter
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
           <Filter className="w-5 h-5" />
           {t('show_filters')}
-          <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">2</span>
+          {categoryFilter && (
+            <span className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">1</span>
+          )}
         </button>
       </div>
+
+      {/* Filter panel */}
+      {showFilters && (
+        <div className="flex flex-wrap items-center gap-2 mb-8 -mt-4">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
+            {t('category', { defaultValue: 'Categoría' })}:
+          </span>
+          <button
+            onClick={() => setCategoryFilter('')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+              !categoryFilter ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            {t('all', { defaultValue: 'Todas' })}
+          </button>
+          {tabCategories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(categoryFilter === cat ? '' : cat)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                categoryFilter === cat ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+          {tabCategories.length === 0 && (
+            <span className="text-xs text-slate-400 italic">{t('no_categories', { defaultValue: 'Sin categorías disponibles' })}</span>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide pb-20">
@@ -305,7 +354,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                   <p className="text-slate-500 font-bold text-lg">{t('loading_library')}</p>
                 </div>
               ) : foodItems
-                .filter(food => !search || food.name.toLowerCase().includes(search.toLowerCase()))
+                .filter(food => (!search || food.name.toLowerCase().includes(search.toLowerCase())) && matchesCat(food.category))
                 .slice(0, visibleCount)
                 .map((food) => (
                 <div key={food.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-4 md:p-6">
@@ -360,7 +409,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 </div>
               )}
               
-              {!isCtxLoading && foodItems.filter(food => !search || food.name.toLowerCase().includes(search.toLowerCase())).length > visibleCount && (
+              {!isCtxLoading && foodItems.filter(food => (!search || food.name.toLowerCase().includes(search.toLowerCase())) && matchesCat(food.category)).length > visibleCount && (
                 <div ref={observerTarget} className="w-full h-8 flex items-center justify-center">
                   <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
@@ -398,7 +447,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               ) : (
               supplementsList
                 .filter(s => s.language === language)
-                .filter(s => !search || s.name.toLowerCase().includes(search.toLowerCase()))
+                .filter(s => (!search || s.name.toLowerCase().includes(search.toLowerCase())) && matchesCat(s.category))
                 .map((supp) => (
                 <div key={supp.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-6">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
