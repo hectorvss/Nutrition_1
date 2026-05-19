@@ -19,13 +19,25 @@ const pickRecipeFields = (body: any) => {
   return out;
 };
 
-// GET / — recetas del manager + las globales, ordenadas por created_at desc
+// Resolves the manager's UI language ('es' | 'en') from their profile.
+const getManagerLanguage = async (managerId: string): Promise<string> => {
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('language')
+    .eq('user_id', managerId)
+    .maybeSingle();
+  return data?.language === 'en' ? 'en' : 'es';
+};
+
+// GET / — recetas del manager + las globales, en el idioma del manager
 router.get('/', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
+    const language = await getManagerLanguage(managerId);
     const { data, error } = await supabaseAdmin
       .from('recipes')
       .select('*')
+      .eq('language', language)
       .or(`manager_id.eq.${managerId},is_global.eq.true`)
       .order('created_at', { ascending: false });
 
@@ -62,12 +74,14 @@ router.post('/', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
     const payload = pickRecipeFields(req.body);
+    const language = await getManagerLanguage(managerId);
     const { data, error } = await supabaseAdmin
       .from('recipes')
       .insert({
         ...payload,
         manager_id: managerId,
         is_global: false,
+        language,
       })
       .select()
       .single();
