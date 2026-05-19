@@ -265,7 +265,9 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
         };
       } else {
         const template = PROGRAM_TEMPLATES[selectedId];
-        const prog = trainingPrograms.find(p => p.id === selectedId) || trainingPrograms[0];
+        // Use the program the coach actually selected — never fall back to a
+        // different one from `trainingPrograms`.
+        const prog: any = selectedProgram;
 
         dataJson = {
           name: prog.name,
@@ -281,7 +283,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
       }
 
       const finalPlanData = {
-        name: dataJson.name,
+        name: dataJson.name || (selectedProgram as any)?.name || 'Training Program',
         data_json: dataJson
       };
 

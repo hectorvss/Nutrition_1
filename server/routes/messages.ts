@@ -84,11 +84,14 @@ router.get('/recent', async (req: any, res) => {
     // In Supabase/PostgreSQL, we can fetch all messages involving the user and then filter in JS
     // or use a more complex SQL query. For simplicity and reliability with RLS, 
     // we'll fetch recently participated conversations.
+    // Cap the scan: the latest ~500 messages are far more than enough to build
+    // every conversation preview, and it bounds the query as history grows.
     const { data: messages, error } = await supabaseAdmin
       .from('messages')
       .select('*')
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (error) throw error;
 

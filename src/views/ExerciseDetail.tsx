@@ -369,18 +369,15 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10 text-emerald-600 relative shadow-sm">
-                  <div className="absolute top-2 right-2 text-emerald-500">
-                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                  </div>
-                  <span className="font-bold text-base mb-1">{t('hypertrophy')}</span>
-                  <span className="text-xs opacity-80 font-medium bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">3 x 10-12</span>
+                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('hypertrophy')}</span>
+                  <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">3 x 10-12</span>
                 </div>
-                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-60">
+                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                   <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('strength_label')}</span>
                   <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">5 x 5</span>
                 </div>
-                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-60">
+                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
                   <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('endurance')}</span>
                   <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">3 x 15+</span>
                 </div>

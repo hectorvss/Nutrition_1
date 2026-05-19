@@ -486,16 +486,13 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               <p className="text-sm font-medium">{loadError}</p>
             </div>
           ) : viewMode === 'monthly' ? (
-            [0, 1, 2, 3].map((w) => (
-              <div key={`week-${w}`} className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 mt-3 first:mt-0">
-                  <span className="material-symbols-outlined text-emerald-500 text-xl">calendar_view_week</span>
-                  <h3 className="font-black text-sm text-slate-500 uppercase tracking-widest">{t('week')} {w + 1}</h3>
-                  <div className="flex-1 h-px bg-slate-200"></div>
-                </div>
-                {processedDays.map((day) => renderDayCard(day, `w${w}-`, false))}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2.5 rounded-2xl px-4 py-3 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                <span className="material-symbols-outlined text-lg">event_repeat</span>
+                <span>{t('weekly_plan_repeats_training', { defaultValue: 'Esta rutina semanal se repite cada semana del mes.' })}</span>
               </div>
-            ))
+              {processedDays.map((day) => renderDayCard(day, '', false))}
+            </div>
           ) : (
             processedDays.map((day) => renderDayCard(day, '', true))
           )}

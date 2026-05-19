@@ -46,6 +46,19 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         clientIds = (clients || []).map(c => c.id);
       }
 
+      // Defense in depth: never message a client that is not actually this
+      // manager's. Drops stale or forged ids from delivery_rules.selected_client_ids.
+      if (clientIds.length > 0) {
+        const { data: owned } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('manager_id', managerId)
+          .eq('role', 'CLIENT')
+          .in('id', clientIds);
+        const ownedSet = new Set((owned || []).map(c => c.id));
+        clientIds = clientIds.filter(cid => ownedSet.has(cid));
+      }
+
       // Pre-fetch manager profile una vez para todas las iteraciones de clientes
       const { data: _managerProfile } = await supabaseAdmin
         .from('profiles')
@@ -64,8 +77,8 @@ export async function processTrigger(managerId: string, triggerId: string, data:
             clients_profiles(goal_weight, check_in_day, last_login)
           `)
           .eq('id', clientId)
-          .single();
-        
+          .maybeSingle();
+
         if (clientError || !client) continue;
 
         // Fetch latest check-in. check_ins stores all metrics inside data_json

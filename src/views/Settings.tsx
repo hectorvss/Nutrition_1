@@ -639,11 +639,26 @@ function SecuritySettings() {
     setMfaBusy(true);
     try {
       // Clean up any leftover unverified factor before creating a new one.
+      // listFactors().totp can omit unverified factors, so also scan `.all`.
       const { data: existing } = await supabase.auth.mfa.listFactors();
-      for (const f of (existing?.totp || [])) {
-        if (f.status === 'unverified') await supabase.auth.mfa.unenroll({ factorId: f.id });
+      const allFactors = [
+        ...((existing as any)?.all || []),
+        ...((existing?.totp as any[]) || []),
+      ];
+      const seen = new Set<string>();
+      for (const f of allFactors) {
+        if (!f?.id || seen.has(f.id)) continue;
+        seen.add(f.id);
+        if (f.status === 'unverified') {
+          try { await supabase.auth.mfa.unenroll({ factorId: f.id }); } catch { /* ignore */ }
+        }
       }
-      const { data, error: eErr } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+      // A unique friendly name avoids the "factor with friendly name '' already
+      // exists" collision even if a stale factor could not be removed.
+      const { data, error: eErr } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: `Authenticator ${Date.now()}`,
+      });
       if (eErr) throw eErr;
       setEnrollData({ factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
       setMfaCode('');
@@ -652,6 +667,18 @@ function SecuritySettings() {
       setEnrollData({ factorId: '', qr: '', secret: '' }); // open modal to show the error
     } finally {
       setMfaBusy(false);
+    }
+  };
+
+  // Close the modal and discard the pending (unverified) factor so it does
+  // not linger and block the next enrolment attempt.
+  const handleCancelEnroll = async () => {
+    const fid = enrollData?.factorId;
+    setEnrollData(null);
+    setMfaCode('');
+    setMfaModalError(null);
+    if (fid) {
+      try { await supabase.auth.mfa.unenroll({ factorId: fid }); } catch { /* ignore */ }
     }
   };
 
@@ -862,7 +889,7 @@ function SecuritySettings() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">{t('mfa_setup_title', { defaultValue: 'Configurar verificación en dos pasos' })}</h3>
-              <button onClick={() => { setEnrollData(null); setMfaCode(''); setMfaModalError(null); }} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+              <button onClick={handleCancelEnroll} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
@@ -898,7 +925,7 @@ function SecuritySettings() {
             </div>
             <div className="p-6 border-t border-slate-100 flex gap-3">
               <button
-                onClick={() => { setEnrollData(null); setMfaCode(''); setMfaModalError(null); }}
+                onClick={handleCancelEnroll}
                 className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
               >
                 {t('cancel', { defaultValue: 'Cancelar' })}

@@ -387,6 +387,10 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   };
 
   const totalExercises = blocks.reduce((acc, b) => acc + b.exercises.length, 0);
+  const totalSets = blocks.reduce(
+    (acc, b) => acc + b.exercises.reduce((s, e) => s + (parseInt(e.sets, 10) || 0), 0),
+    0
+  );
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
@@ -413,13 +417,12 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline-block">
-            {isBlank ? t('draft_not_saved') : t('last_autosave_2_min')}
-          </span>
-          <button className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-            <span className="material-symbols-outlined">more_horiz</span>
-          </button>
-          <button 
+          {isBlank && (
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline-block">
+              {t('draft_not_saved')}
+            </span>
+          )}
+          <button
             onClick={saveProgram}
             disabled={isSaving}
             className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm"
@@ -586,20 +589,13 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm p-8 shrink-0">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-slate-900">{t('workout_summary')}</h3>
-                <button className="text-slate-300 hover:text-slate-500">
-                  <span className="material-symbols-outlined text-[20px]">info</span>
-                </button>
               </div>
               <div className="flex flex-col items-center">
                 <div className={`relative w-44 h-44 ${totalExercises === 0 ? 'opacity-40 grayscale' : ''}`}>
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <circle className="text-slate-100" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" />
                     {totalExercises > 0 && (
-                      <>
-                        <circle className="text-blue-500" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" strokeDasharray="50 100" />
-                        <circle className="text-purple-500" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" strokeDasharray="25 100" strokeDashoffset="-50" />
-                        <circle className="text-orange-500" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" strokeDasharray="25 100" strokeDashoffset="-75" />
-                      </>
+                      <circle className="text-emerald-500" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" strokeDasharray="100 100" strokeLinecap="round" />
                     )}
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center flex-col">
@@ -611,27 +607,18 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                   {totalExercises === 0 ? (
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t('add_exercises_for_breakdown')}</p>
                   ) : (
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-3 w-full">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-                          <span className="text-slate-500 uppercase tracking-tight">Legs</span>
-                        </div>
-                        <span className="text-slate-900">50%</span>
+                    <div className="grid grid-cols-3 gap-3 w-full">
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-2xl font-black text-slate-900 leading-none">{blocks.length}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('blocks_label', { defaultValue: 'Bloques' })}</span>
                       </div>
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-purple-500"></div>
-                          <span className="text-slate-500 uppercase tracking-tight">Chest</span>
-                        </div>
-                        <span className="text-slate-900">25%</span>
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-2xl font-black text-slate-900 leading-none">{totalExercises}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
                       </div>
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                          <span className="text-slate-500 uppercase tracking-tight">Shoulders</span>
-                        </div>
-                        <span className="text-slate-900">25%</span>
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-2xl font-black text-slate-900 leading-none">{totalSets}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('sets_label', { defaultValue: 'Series' })}</span>
                       </div>
                     </div>
                   )}
@@ -644,9 +631,6 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
               <div className="px-6 py-6 border-b border-slate-100 flex flex-col gap-4 shrink-0">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-slate-900">{t('exercise_library')}</h3>
-                  <button className="text-slate-300 hover:text-slate-500">
-                    <span className="material-symbols-outlined">more_horiz</span>
-                  </button>
                 </div>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">search</span>
@@ -658,13 +642,6 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <button className="w-full flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-2xl hover:border-emerald-500/50 hover:bg-slate-50 transition-all group">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <span className="material-symbols-outlined text-[20px] text-emerald-500">filter_list</span>
-                      <span className="text-xs font-bold uppercase tracking-widest group-hover:text-emerald-600 transition-colors">{t('filter_by_category')}</span>
-                  </div>
-                  <span className="material-symbols-outlined text-slate-400 text-[20px]">expand_more</span>
-                </button>
               </div>
               
               <div className="p-4 bg-slate-50/20 max-h-[600px] overflow-y-auto custom-scrollbar">

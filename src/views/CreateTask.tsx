@@ -98,7 +98,12 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
         }
         if (task.clientId) setSelectedClientId(task.clientId);
         setLinkUrl(task.linkUrl || '');
+        if ((task as any).repeat) setRepeat((task as any).repeat);
       }
+      // Fallback: if the task is never found (e.g. a non-event id), stop the
+      // loader after a short wait instead of spinning forever.
+      const timer = setTimeout(() => setIsEditLoaded(true), 4000);
+      return () => clearTimeout(timer);
     }
   }, [editId, events]);
 
@@ -162,7 +167,8 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       initials: client ? client.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'GT',
       priority: priority.toLowerCase(),
       status: (editId && events.find(e => e.id === editId)?.status) || 'pending',
-      linkUrl: linkUrl
+      linkUrl: linkUrl,
+      repeat: repeat
     };
 
     try {

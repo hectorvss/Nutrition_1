@@ -60,14 +60,23 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
   const handlePublish = async () => {
     if (!coachNotes.trim()) return;
     setPublishingState('publishing');
+
+    // 1. Update the check-in review in the DB (primary action).
     try {
-      // 1. Update the check-in review in the DB
       await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins/${checkInId}/review`, {
         method: 'POST',
         body: JSON.stringify({ coach_notes: coachNotes, next_week_focus: nextWeekFocus })
       });
+    } catch (err) {
+      console.error('Error saving review:', err);
+      setPublishingState('idle');
+      alert(t('review_save_error', { defaultValue: 'No se pudo guardar la revisión. Inténtalo de nuevo.' }));
+      return;
+    }
 
-      // 2. Send the feedback message to the chat
+    // 2. Send the feedback message to the chat — best-effort: the review is
+    //    already saved, so a message failure must not leave the UI stuck.
+    try {
       await fetchWithAuth('/messages', {
         method: 'POST',
         body: JSON.stringify({
@@ -78,16 +87,16 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
           send_email: sendViaEmail
         })
       });
-
-      // 3. Refresh the manager's client list to sync review status
-      await reloadClients();
-
-      onBack();
     } catch (err) {
-      console.error('Error publishing review:', err);
-    } finally {
-      setPublishingState('idle');
+      console.error('Review saved but the feedback message failed:', err);
+      alert(t('review_message_failed', { defaultValue: 'La revisión se guardó, pero no se pudo enviar el mensaje al cliente.' }));
     }
+
+    // 3. Refresh the manager's client list to sync review status.
+    try { await reloadClients(); } catch (e) { console.error(e); }
+
+    setPublishingState('idle');
+    onBack();
   };
 
   const handleMarkAsReviewed = async () => {
@@ -400,14 +409,6 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
                   className="w-full bg-yellow-50/50 dark:bg-amber-900/10 border-2 border-yellow-100/50 dark:border-amber-900/20 rounded-2xl p-6 text-[15px] leading-relaxed text-slate-700 dark:text-slate-200 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-200 transition-all min-h-[200px] resize-none outline-none font-medium placeholder-slate-400" 
                   placeholder={t('feedback_placeholder')}
                 />
-                <div className="absolute bottom-4 right-4 flex items-center gap-2">
-                  <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                    <Mic className="w-4 h-4" />
-                  </button>
-                  <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                    <Paperclip className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
             </div>
 

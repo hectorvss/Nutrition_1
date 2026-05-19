@@ -75,16 +75,6 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
-            <span className="material-symbols-outlined text-[18px]">filter_list</span>
-            {t('filter_by_muscle')}
-          </button>
-          <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
-            <span className="material-symbols-outlined text-[18px]">fitness_center</span>
-            {t('tools_label')}
-          </button>
-        </div>
       </div>
 
       {/* Content */}

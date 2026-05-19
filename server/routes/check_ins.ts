@@ -7,6 +7,8 @@ import { verifyManager as _verifyManager, verifyClient as _verifyClient } from '
 
 const router = Router();
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FIXED CHECK-IN QUESTIONS — the canonical data-collection contract.
 // Every question here is required + is_fixed + locked: it is injected into every
@@ -838,8 +840,11 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
 
     if (error) throw error;
 
+    // Guaranteed array — the query can return null, and we mutate it below.
+    const list: any[] = data || [];
+
     // --- AUTO-INJECT GENERAL CHECK-IN IF MISSING ---
-    const hasPermanent = (data || []).some((t: any) => t.is_permanent || t.name === 'General Check-in');
+    const hasPermanent = list.some((t: any) => t.is_permanent || t.name === 'General Check-in');
     
     if (!hasPermanent) {
       console.log(`[CheckIn] General Check-in not found in list for manager: ${managerId}. Searching in all (including archived)...`);
@@ -869,10 +874,10 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
           .maybeSingle();
         
         if (updated) {
-          data.unshift(updated);
+          list.unshift(updated);
         } else {
           // If update failed, still show the existing record
-          data.unshift(existing);
+          list.unshift(existing);
         }
       } else {
         // No General Check-in exists at all — create it now
@@ -882,7 +887,7 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
           name: 'General Check-in',
           description: 'Comprehensive weekly check-in template. Tracks adherence, body progress, recovery, training, and more.',
           template_schema: GENERAL_CHECKIN_SCHEMA, 
-          is_default: (data || []).length === 0,
+          is_default: list.length === 0,
           version: 1
         };
 
@@ -896,12 +901,12 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
           console.error(`[CheckIn] Error creating General Check-in:`, JSON.stringify(insertError));
         } else if (newTemplate) {
           console.log(`[CheckIn] Created General Check-in: ${newTemplate.id}`);
-          data.unshift(newTemplate);
+          list.unshift(newTemplate);
         }
       }
     }
 
-    res.json(data);
+    res.json(list);
   } catch (error: any) {
     console.error('Error fetching templates:', error);
     res.status(500).json({ error: 'Server error' });
@@ -1423,11 +1428,12 @@ router.delete('/manager/check-ins/:checkInId', verifyManager, async (req: any, r
   const { checkInId } = req.params;
   const managerId = req.user.id;
   try {
+    if (!UUID_RE.test(checkInId)) return res.status(400).json({ error: 'Invalid check-in id format' });
     const { data: checkin, error: fetchError } = await supabaseAdmin
       .from('check_ins')
       .select('client_id')
       .eq('id', checkInId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !checkin) return res.status(404).json({ error: 'Check-in not found' });
 
@@ -1435,7 +1441,7 @@ router.delete('/manager/check-ins/:checkInId', verifyManager, async (req: any, r
       .from('users')
       .select('manager_id')
       .eq('id', checkin.client_id)
-      .single();
+      .maybeSingle();
 
     if (clientErr || !client || client.manager_id !== managerId) {
       return res.status(403).json({ error: 'Access denied: Permission check failed' });
@@ -1459,11 +1465,12 @@ router.delete('/manager/client-submissions/:submissionId', verifyManager, async 
   const { submissionId } = req.params;
   const managerId = req.user.id;
   try {
+    if (!UUID_RE.test(submissionId)) return res.status(400).json({ error: 'Invalid submission id format' });
     const { data: submission, error: fetchError } = await supabaseAdmin
       .from('client_checkin_submissions')
       .select('client_id')
       .eq('id', submissionId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !submission) return res.status(404).json({ error: 'Check-in not found' });
 
@@ -1471,7 +1478,7 @@ router.delete('/manager/client-submissions/:submissionId', verifyManager, async 
       .from('users')
       .select('manager_id')
       .eq('id', submission.client_id)
-      .single();
+      .maybeSingle();
 
     if (clientErr || !client || client.manager_id !== managerId) {
       return res.status(403).json({ error: 'Access denied: Permission check failed' });

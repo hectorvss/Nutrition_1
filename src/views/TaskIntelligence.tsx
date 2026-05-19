@@ -74,10 +74,6 @@ export default function TaskIntelligence({ onNavigate }: TaskIntelligenceProps) 
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-              <History className="w-4 h-4" />
-              {t('history', { defaultValue: 'History' })}
-            </button>
             <button
               onClick={handleSave}
               disabled={isSaving}

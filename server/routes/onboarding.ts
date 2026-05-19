@@ -237,12 +237,16 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
 
   try {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(String(client_id)) || !UUID_RE.test(String(template_id))) {
+      return res.status(400).json({ error: 'Invalid client or template id format' });
+    }
     // 1. Verify client belongs to manager (Check in users table - standard source of truth)
     const { data: client, error: clientErr } = await supabaseAdmin
       .from('users')
       .select('id, manager_id')
       .eq('id', client_id)
-      .single();
+      .maybeSingle();
 
     if (clientErr || !client || client.manager_id !== managerId) {
       console.warn(`[Assignment] User ${managerId} attempted to assign onboarding to unauthorized client ${client_id}`);

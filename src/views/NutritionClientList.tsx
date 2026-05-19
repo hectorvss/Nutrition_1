@@ -78,7 +78,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
           <div className="col-span-4">{t('client_label')}</div>
           <div className="col-span-3">{t('goal_short')}</div>
           <div className="col-span-3">{t('daily_macros_label')}</div>
-          <div className="col-span-2 text-right">{t('adherence')}</div>
+          <div className="col-span-2 text-right">{t('actions')}</div>
         </div>
 
         {/* Client List */}

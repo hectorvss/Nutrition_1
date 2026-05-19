@@ -482,6 +482,10 @@ router.patch('/clients/:id/status', async (req: any, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid client id format' });
+    }
+
     const VALID_STATUSES = ['Active', 'Archived', 'Inactive'];
     if (!status || !VALID_STATUSES.includes(status)) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
@@ -492,14 +496,18 @@ router.patch('/clients/:id/status', async (req: any, res) => {
       .update({ status })
       .eq('id', id)
       .eq('manager_id', req.user.id)
+      .eq('role', 'CLIENT')
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Supabase error updating status:', error);
       return res.status(500).json({ error: error.message, details: error });
     }
-    
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'Client not found or access denied' });
+    }
+
     res.json({ success: true, user: updatedUser });
   } catch (error: any) {
     console.error('Catch block error updating client status:', error);
@@ -574,8 +582,17 @@ router.post('/clients', async (req: any, res) => {
     const clientId = authData.user.id;
 
     // 2. The database trigger automatically creates the `public.users` record.
-    // We just need to link it to the manager.
-    await supabaseAdmin.from('users').update({ manager_id: managerId }).eq('id', clientId);
+    // We just need to link it to the manager. If this fails the client would be
+    // orphaned (invisible to the manager) — roll back the auth user instead.
+    const { error: linkError } = await supabaseAdmin
+      .from('users')
+      .update({ manager_id: managerId })
+      .eq('id', clientId);
+    if (linkError) {
+      console.error('Failed to link client to manager, rolling back auth user:', linkError);
+      await supabaseAdmin.auth.admin.deleteUser(clientId).catch(() => {});
+      return res.status(500).json({ error: 'Failed to create client. Please try again.' });
+    }
 
     // 3. Store the display name / phone in profiles (the source GET /clients reads).
     const fullName = (name || profile?.full_name || '').trim();
@@ -1632,7 +1649,7 @@ router.post('/clients/:id/apply-training-master-plan', async (req: any, res: any
 
 
 // Get manager settings
-router.get('/settings', verifyManager, async (req: any, res) => {
+router.get('/settings', async (req: any, res) => {
   try {
     const { data: settings, error } = await supabaseAdmin
       .from('manager_settings')
@@ -1668,7 +1685,7 @@ router.get('/settings', verifyManager, async (req: any, res) => {
 });
 
 // Update manager settings
-router.post('/settings', verifyManager, async (req: any, res) => {
+router.post('/settings', async (req: any, res) => {
   try {
     const ALLOWED_SETTINGS_FIELDS = ['theme_color', 'dark_mode', 'density', 'font_scale', 'notification_prefs', 'language'];
     const filtered: Record<string, any> = {};
@@ -3231,19 +3248,28 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
 router.post('/tasks', async (req: any, res) => {
   console.log('POST /tasks: Received payload:', JSON.stringify(req.body, null, 2));
   try {
-    // Optional: Verify that client_id belongs to this manager if provided
+    // Verify that client_id belongs to this manager if provided
     if (req.body.client_id) {
+       if (!UUID_RE.test(String(req.body.client_id))) {
+         return res.status(400).json({ error: 'Invalid client id format' });
+       }
        const { data: clientCheck } = await supabaseAdmin
          .from('users')
          .select('id')
          .eq('id', req.body.client_id)
          .eq('manager_id', req.user.id)
-         .single();
-         
+         .eq('role', 'CLIENT')
+         .maybeSingle();
+
        if (!clientCheck) {
          return res.status(403).json({ error: 'Forbidden. Client does not belong to you.' });
        }
     }
+
+    // `time` must be a string before any .split() — guard against numeric/object bodies.
+    const timeStr = typeof req.body.time === 'string' ? req.body.time : '';
+    const computedEnd = (parseInt(timeStr.split(':')[0] || '09', 10) + 1).toString().padStart(2, '0')
+      + ':' + (timeStr.split(':')[1] || '00');
 
     const { data, error } = await supabaseAdmin
       .from('tasks')
@@ -3252,8 +3278,8 @@ router.post('/tasks', async (req: any, res) => {
         description: req.body.description,
         type: req.body.type,
         date: req.body.date,
-        time: req.body.time,
-        end_time: req.body.end_time || (parseInt(req.body.time?.split(':')[0] || '09') + 1).toString().padStart(2, '0') + ':' + (req.body.time?.split(':')[1] || '00'),
+        time: timeStr || null,
+        end_time: req.body.end_time || computedEnd,
         duration: req.body.duration,
         client_id: req.body.client_id,
         status: req.body.status || 'pending',
@@ -3378,10 +3404,13 @@ router.post('/integrations/stripe/test', async (req: any, res) => {
 // Update a task
 router.patch('/tasks/:id', async (req: any, res) => {
   try {
+    if (!UUID_RE.test(String(req.params.id))) {
+      return res.status(400).json({ error: 'Invalid task id format' });
+    }
     // Filter out undefined fields to allow safe partial updates
     const updates: any = { updated_at: new Date().toISOString() };
     const allowedFields = ['title', 'description', 'type', 'date', 'time', 'end_time', 'duration', 'client_id', 'status'];
-    
+
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updates[field] = req.body[field];
@@ -3394,9 +3423,10 @@ router.patch('/tasks/:id', async (req: any, res) => {
       .eq('id', req.params.id)
       .eq('manager_id', req.user.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Task not found or access denied' });
 
     // Sync to Google Calendar
     await syncToGoogleCalendar(req.user.id, data, 'UPDATE');
@@ -3645,6 +3675,7 @@ router.get('/nutrition-templates', async (req: any, res: any) => {
       .from('nutrition_templates')
       .select('id, key, name, description, target_calories, data_json')
       .eq('language', language)
+      .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
       .order('target_calories', { ascending: true })
       .order('name', { ascending: true });
 
@@ -3677,6 +3708,7 @@ router.post('/nutrition-templates', async (req: any, res: any) => {
         target_calories: Number(target_calories) || 0,
         data_json: data_json || {},
         language,
+        manager_id: req.user.id,
       })
       .select()
       .single();
@@ -3700,9 +3732,12 @@ router.put('/nutrition-templates/:id', async (req: any, res: any) => {
     for (const f of ['name', 'description', 'target_calories', 'data_json']) {
       if (req.body?.[f] !== undefined) patch[f] = req.body[f];
     }
-    const q = supabaseAdmin.from('nutrition_templates').update(patch);
-    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().single();
+    // Only the owning manager may modify their templates; global presets
+    // (manager_id IS NULL) are read-only.
+    const q = supabaseAdmin.from('nutrition_templates').update(patch).eq('manager_id', req.user.id);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().maybeSingle();
     if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Template not found or not editable' });
     res.json(data);
   } catch (error: any) {
     console.error('Error updating nutrition template:', error);
@@ -3717,9 +3752,10 @@ router.delete('/nutrition-templates/:id', async (req: any, res: any) => {
     const isUuid = UUID_RE.test(id);
     const isKey = KEY_RE.test(id);
     if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
-    const q = supabaseAdmin.from('nutrition_templates').delete();
-    const { error } = await (isUuid ? q.eq('id', id) : q.eq('key', id));
+    const q = supabaseAdmin.from('nutrition_templates').delete().eq('manager_id', req.user.id);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select();
     if (error) throw error;
+    if (!data || data.length === 0) return res.status(404).json({ error: 'Template not found or not deletable' });
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting nutrition template:', error);
@@ -3742,6 +3778,10 @@ router.get('/nutrition-templates/:id', async (req: any, res: any) => {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Template not found' });
+    // Only global presets or the manager's own templates are visible.
+    if (data.manager_id && data.manager_id !== req.user.id) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
 
     res.json(data);
   } catch (error: any) {
@@ -3767,6 +3807,7 @@ router.get('/training-templates', async (req: any, res: any) => {
       .from('training_templates')
       .select('id, key, name, description, level, type, weekly_frequency, data_json')
       .eq('language', language)
+      .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
       .order('weekly_frequency', { ascending: true })
       .order('name', { ascending: true });
 
@@ -3801,6 +3842,7 @@ router.post('/training-templates', async (req: any, res: any) => {
         weekly_frequency: Number(weekly_frequency) || null,
         data_json: data_json || {},
         language,
+        manager_id: req.user.id,
       })
       .select()
       .single();
@@ -3824,9 +3866,10 @@ router.put('/training-templates/:id', async (req: any, res: any) => {
     for (const f of ['name', 'description', 'level', 'type', 'weekly_frequency', 'data_json']) {
       if (req.body?.[f] !== undefined) patch[f] = req.body[f];
     }
-    const q = supabaseAdmin.from('training_templates').update(patch);
-    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().single();
+    const q = supabaseAdmin.from('training_templates').update(patch).eq('manager_id', req.user.id);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().maybeSingle();
     if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Template not found or not editable' });
     res.json(data);
   } catch (error: any) {
     console.error('Error updating training template:', error);
@@ -3841,9 +3884,10 @@ router.delete('/training-templates/:id', async (req: any, res: any) => {
     const isUuid = UUID_RE.test(id);
     const isKey = KEY_RE.test(id);
     if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
-    const q = supabaseAdmin.from('training_templates').delete();
-    const { error } = await (isUuid ? q.eq('id', id) : q.eq('key', id));
+    const q = supabaseAdmin.from('training_templates').delete().eq('manager_id', req.user.id);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select();
     if (error) throw error;
+    if (!data || data.length === 0) return res.status(404).json({ error: 'Template not found or not deletable' });
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting training template:', error);
@@ -3864,7 +3908,10 @@ router.get('/training-templates/:id', async (req: any, res: any) => {
 
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Template not found' });
-    
+    if (data.manager_id && data.manager_id !== req.user.id) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching training template detail:', error);

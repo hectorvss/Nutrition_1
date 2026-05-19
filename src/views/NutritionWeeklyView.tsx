@@ -155,7 +155,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
     let totalCals = 0, totalP = 0, totalC = 0, totalF = 0;
     
     meals.forEach((m: any) => {
-      m.items.forEach((i: any) => {
+      (m.items || []).forEach((i: any) => {
         const qty = i.multiplier || i.quantity || 1;
         totalCals += (i.calories || 0) * qty;
         totalP += (i.protein || 0) * qty;
@@ -183,7 +183,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
     const fPct = Math.round((totalF * 9 / totalMacros) * 100);
 
     const bars = meals.map((m: any) => {
-      const mCals = m.items.reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0);
+      const mCals = (m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0);
       const h = Math.min(100, Math.max(20, (mCals / (totalCals / meals.length || 1)) * 60));
       return { h, p: true };
     });
@@ -388,16 +388,13 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               <p className="text-sm font-medium">{loadError}</p>
             </div>
           ) : viewMode === 'monthly' ? (
-            [0, 1, 2, 3].map((w) => (
-              <div key={`week-${w}`} className="flex flex-col gap-4">
-                <div className="flex items-center gap-3 mt-3 first:mt-0">
-                  <span className="material-symbols-outlined text-emerald-500 text-xl">calendar_view_week</span>
-                  <h3 className="font-black text-sm text-slate-500 dark:text-slate-400 uppercase tracking-widest">{t('week')} {w + 1}</h3>
-                  <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
-                </div>
-                {processedDays.map((day) => renderDayCard(day, `w${w}-`, false))}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2.5 rounded-2xl px-4 py-3 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                <span className="material-symbols-outlined text-lg">event_repeat</span>
+                <span>{t('weekly_plan_repeats', { defaultValue: 'Este plan semanal se repite cada semana del mes.' })}</span>
               </div>
-            ))
+              {processedDays.map((day) => renderDayCard(day, '', false))}
+            </div>
           ) : (
             processedDays.map((day) => renderDayCard(day, '', true))
           )}

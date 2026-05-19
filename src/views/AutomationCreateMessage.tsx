@@ -219,21 +219,7 @@ export default function AutomationCreateMessage({
 
                 {/* Message Editor */}
                 <div className="flex flex-col border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
-                  <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-2 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-1">
-                      <button className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors" title="Bold"><Bold className="w-4 h-4" /></button>
-                      <button className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors" title="Italic"><Italic className="w-4 h-4" /></button>
-                      <button className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors" title="Underline"><Underline className="w-4 h-4" /></button>
-                      <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1"></div>
-                      <button className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors" title="Link"><Link className="w-4 h-4" /></button>
-                      <button className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors" title="Image"><ImageIcon className="w-4 h-4" /></button>
-                    </div>
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white shadow-sm transition-all text-xs font-semibold">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {t('generate_with_ai')}
-                    </button>
-                  </div>
-                  <textarea 
+                  <textarea
                     ref={textareaRef}
                     value={message}
                     onChange={e => setMessage(e.target.value)}

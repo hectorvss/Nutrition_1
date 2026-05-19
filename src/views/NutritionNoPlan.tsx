@@ -313,7 +313,8 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     // 1. Calculate Total Macros (Grams)
     let pPct = 0.3, cPct = 0.4, fPct = 0.3;
     if (macroSplitId.includes("40/30/30")) { pPct = 0.4; cPct = 0.3; fPct = 0.3; }
-    else if (macroSplitId.includes("40/20/40")) { pPct = 0.4; cPct = 0.2; fPct = 0.4; } 
+    else if (macroSplitId.includes("40/40/20")) { pPct = 0.4; cPct = 0.4; fPct = 0.2; }
+    else if (macroSplitId.includes("40/20/40")) { pPct = 0.4; cPct = 0.2; fPct = 0.4; }
     else if (macroSplitId.includes("25/50/25")) { pPct = 0.25; cPct = 0.5; fPct = 0.25; }
     else if (macroSplitId.includes("25/55/20")) { pPct = 0.25; cPct = 0.55; fPct = 0.2; }
     else if (macroSplitId.includes("20/60/20")) { pPct = 0.2; cPct = 0.6; fPct = 0.2; }
@@ -563,13 +564,15 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">female</span>
-                Female, {client?.age || '28'}
+                <span className="material-symbols-outlined text-[16px]">
+                  {client?.gender === 'Male' || client?.gender === 'Masculino' ? 'male' : client?.gender === 'Female' || client?.gender === 'Femenino' ? 'female' : 'person'}
+                </span>
+                {client?.gender && client.gender !== 'Unknown' ? client.gender : '--'}{client?.age && client.age !== '--' ? `, ${client.age}` : ''}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">scale</span>
-                {client?.weight || '68'}kg
+                {client?.weight ? `${client.weight}kg` : '--'}
               </span>
             </div>
           </div>

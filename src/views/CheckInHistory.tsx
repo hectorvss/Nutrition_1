@@ -148,10 +148,6 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
               <p className="text-slate-500 text-sm mt-1 font-medium">{t('checkins_submitted_count', { count: checkIns.length })}</p>
             </div>
           </div>
-          <button className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 bg-white text-sm">
-            <Filter className="w-4 h-4" />
-            {t('filters_label')}
-          </button>
         </div>
         </>
       )}

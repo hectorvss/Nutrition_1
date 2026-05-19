@@ -164,7 +164,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         const icons: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
         const loadedMeals = targetMeals.map((m: any) => ({
           ...m,
-          items: m.items.map((i: any) => ({
+          items: (m.items || []).map((i: any) => ({
             ...i,
             quantity: i.multiplier || i.quantity || 1
           })),
@@ -639,12 +639,6 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               >
                 {isSaving ? t('saving_dots') : <><Check className="w-4 h-4" /> {t('save_plan')}</>}
               </button>
-              <button className="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Print Plan">
-                <Printer className="w-5 h-5" />
-              </button>
-              <button className="p-2 text-slate-400 hover:text-emerald-600 transition-colors" title="Share">
-                <Share2 className="w-5 h-5" />
-              </button>
             </div>
           </div>
 
@@ -1109,34 +1103,8 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               </div>
             )}
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100">
-              <button className="w-full py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center justify-center gap-2">
-                {t('view_full_library')}
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
           </div>
 
-          {/* Water Intake Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-3 mb-4">
-              <Droplets className="w-5 h-5 text-blue-500" />
-              <h3 className="font-bold text-slate-900">{t('water_intake')}</h3>
-            </div>
-            <div className="flex items-end gap-1 h-12 mb-2">
-              {[100, 80, 60, 0, 0].map((h, i) => (
-                <div 
-                  key={i} 
-                  className={`flex-1 rounded-md transition-all ${h > 0 ? 'bg-blue-500' : 'bg-slate-100'}`} 
-                  style={{ height: h > 0 ? `${h}%` : '100%', opacity: h > 0 ? h/100 : 1 }}
-                ></div>
-              ))}
-            </div>
-            <div className="flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-              <span>{t('current')}: 1.5L</span>
-              <span>{t('goal_short')}: 2.5L</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>

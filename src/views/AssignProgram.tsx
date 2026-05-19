@@ -118,7 +118,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                     <span className="material-symbols-outlined text-3xl text-slate-400 group-hover:text-white">add</span>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">Create from Scratch</h3>
+                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">{t('create_from_scratch', { defaultValue: 'Crear desde cero' })}</h3>
                     <p className="text-sm text-slate-500 font-medium">{t('create_scratch_program_desc')}</p>
                   </div>
                 </div>
@@ -289,7 +289,7 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
                       </div>
                       <div className="h-px bg-slate-200 w-full"></div>
                       <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                        {selectedProgram.description} Ideally suited for {selectedProgram.level.toLowerCase()}s. Focuses on building a solid foundation.
+                        {selectedProgram.description}
                       </p>
                     </div>
                   </div>
