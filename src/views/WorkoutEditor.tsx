@@ -528,19 +528,11 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                               >
                                 <div className="grid grid-cols-12 gap-4 items-center">
                                   <div className="col-span-4 flex items-center gap-3">
-                                    <div className="cursor-grab text-slate-200 group-hover:text-slate-400 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                      <span className="material-symbols-outlined text-[20px]">drag_handle</span>
-                                    </div>
                                     <div className="min-w-0 flex flex-col gap-1 flex-1">
                                       <h4 className="text-sm font-bold text-slate-900 truncate flex items-center gap-2">
                                         {ex.name}
                                       </h4>
-                                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{ex.type}</p>
-                                        <button className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                          <span className="material-symbols-outlined text-[12px]">videocam</span> {t('video')}
-                                        </button>
-                                      </div>
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{ex.type}</p>
                                     </div>
                                   </div>
                                   <div className="col-span-8 grid grid-cols-5 gap-2 relative pr-24" onClick={(e) => e.stopPropagation()}>

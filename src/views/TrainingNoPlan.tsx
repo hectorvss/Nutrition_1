@@ -337,7 +337,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                   </div>
                   <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
                   <div className="flex items-center gap-1 text-slate-400">
-                    {client?.age || '28'} {t('years_label')}
+                    {client?.age || '--'} {t('years_label')}
                   </div>
                 </div>
               </div>

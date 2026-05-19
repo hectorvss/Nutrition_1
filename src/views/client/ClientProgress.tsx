@@ -663,122 +663,71 @@ export default function ClientProgress() {
     </div>
   );
 
-  const renderPlanning = () => (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <div className="xl:col-span-2 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  const renderPlanning = () => {
+    const goal = stats?.weight?.goal ?? null;
+    const current = stats?.weight?.current ?? null;
+    const start = stats?.weight?.start ?? null;
+    const targetDelta = (goal != null && current != null) ? (Number(goal) - Number(current)) : null;
+    const nutritionAdh = stats?.adherence?.nutrition ?? stats?.nutrition?.adherenceRate ?? null;
+    const trainingAdh = stats?.adherence?.training ?? stats?.training?.adherenceRate ?? null;
+    const avgSteps = stats?.activity?.avgSteps ?? null;
+    const hasPlanningData = goal != null || current != null || nutritionAdh != null || trainingAdh != null;
+
+    if (!hasPlanningData) {
+      return (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-12 flex flex-col items-center justify-center text-center">
+          <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+            <Target className="w-7 h-7 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{t('planning_no_data_title', { defaultValue: 'No planning data yet' })}</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">{t('planning_no_data_desc', { defaultValue: 'Your coach will set goals and a roadmap. Complete your check-ins so progress can be tracked here.' })}</p>
+        </div>
+      );
+    }
+
+    const adherenceCards = [
+      { label: t('nutrition'), value: nutritionAdh != null ? `${Math.round(Number(nutritionAdh))}%` : '--', icon: Utensils },
+      { label: t('training'), value: trainingAdh != null ? `${Math.round(Number(trainingAdh))}%` : '--', icon: Dumbbell },
+      { label: t('planning_avg_steps'), value: avgSteps != null ? `${(Number(avgSteps) / 1000).toFixed(1)}k` : '--', icon: Activity },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: t('planning_projected_goal_date'), value: 'Dec 15', sub: t('planning_on_track'), icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { label: t('planning_target_delta'), value: '-4.5 kg', sub: '', icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' },
-            { label: t('planning_current_mesocycle'), value: '2/4', sub: '', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-            { label: t('planning_success_probability'), value: '88%', sub: t('planning_high_confidence'), icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { label: t('planning_target_delta'), value: targetDelta != null ? `${targetDelta > 0 ? '+' : ''}${targetDelta.toFixed(1)} kg` : '--', icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' },
+            { label: t('current_weight', { defaultValue: 'Current weight' }), value: current != null ? `${Number(current).toFixed(1)} kg` : '--', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
+            { label: t('goal', { defaultValue: 'Goal' }), value: goal != null ? `${Number(goal).toFixed(1)} kg` : '--', icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50' },
           ].map((stat: any, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
               <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>
                 <stat.icon className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-sm font-bold text-slate-900">{stat.value}</span>
-                  {stat.sub && <span className="text-[10px] font-bold text-emerald-500 ml-1">{stat.sub}</span>}
-                </div>
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{stat.value}</span>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900">{t('adherence_snapshot_7d')}</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('adherence_snapshot_7d')}</h3>
           </div>
           <div className="grid grid-cols-3 gap-4">
-            {[
-              { label: t('nutrition'), value: '78%', change: '+2%', icon: Utensils, color: 'text-emerald-500' },
-              { label: t('training'), value: '85%', change: '+5%', icon: Dumbbell, color: 'text-emerald-500' },
-              { label: t('planning_avg_steps'), value: '8.2k', sub: '/9k', change: '-4%', icon: Activity, color: 'text-red-500' },
-            ].map((stat, idx) => (
-              <div key={idx} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <div className="flex justify-between items-start mb-4">
-                  <stat.icon className="w-5 h-5 text-slate-400" />
-                  <span className={`text-[10px] font-bold ${stat.color}`}>{stat.change}</span>
-                </div>
-                <p className="text-2xl font-bold text-slate-900">{stat.value}<span className="text-sm text-slate-400 font-medium">{stat.sub}</span></p>
+            {adherenceCards.map((stat, idx) => (
+              <div key={idx} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                <stat.icon className="w-5 h-5 text-slate-400 mb-4" />
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{stat.label}</p>
               </div>
             ))}
           </div>
         </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-slate-900">{t('master_roadmap')}</h3>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 uppercase">{t('status')}: {t('in_progress')}</span>
-          </div>
-          <div className="space-y-8">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">{t('nutrition_focus')}</p>
-              <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
-                <div className="w-1/3 bg-red-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-red-700">{t('deficit')}</span>
-                  <span className="text-[8px] font-bold text-red-400 uppercase">{t('planning_week_range', { start: 1, end: 4 })}</span>
-                </div>
-                <div className="w-1/3 bg-blue-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-blue-700">{t('maintenance')}</span>
-                  <span className="text-[8px] font-bold text-blue-400 uppercase">{t('planning_week_range', { start: 5, end: 8 })}</span>
-                </div>
-                <div className="w-1/3 bg-emerald-50 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-emerald-700">{t('surplus')}</span>
-                  <span className="text-[8px] font-bold text-emerald-400 uppercase">{t('planning_week_range', { start: 9, end: 12 })}</span>
-                </div>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">{t('training_block')}</p>
-              <div className="flex h-12 rounded-xl overflow-hidden border border-slate-100">
-                <div className="w-1/4 bg-purple-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-purple-700">{t('metabolic')}</span>
-                  <span className="text-[8px] font-bold text-purple-400 uppercase">{t('planning_week_range', { start: 1, end: 3 })}</span>
-                </div>
-                <div className="w-[41.6%] bg-indigo-50 border-r border-slate-100 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-indigo-700">{t('strength_base')}</span>
-                  <span className="text-[8px] font-bold text-indigo-400 uppercase">{t('planning_week_range', { start: 4, end: 8 })}</span>
-                </div>
-                <div className="w-[33.3%] bg-amber-50 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-amber-700">{t('hypertrophy')}</span>
-                  <span className="text-[8px] font-bold text-amber-400 uppercase">{t('planning_week_range', { start: 9, end: 12 })}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-
-      <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <h3 className="text-md font-bold text-slate-900 mb-6">{t('upcoming_tasks')}</h3>
-          <div className="space-y-3">
-          {[
-              { title: t('weekly_checkin'), time: t('tomorrow_9am'), icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { title: t('progress_photos'), time: t('friday_eod'), icon: Camera, color: 'text-purple-600', bg: 'bg-purple-50' },
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full ${item.bg} ${item.color} flex items-center justify-center`}>
-                    <item.icon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">{item.title}</p>
-                    <p className="text-[10px] font-bold text-slate-400">{item.time}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderMindset = () => (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

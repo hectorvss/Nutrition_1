@@ -10,7 +10,7 @@ import {
   Video,
   MapPin,
   Clock,
-  MoreVertical,
+  Trash2,
   User
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -233,7 +233,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
     return () => clearInterval(timer);
   }, []);
 
-  const { getEventsForDate, updateEvent } = useCalendar();
+  const { getEventsForDate, updateEvent, deleteEvent } = useCalendar();
 
   const getLocalDateString = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000;
@@ -352,7 +352,14 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   <>
                     <div className="flex justify-between items-start">
                       <span className={`text-sm font-bold block mb-1 h-6 w-6 flex items-center justify-center rounded-full ${dayObj.isCurrent ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-900'}`}>{dayObj.date}</span>
-                      <button className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-emerald-500 transition-all"><Plus className="w-4 h-4" /></button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNavigate('create-task', { date: dayObj.dateStr, returnTo: 'Month', currentDate: dayObj.dateStr });
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-emerald-500 transition-all"
+                        title={t('add_event', { defaultValue: 'Add event' })}
+                      ><Plus className="w-4 h-4" /></button>
                     </div>
                     <div className="mt-1 space-y-1">
                       {dayEvents.slice(0, 3).map((ev, eIdx) => {
@@ -560,8 +567,17 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                       >
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
-                      <button className="p-1.5 hover:bg-white/50 rounded-lg transition-colors text-slate-400">
-                        <MoreVertical className="w-4 h-4" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(t('confirm_delete_event', { defaultValue: '¿Eliminar este evento?' }))) {
+                            deleteEvent(event.id);
+                          }
+                        }}
+                        className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-slate-400 hover:text-red-500"
+                        title={t('delete_label')}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                     </div>

@@ -31,6 +31,8 @@ export interface ClientData {
   
   // Custom mapped fields for specific views (Nutrition, Training)
   goal: string;
+  /** Goal carried by the assigned nutrition plan / roadmap (fallback for `goal`). */
+  nutritionPlanGoal?: string | null;
   notes: string;
   weight: number | null;
 
@@ -215,7 +217,10 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
              isAtRisk: c.isAtRisk || false,
              riskStatus: c.riskStatus || null,
              weight: (dj as any).weight || c.clients_profiles?.[0]?.weight || null,
-             goal: c.clients_profiles?.[0]?.goal || c.goal || 'Not Set',
+             // Prefer an explicit profile goal; fall back to the goal carried by
+             // the assigned plan/roadmap so a client WITH a plan never shows "Not Set".
+             goal: c.clients_profiles?.[0]?.goal || c.goal || c.nutritionPlanGoal || 'Not Set',
+             nutritionPlanGoal: c.nutritionPlanGoal || null,
              notes: c.clients_profiles?.[0]?.notes || c.notes || '',
              temp_password: c.clients_profiles?.[0]?.temp_password || c.tempPassword,
              nutritionPlanAssigned: (c.nutrition_plans && c.nutrition_plans.length > 0) || c.nutritionPlanAssigned || false,

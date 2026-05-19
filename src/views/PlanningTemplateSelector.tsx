@@ -198,9 +198,6 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               <Grid className="w-5 h-5 text-emerald-500" />
               {t('strategic_templates')}
             </h2>
-            <button className="p-2 rounded-xl hover:bg-white border border-transparent hover:border-slate-200 text-slate-400 hover:text-slate-600 transition-all">
-              <Filter className="w-5 h-5" />
-            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
@@ -283,21 +280,6 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                   </p>
                 </div>
 
-                {/* Small Visual Chart (Mirroring Week View Chart) */}
-                <div className="hidden sm:flex w-full sm:w-1/5 flex-shrink-0 flex-col pl-6 border-l border-slate-100 h-20 justify-center">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{t('load_projection')}</span>
-                  </div>
-                  <div className="flex gap-1.5 h-10 items-end justify-between">
-                    {[40, 60, 80, 70, 90, 100, 80, 60, 40].map((h, i) => (
-                      <div 
-                        key={i} 
-                        className={`w-2 rounded-full transition-all ${h > 80 ? 'bg-emerald-500' : 'bg-slate-200'}`} 
-                        style={{ height: `${h}%` }}
-                      ></div>
-                    ))}
-                  </div>
-                </div>
               </div>
             ))}
           </div>

@@ -102,6 +102,60 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Open manager self-registration (the public landing "Create account" flow).
+router.post('/register', async (req: any, res) => {
+  const { email, password, name } = req.body;
+
+  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { role: 'MANAGER' }
+    });
+
+    if (error || !data.user) {
+      return res.status(400).json({ error: error?.message || 'Failed to create account' });
+    }
+
+    // The DB trigger creates public.users — force the MANAGER role (the trigger
+    // may default to CLIENT) and never trust user_metadata for authorization.
+    await supabaseAdmin.from('users').update({ role: 'MANAGER' }).eq('id', data.user.id);
+
+    if (name && String(name).trim()) {
+      await supabaseAdmin
+        .from('profiles')
+        .upsert({ user_id: data.user.id, full_name: String(name).trim() }, { onConflict: 'user_id' });
+    }
+
+    // Sign the new manager in straight away so the funnel doesn't dead-end.
+    const { data: sess } = await supabase.auth.signInWithPassword({ email, password });
+    if (sess?.session) {
+      await recordLogin(data.user.id, req);
+      return res.json({
+        token: sess.session.access_token,
+        refresh_token: sess.session.refresh_token,
+        user: { id: data.user.id, email, role: 'MANAGER', manager_id: null }
+      });
+    }
+    res.json({ success: true, id: data.user.id });
+  } catch (error: any) {
+    console.error('Register error:', error);
+    res.status(400).json({ error: error.message || 'Failed to register' });
+  }
+});
+
 // Create user — protegido por rol
 // - Para crear MANAGER: requiere cabecera x-setup-secret con SETUP_SECRET del .env
 // - Para crear CLIENT: requiere JWT válido de un MANAGER autenticado

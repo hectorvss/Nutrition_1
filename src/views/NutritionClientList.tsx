@@ -19,7 +19,12 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
 
   const clients = globalClients.map((client) => {
     const hasPlan = client.nutritionPlanAssigned;
-    const goalRaw = client.goal || 'Not Set';
+    // Resolve the goal: profile goal → plan/roadmap goal → (if a plan exists) the
+    // plan's name → only then "Not Set". A client WITH a plan never shows "Not Set".
+    const rawGoal = client.goal && client.goal !== 'Not Set' ? client.goal : null;
+    const goalRaw = rawGoal
+      || client.nutritionPlanGoal
+      || (hasPlan ? (client.plan && client.plan !== 'No Plan' ? client.plan : t('active_plan_status')) : 'Not Set');
     const goalLabel = goalRaw === 'Weight Loss' ? t('weight_loss_goal') :
                      goalRaw === 'Muscle Gain' ? t('muscle_gain_goal') :
                      goalRaw === 'Maintenance' ? t('maintenance_goal') :

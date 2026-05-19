@@ -207,7 +207,10 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
           workoutName: workout.name,
           intensity: isStrength ? t('intensity_high') : isMobility ? t('intensity_low') : t('intensity_mod'),
           intensityColor: isStrength ? 'bg-orange-500' : isMobility ? 'bg-blue-400' : 'bg-emerald-500',
-          duration: planData.duration ? `${planData.duration} ${t('min_label')}` : `60 ${t('min_label')}`,
+          duration: (() => {
+            const d = workout.duration ?? dataJson.duration;
+            return d ? `${d} ${t('min_label')}` : `60 ${t('min_label')}`;
+          })(),
           volume: `${totalSetsNum} ${t('sets_label')}`,
           tag: isMobility ? t('mobility_label') : t('training_day'),
           tagColor: isMobility
@@ -393,7 +396,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">flag</span>
-                {t('goal')}: {client?.goal || 'Muscle Gain'}
+                {t('goal')}: {client?.goal || '--'}
               </span>
               <span className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block"></span>
               <span className="flex items-center gap-1 font-medium text-emerald-600">

@@ -402,14 +402,10 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
             <div className="absolute -bottom-1 -right-1 bg-[#17cf54] w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email?.split('@')[0]}</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email?.split('@')[0] || t('client')}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">flag</span> {t('goal')}: {t('fat_loss')}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">female</span> {t('client')}
+                <span className="material-symbols-outlined text-[16px]">person</span> {t('client')}
               </span>
             </div>
           </div>

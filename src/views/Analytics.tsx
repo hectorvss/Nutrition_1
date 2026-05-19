@@ -99,14 +99,9 @@ export default function Analytics() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('analytics_title')}</h1>
           <p className="text-slate-500 text-sm">{t('analytics_overview')}</p>
         </div>
-        <div className="flex items-center gap-3 bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
-          <button className="px-4 py-2 rounded-md bg-emerald-50 text-emerald-600 text-sm font-medium">{t('last_30_days')}</button>
-          <div className="w-px h-6 bg-slate-200"></div>
-          <div className="flex items-center gap-2 px-3">
-            <Calendar className="w-5 h-5 text-slate-400" />
-            <span className="text-sm text-slate-600 font-medium">{t('analytics_sample_date_range')}</span>
-            <ChevronDown className="w-5 h-5 text-slate-400 cursor-pointer" />
-          </div>
+        <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-slate-200 shadow-sm">
+          <Calendar className="w-5 h-5 text-emerald-500" />
+          <span className="text-sm text-slate-600 font-medium">{t('last_30_days')}</span>
         </div>
       </header>
 
@@ -170,7 +165,7 @@ export default function Analytics() {
 function BusinessAnalytics({ data }: any) {
   const { t, language } = useLanguage();
   const monthLabels = Array.from({ length: 12 }, (_, i) =>
-    new Date(2026, i, 1).toLocaleString(language === 'es' ? 'es-ES' : 'en-US', { month: 'short' })
+    new Date(new Date().getFullYear(), i, 1).toLocaleString(language === 'es' ? 'es-ES' : 'en-US', { month: 'short' })
   );
 
   return (
@@ -455,17 +450,15 @@ function NutritionAnalytics({ data }: any) {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-slate-900">{t('top_deficit_clients')}</h3>
-            <button className="text-emerald-600 text-xs font-semibold hover:underline">{t('view_all')}</button>
           </div>
           <div className="flex flex-col gap-4 overflow-y-auto">
             {data?.topDeficits && data.topDeficits.length > 0 ? (
               data.topDeficits.map((client: any, idx: number) => (
-                <DeficitClient 
+                <DeficitClient
                   key={idx}
                   name={client.name}
                   deficit={client.deficit}
                   severity={client.status === 'High Deficit' ? 'high' : 'med'}
-                  image={`https://ui-avatars.com/api/?name=${client.name}&background=random`}
                 />
               ))
             ) : (
@@ -582,9 +575,6 @@ function TrainingAnalytics({ data }: any) {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-slate-900">{t('training_distribution')}</h3>
-            <button className="text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
           </div>
           <div className="flex items-center gap-8 h-full">
             <div className="relative w-40 h-40 flex-shrink-0">
@@ -625,9 +615,6 @@ function TrainingAnalytics({ data }: any) {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-slate-900">{t('muscle_frequency')}</h3>
-            <button className="text-slate-400 hover:text-slate-600">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
           </div>
           <div className="flex flex-col h-full justify-center space-y-4">
             {data?.muscleFrequency?.map((item: any, idx: number) => {
@@ -730,17 +717,19 @@ function LegendItem({ color, label }: any) {
   );
 }
 
-function DeficitClient({ name, deficit, severity, image }: any) {
+function DeficitClient({ name, deficit, severity }: any) {
   const { t } = useLanguage();
   const severityStyles = {
     high: 'bg-red-50 border-red-100 text-red-500',
     med: 'bg-amber-50 border-amber-100 text-amber-500',
     low: 'bg-slate-50 border-slate-100 text-slate-500'
   };
-  
+
   return (
     <div className={`flex items-center gap-3 p-3 rounded-xl border ${severity === 'high' ? severityStyles.high : 'bg-white border-transparent hover:bg-slate-50'} transition-colors`}>
-      <div className="h-10 w-10 rounded-full bg-slate-200 bg-cover bg-center" style={{ backgroundImage: `url(${image})` }}></div>
+      <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-bold text-sm shrink-0">
+        {String(name || 'C').charAt(0).toUpperCase()}
+      </div>
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-semibold text-slate-900 truncate">{name}</h4>
         <p className={`text-xs font-medium ${severity === 'high' ? 'text-red-500' : 'text-slate-500'}`}>{deficit}</p>

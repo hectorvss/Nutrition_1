@@ -6,9 +6,9 @@ import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, Play, ShieldCheck } from 
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../supabase';
 
-export default function Login({ onBackToLanding }: { onBackToLanding?: () => void }) {
+export default function Login({ onBackToLanding, initialMode }: { onBackToLanding?: () => void; initialMode?: 'login' | 'signup' }) {
   const { t } = useLanguage();
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(initialMode !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,7 +20,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
   const [pendingUser, setPendingUser] = useState<any>(null);
 
   const { login } = useAuth();
-  const isSuccessMessage = error === t('login_account_created');
+  const isSuccessMessage = error === t('login_reset_email_sent', { defaultValue: 'Si el email existe, recibirás un enlace para restablecer la contraseña.' });
 
   // Establishes a real supabase-js session in the browser (needed for MFA),
   // then completes login — challenging for a 2FA code first if required.
@@ -70,12 +70,9 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? '/auth/login' : '/auth/setup';
-      
+      const endpoint = isLogin ? '/auth/login' : '/auth/register';
+
       const payload: any = { email, password };
-      if (!isLogin) {
-        payload.role = 'MANAGER';
-      }
 
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
@@ -119,7 +116,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setError(t('login_auth_failed'));
+      setError(t('login_enter_email', { defaultValue: 'Introduce tu email primero.' }));
       return;
     }
     setError('');
@@ -134,7 +131,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
       if (!response.ok) {
         throw new Error(data.error || t('login_auth_failed'));
       }
-      setError(t('login_account_created'));
+      setError(t('login_reset_email_sent', { defaultValue: 'Si el email existe, recibirás un enlace para restablecer la contraseña.' }));
     } catch (err: any) {
       setError(err.message);
     } finally {

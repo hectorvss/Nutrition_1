@@ -20,6 +20,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
   const [instructions, setInstructions] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [safetyRating, setSafetyRating] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -38,6 +39,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
         tools: tools ? tools.split(',').map(s => s.trim()) : ['Bodyweight'],
         level,
         icon: 'fitness_center',
+        safety_rating: safetyRating || null,
       } as any);
       onBack();
     } finally {
@@ -219,12 +221,19 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                 <div className="flex flex-col items-center justify-center space-y-4 py-4">
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <button key={i} className="text-amber-400 hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-4xl fill-1">star</span>
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setSafetyRating(safetyRating === i ? 0 : i)}
+                        className={`hover:scale-110 transition-all ${i <= safetyRating ? 'text-amber-400' : 'text-slate-200 hover:text-amber-400'}`}
+                      >
+                        <span className={`material-symbols-outlined text-4xl ${i <= safetyRating ? 'fill-1' : ''}`}>star</span>
                       </button>
                     ))}
                   </div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('five_out_of_five')}</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    {safetyRating > 0 ? `${safetyRating} / 5` : t('not_rated', { defaultValue: 'Sin valorar' })}
+                  </span>
                 </div>
               </div>
             </div>

@@ -9,7 +9,6 @@ import {
   Star, 
   MoreVertical, 
   ChevronRight,
-  Heart,
   Trash2,
   Loader2
 } from 'lucide-react';
@@ -155,11 +154,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
             onClick={() => {
               if (activeTab === tab) return;
               setCategoryFilter('');  // categories differ per tab
-              setIsLoading(true);
-              setTimeout(() => {
-                setActiveTab(tab);
-                setIsLoading(false);
-              }, 400); // artificially slightly slow it down to show a mask
+              setActiveTab(tab);
             }}
             className={`pb-4 text-sm font-bold capitalize transition-all whitespace-nowrap ${
               activeTab === tab ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-400 hover:text-slate-600'
@@ -275,7 +270,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                   )}
                   <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
                     <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                    <span className="text-xs font-bold text-slate-700">{recipe.rating}</span>
+                    <span className="text-xs font-bold text-slate-700">{recipe.rating ?? '—'}</span>
                   </div>
                 </div>
 
@@ -306,13 +301,18 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                     </div>
                     <div className="flex gap-3">
                       <button
+                        onClick={(e) => { e.stopPropagation(); onNavigate('recipe-detail', recipe.id); }}
+                        className="p-3 rounded-2xl text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center"
+                        title={t('view_recipe', { defaultValue: 'View recipe' })}
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                      <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteRecipe(recipe.id); }}
                         className="p-3 rounded-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+                        title={t('delete_label')}
                       >
-                        <Heart className="w-6 h-6" />
-                      </button>
-                      <button className="p-3 rounded-2xl text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center">
-                        <Plus className="w-6 h-6" />
+                        <Trash2 className="w-6 h-6" />
                       </button>
                     </div>
                   </div>
@@ -389,9 +389,6 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                       <div className="hidden md:flex justify-center gap-2">
                         <button onClick={() => deleteFood(food.id)} className="p-3 rounded-2xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all" title={t('delete_label')}>
                           <Trash2 className="w-5 h-5" />
-                        </button>
-                        <button className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all">
-                          <Plus className="w-6 h-6" />
                         </button>
                       </div>
                     </div>

@@ -97,10 +97,6 @@ export default function ClientCheckIns() {
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email?.split('@')[0] || t('client')}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">flag</span> {t('goal')}: {t('fat_loss')}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-              <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">how_to_reg</span> {t('active_client')}
               </span>
             </div>

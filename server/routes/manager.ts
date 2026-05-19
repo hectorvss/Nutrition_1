@@ -413,6 +413,19 @@ router.get('/clients', async (req: any, res) => {
         .sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())[0];
       const planName = latestNutritionPlan?.name || 'No Plan';
 
+      // The goal carried by the assigned nutrition plan / roadmap. Used so the
+      // UI never shows "Not Set" for a client who actually has a plan.
+      const planGoal = (() => {
+        let pdj: any = latestNutritionPlan?.data_json;
+        if (typeof pdj === 'string') { try { pdj = JSON.parse(pdj); } catch { pdj = {}; } }
+        const fromPlan = pdj?.goal || pdj?.goalType || pdj?.planFamilyLabel;
+        if (fromPlan) return fromPlan;
+        let rdj: any = (c.roadmaps || [])[0]?.data_json;
+        if (typeof rdj === 'string') { try { rdj = JSON.parse(rdj); } catch { rdj = {}; } }
+        return rdj?.goalType || rdj?.planFamilyLabel || rdj?.primaryGoal
+          || rdj?.trajectoryGoals?.primaryGoal || null;
+      })();
+
       return {
         id: c.id,
         email: c.email,
@@ -426,6 +439,7 @@ router.get('/clients', async (req: any, res) => {
         age: c.clients_profiles?.age || c.clients_profiles?.[0]?.age || '--',
         weight: dj.weight || c.clients_profiles?.weight || c.clients_profiles?.[0]?.weight || null,
         goal: c.clients_profiles?.goal || c.clients_profiles?.[0]?.goal || null,
+        nutritionPlanGoal: planGoal,
         notes: c.clients_profiles?.notes || c.clients_profiles?.[0]?.notes || null,
         nutritionPlanAssigned: !!(c.nutrition_plans && c.nutrition_plans.length > 0),
         trainingPlanAssigned: !!(c.training_programs && c.training_programs.length > 0),
@@ -519,7 +533,7 @@ router.patch('/clients/:id/status', async (req: any, res) => {
 router.patch('/clients/:id', async (req: any, res) => {
   const { id } = req.params;
   const managerId = req.user.id;
-  const { access_expiration } = req.body;
+  const { access_expiration, full_name, phone, gender, age, goal } = req.body;
 
   try {
     if (!UUID_RE.test(id)) {
@@ -535,6 +549,29 @@ router.patch('/clients/:id', async (req: any, res) => {
       .eq('role', 'CLIENT')
       .maybeSingle();
     if (!clientOwner) return res.status(404).json({ error: 'Client not found or access denied' });
+
+    // Update profile fields (name / phone) when provided.
+    if (full_name !== undefined || phone !== undefined) {
+      const profilePatch: any = {};
+      if (full_name !== undefined) profilePatch.full_name = String(full_name).trim();
+      if (phone !== undefined) profilePatch.phone_number = phone ? String(phone).trim() : null;
+      const { error: pErr } = await supabaseAdmin
+        .from('profiles')
+        .upsert({ user_id: id, ...profilePatch }, { onConflict: 'user_id' });
+      if (pErr) throw pErr;
+    }
+
+    // Update client-specific fields (gender / age / goal) when provided.
+    if (gender !== undefined || age !== undefined || goal !== undefined) {
+      const cpPatch: any = {};
+      if (gender !== undefined) cpPatch.gender = gender || null;
+      if (age !== undefined) cpPatch.age = (age === '' || age === null) ? null : Number(age);
+      if (goal !== undefined) cpPatch.goal = goal || null;
+      const { error: cpErr } = await supabaseAdmin
+        .from('clients_profiles')
+        .upsert({ user_id: id, ...cpPatch }, { onConflict: 'user_id' });
+      if (cpErr) throw cpErr;
+    }
 
     if (access_expiration !== undefined) {
       // Merge into clients_profiles.metadata (jsonb) without clobbering other keys.
@@ -556,6 +593,38 @@ router.patch('/clients/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error updating client:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Reset a client's password — generates a new one and returns it so the
+// manager can pass it on. Existing (hashed) passwords can never be retrieved.
+router.post('/clients/:id/reset-password', async (req: any, res) => {
+  const { id } = req.params;
+  const managerId = req.user.id;
+
+  try {
+    if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid client id format' });
+    }
+
+    // Verify the client belongs to this manager.
+    const { data: clientOwner } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT')
+      .maybeSingle();
+    if (!clientOwner) return res.status(404).json({ error: 'Client not found or access denied' });
+
+    const newPassword = 'Nutri' + Math.floor(Math.random() * 9000 + 1000) + '$xp';
+    const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(id, { password: newPassword });
+    if (updErr) throw updErr;
+
+    res.json({ success: true, password: newPassword });
+  } catch (error: any) {
+    console.error('Error resetting client password:', error);
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });
@@ -1804,10 +1873,12 @@ router.get('/supplements', async (req: any, res) => {
 // Create a custom supplement for this manager
 router.post('/supplements', async (req: any, res) => {
   try {
-    const { name, category, purpose, recommended_dose, timing, notes, emoji, language } = req.body;
+    const { name, category, purpose, recommended_dose, timing, notes, emoji, language,
+      brand, primary_ingredient, calories, protein, carbs, fats, quality_rating } = req.body;
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
+    const numOrNull = (v: any) => (v === undefined || v === null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
     const { data, error } = await supabaseAdmin
       .from('supplements')
       .insert({
@@ -1819,6 +1890,13 @@ router.post('/supplements', async (req: any, res) => {
         notes: notes || null,
         emoji: emoji || null,
         language: language || 'es',
+        brand: brand || null,
+        primary_ingredient: primary_ingredient || null,
+        calories: numOrNull(calories),
+        protein: numOrNull(protein),
+        carbs: numOrNull(carbs),
+        fats: numOrNull(fats),
+        quality_rating: numOrNull(quality_rating),
         is_custom: true,
         manager_id: req.user.id
       })
@@ -2955,14 +3033,38 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       .or(`sender_id.eq.${id},receiver_id.eq.${id}`)
       .not('attachment_url', 'is', null);
 
+    // Classify an attachment into a real file category from its URL/extension.
+    const classifyAttachment = (url: string, declaredType?: string | null) => {
+      const clean = String(url || '').split('?')[0].toLowerCase();
+      const ext = clean.includes('.') ? clean.split('.').pop() || '' : '';
+      if (declaredType === 'image' || /^(jpg|jpeg|png|gif|webp|heic|bmp|svg)$/.test(ext)) return 'image';
+      if (declaredType === 'audio' || /^(mp3|wav|ogg|m4a|aac|flac|opus)$/.test(ext)) return 'audio';
+      if (declaredType === 'video' || /^(mp4|mov|avi|wmv|mkv|webm)$/.test(ext)) return 'video';
+      if (/^(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|rtf|odt)$/.test(ext)) return 'document';
+      return declaredType && declaredType !== 'file' ? declaredType : 'document';
+    };
+    const fileNameFromUrl = (url: string) => {
+      try {
+        const seg = decodeURIComponent(String(url || '').split('?')[0].split('/').pop() || '');
+        return seg && seg.includes('.') ? seg : '';
+      } catch { return ''; }
+    };
+
     const documents = (messageAttachments || [])
-      .filter(m => m.attachment_url) // Real files only
-      .map(m => ({
-        name: m.attachment_name || (m.attachment_type === 'image' ? 'Image Attachment' : 'Chat File'),
-        url: m.attachment_url,
-        date: m.created_at,
-        type: m.attachment_type || 'File'
-      }));
+      .filter(m => m.attachment_url) // Real attached files only — never the chat text itself
+      .map(m => {
+        const kind = classifyAttachment(m.attachment_url as string, m.attachment_type);
+        const fallbackName =
+          kind === 'image' ? 'Photo' :
+          kind === 'audio' ? 'Audio' :
+          kind === 'video' ? 'Video' : 'Document';
+        return {
+          name: m.attachment_name || fileNameFromUrl(m.attachment_url as string) || fallbackName,
+          url: m.attachment_url,
+          date: m.created_at,
+          type: kind
+        };
+      });
 
     // Add initial assessment if it exists from profile
     if ((client.clients_profiles as any)?.metadata?.initial_assessment_url) {

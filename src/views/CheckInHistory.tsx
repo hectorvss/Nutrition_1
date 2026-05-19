@@ -163,13 +163,12 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
           const reviewedAt = item.reviewed_at || item.data_json?.reviewed_at;
           const isPending = !reviewedAt;
           const isNew = isPending && idx === 0;
-          const isArchived = false;
           return (
             <div
               key={item.id}
               className={`bg-white rounded-2xl shadow-sm p-5 border transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden group ${
                 isPending ? 'border-amber-200' : 'border-slate-200 hover:border-slate-300'
-              } ${isArchived ? 'opacity-60 border-dashed' : ''}`}
+              }`}
             >
               {isPending && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400" />}
 

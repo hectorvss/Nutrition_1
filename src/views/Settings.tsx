@@ -375,10 +375,16 @@ function ProfileSettings() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-6 pb-6 border-b border-slate-100">
             <div className="relative">
-              <div 
-                className="w-24 h-24 rounded-full bg-slate-100 bg-center bg-cover border-4 border-white shadow-sm" 
-                style={{ backgroundImage: `url(${profile.avatar_url || "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop"})` }}
-              />
+              {profile.avatar_url ? (
+                <div
+                  className="w-24 h-24 rounded-full bg-slate-100 bg-center bg-cover border-4 border-white shadow-sm"
+                  style={{ backgroundImage: `url(${profile.avatar_url})` }}
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-emerald-50 border-4 border-white shadow-sm flex items-center justify-center text-emerald-500 font-bold text-3xl">
+                  {(profile.full_name || profile.name || 'M').charAt(0).toUpperCase()}
+                </div>
+              )}
               <input 
                 type="file" 
                 ref={fileInputRef} 

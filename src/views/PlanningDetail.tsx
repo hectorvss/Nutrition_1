@@ -636,10 +636,16 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
               </div>
               
               <div className="flex items-center gap-4 relative z-10">
-                <div 
-                  className="w-16 h-16 rounded-full bg-cover bg-center shadow-inner border-2 border-slate-50" 
-                  style={{ backgroundImage: `url("${client?.avatar_url || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop'}")` }}
-                />
+                {(client?.avatar_url || client?.avatar) ? (
+                  <div
+                    className="w-16 h-16 rounded-full bg-cover bg-center shadow-inner border-2 border-slate-50"
+                    style={{ backgroundImage: `url("${client.avatar_url || client.avatar}")` }}
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-emerald-50 shadow-inner border-2 border-slate-50 flex items-center justify-center text-emerald-500 font-bold text-xl">
+                    {(client?.name || 'C').charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{client?.name}</h2>
                   <div className="flex items-center gap-2 mt-0.5">
@@ -958,7 +964,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                               </div>
                             ))}
                             <button 
-                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...(prev.secondaryObjectives || []), 'New Objective'] } : null)}
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...(prev.secondaryObjectives || []), ''] } : null)}
                               className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
                             >
                               + Add Objective
@@ -1035,7 +1041,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                               />
                             ))}
                             <button 
-                              onClick={() => setDraftStratData(prev => prev ? { ...prev, intensityTargets: [...(prev.intensityTargets || []), 'New Target'] } : null)}
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, intensityTargets: [...(prev.intensityTargets || []), ''] } : null)}
                               className="text-[9px] font-bold text-purple-500 uppercase tracking-widest mt-1 hover:underline"
                             >
                               + Add Target
@@ -1062,7 +1068,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                               </div>
                             ))}
                             <button
-                              onClick={() => setDraftStratData(prev => prev ? { ...prev, risksAndConstraints: [...(prev.risksAndConstraints || []), 'New Risk'] } : null)}
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, risksAndConstraints: [...(prev.risksAndConstraints || []), ''] } : null)}
                               className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-1 hover:underline"
                             >
                               + Add Risk
@@ -1103,7 +1109,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                               </div>
                             ))}
                             <button
-                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...(prev.secondaryObjectives || []), 'New Objective'] } : null)}
+                              onClick={() => setDraftStratData(prev => prev ? { ...prev, secondaryObjectives: [...(prev.secondaryObjectives || []), ''] } : null)}
                               className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
                             >
                               + Add Objective
@@ -1146,7 +1152,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                             </div>
                           ))}
                           <button 
-                            onClick={() => setDraftStratData(prev => prev ? { ...prev, successCriteria: [...(prev.successCriteria || []), 'New Criteria'] } : null)}
+                            onClick={() => setDraftStratData(prev => prev ? { ...prev, successCriteria: [...(prev.successCriteria || []), ''] } : null)}
                             className="text-[9px] font-bold text-orange-500 uppercase tracking-widest mt-1 hover:underline"
                           >
                             + Add Criteria
@@ -1173,7 +1179,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                             </div>
                           ))}
                           <button 
-                            onClick={() => setDraftStratData(prev => prev ? { ...prev, kpis: [...(prev.kpis || []), 'New KPI'] } : null)}
+                            onClick={() => setDraftStratData(prev => prev ? { ...prev, kpis: [...(prev.kpis || []), ''] } : null)}
                             className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-1 hover:underline"
                           >
                             + Add KPI
@@ -1216,13 +1222,17 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             const autoCurrent = checkInsHistory.length > 0 ? checkInsHistory[checkInsHistory.length - 1].weight : undefined;
             const saved = roadmap.trajectoryGoals || {};
 
+            // Seed from the client's real weight; no invented numbers. Targets
+            // default to "maintain" (= current) until the coach sets them.
+            const profileWeight = Number((client as any)?.weight) || 0;
+            const baseWeight = autoCurrent ?? autoStart ?? profileWeight;
             const tGoals: TrajectoryGoals = {
-              targetWeight: 70,
-              startWeight: autoStart ?? 80,
-              currentWeight: autoCurrent ?? autoStart ?? 80,
-              targetStrengthKg: 100,
-              startStrengthKg: 60,
-              exerciseName: 'Key Lift',
+              targetWeight: baseWeight,
+              startWeight: autoStart ?? profileWeight ?? baseWeight,
+              currentWeight: autoCurrent ?? autoStart ?? baseWeight,
+              targetStrengthKg: 0,
+              startStrengthKg: 0,
+              exerciseName: '',
               programStartDate: today,
               totalWeeks: roadmap.totalWeeks || 12,
               ...saved,

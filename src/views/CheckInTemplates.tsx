@@ -231,15 +231,11 @@ ${t('template_will_be_archived_if_has_submissions')}`;
                       {t('default')}
                     </span>
                   )}
-                  <div className="relative group/menu">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors">
-                      {template.is_permanent ? (
-                        <Check className="w-5 h-5 text-emerald-500" />
-                      ) : (
-                        <MoreVertical className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
+                  {template.is_permanent && (
+                    <div className="p-2" title={t('permanent_template', { defaultValue: 'Permanent template' })}>
+                      <Check className="w-5 h-5 text-emerald-500" />
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -195,6 +195,48 @@ router.get('/workout-logs', async (req: any, res) => {
   }
 });
 
+// Update one of my own workout logs (edit sets / notes / RPE)
+router.patch('/workout-logs/:id', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(String(id))) {
+      return res.status(400).json({ error: 'Invalid log id format' });
+    }
+
+    const { exercises, notes, session_rpe } = req.body;
+    const updates: any = {};
+    if (exercises !== undefined) {
+      updates.exercises = Array.isArray(exercises) ? exercises.slice(0, 100) : [];
+    }
+    if (notes !== undefined) {
+      updates.notes = typeof notes === 'string' ? notes.slice(0, 2000) : null;
+    }
+    if (session_rpe !== undefined) {
+      const rpeNum = Number(session_rpe);
+      updates.session_rpe = (Number.isFinite(rpeNum) && rpeNum >= 1 && rpeNum <= 10) ? rpeNum : null;
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('workout_logs')
+      .update(updates)
+      .eq('id', id)
+      .eq('client_id', req.user.id)
+      .select()
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Workout log not found' });
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating workout log:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 // --- ONBOARDING ROUTES ---
 
 // Get active onboarding message for the client
@@ -275,10 +317,15 @@ router.get('/profile-stats', async (req: any, res) => {
       .order('date', { ascending: true });
 
     // 3. Weight & Body Fat History
+    const num = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      return isNaN(n) ? null : n;
+    };
     const weightHistory = (checkIns || []).map(ci => ({
       date: ci.date,
-      weight: (ci.data_json as any).weight || null,
-      bodyFat: (ci.data_json as any).body_fat || null
+      weight: num((ci.data_json as any)?.weight),
+      bodyFat: num((ci.data_json as any)?.body_fat)
     })).filter(w => w.weight !== null);
 
     // 4. Latest Measurements
@@ -299,16 +346,17 @@ router.get('/profile-stats', async (req: any, res) => {
       let countP = 0, countC = 0, countF = 0, countKcal = 0;
 
       recentCheckIns.forEach(ci => {
-        const d = ci.data_json as any;
-        if (d.protein_intake && d.protein_goal) { totalP += (d.protein_intake / d.protein_goal); countP++; }
-        if (d.carbs_intake && d.carbs_goal) { totalC += (d.carbs_intake / d.carbs_goal); countC++; }
-        if (d.fats_intake && d.fats_goal) { totalF += (d.fats_intake / d.fats_goal); countF++; }
-        if (d.calories_intake) { totalKcal += d.calories_intake; countKcal++; }
+        const d = (ci.data_json as any) || {};
+        // Canonical fixed check-in keys: absolute average daily intake.
+        const p = num(d.protein); if (p !== null) { totalP += p; countP++; }
+        const c = num(d.carbs); if (c !== null) { totalC += c; countC++; }
+        const f = num(d.fats); if (f !== null) { totalF += f; countF++; }
+        const k = num(d.calories); if (k !== null) { totalKcal += k; countKcal++; }
       });
 
-      avgProteinAdherence = countP > 0 ? Math.round((totalP / countP) * 100) : 0;
-      avgCarbsAdherence = countC > 0 ? Math.round((totalC / countC) * 100) : 0;
-      avgFatsAdherence = countF > 0 ? Math.round((totalF / countF) * 100) : 0;
+      avgProteinAdherence = countP > 0 ? Math.round(totalP / countP) : 0;
+      avgCarbsAdherence = countC > 0 ? Math.round(totalC / countC) : 0;
+      avgFatsAdherence = countF > 0 ? Math.round(totalF / countF) : 0;
       dailyCaloricAvg = countKcal > 0 ? Math.round(totalKcal / countKcal) : 0;
     }
 
@@ -317,13 +365,13 @@ router.get('/profile-stats', async (req: any, res) => {
       let totalAdh = 0;
       let countAdh = 0;
       recentCheckIns.forEach(ci => {
-        const d = ci.data_json as any;
+        const d = (ci.data_json as any) || {};
         const val = d.nutrition_adherence_score !== undefined ? Number(d.nutrition_adherence_score) * 10 :
                     (d.adherence_score !== undefined ? Number(d.adherence_score) * 10 : null);
         if (val !== null) {
           totalAdh += val;
           countAdh++;
-        } else if (d.nutritionAdherence) {
+        } else if (typeof d.nutritionAdherence === 'string') {
           const str = d.nutritionAdherence;
           if (str.includes('>95%')) { totalAdh += 98; countAdh++; }
           else if (str.includes('80-95%')) { totalAdh += 85; countAdh++; }
@@ -343,13 +391,16 @@ router.get('/profile-stats', async (req: any, res) => {
       .limit(3);
 
     const activity = [
-      ...(checkIns || []).slice(-3).map(ci => ({
-        type: 'CHECK_IN',
-        title: 'Morning Check-in',
-        sub: `Logged weight (${(ci.data_json as any).weight}kg)`,
-        time: ci.date,
-        color: 'bg-emerald-100 text-emerald-600'
-      })),
+      ...(checkIns || []).slice(-3).map(ci => {
+        const w = (ci.data_json as any)?.weight;
+        return {
+          type: 'CHECK_IN',
+          title: 'Morning Check-in',
+          sub: w ? `Logged weight (${w}kg)` : 'Check-in submitted',
+          time: ci.date,
+          color: 'bg-emerald-100 text-emerald-600'
+        };
+      }),
       ...(recentMsgs || []).map(m => ({
         type: 'MESSAGE',
         title: 'Message Received',
@@ -514,20 +565,28 @@ router.get('/profile-stats', async (req: any, res) => {
       stress: (lastCheckIn?.data_json as any)?.stress_level || '--',
       mood: (lastCheckIn?.data_json as any)?.mood_score || '--',
       motivation: (lastCheckIn?.data_json as any)?.motivation_level || '--',
-      history: (checkIns || []).map(ci => ({
-        date: ci.date,
-        energy: (ci.data_json as any).energy_level || null,
-        stress: (ci.data_json as any).stress_level || null,
-        mood: (ci.data_json as any).mood_score || null,
-        motivation: (ci.data_json as any).motivation_level || null
-      })).filter(h => h.energy || h.stress || h.mood || h.motivation)
+      history: (checkIns || []).map(ci => {
+        const d = (ci.data_json as any) || {};
+        return {
+          date: ci.date,
+          energy: num(d.energy_level),
+          stress: num(d.stress_level),
+          mood: num(d.mood_score),
+          motivation: num(d.motivation_level)
+        };
+      }).filter(h => h.energy || h.stress || h.mood || h.motivation)
     };
 
+    const cProfile: any = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
+    const allergies = cProfile?.metadata?.allergies || [];
+
     res.json({
-      latestWeight: (lastCheckIn?.data_json as any)?.weight || null,
-      goal: client.clients_profiles?.[0]?.goal || null,
-      bodyFat: (lastCheckIn?.data_json as any)?.body_fat || null,
+      latestWeight: num((lastCheckIn?.data_json as any)?.weight),
+      goal: cProfile?.goal || null,
+      bodyFat: num((lastCheckIn?.data_json as any)?.body_fat),
       adherenceRate: calculatedAdherenceRate,
+      activeDays: (checkIns?.length || 0),
+      allergies: allergies.length > 0 ? allergies : [],
       weightHistory,
       macros: {
           protein: avgProteinAdherence,

@@ -15,7 +15,12 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
 
   const clients = globalClients.map((client) => {
     const hasPlan = client.trainingPlanAssigned;
-    const goalRaw = client.goal || 'Not Set';
+    // A client WITH a plan never shows "Not Set": profile goal → plan/roadmap
+    // goal → plan name → only then "Not Set".
+    const rawGoal = client.goal && client.goal !== 'Not Set' ? client.goal : null;
+    const goalRaw = rawGoal
+      || client.nutritionPlanGoal
+      || (hasPlan ? (client.plan && client.plan !== 'No Plan' ? client.plan : t('active_plan_status')) : 'Not Set');
     const goalLabel = goalRaw === 'Weight Loss' ? t('weight_loss_goal') :
                       goalRaw === 'Muscle Gain' ? t('muscle_gain_goal') :
                       goalRaw === 'Maintenance' ? t('maintenance_goal') :

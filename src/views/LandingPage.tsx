@@ -90,7 +90,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               </div>
               
               <p className="text-sm text-gray-500 mt-2">
-                {t('landing_personalized_walkthrough')} <a href="#" className="underline font-medium text-black">{t('book_a_demo')}</a>
+                {t('landing_personalized_walkthrough')} <button type="button" onClick={() => setCurrentPage('pricing')} className="underline font-medium text-black bg-transparent border-none cursor-pointer p-0">{t('book_a_demo')}</button>
               </p>
             </motion.div>
             
@@ -205,7 +205,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                 </div>
                 
                 <p className="text-sm text-gray-500 mb-8">
-                  {t('landing_no_credit_card')} <a href="#" className="underline font-medium text-black">{t('view_pricing_plans')}</a>
+                  {t('landing_no_credit_card')} <button type="button" onClick={() => setCurrentPage('pricing')} className="underline font-medium text-black bg-transparent border-none cursor-pointer p-0">{t('view_pricing_plans')}</button>
                 </p>
                 
                 <div className="flex items-center gap-2 mb-2">
@@ -223,18 +223,18 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               <div className="flex flex-col items-center mb-16">
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-gray-400">{t('designed_for_professionals')}</p>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900 mb-6 font-black font-sans">NutriFit Systems Inc.</p>
-                <div className="flex gap-6 text-gray-900">
-                  <X className="w-4 h-4 cursor-pointer hover:text-gray-500 transition-colors" />
-                  <Instagram className="w-4 h-4 cursor-pointer hover:text-gray-500 transition-colors" />
-                  <Linkedin className="w-4 h-4 cursor-pointer hover:text-gray-500 transition-colors" />
+                <div className="flex gap-6 text-gray-400">
+                  <X className="w-4 h-4" />
+                  <Instagram className="w-4 h-4" />
+                  <Linkedin className="w-4 h-4" />
                 </div>
               </div>
               
               <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-gray-100 pt-8">
                 <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  <a href="#" className="hover:text-gray-900 transition-colors">{t('privacy_policy')}</a>
-                  <a href="#" className="hover:text-gray-900 transition-colors">{t('careers')}</a>
-                  <a href="#" className="hover:text-gray-900 transition-colors">{t('security')}</a>
+                  <span>{t('privacy_policy')}</span>
+                  <span>{t('careers')}</span>
+                  <span>{t('security')}</span>
                 </div>
                 <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                   <span className="flex items-center gap-2">
@@ -250,7 +250,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
           </footer>
         </>
       ) : (
-        <Pricing />
+        <Pricing onGetStarted={onGetStarted} />
       )}
     </div>
   );

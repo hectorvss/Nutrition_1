@@ -75,6 +75,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
           tools: exercise.tools,
           difficulty_level: exercise.level,
           icon: exercise.icon,
+          safety_rating: (exercise as any).safety_rating ?? null,
           language: language
         }]);
 

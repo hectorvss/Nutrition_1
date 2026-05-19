@@ -31,6 +31,7 @@ import {
   FileText,
   FileImage,
   FileVideo,
+  FileAudio,
   History,
   X,
   Plus,
@@ -41,7 +42,9 @@ import {
   ChevronDown,
   Scale,
   PieChart,
-  Download
+  Download,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -73,6 +76,7 @@ const primaryExercises = [
 interface ClientDetailProps {
   clientId: string;
   onBack: () => void;
+  onNavigate?: (view: string, data?: any) => void;
 }
 
 type Tab = 'Information' | 'Nutrition' | 'Training' | 'Planning' | 'Mindset';
@@ -327,11 +331,6 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
           )}
         </div>
       </div>
-      <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
-        <button className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline flex items-center gap-1.5">
-          <ImageIcon className="w-3 h-3" /> {t('view_photo_plan')}
-        </button>
-      </div>
     </div>
   );
 };
@@ -437,20 +436,15 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
           )}
         </div>
       </div>
-      <div className="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
-        <button className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline flex items-center gap-1.5">
-          <Target className="w-3 h-3" /> {t('open_full_program')}
-        </button>
-      </div>
     </div>
   );
 };
 
 
 
-export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
+export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDetailProps) {
   const { t } = useLanguage();
-  const { clients, deleteClient } = useClient();
+  const { clients, deleteClient, reloadClients } = useClient();
   const [activeTab, setActiveTab] = useState<Tab>('Information');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
   const [onboardingSubmission, setOnboardingSubmission] = useState<any>(null);
@@ -476,6 +470,63 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
   const [onboardingError, setOnboardingError] = useState<string | null>(null);
   const [accessExpiration, setAccessExpiration] = useState('');
   const [savingExpiration, setSavingExpiration] = useState(false);
+
+  // ─── Planning roadmap state ──────────────────────────────────────────────
+  const [roadmap, setRoadmap] = useState<any>(null);
+  const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(true);
+
+  // ─── Password reveal / reset state ───────────────────────────────────────
+  const [revealedPassword, setRevealedPassword] = useState<string | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [showPasswordResetConfirm, setShowPasswordResetConfirm] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // ─── Edit profile modal state ────────────────────────────────────────────
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '', gender: '', age: '', goal: '' });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const handleResetPassword = async () => {
+    setIsResettingPassword(true);
+    setPasswordError(null);
+    try {
+      const resp = await fetchWithAuth(`/manager/clients/${clientId}/reset-password`, { method: 'POST' });
+      if (resp?.password) {
+        setRevealedPassword(resp.password);
+        setShowPasswordResetConfirm(false);
+      } else {
+        setPasswordError(t('server_error', { defaultValue: 'Server error' }));
+      }
+    } catch (e: any) {
+      setPasswordError(e?.message || t('server_error', { defaultValue: 'Server error' }));
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      await fetchWithAuth(`/manager/clients/${clientId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          full_name: editForm.full_name,
+          phone: editForm.phone,
+          gender: editForm.gender,
+          age: editForm.age,
+          goal: editForm.goal,
+        }),
+      });
+      await reloadClients();
+      setShowEditModal(false);
+    } catch (e: any) {
+      setEditError(e?.message || t('server_error', { defaultValue: 'Server error' }));
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -518,6 +569,29 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       }
     };
     fetchOnboarding();
+  }, [clientId]);
+
+  useEffect(() => {
+    const fetchRoadmap = async () => {
+      setIsLoadingRoadmap(true);
+      try {
+        const data = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`);
+        const dj = data?.data_json
+          ? (typeof data.data_json === 'string' ? JSON.parse(data.data_json) : data.data_json)
+          : null;
+        if (dj) {
+          setRoadmap({ ...dj, status: data?.status || dj.status || 'Draft' });
+        } else {
+          setRoadmap(null);
+        }
+      } catch (error) {
+        console.error('Error fetching roadmap:', error);
+        setRoadmap(null);
+      } finally {
+        setIsLoadingRoadmap(false);
+      }
+    };
+    fetchRoadmap();
   }, [clientId]);
 
   useEffect(() => {
@@ -793,7 +867,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('allergies')}</h3>
-              <button className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline">{t('edit')}</button>
             </div>
             <div className="flex flex-wrap gap-2 mb-6">
               {stats?.allergies?.map((allergy: string, idx: number) => (
@@ -1131,7 +1204,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('personal_records')}</h3>
-            <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">{t('history')}</button>
           </div>
           <div className="h-[400px] flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-hide no-scrollbar">
@@ -1169,7 +1241,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('recent_workout_activity')}</h3>
-            <button className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline uppercase tracking-wider">{t('view_log')}</button>
           </div>
           <div className="h-[400px] flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 scrollbar-hide no-scrollbar">
@@ -1204,13 +1275,158 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
     </div>
   );
 
-  const renderPlanning = () => (
-    <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
-      <Target className="w-12 h-12 mx-auto mb-4 opacity-20" />
-      <p className="text-lg font-medium text-slate-600 dark:text-slate-300">{t('no_planning_data_title')}</p>
-      <p className="text-sm mt-2 max-w-sm mx-auto">{t('no_planning_data_desc')}</p>
-    </div>
-  );
+  const renderPlanning = () => {
+    if (isLoadingRoadmap) {
+      return (
+        <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+          <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+          <p className="text-sm font-medium">{t('loading_general_information')}</p>
+        </div>
+      );
+    }
+
+    const nutritionBlocks: any[] = Array.isArray(roadmap?.nutrition) ? roadmap.nutrition : [];
+    const trainingBlocks: any[] = Array.isArray(roadmap?.training) ? roadmap.training : [];
+    const goals: any[] = Array.isArray(roadmap?.goals) ? roadmap.goals : [];
+    const milestones: any[] = Array.isArray(roadmap?.milestones) ? roadmap.milestones : [];
+    const tg = roadmap?.trajectoryGoals || null;
+    const hasAnything = nutritionBlocks.length > 0 || trainingBlocks.length > 0 || goals.length > 0 || milestones.length > 0 || !!tg;
+
+    if (!hasAnything) {
+      return (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
+          <Target className="w-12 h-12 mx-auto mb-4 opacity-20" />
+          <p className="text-lg font-medium text-slate-600 dark:text-slate-300">{t('no_planning_data_title')}</p>
+          <p className="text-sm mt-2 max-w-sm mx-auto">{t('no_planning_data_desc')}</p>
+        </div>
+      );
+    }
+
+    const totalWeeks = (tg?.totalWeeks || roadmap?.totalWeeks || 12);
+    const status = roadmap?.status || 'Draft';
+
+    const BlockTimeline = ({ blocks, title, icon: Icon }: any) => {
+      if (!blocks.length) return null;
+      return (
+        <div>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Icon className="w-3.5 h-3.5" /> {title}
+          </p>
+          <div className="space-y-2">
+            {blocks
+              .slice()
+              .sort((a: any, b: any) => (a.startWeek || 0) - (b.startWeek || 0))
+              .map((b: any, i: number) => (
+                <div key={b.id || i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                  <div className="flex-shrink-0 w-14 text-center">
+                    <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase">{t('week', { defaultValue: 'Week' })}</span>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{b.startWeek || '?'}–{b.endWeek || '?'}</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{b.title || t('untitled', { defaultValue: 'Untitled block' })}</p>
+                    {(b.stratData?.summary || b.rationale) && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{b.stratData?.summary || b.rationale}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header: status + horizon */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 flex items-center justify-center">
+              <Target className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('master_roadmap', { defaultValue: 'Master roadmap' })}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{totalWeeks} {t('weeks', { defaultValue: 'weeks' })}</p>
+            </div>
+          </div>
+          <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
+            status === 'Active'
+              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50'
+              : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50'
+          }`}>
+            {status}
+          </span>
+        </div>
+
+        {/* Trajectory goals */}
+        {tg && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">{t('trajectory', { defaultValue: 'Trajectory' })}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: t('start_weight', { defaultValue: 'Start weight' }), value: tg.startWeight ? `${tg.startWeight} kg` : '—' },
+                { label: t('current_weight'), value: tg.currentWeight ? `${tg.currentWeight} kg` : '—' },
+                { label: t('target_weight', { defaultValue: 'Target weight' }), value: tg.targetWeight ? `${tg.targetWeight} kg` : '—' },
+                { label: t('duration', { defaultValue: 'Duration' }), value: `${totalWeeks} ${t('weeks', { defaultValue: 'weeks' })}` },
+              ].map((s, i) => (
+                <div key={i} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{s.label}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">{s.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Phases */}
+        {(nutritionBlocks.length > 0 || trainingBlocks.length > 0) && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
+            <BlockTimeline blocks={nutritionBlocks} title={t('nutrition_focus', { defaultValue: 'Nutrition phases' })} icon={Utensils} />
+            <BlockTimeline blocks={trainingBlocks} title={t('training_block', { defaultValue: 'Training blocks' })} icon={Dumbbell} />
+          </div>
+        )}
+
+        {/* Goals */}
+        {goals.length > 0 && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">{t('goals', { defaultValue: 'Goals' })}</h3>
+            <div className="space-y-2">
+              {goals.map((g: any, i: number) => (
+                <div key={g.id || i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{g.label}</p>
+                    {g.desc && <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{g.desc}</p>}
+                  </div>
+                  {(g.currentLabel || g.targetLabel) && (
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap ml-3">
+                      {g.currentLabel || '—'} → {g.targetLabel || '—'}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Milestones */}
+        {milestones.length > 0 && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">{t('milestones', { defaultValue: 'Milestones' })}</h3>
+            <div className="space-y-2">
+              {milestones.map((m: any, i: number) => (
+                <div key={m.id || i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                    m.status === 'done' ? 'bg-emerald-500' : m.status === 'next' ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
+                  }`}></div>
+                  <p className="flex-1 text-sm font-bold text-slate-900 dark:text-white truncate">{m.label}</p>
+                  {m.week && <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{m.week}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderMindset = () => (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -1297,7 +1513,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
           <h3 className="text-lg font-bold text-slate-900">{t('latest_measurements')}</h3>
-          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">{t('view_all')}</button>
         </div>
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left">
@@ -1339,7 +1554,6 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
           <h3 className="text-lg font-bold text-slate-900">{t('recent_activity')}</h3>
-          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">{t('history')}</button>
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
@@ -1371,14 +1585,9 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
           <ShieldCheck className="w-5 h-5 text-slate-400" />
         </div>
         <div className="p-6 flex-1 flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold text-slate-900">{t('grant_app_access')}</p>
-              <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{t('allow_client_login')}</p>
-            </div>
-            <button className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 bg-emerald-500">
-              <span className="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-            </button>
+          <div>
+            <p className="text-sm font-bold text-slate-900">{t('grant_app_access')}</p>
+            <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{t('allow_client_login')}</p>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('access_expiration_date')}</label>
@@ -1410,14 +1619,21 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
         <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
           <h3 className="text-lg font-bold text-slate-900">{t('client_documents')}</h3>
-          <button className="text-emerald-600 text-xs font-bold hover:underline uppercase tracking-wider">{t('upload_new')}</button>
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="flex flex-col gap-3">
+              {(stats?.documents || []).length === 0 && (
+                <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs font-bold uppercase tracking-wider">{t('no_documents', { defaultValue: 'No documents yet' })}</p>
+                </div>
+              )}
               {stats?.documents?.map((doc: any, idx: number) => {
-                const isImage = doc.type === 'image' || doc.url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                const isVideo = doc.type === 'video' || doc.url.match(/\.(mp4|mov|avi|wmv)$/i);
-                
+                const url = String(doc.url || '');
+                const isImage = doc.type === 'image' || /\.(jpg|jpeg|png|gif|webp|heic|bmp|svg)(\?|$)/i.test(url);
+                const isVideo = doc.type === 'video' || /\.(mp4|mov|avi|wmv|mkv|webm)(\?|$)/i.test(url);
+                const isAudio = doc.type === 'audio' || /\.(mp3|wav|ogg|m4a|aac|flac|opus)(\?|$)/i.test(url);
+
                 return (
                   <a 
                     key={idx} 
@@ -1428,7 +1644,7 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                     className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-500/50 transition-colors group cursor-pointer"
                   >
                     <div className={`flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-500`}>
-                      {isImage ? <FileImage className="w-5 h-5" /> : isVideo ? <FileVideo className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                      {isImage ? <FileImage className="w-5 h-5" /> : isVideo ? <FileVideo className="w-5 h-5" /> : isAudio ? <FileAudio className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                     </div>
                     <div className="flex-1 min-w-0 text-left">
                       <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{doc.name}</p>
@@ -1499,11 +1715,27 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
             </div>
             <div className="flex flex-col w-full lg:w-auto gap-4">
               <div className="flex items-center gap-3">
-                <button className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm text-sm font-bold">
+                <button
+                  onClick={() => onNavigate?.('messages', { clientId })}
+                  className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm text-sm font-bold"
+                >
                   <MessageSquare className="w-4 h-4" />
                   {t('message')}
                 </button>
-                <button className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 text-sm font-bold">
+                <button
+                  onClick={() => {
+                    setEditForm({
+                      full_name: client.name && client.name !== t('unknown_client') ? client.name : '',
+                      phone: (client as any).phone || (client as any).phone_number || '',
+                      gender: (client as any).gender && (client as any).gender !== '--' ? (client as any).gender : '',
+                      age: (client as any).age && (client as any).age !== '--' ? String((client as any).age) : '',
+                      goal: (client as any).goal && (client as any).goal !== '--' ? (client as any).goal : '',
+                    });
+                    setEditError(null);
+                    setShowEditModal(true);
+                  }}
+                  className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 text-sm font-bold"
+                >
                   <Edit className="w-4 h-4" />
                   {t('edit_profile')}
                 </button>
@@ -1520,19 +1752,29 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   </div>
                   <Copy className="w-3 h-3 text-slate-300 dark:text-slate-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" />
                 </div>
-                <div 
-                  onClick={() => client.tempPassword && navigator.clipboard.writeText(client.tempPassword)}
-                  className={`flex-1 flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 transition-all ${client.tempPassword ? 'group cursor-pointer hover:border-slate-200 dark:hover:border-slate-600' : 'opacity-70 cursor-not-allowed'}`}
-                  title={client.tempPassword ? t('copy_password') : t('password_not_available')}
-                >
+                <div className="flex-1 flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
                   <div className="flex items-center gap-2 overflow-hidden">
                     <Key className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                     <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate">
-                      {client.tempPassword || '••••••••'}
+                      {revealedPassword || '••••••••'}
                     </span>
                   </div>
-                  {client.tempPassword && (
-                    <Copy className="w-3 h-3 text-slate-300 dark:text-slate-500 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors" />
+                  {revealedPassword ? (
+                    <button
+                      onClick={() => navigator.clipboard.writeText(revealedPassword)}
+                      title={t('copy_password')}
+                      className="text-slate-300 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setPasswordError(null); setShowPasswordResetConfirm(true); }}
+                      title={t('reset_password', { defaultValue: 'Reset password' })}
+                      className="text-slate-300 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -1642,6 +1884,118 @@ export default function ClientDetail({ clientId, onBack }: ClientDetailProps) {
                   ) : (
                     <><Trash2 className="w-4 h-4" /> {t('delete_permanently')}</>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password reset confirmation modal */}
+      {showPasswordResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('reset_password', { defaultValue: 'Reset password' })}</h3>
+              <button onClick={() => setShowPasswordResetConfirm(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {t('reset_password_explain', { defaultValue: 'A new password will be generated for this client. Their current password will stop working. Make sure to share the new password with them.' })}
+              </p>
+              {passwordError && <p className="text-xs text-red-500 font-medium">{passwordError}</p>}
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setShowPasswordResetConfirm(false)}
+                  className="flex-1 py-2.5 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={handleResetPassword}
+                  disabled={isResettingPassword}
+                  className="flex-1 py-2.5 font-bold bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isResettingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                  {t('reset_password', { defaultValue: 'Reset password' })}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit profile modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('edit_profile')}</h3>
+              <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">{t('full_name', { defaultValue: 'Full name' })}</label>
+                <input
+                  value={editForm.full_name}
+                  onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">{t('phone', { defaultValue: 'Phone' })}</label>
+                <input
+                  value={editForm.phone}
+                  onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">{t('gender', { defaultValue: 'Gender' })}</label>
+                  <input
+                    value={editForm.gender}
+                    onChange={e => setEditForm(f => ({ ...f, gender: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">{t('age', { defaultValue: 'Age' })}</label>
+                  <input
+                    type="number"
+                    value={editForm.age}
+                    onChange={e => setEditForm(f => ({ ...f, age: e.target.value }))}
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">{t('goal', { defaultValue: 'Goal' })}</label>
+                <input
+                  value={editForm.goal}
+                  onChange={e => setEditForm(f => ({ ...f, goal: e.target.value }))}
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              {editError && <p className="text-xs text-red-500 font-medium">{editError}</p>}
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 py-2.5 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={isSavingEdit}
+                  className="flex-1 py-2.5 font-bold bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSavingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {t('save')}
                 </button>
               </div>
             </div>

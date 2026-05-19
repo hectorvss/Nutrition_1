@@ -77,9 +77,15 @@ export default function ClientNutrition() {
   const isWeekly = nutritionPlan.data_json?.type === 'weekly';
   const planDays = nutritionPlan.data_json?.days || {};
   
-  const meals = isWeekly 
-    ? (planDays[selectedDay]?.meals || []) 
+  const meals = isWeekly
+    ? (planDays[selectedDay]?.meals || [])
     : (nutritionPlan.data_json?.meals || []);
+
+  const planGoal: string = nutritionPlan.data_json?.goal || nutritionPlan.goal || '';
+
+  const foodsToAvoid: any[] = Array.isArray(nutritionPlan.data_json?.foodsToAvoid)
+    ? nutritionPlan.data_json.foodsToAvoid
+    : (Array.isArray(nutritionPlan.data_json?.foods_to_avoid) ? nutritionPlan.data_json.foods_to_avoid : []);
 
   // Compute totals from food items AND from general-mode macro categories,
   // so the macro panel is correct regardless of which mode the plan uses.
@@ -343,7 +349,8 @@ export default function ClientNutrition() {
         </div>
       </div>
 
-      {/* Foods to Avoid */}
+      {/* Foods to Avoid — only shown when the coach has defined restrictions */}
+      {foodsToAvoid.length > 0 && (
       <div className="bg-amber-50/30 dark:bg-amber-900/10 rounded-3xl border border-amber-200 dark:border-amber-900/50 p-8 flex-shrink-0">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -357,22 +364,20 @@ export default function ClientNutrition() {
           </div>
         </div>
         <div className="space-y-4">
-          <div className="bg-white/80 dark:bg-slate-900/80 p-5 rounded-2xl border border-rose-100 dark:border-rose-900/30 flex items-center gap-4 shadow-sm">
-            <span className="material-symbols-outlined text-rose-500">cancel</span>
-            <div>
-              <p className="text-sm font-black text-slate-800 dark:text-slate-200">{t('deep_fried_foods')}</p>
-              <p className="text-xs text-slate-500 font-medium tracking-tight">{t('high_inflammatory_oils_and_trans_fats')}</p>
+          {foodsToAvoid.map((item: any, idx: number) => (
+            <div key={idx} className="bg-white/80 dark:bg-slate-900/80 p-5 rounded-2xl border border-rose-100 dark:border-rose-900/30 flex items-center gap-4 shadow-sm">
+              <span className="material-symbols-outlined text-rose-500">cancel</span>
+              <div>
+                <p className="text-sm font-black text-slate-800 dark:text-slate-200">{typeof item === 'string' ? item : item?.name}</p>
+                {typeof item !== 'string' && item?.reason && (
+                  <p className="text-xs text-slate-500 font-medium tracking-tight">{item.reason}</p>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="bg-white/80 dark:bg-slate-900/80 p-5 rounded-2xl border border-rose-100 dark:border-rose-900/30 flex items-center gap-4 shadow-sm">
-            <span className="material-symbols-outlined text-rose-500">cancel</span>
-            <div>
-              <p className="text-sm font-black text-slate-800 dark:text-slate-200">{t('added_sugars_over_25g')}</p>
-              <p className="text-xs text-slate-500 font-medium tracking-tight">{t('soda_processed_sweets_hidden_sugars')}</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
+      )}
     </div>
   );
 
@@ -472,7 +477,7 @@ export default function ClientNutrition() {
             <li>
               <div className="flex items-center">
                 <span className="material-symbols-outlined text-slate-400 text-lg mx-1">chevron_right</span>
-                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.email.split('@')[0]}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.email?.split('@')[0] || t('nutrition')}</span>
               </div>
             </li>
           </ol>
@@ -485,14 +490,15 @@ export default function ClientNutrition() {
             <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{user?.email.split('@')[0]}</h1>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{user?.email?.split('@')[0] || '—'}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {planGoal && (
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">flag</span> {t('goal')}: {planGoal}
+                </span>
+              )}
               <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">flag</span> {t('goal')}: {t('fat_loss')}
-              </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-              <span className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">female</span> {t('client')}
+                <span className="material-symbols-outlined text-[16px]">person</span> {t('client')}
               </span>
             </div>
           </div>
@@ -523,8 +529,7 @@ export default function ClientNutrition() {
             </button>
           </div>
           <div className="flex gap-2 pr-2">
-            <button className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"><span className="material-symbols-outlined">print</span></button>
-            <button className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"><span className="material-symbols-outlined">share</span></button>
+            <button onClick={() => window.print()} title={t('print', { defaultValue: 'Print' })} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"><span className="material-symbols-outlined">print</span></button>
           </div>
         </div>
 

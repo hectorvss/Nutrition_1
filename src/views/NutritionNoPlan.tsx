@@ -519,7 +519,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       onStartPlan(null, finalPlanData);
     } catch (err) {
       console.error('Error saving plan:', err);
-      alert('Error al guardar el plan');
+      alert(t('plan_save_error_alert', { defaultValue: 'Error al guardar el plan' }));
     }
   };
 

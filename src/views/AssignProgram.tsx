@@ -69,10 +69,16 @@ const AssignProgram: React.FC<AssignProgramProps> = ({ clientId, onBack, onAssig
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div 
-                    className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm" 
-                    style={{ backgroundImage: `url("${client.avatar}")` }}
-                  ></div>
+                  {client.avatar ? (
+                    <div
+                      className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm"
+                      style={{ backgroundImage: `url("${client.avatar}")` }}
+                    ></div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 shadow-sm flex items-center justify-center text-emerald-500 font-bold text-2xl">
+                      {String(client.name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-5 h-5 rounded-full border-2 border-white shadow-sm"></div>
                 </div>
                 <div>

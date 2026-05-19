@@ -9,6 +9,10 @@ interface ScaleIngredient { name: string; amount?: string | number; unit?: strin
 interface ClientScalePreviewProps {
   ingredients: ScaleIngredient[];
   calories: number;
+  recipeTitle?: string;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
 }
 
 // Daily-calorie baseline a recipe is authored for. The per-client scale ratio
@@ -51,15 +55,17 @@ const computePlanKcal = (dataJson: any): number => {
  * Self-contained: works both while creating/editing a recipe and on the
  * default recipe detail view.
  */
-export default function ClientScalePreview({ ingredients, calories }: ClientScalePreviewProps) {
+export default function ClientScalePreview({ ingredients, calories, recipeTitle, protein, carbs, fats }: ClientScalePreviewProps) {
   const { t } = useLanguage();
   const { clients } = useClient();
   const [scaleClientId, setScaleClientId] = useState('');
   const [clientPlanKcal, setClientPlanKcal] = useState<number | null>(null);
   const [scaleLoading, setScaleLoading] = useState(false);
+  const [applyState, setApplyState] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
 
   // Load the selected client's nutrition plan and derive their daily kcal target.
   useEffect(() => {
+    setApplyState('idle');
     if (!scaleClientId) { setClientPlanKcal(null); return; }
     let cancelled = false;
     setScaleLoading(true);
@@ -82,6 +88,53 @@ export default function ClientScalePreview({ ingredients, calories }: ClientScal
     .filter(i => i.name?.trim() && i.amount != null && String(i.amount).trim() !== ''
       && !Number.isNaN(Number(i.amount)) && Number(i.amount) > 0)
     .map(i => ({ name: i.name.trim(), unit: i.unit || '', original: Number(i.amount) }));
+
+  // Apply the scaled recipe to the selected client's nutrition plan: append it
+  // as a new meal block (recipe = a single scaled item) to the plan's data_json.
+  const handleApply = async () => {
+    if (!scaleClientId || !scaleRatio || applyState === 'saving') return;
+    setApplyState('saving');
+    try {
+      const plan = await fetchWithAuth(`/manager/clients/${scaleClientId}/nutrition-plan`);
+      let dj: any = plan?.data_json || {};
+      if (typeof dj === 'string') { try { dj = JSON.parse(dj); } catch { dj = {}; } }
+      if (!dj || typeof dj !== 'object') dj = {};
+
+      const now = Date.now();
+      const mealItem = {
+        id: now + 1,
+        name: recipeTitle || t('client_scale_preview'),
+        calories: Math.round(calNum * scaleRatio),
+        protein: Math.round((Number(protein) || 0) * scaleRatio),
+        carbs: Math.round((Number(carbs) || 0) * scaleRatio),
+        fats: Math.round((Number(fats) || 0) * scaleRatio),
+        quantity: 1,
+      };
+      const newMeal = { id: now, name: recipeTitle || t('client_scale_preview'), time: '', items: [mealItem], categories: [] };
+
+      // Append to a flat `meals` array, or to the first day of a weekly plan.
+      if (dj.days && typeof dj.days === 'object' && !Array.isArray(dj.meals)) {
+        const firstKey = Object.keys(dj.days)[0];
+        if (firstKey) {
+          dj.days[firstKey] = dj.days[firstKey] || { meals: [] };
+          dj.days[firstKey].meals = [...(dj.days[firstKey].meals || []), newMeal];
+        } else {
+          dj.meals = [...(Array.isArray(dj.meals) ? dj.meals : []), newMeal];
+        }
+      } else {
+        dj.meals = [...(Array.isArray(dj.meals) ? dj.meals : []), newMeal];
+      }
+
+      await fetchWithAuth(`/manager/clients/${scaleClientId}/nutrition-plan`, {
+        method: 'POST',
+        body: JSON.stringify({ name: plan?.name || 'Nutrition Plan', data_json: dj }),
+      });
+      setApplyState('done');
+    } catch (err) {
+      console.error('Error applying scaled recipe to plan:', err);
+      setApplyState('error');
+    }
+  };
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
@@ -155,12 +208,25 @@ export default function ClientScalePreview({ ingredients, calories }: ClientScal
 
         <button
           type="button"
-          disabled
-          title={t('scale_apply_soon')}
-          className="w-full py-4 rounded-2xl border-2 border-slate-200 text-slate-400 text-sm font-bold cursor-not-allowed"
+          onClick={handleApply}
+          disabled={!scaleClientId || !scaleRatio || applyState === 'saving' || applyState === 'done'}
+          className={`w-full py-4 rounded-2xl border-2 text-sm font-bold transition-all ${
+            applyState === 'done'
+              ? 'border-emerald-500 bg-emerald-500 text-white cursor-default'
+              : (!scaleClientId || !scaleRatio || applyState === 'saving')
+                ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                : 'border-emerald-500 text-emerald-600 hover:bg-emerald-500 hover:text-white'
+          }`}
         >
-          {t('apply_scale')}
+          {applyState === 'saving'
+            ? t('saving')
+            : applyState === 'done'
+              ? t('scale_applied', { defaultValue: 'Applied to plan ✓' })
+              : t('apply_scale')}
         </button>
+        {applyState === 'error' && (
+          <p className="text-xs font-medium text-red-500 text-center">{t('scale_apply_error', { defaultValue: 'Could not apply to the plan.' })}</p>
+        )}
       </div>
     </div>
   );

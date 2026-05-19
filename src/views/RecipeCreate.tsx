@@ -450,7 +450,14 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
               </div>
 
               {/* Client Scale Preview */}
-              <ClientScalePreview ingredients={ingredients} calories={calNum} />
+              <ClientScalePreview
+                ingredients={ingredients}
+                calories={calNum}
+                recipeTitle={title}
+                protein={macroProtein}
+                carbs={macroCarbs}
+                fats={macroFats}
+              />
             </div>
           </div>
         </div>

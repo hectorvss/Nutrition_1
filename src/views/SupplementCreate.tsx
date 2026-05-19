@@ -14,6 +14,13 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
   const [notes, setNotes] = useState('');
   const [dose, setDose] = useState('');
   const [timing, setTiming] = useState('');
+  const [brand, setBrand] = useState('');
+  const [primaryIngredient, setPrimaryIngredient] = useState('');
+  const [calories, setCalories] = useState('');
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fats, setFats] = useState('');
+  const [quality, setQuality] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +40,13 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
           purpose: notes || null,
           recommended_dose: dose || null,
           timing: timing || null,
+          brand: brand.trim() || null,
+          primary_ingredient: primaryIngredient.trim() || null,
+          calories: calories || null,
+          protein: protein || null,
+          carbs: carbs || null,
+          fats: fats || null,
+          quality_rating: quality || null,
           language
         })
       });
@@ -106,8 +120,10 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('brand_label')}</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
+                        value={brand}
+                        onChange={e => setBrand(e.target.value)}
                         className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                         placeholder={t('brand_placeholder')}
                       />
@@ -174,8 +190,10 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('primary_ingredient')}</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
+                      value={primaryIngredient}
+                      onChange={e => setPrimaryIngredient(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder={t('primary_ingredient_placeholder')}
                     />
@@ -194,16 +212,18 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                 <div className="space-y-5">
                   <p className="text-xs text-slate-400 font-medium">{t('values_per_serving_help')}</p>
                   {[
-                    { label: t('calories'), unit: 'kcal' },
-                    { label: t('protein_g'), unit: 'g' },
-                    { label: t('carbs_g'), unit: 'g' },
-                    { label: t('fat_g'), unit: 'g' }
+                    { label: t('calories'), value: calories, setter: setCalories },
+                    { label: t('protein_g'), value: protein, setter: setProtein },
+                    { label: t('carbs_g'), value: carbs, setter: setCarbs },
+                    { label: t('fat_g'), value: fats, setter: setFats }
                   ].map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                       <span className="text-sm font-bold text-slate-600">{item.label}</span>
                       <div className="w-24">
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
+                          value={item.value}
+                          onChange={e => item.setter(e.target.value)}
                           className="w-full px-2 py-1 text-right text-sm bg-transparent border-b border-slate-300 focus:border-emerald-500 outline-none text-slate-900 font-bold"
                           placeholder="0"
                         />
@@ -221,16 +241,20 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                 </h3>
                 <div className="flex flex-col items-center justify-center space-y-4 py-4">
                   <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4].map((i) => (
-                      <button key={i} className="text-amber-400 hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-[32px] fill-1">star</span>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setQuality(quality === i ? 0 : i)}
+                        className={`hover:scale-110 transition-all ${i <= quality ? 'text-amber-400' : 'text-slate-200 hover:text-amber-400'}`}
+                      >
+                        <span className={`material-symbols-outlined text-[32px] ${i <= quality ? 'fill-1' : ''}`}>star</span>
                       </button>
                     ))}
-                    <button className="text-slate-200 hover:text-amber-400 hover:scale-110 transition-all">
-                      <span className="material-symbols-outlined text-[32px]">star</span>
-                    </button>
                   </div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('four_out_of_five')}</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    {quality > 0 ? `${quality} / 5` : t('not_rated', { defaultValue: 'Sin valorar' })}
+                  </span>
                 </div>
               </div>
             </div>

@@ -247,6 +247,10 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
               <ClientScalePreview
                 ingredients={recipe.ingredients || []}
                 calories={recipe.calories || 0}
+                recipeTitle={recipe.title}
+                protein={protein}
+                carbs={carbs}
+                fats={fats}
               />
 
               {(recipe.tags || []).length > 0 && (
