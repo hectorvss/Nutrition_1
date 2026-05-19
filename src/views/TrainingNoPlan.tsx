@@ -190,50 +190,47 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
     fetchTemplates();
   }, []);
 
-  // Combine hardcoded PRESETS with DB templates
-  const allPresets = [...PRESETS];
-  if (Array.isArray(templates)) {
-    templates.forEach(t => {
-      const existingIdx = allPresets.findIndex(p => p.id === t.key);
-      const mapped = {
-        id: t.key,
-        title: t.name,
-        level: t.level || 'Intermediate',
-        levelColor: t.level === 'Beginner' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900' :
-                    t.level === 'Advanced' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900' :
-                    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',
-        type: t.type || 'Full Body',
-        desc: t.description || 'Template from database',
-        intensity: { label: 'Moderate', pct: 60, color: 'bg-amber-400' },
-        volume: { label: 'Moderate', pct: 60, color: 'bg-blue-400' },
-        tags: [
-          { icon: 'calendar_today', text: `${t.weekly_frequency || 3}x / week` },
-          { icon: 'timer', text: `${t.data_json?.duration || 60} min` },
-          { icon: 'fitness_center', text: t.type || 'Strength' }
-        ],
-        scheduleLabel: `${t.weekly_frequency || 3} days active`,
-        schedule: t.data_json?.schedule || ['M', null, 'W', null, 'F', null, null],
-        freqValue: `${t.weekly_frequency || 3}x`,
-        focusValue: t.data_json?.focus || 'Full Body Strength',
-        recommended: t.data_json?.recommended || [],
-        isDbTemplate: true,
-        data_json: t.data_json
-      };
-      if (existingIdx >= 0) {
-        allPresets[existingIdx] = mapped;
-      } else {
-        allPresets.push(mapped);
-      }
-    });
-  }
+  // Show the manager's real templates (from the template library). Fall back
+  // to the built-in presets only when there are no templates yet.
+  const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dbPresets = (Array.isArray(templates) ? templates : []).map((tpl: any) => ({
+    id: tpl.key,
+    title: tpl.name,
+    level: tpl.level || 'Intermediate',
+    levelColor: tpl.level === 'Beginner' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900' :
+                tpl.level === 'Advanced' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-900' :
+                'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900',
+    type: tpl.type || 'Full Body',
+    desc: tpl.description || '',
+    intensity: { label: 'Moderate', pct: 60, color: 'bg-amber-400' },
+    volume: { label: 'Moderate', pct: 60, color: 'bg-blue-400' },
+    tags: [
+      { icon: 'calendar_today', text: `${tpl.weekly_frequency || 3}x / week` },
+      { icon: 'fitness_center', text: tpl.type || 'Strength' },
+      { icon: 'exercise', text: `${tpl.data_json?.workouts?.length || 0} ${t('workouts', { defaultValue: 'entrenos' })}` },
+    ],
+    scheduleLabel: `${tpl.weekly_frequency || 3} ${t('days_label', { defaultValue: 'días' })}`,
+    schedule: DAY_KEYS.map((d, i) => (tpl.data_json?.weeklySchedule && tpl.data_json.weeklySchedule[d]) ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i] : null),
+    freqValue: `${tpl.weekly_frequency || 3}x`,
+    focusValue: tpl.data_json?.goal || 'Full Body Strength',
+    recommended: tpl.data_json?.goal ? [tpl.data_json.goal] : [],
+    isDbTemplate: true,
+    data_json: tpl.data_json,
+  }));
+  const allPresets: any[] = dbPresets.length > 0 ? dbPresets : [...PRESETS];
 
-  // Define recommendations and selection state based on combined presets
-  const recommendedPreset = allPresets.find(p => Array.isArray(p.recommended) && p.recommended.includes(clientGoal)) || 
-                           allPresets.find(p => p.id === 'strength_start') || 
+  const recommendedPreset = allPresets.find(p => Array.isArray(p.recommended) && p.recommended.includes(clientGoal)) ||
                            allPresets[0];
-  
+
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
   const selectedPreset = allPresets.find(p => p.id === selectedId) || recommendedPreset;
+
+  // Once the real templates have loaded, snap the selection to the recommended one.
+  React.useEffect(() => {
+    if (isLoadingTemplates) return;
+    if (!allPresets.some(p => p.id === selectedId)) setSelectedId(recommendedPreset.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingTemplates]);
 
   // Editable program settings (frequency / focus) — kept in sync with the
   // currently selected preset and persisted into the saved program.
