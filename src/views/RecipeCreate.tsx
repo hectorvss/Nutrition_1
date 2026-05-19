@@ -1,10 +1,45 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import { useClient } from '../context/ClientContext';
 import Select from '../components/ui/Select';
 import { fetchWithAuth } from '../api';
 
 interface Ingredient { name: string; amount: string; unit: string; }
 interface Step { title: string; text: string; }
+
+// Daily-calorie baseline a recipe is authored for. The per-client scale ratio
+// is clientPlanKcal / SCALE_REFERENCE_KCAL.
+const SCALE_REFERENCE_KCAL = 2000;
+
+const unitShort = (u: string): string => {
+  const v = (u || '').toLowerCase();
+  if (v === 'grams' || v === 'gram' || v === 'g') return 'g';
+  if (v === 'unit' || v === 'units') return ' u';
+  return v ? ' ' + v : '';
+};
+
+/** Sum the daily calories of a nutrition plan's data_json (single-day or weekly). */
+const computePlanKcal = (dataJson: any): number => {
+  let dj = dataJson;
+  if (typeof dj === 'string') {
+    try { dj = JSON.parse(dj); } catch { return 0; }
+  }
+  if (!dj || typeof dj !== 'object') return 0;
+  let meals: any[] = [];
+  if (Array.isArray(dj.meals)) {
+    meals = dj.meals;
+  } else if (dj.days && typeof dj.days === 'object') {
+    const firstDay: any = Object.values(dj.days)[0];
+    meals = (firstDay && firstDay.meals) || [];
+  }
+  let total = 0;
+  meals.forEach((m: any) => {
+    (m?.items || []).forEach((it: any) => {
+      total += (Number(it?.calories) || 0) * (Number(it?.quantity) || 1);
+    });
+  });
+  return Math.round(total);
+};
 
 interface RecipeCreateProps {
   recipeId?: string;
@@ -35,6 +70,30 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Client Scale Preview state
+  const { clients } = useClient();
+  const [scaleClientId, setScaleClientId] = useState('');
+  const [clientPlanKcal, setClientPlanKcal] = useState<number | null>(null);
+  const [scaleLoading, setScaleLoading] = useState(false);
+
+  // Load the selected client's nutrition plan and derive their daily kcal target.
+  useEffect(() => {
+    if (!scaleClientId) { setClientPlanKcal(null); return; }
+    let cancelled = false;
+    setScaleLoading(true);
+    (async () => {
+      try {
+        const plan = await fetchWithAuth(`/manager/clients/${scaleClientId}/nutrition-plan`);
+        if (!cancelled) setClientPlanKcal(plan ? computePlanKcal(plan.data_json) : 0);
+      } catch {
+        if (!cancelled) setClientPlanKcal(0);
+      } finally {
+        if (!cancelled) setScaleLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [scaleClientId]);
 
   useEffect(() => {
     if (!recipeId) return;
@@ -88,6 +147,12 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
   const pct = (v: number) => (macroTotal > 0 ? Math.round((v / macroTotal) * 100) : 0);
   // donut: circumference 439.8, offset shrinks as calories grow (cap at 1000 kcal)
   const calNum = num(calories);
+
+  // Per-client scale: ratio of the client's plan target vs the recipe baseline.
+  const scaleRatio = clientPlanKcal && clientPlanKcal > 0 ? clientPlanKcal / SCALE_REFERENCE_KCAL : null;
+  const scaledIngredients = ingredients
+    .filter(i => i.name.trim() && i.amount.trim() && !Number.isNaN(Number(i.amount)) && Number(i.amount) > 0)
+    .map(i => ({ name: i.name.trim(), unit: i.unit, original: Number(i.amount) }));
   const donutOffset = 439.8 * (1 - Math.min(calNum, 1000) / 1000);
 
   const updateIngredient = (idx: number, patch: Partial<Ingredient>) => {
@@ -448,7 +513,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                 </div>
               </div>
 
-              {/* Client Scale Preview (static visual) */}
+              {/* Client Scale Preview */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-6 border-b border-slate-100 bg-emerald-50/50">
                   <h3 className="font-bold text-slate-900 flex items-center gap-2">
@@ -460,41 +525,70 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                 <div className="p-8 space-y-6">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('select_client')}</label>
-                    <div className="flex items-center gap-3 p-4 rounded-2xl border border-emerald-500 bg-white shadow-sm cursor-pointer">
-                      <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
-                        <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf0Q3uAjHC8p014ZEXi-XOqgXIRaqRf0R1dawNQFMSEqrtIhBl997C3o6iGILTMLcGdyoP1VfSeZrtgvvQQ-hVjchh-eGdHuWGvBVI19wQvtu4SMW4Qwy809bw1FKZjwadQQ6pkJb5CaIrmomnOXQiloCBpKeBZ00l53VC9TijpiLDgjqcQ_pAw7psb_m0b-dpBrXlwCrZvjZFOJ4BwSxnkeFTJ4H9_DddUPYVgWypgllSmAkHkI6pkuxMW3pn8MYu5aXBRPDKxWoH" alt="Sarah" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-bold text-slate-900">Sarah Jenkins</div>
-                        <div className="text-[10px] font-bold text-slate-400">{t('target_kcal_day')}</div>
-                      </div>
-                      <span className="material-symbols-outlined text-emerald-500">expand_more</span>
-                    </div>
+                    <Select
+                      value={scaleClientId}
+                      onChange={(v) => setScaleClientId(v)}
+                      placeholder={t('select_client')}
+                      className="w-full p-4 rounded-2xl border border-slate-200 bg-white shadow-sm text-sm font-bold text-slate-900"
+                      options={clients.map(c => ({ value: c.id, label: c.name }))}
+                    />
                   </div>
 
-                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('scaled_values')}</span>
-                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg">{t('scale_ratio_sample')}</span>
+                  {!scaleClientId ? (
+                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 text-center text-xs font-medium text-slate-400">
+                      {t('scale_select_client_hint')}
                     </div>
-                    <div className="space-y-4">
-                      {[
-                        { name: 'Chicken Breast', original: '120g', scaled: '102g' },
-                        { name: 'Quinoa', original: '150g', scaled: '127g' },
-                        { name: 'Calories', original: '485', scaled: '412 kcal' }
-                      ].map((val, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-sm font-bold">
-                          <span className="text-slate-500">{val.name}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="line-through text-slate-300 text-xs">{val.original}</span>
-                            <span className="text-emerald-600">{val.scaled}</span>
+                  ) : scaleLoading ? (
+                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 text-center text-xs font-medium text-slate-400">
+                      {t('loading')}
+                    </div>
+                  ) : !scaleRatio ? (
+                    <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100 text-center text-xs font-medium text-amber-600">
+                      {t('scale_no_plan')}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('scaled_values')}</span>
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg">
+                          {t('scale_ratio_label', { ratio: scaleRatio.toFixed(2) })}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-400 mb-4">
+                        {t('scale_client_target', { kcal: clientPlanKcal ?? 0 })}
+                      </p>
+                      <div className="space-y-4">
+                        {scaledIngredients.map((ing, idx) => (
+                          <div key={idx} className="flex justify-between items-center text-sm font-bold">
+                            <span className="text-slate-500">{ing.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="line-through text-slate-300 text-xs">{ing.original}{unitShort(ing.unit)}</span>
+                              <span className="text-emerald-600">{Math.round(ing.original * scaleRatio)}{unitShort(ing.unit)}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                        {calNum > 0 && (
+                          <div className="flex justify-between items-center text-sm font-bold">
+                            <span className="text-slate-500">{t('calories')}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="line-through text-slate-300 text-xs">{calNum}</span>
+                              <span className="text-emerald-600">{Math.round(calNum * scaleRatio)} kcal</span>
+                            </div>
+                          </div>
+                        )}
+                        {scaledIngredients.length === 0 && calNum === 0 && (
+                          <p className="text-xs text-slate-400 font-medium">{t('scale_no_data')}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <button className="w-full py-4 rounded-2xl border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all text-sm font-bold">
+                  <button
+                    type="button"
+                    disabled
+                    title={t('scale_apply_soon')}
+                    className="w-full py-4 rounded-2xl border-2 border-slate-200 text-slate-400 text-sm font-bold cursor-not-allowed"
+                  >
                     {t('apply_scale')}
                   </button>
                 </div>

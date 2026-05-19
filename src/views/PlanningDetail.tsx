@@ -1327,20 +1327,29 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             );
 
             return (
-              <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+              <div className="bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-md shadow-slate-200/60 dark:shadow-black/20 border border-slate-200/80 dark:border-slate-700">
                 {/* Header */}
-                <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Icon name="monitoring" className="text-emerald-500" />
-                    {t('planning_goal_trajectory_predictions', { defaultValue: 'Goal Trajectory & Predictions' })}
-                  </h3>
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-wrap justify-between items-start gap-3 mb-5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                      <Icon name="monitoring" className="text-emerald-500 text-xl" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                        {t('planning_goal_trajectory_predictions', { defaultValue: 'Goal Trajectory & Predictions' })}
+                      </h3>
+                      <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+                        {isEs ? 'Peso real vs. proyección según el plan nutricional' : 'Actual weight vs. projection from the nutrition plan'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 pt-1">
                     <div className="flex items-center gap-1.5">
                       <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" /></svg>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_actual', { defaultValue: 'Actual' })}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#10b981" strokeWidth="3" strokeDasharray="5 3" strokeLinecap="round" /></svg>
+                      <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#10b981" strokeWidth="3" strokeDasharray="2 4" strokeLinecap="round" /></svg>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('planning_projected', { defaultValue: 'Projected' })}</span>
                     </div>
                   </div>
@@ -1424,45 +1433,55 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                 )}
 
                 {/* Chart */}
-                <div className="w-full" style={{ height: 320 }}>
+                <div className="w-full rounded-2xl bg-gradient-to-b from-slate-50/60 to-transparent dark:from-slate-800/30 p-2" style={{ height: 376 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={chartData} margin={{ top: 12, right: 64, left: 0, bottom: 0 }}>
+                    <ComposedChart data={chartData} margin={{ top: 18, right: 72, left: 4, bottom: 4 }}>
                       <defs>
                         <linearGradient id="traj-projected" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.18}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.30}/>
+                          <stop offset="55%" stopColor="#10b981" stopOpacity={0.08}/>
+                          <stop offset="100%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="traj-actual" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.24}/>
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="traj-proj-stroke" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#34d399"/>
+                          <stop offset="100%" stopColor="#059669"/>
                         </linearGradient>
                       </defs>
 
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
+                      <CartesianGrid strokeDasharray="4 5" vertical={false} stroke="#e2e8f0" className="dark:opacity-10" />
 
                       <XAxis
                         dataKey="label"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }}
+                        tickMargin={10}
+                        tick={{ fontSize: 9, fontWeight: 700, fill: '#94a3b8' }}
                         interval={totalWeeks > 16 ? Math.floor(totalWeeks / 8) : 1}
                       />
                       <YAxis
                         domain={[minW, maxW]}
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fontSize: 9, fontWeight: 600, fill: '#94a3b8' }}
-                        tickCount={5}
-                        tickFormatter={v => `${v}kg`}
-                        width={42}
+                        tick={{ fontSize: 9, fontWeight: 700, fill: '#94a3b8' }}
+                        tickCount={6}
+                        tickFormatter={v => `${v}`}
+                        width={34}
                       />
 
-                      <RechartTooltip content={<ChartTooltip />} />
+                      <RechartTooltip content={<ChartTooltip />} cursor={{ stroke: '#94a3b8', strokeWidth: 1.5, strokeDasharray: '4 4' }} />
 
                       {/* Target weight reference line */}
                       {targetW > 0 && (
                         <ReferenceLine
                           y={targetW}
                           stroke="#10b981"
-                          strokeDasharray="6 4"
+                          strokeDasharray="2 4"
                           strokeWidth={1.5}
-                          label={{ value: `${isEs ? 'Objetivo' : 'Target'} ${targetW}kg`, position: 'right', fill: '#10b981', fontSize: 9, fontWeight: 700 }}
+                          label={{ value: `🎯 ${targetW}kg`, position: 'right', fill: '#059669', fontSize: 10, fontWeight: 800 }}
                         />
                       )}
 
@@ -1470,35 +1489,52 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                       {chartData[currentWeekIndex] && (
                         <ReferenceLine
                           x={chartData[currentWeekIndex].label}
-                          stroke="#64748b"
-                          strokeDasharray="4 3"
+                          stroke="#94a3b8"
+                          strokeDasharray="3 4"
                           strokeWidth={1.5}
-                          label={{ value: isEs ? 'Hoy' : 'Now', position: 'top', fill: '#64748b', fontSize: 9, fontWeight: 700 }}
+                          label={{ value: isEs ? 'HOY' : 'NOW', position: 'top', fill: '#64748b', fontSize: 9, fontWeight: 800 }}
                         />
                       )}
 
-                      {/* Projected (from current weight onward) */}
+                      {/* Actual — soft fill under the real check-in line */}
+                      <Area
+                        type="monotone"
+                        dataKey="actual"
+                        stroke="none"
+                        fill="url(#traj-actual)"
+                        connectNulls={false}
+                        isAnimationActive
+                        animationDuration={800}
+                      />
+
+                      {/* Projected — gradient curve from current weight onward */}
                       <Area
                         type="monotone"
                         dataKey="projected"
-                        stroke="#10b981"
-                        strokeWidth={2.5}
-                        strokeDasharray="7 4"
+                        stroke="url(#traj-proj-stroke)"
+                        strokeWidth={3}
+                        strokeDasharray="2 5"
+                        strokeLinecap="round"
                         fill="url(#traj-projected)"
                         dot={false}
-                        activeDot={{ r: 5, fill: '#10b981', stroke: 'white', strokeWidth: 2 }}
+                        activeDot={{ r: 6, fill: '#10b981', stroke: 'white', strokeWidth: 2.5 }}
                         connectNulls
+                        isAnimationActive
+                        animationDuration={1100}
                       />
 
-                      {/* Actual check-ins */}
+                      {/* Actual check-ins — crisp solid line on top */}
                       <Line
                         type="monotone"
                         dataKey="actual"
                         stroke="#3b82f6"
-                        strokeWidth={3}
-                        dot={{ fill: 'white', stroke: '#3b82f6', strokeWidth: 2.5, r: 4 }}
-                        activeDot={{ r: 7, fill: '#3b82f6', stroke: 'white', strokeWidth: 2 }}
+                        strokeWidth={3.5}
+                        strokeLinecap="round"
+                        dot={{ fill: 'white', stroke: '#3b82f6', strokeWidth: 2.5, r: 4.5 }}
+                        activeDot={{ r: 7.5, fill: '#3b82f6', stroke: 'white', strokeWidth: 2.5 }}
                         connectNulls={false}
+                        isAnimationActive
+                        animationDuration={800}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
