@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { fetchWithAuth } from '../api';
+import { useAuth } from './AuthContext';
 
 export type TriggerCategory = 'check-in' | 'activity' | 'milestone' | 'logistics' | 'custom';
 
@@ -54,10 +55,17 @@ interface AutomationContextType {
 const AutomationContext = createContext<AutomationContextType | undefined>(undefined);
 
 export const AutomationProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadAutomations = async () => {
+    // No authenticated user yet -> don't fire an unauthenticated request.
+    if (!user) {
+      setAutomations([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await fetchWithAuth('/automations');
@@ -69,9 +77,12 @@ export const AutomationProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // (Re)load whenever the authenticated user changes — including right
+  // after login, when the token first becomes available.
   useEffect(() => {
     loadAutomations();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const toggleAutomation = async (id: string) => {
     const auto = automations.find(a => a.id === id);
