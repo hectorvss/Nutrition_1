@@ -1014,12 +1014,49 @@ function SecuritySettings() {
 }
 
 
+// Stripe price ids per tier (same catalogue as the public Pricing page).
+const BILLING_PRICE_MAP: Record<string, { monthly: string; annual: string }> = {
+  professional: { monthly: 'price_1TCN9vCR4WvolxlpwC33dk8J', annual: 'price_1TCf4PCR4Wvolxlp3MoDzi0J' },
+  scale:        { monthly: 'price_1TCNAHCR4WvolxlpwpLRfmwX', annual: 'price_1TCf52CR4WvolxlpcMMLOVpv' },
+  unlimited:    { monthly: 'price_1TCNAcCR4WvolxlptLzNYdsz', annual: 'price_1TCf5cCR4WvolxlpWGhpOgnI' },
+};
+const BILLING_PLANS = [
+  { tier: 'professional', monthlyPrice: 39, desc: 'Hasta 20 clientes activos', popular: false },
+  { tier: 'scale',        monthlyPrice: 79, desc: 'Hasta 60 clientes activos', popular: true },
+  { tier: 'unlimited',    monthlyPrice: 99, desc: 'Clientes ilimitados', popular: false },
+];
+
 function BillingSettings() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [billing, setBilling] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAnnual, setIsAnnual] = useState(false);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
+
+  // Start a Stripe Checkout session for the chosen tier and redirect to it.
+  const handleSubscribe = async (tier: string) => {
+    setSubscribing(tier);
+    setError(null);
+    try {
+      const priceId = isAnnual ? BILLING_PRICE_MAP[tier].annual : BILLING_PRICE_MAP[tier].monthly;
+      const data = await fetchWithAuth('/stripe/create-checkout-session', {
+        method: 'POST',
+        body: JSON.stringify({ priceId, userId: user?.id, userEmail: user?.email }),
+      });
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        setError(t('billing_unavailable', { defaultValue: 'La gestión de facturación no está disponible.' }));
+        setSubscribing(null);
+      }
+    } catch (err: any) {
+      setError(err?.message || t('billing_unavailable', { defaultValue: 'La gestión de facturación no está disponible.' }));
+      setSubscribing(null);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -1100,8 +1137,49 @@ function BillingSettings() {
             </button>
           </div>
         ) : (
-          <div className="bg-slate-50 rounded-xl p-8 border border-dashed border-slate-200 text-center">
-            <p className="text-sm font-medium text-slate-600">{t('no_active_subscription', { defaultValue: 'No tienes una suscripción activa.' })}</p>
+          <div className="space-y-5">
+            <p className="text-sm font-medium text-slate-600">{t('no_active_subscription', { defaultValue: 'No tienes una suscripción activa.' })} {t('choose_plan_below', { defaultValue: 'Elige un plan para empezar:' })}</p>
+            <div className="flex items-center justify-center gap-3">
+              <span className={`text-sm font-medium ${!isAnnual ? 'text-slate-900' : 'text-slate-400'}`}>{t('billing_monthly', { defaultValue: 'Mensual' })}</span>
+              <button
+                type="button"
+                onClick={() => setIsAnnual(v => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${isAnnual ? 'bg-emerald-500' : 'bg-slate-300'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isAnnual ? 'translate-x-5' : ''}`} />
+              </button>
+              <span className={`text-sm font-medium ${isAnnual ? 'text-slate-900' : 'text-slate-400'}`}>
+                {t('billing_annual', { defaultValue: 'Anual' })} <span className="text-emerald-600 font-bold">−20%</span>
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {BILLING_PLANS.map(plan => {
+                const price = isAnnual ? Math.round(plan.monthlyPrice * 0.8) : plan.monthlyPrice;
+                return (
+                  <div key={plan.tier} className={`rounded-xl border p-5 flex flex-col ${plan.popular ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200'}`}>
+                    {plan.popular && (
+                      <span className="self-start text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mb-2">
+                        {t('billing_popular', { defaultValue: 'Popular' })}
+                      </span>
+                    )}
+                    <h3 className="text-base font-bold text-slate-900 capitalize">{t(`plan_${plan.tier}`, { defaultValue: plan.tier })}</h3>
+                    <div className="mt-2 mb-1">
+                      <span className="text-3xl font-bold text-slate-900">{price}€</span>
+                      <span className="text-sm text-slate-400">/{t('billing_month', { defaultValue: 'mes' })}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mb-4">{t(`plan_${plan.tier}_desc`, { defaultValue: plan.desc })}</p>
+                    <button
+                      onClick={() => handleSubscribe(plan.tier)}
+                      disabled={!!subscribing}
+                      className={`mt-auto w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${plan.popular ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'border border-slate-200 text-slate-900 hover:bg-slate-50'}`}
+                    >
+                      {subscribing === plan.tier && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                      {t('billing_subscribe', { defaultValue: 'Suscribirme' })}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
