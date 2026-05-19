@@ -42,10 +42,22 @@ const TrainingDashboard: React.FC<{ onNavigate: (view: string, clientId?: string
                 <h2 className="text-3xl font-bold text-slate-900">{t('training_management')}</h2>
                 <p className="text-sm text-slate-500 mt-1 font-medium">{t('training_mgmt_desc')}</p>
               </div>
-              <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm">
-                <span className="material-symbols-outlined text-[20px]">add</span>
-                {t('new_workout_plan')}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onNavigate('plan-templates')}
+                  className="bg-white border border-slate-200 hover:border-emerald-300 text-slate-700 px-5 py-3 rounded-2xl transition-all flex items-center gap-2 font-bold text-sm"
+                >
+                  <span className="material-symbols-outlined text-[20px]">grid_view</span>
+                  {t('training_templates_title', { defaultValue: 'Plantillas' })}
+                </button>
+                <button
+                  onClick={() => onNavigate('plan-templates')}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm"
+                >
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                  {t('new_workout_plan')}
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center pt-2">

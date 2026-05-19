@@ -3699,6 +3699,79 @@ router.get('/training-templates', async (req: any, res: any) => {
   }
 });
 
+// Create a new training plan template
+router.post('/training-templates', async (req: any, res: any) => {
+  try {
+    const { name, description, level, type, weekly_frequency, data_json } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    const { data: profile } = await supabaseAdmin
+      .from('profiles').select('language').eq('user_id', req.user.id).maybeSingle();
+    const language = profile?.language || 'es';
+    const key = `twf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const { data, error } = await supabaseAdmin
+      .from('training_templates')
+      .insert({
+        key,
+        name: String(name).trim(),
+        description: description || null,
+        level: level || null,
+        type: type || null,
+        weekly_frequency: Number(weekly_frequency) || null,
+        data_json: data_json || {},
+        language,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error creating training template:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Update a training template (id may be a UUID or a key slug)
+router.put('/training-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
+
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+    for (const f of ['name', 'description', 'level', 'type', 'weekly_frequency', 'data_json']) {
+      if (req.body?.[f] !== undefined) patch[f] = req.body[f];
+    }
+    const q = supabaseAdmin.from('training_templates').update(patch);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating training template:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Delete a training template (id may be a UUID or a key slug)
+router.delete('/training-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
+    const q = supabaseAdmin.from('training_templates').delete();
+    const { error } = await (isUuid ? q.eq('id', id) : q.eq('key', id));
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting training template:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 router.get('/training-templates/:id', async (req: any, res: any) => {
   const { id } = req.params;
   try {

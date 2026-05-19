@@ -98,6 +98,22 @@ async function run() {
   const delRes = await fetch(`${API}/manager/nutrition-templates/${tplId}`, { method: 'DELETE', headers: H });
   check('DELETE nutrition-template 200', delRes.status === 200, `status=${delRes.status}`);
 
+  // [5] Template CRUD (training)
+  console.log('[5] Training template create / edit / delete');
+  const tCreate = await fetch(`${API}/manager/training-templates`, {
+    method: 'POST', headers: H,
+    body: JSON.stringify({ name: `${TAG}-twf`, description: 'd', level: 'Intermediate',
+      weekly_frequency: 4,
+      data_json: { type: 'template', weeklySchedule: {}, workouts: [] } }) });
+  const tCreated = tCreate.ok ? await tCreate.json() : null;
+  check('POST training-template (create) 200', tCreate.status === 200 && !!tCreated?.id, `status=${tCreate.status}`);
+  const twfId = tCreated?.key || tCreated?.id;
+  const tPut = await fetch(`${API}/manager/training-templates/${twfId}`, {
+    method: 'PUT', headers: H, body: JSON.stringify({ weekly_frequency: 5 }) });
+  check('PUT training-template (edit) 200', tPut.status === 200, `status=${tPut.status}`);
+  const tDel = await fetch(`${API}/manager/training-templates/${twfId}`, { method: 'DELETE', headers: H });
+  check('DELETE training-template 200', tDel.status === 200, `status=${tDel.status}`);
+
   console.log(`\n=== Result: ${pass} passed, ${fail} failed ===\n`);
 }
 
@@ -106,6 +122,7 @@ async function cleanup() {
   await supabaseAdmin.from('nutrition_plans').delete().in('client_id', ids);
   await supabaseAdmin.from('training_programs').delete().in('client_id', ids);
   await supabaseAdmin.from('nutrition_templates').delete().like('name', `${TAG}%`);
+  await supabaseAdmin.from('training_templates').delete().like('name', `${TAG}%`);
   await supabaseAdmin.from('clients_profiles').delete().in('user_id', ids);
   await supabaseAdmin.from('profiles').delete().in('user_id', ids);
   await supabaseAdmin.from('users').delete().in('id', ids);

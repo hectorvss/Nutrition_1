@@ -7,8 +7,9 @@ import WorkoutEditor from './WorkoutEditor';
 import { fetchWithAuth } from '../api';
 import AssignProgram from './AssignProgram';
 import ActivityEditor from './ActivityEditor';
+import TrainingPlanTemplates from './TrainingPlanTemplates';
 
-type TrainingView = 'client-list' | 'no-plan' | 'weekly-view' | 'workout-editor' | 'assign-program' | 'activity-editor';
+type TrainingView = 'client-list' | 'no-plan' | 'weekly-view' | 'workout-editor' | 'assign-program' | 'activity-editor' | 'plan-templates';
 
 export default function Training() {
   const [currentView, setCurrentView] = useState<TrainingView>('client-list');
@@ -120,9 +121,12 @@ export default function Training() {
           />
         );
 
+      case 'plan-templates':
+        return <TrainingPlanTemplates onBack={() => setCurrentView('client-list')} />;
+
       case 'activity-editor':
         return (
-          <ActivityEditor 
+          <ActivityEditor
             activityName={selectedActivityName || undefined}
             onBack={() => setCurrentView('workout-editor')}
           />
