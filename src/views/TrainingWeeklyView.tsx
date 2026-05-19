@@ -233,6 +233,134 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
     };
   });
 
+  // One day card — shared by the weekly list and the monthly (4-week) view.
+  const renderDayCard = (day: DayTraining, keyPrefix: string, drag: boolean) => (
+    <div
+      key={`${keyPrefix}${day.id}`}
+      className={`relative group transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.02] -translate-y-1' : ''}`}
+      draggable={drag}
+      onDragStart={drag ? (e) => handleDragStart(e, day.id) : undefined}
+      onDragOver={drag ? (e) => handleDragOver(e, day.id) : undefined}
+      onDragLeave={drag ? () => setDragOverDayId(null) : undefined}
+      onDrop={drag ? (e) => handleDrop(e, day.id) : undefined}
+      onDragEnd={drag ? handleDragEnd : undefined}
+    >
+      <button
+        onClick={() => onSelectDay(day.id)}
+        className={`w-full text-left bg-white rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
+          dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' :
+          day.isRestDay ? 'border-slate-100 opacity-80 hover:opacity-100' : 'border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
+        }`}
+      >
+        {drag && (
+          <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
+            <span className="material-symbols-outlined text-[24px]">drag_indicator</span>
+          </div>
+        )}
+        <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 pb-4 sm:pb-0 sm:pr-4">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-bold text-lg text-slate-900 leading-tight">{day.name}</h3>
+          </div>
+          <div className={`flex items-center gap-1.5 font-bold text-xl ${day.isRestDay ? 'text-slate-300' : 'text-emerald-600'}`}>
+            <span className="material-symbols-outlined text-lg">{day.isRestDay ? 'bedtime' : 'fitness_center'}</span>
+            {day.duration}
+          </div>
+        </div>
+
+        <div className="flex-1 w-full space-y-3">
+          <div className="flex items-center justify-between">
+            <span className={`${day.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide border`}>
+              {day.tag}
+            </span>
+            <div className="flex gap-4 text-xs text-slate-500 font-medium">
+              {!day.isRestDay && (
+                <>
+                  <span className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-slate-400">monitoring</span>
+                    {t('intensity_label')}: {day.intensity}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-slate-400">layers</span>
+                    {day.volume}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
+            {!day.isRestDay && <div className={`${day.intensityColor} h-full transition-all`} style={{ width: '100%' }}></div>}
+          </div>
+        </div>
+
+        <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-50 pt-4 sm:pt-0 flex justify-between items-center group/side">
+          <div>
+            <div className="flex justify-between items-center mb-2">
+               <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{t('training')}</span>
+               </div>
+            </div>
+            <div className={`text-sm font-bold truncate ${day.isRestDay ? 'text-slate-400' : 'text-slate-900'}`}>
+              {day.workoutName}
+            </div>
+            {!day.isRestDay && (
+              <div className="text-[10px] text-slate-400 font-medium mt-1">
+                {t('click_to_view_exercises')}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowWorkoutPicker(showWorkoutPicker === day.id ? null : day.id);
+            }}
+            className={`p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
+              showWorkoutPicker === day.id ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500'
+            }`}
+          >
+            <span className="material-symbols-outlined">edit_calendar</span>
+          </button>
+        </div>
+      </button>
+
+      {showWorkoutPicker === day.id && (
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in duration-200">
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2 border-b border-slate-50 mb-2">
+            {t('change_workout_title')}
+          </div>
+          <div className="space-y-1">
+            <button
+              onClick={() => { handleUpdateDay(day.id, null); setShowWorkoutPicker(null); }}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all flex items-center gap-3"
+            >
+              <span className="material-symbols-outlined text-[20px]">block</span>
+              {t('rest_day_title')}
+            </button>
+            {planData?.data_json?.workouts?.map((w: any) => (
+              <button
+                key={w.id}
+                onClick={() => { handleUpdateDay(day.id, w.id); setShowWorkoutPicker(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between group/item ${
+                  planData.data_json.weeklySchedule?.[day.id] === w.id
+                    ? 'bg-emerald-50 text-emerald-600'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-emerald-500'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-[20px]">fitness_center</span>
+                  {w.name}
+                </div>
+                {planData.data_json.weeklySchedule?.[day.id] === w.id && (
+                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
       <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6 pb-2">
@@ -357,137 +485,20 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               <span className="material-symbols-outlined text-4xl">error</span>
               <p className="text-sm font-medium">{loadError}</p>
             </div>
-          ) : processedDays.map((day) => (
-            <div 
-              key={day.id} 
-              className={`relative group transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.02] -translate-y-1' : ''}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, day.id)}
-              onDragOver={(e) => handleDragOver(e, day.id)}
-              onDragLeave={() => setDragOverDayId(null)}
-              onDrop={(e) => handleDrop(e, day.id)}
-              onDragEnd={handleDragEnd}
-            >
-              <button
-                onClick={() => onSelectDay(day.id)}
-                className={`w-full text-left bg-white rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
-                  dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' : 
-                  day.isRestDay ? 'border-slate-100 opacity-80 hover:opacity-100' : 'border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
-                }`}
-              >
-                <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
-                  <span className="material-symbols-outlined text-[24px]">drag_indicator</span>
+          ) : viewMode === 'monthly' ? (
+            [0, 1, 2, 3].map((w) => (
+              <div key={`week-${w}`} className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 mt-3 first:mt-0">
+                  <span className="material-symbols-outlined text-emerald-500 text-xl">calendar_view_week</span>
+                  <h3 className="font-black text-sm text-slate-500 uppercase tracking-widest">{t('week')} {w + 1}</h3>
+                  <div className="flex-1 h-px bg-slate-200"></div>
                 </div>
-                <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 pb-4 sm:pb-0 sm:pr-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-lg text-slate-900 leading-tight">{day.name}</h3>
-                  </div>
-                  <div className={`flex items-center gap-1.5 font-bold text-xl ${day.isRestDay ? 'text-slate-300' : 'text-emerald-600'}`}>
-                    <span className="material-symbols-outlined text-lg">{day.isRestDay ? 'bedtime' : 'fitness_center'}</span>
-                    {day.duration}
-                  </div>
-                </div>
-
-                <div className="flex-1 w-full space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className={`${day.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide border`}>
-                      {day.tag}
-                    </span>
-                    <div className="flex gap-4 text-xs text-slate-500 font-medium">
-                      {!day.isRestDay && (
-                        <>
-                          <span className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[16px] text-slate-400">monitoring</span>
-                            {t('intensity_label')}: {day.intensity}
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[16px] text-slate-400">layers</span>
-                            {day.volume}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
-                    {!day.isRestDay && <div className={`${day.intensityColor} h-full transition-all`} style={{ width: '100%' }}></div>}
-                  </div>
-                </div>
-
-                <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-50 pt-4 sm:pt-0 flex justify-between items-center group/side">
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                       <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{t('training')}</span>
-                       </div>
-                    </div>
-                    <div className={`text-sm font-bold truncate ${day.isRestDay ? 'text-slate-400' : 'text-slate-900'}`}>
-                      {day.workoutName}
-                    </div>
-                    {!day.isRestDay && (
-                      <div className="text-[10px] text-slate-400 font-medium mt-1">
-                        {t('click_to_view_exercises')}
-                      </div>
-                    )}
-                  </div>
-
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowWorkoutPicker(showWorkoutPicker === day.id ? null : day.id);
-                    }}
-                    className={`p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
-                      showWorkoutPicker === day.id ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined">edit_calendar</span>
-                  </button>
-                </div>
-              </button>
-
-              {/* Workout Picker Dropdown */}
-              {showWorkoutPicker === day.id && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in duration-200">
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2 border-b border-slate-50 mb-2">
-                    {t('change_workout_title')}
-                  </div>
-                  <div className="space-y-1">
-                    <button 
-                      onClick={() => {
-                        handleUpdateDay(day.id, null);
-                        setShowWorkoutPicker(null);
-                      }}
-                      className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all flex items-center gap-3"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">block</span>
-                      {t('rest_day_title')}
-                    </button>
-                    {planData.data_json.workouts?.map((w: any) => (
-                      <button 
-                        key={w.id}
-                        onClick={() => {
-                          handleUpdateDay(day.id, w.id);
-                          setShowWorkoutPicker(null);
-                        }}
-                        className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between group/item ${
-                          planData.data_json.weeklySchedule?.[day.id] === w.id 
-                            ? 'bg-emerald-50 text-emerald-600' 
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-emerald-500'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="material-symbols-outlined text-[20px]">fitness_center</span>
-                          {w.name}
-                        </div>
-                        {planData.data_json.weeklySchedule?.[day.id] === w.id && (
-                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+                {processedDays.map((day) => renderDayCard(day, `w${w}-`, false))}
+              </div>
+            ))
+          ) : (
+            processedDays.map((day) => renderDayCard(day, '', true))
+          )}
         </div>
       </div>
     </div>
