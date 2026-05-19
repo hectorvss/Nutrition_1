@@ -746,6 +746,19 @@ function SecuritySettings() {
     }
   };
 
+  // Global sign-out: revokes every session on the server, then logs out locally.
+  const handleLogoutEverywhere = async () => {
+    if (!confirm(t('logout_all_confirm', { defaultValue: '¿Cerrar la sesión en todos los dispositivos?' }))) return;
+    try {
+      await fetchWithAuth('/manager/security/sessions/revoke-all', { method: 'POST' });
+      await supabase.auth.signOut().catch(() => {});
+    } catch (err) {
+      console.error('Error signing out everywhere:', err);
+    } finally {
+      logout();
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {success && (
@@ -922,8 +935,8 @@ function SecuritySettings() {
             <h2 className="text-lg font-bold text-slate-900">{t('active_sessions')}</h2>
             <p className="text-sm text-slate-500 mt-1">{t('sessions_desc')}</p>
           </div>
-          <button 
-            onClick={logout}
+          <button
+            onClick={handleLogoutEverywhere}
             className="text-red-500 text-sm font-semibold hover:text-red-600 transition-colors border border-red-200 bg-red-50 px-3 py-1.5 rounded-lg"
           >
             {t('logout_all')}

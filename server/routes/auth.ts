@@ -11,6 +11,40 @@ const timingSafeStrEqual = (a: string | undefined, b: string | undefined) => {
   return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
 };
 
+// Lightweight User-Agent parser for the session/login-history records.
+const parseUA = (ua: string) => {
+  const s = ua || '';
+  let browser = 'Browser';
+  if (/edg/i.test(s)) browser = 'Edge';
+  else if (/chrome|crios/i.test(s)) browser = 'Chrome';
+  else if (/firefox|fxios/i.test(s)) browser = 'Firefox';
+  else if (/safari/i.test(s)) browser = 'Safari';
+  let device = 'Desktop';
+  if (/mobile|iphone|android/i.test(s)) device = 'Mobile';
+  else if (/ipad|tablet/i.test(s)) device = 'Tablet';
+  return { browser, device };
+};
+
+// Records a real login: marks previous sessions as not-current, inserts the
+// new session and a login-history row. Best-effort — never blocks login.
+const recordLogin = async (userId: string, req: any) => {
+  try {
+    const ua = (req.headers['user-agent'] as string) || '';
+    const { browser, device } = parseUA(ua);
+    const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || null;
+    await supabaseAdmin.from('user_sessions').update({ is_current: false }).eq('user_id', userId);
+    await supabaseAdmin.from('user_sessions').insert({
+      user_id: userId, device_name: device, browser, ip_address: ip,
+      is_current: true, last_active: new Date().toISOString()
+    });
+    await supabaseAdmin.from('login_history').insert({
+      user_id: userId, event: 'Signed in', device, ip_address: ip, status: 'Success'
+    });
+  } catch (e) {
+    console.error('recordLogin error:', e);
+  }
+};
+
 // Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -47,6 +81,9 @@ router.post('/login', async (req, res) => {
         .update({ last_login: new Date().toISOString() })
         .eq('user_id', authData.user.id);
     }
+
+    // Record the real session + login-history entry.
+    await recordLogin(authData.user.id, req);
 
     res.json({
       token: authData.session.access_token,

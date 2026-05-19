@@ -1778,21 +1778,8 @@ router.get('/security/sessions', async (req: any, res) => {
 
     if (error) throw error;
 
-    // If no sessions, insert a "current" one as mockup/placeholder if it's the first time
-    if (!sessions || sessions.length === 0) {
-      const currentSession = {
-        user_id: req.user.id,
-        device_name: 'Current Device',
-        browser: 'Chrome',
-        ip_address: '127.0.0.1',
-        location: 'Localhost',
-        is_current: true
-      };
-      const { data: inserted } = await supabaseAdmin.from('user_sessions').insert(currentSession).select();
-      return res.json(inserted || []);
-    }
-
-    res.json(sessions);
+    // Real sessions only — recorded on each login. No mock fallback.
+    res.json(sessions || []);
   } catch (error) {
     console.error('Error fetching sessions:', error);
     res.status(500).json({ error: error.message || 'Server error' });
@@ -1816,6 +1803,28 @@ router.delete('/security/sessions/:id', async (req: any, res) => {
   }
 });
 
+// Revoke ALL sessions for this user (global sign-out across every device).
+router.post('/security/sessions/revoke-all', async (req: any, res) => {
+  try {
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (token) {
+      try {
+        await supabaseAdmin.auth.admin.signOut(token, 'global');
+      } catch (e: any) {
+        console.error('admin signOut error:', e?.message);
+      }
+    }
+    await supabaseAdmin.from('user_sessions').delete().eq('user_id', req.user.id);
+    await supabaseAdmin.from('login_history').insert({
+      user_id: req.user.id, event: 'Signed out everywhere', status: 'Success'
+    });
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error revoking all sessions:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
 // Get login history
 router.get('/security/history', async (req: any, res) => {
   try {
@@ -1828,21 +1837,8 @@ router.get('/security/history', async (req: any, res) => {
 
     if (error) throw error;
 
-    // Add a default login if empty
-    if (!history || history.length === 0) {
-      const defaultLogin = {
-        user_id: req.user.id,
-        event: 'Signed in',
-        device: 'Current Device',
-        ip_address: '127.0.0.1',
-        location: 'Localhost',
-        status: 'Success'
-      };
-      const { data: inserted } = await supabaseAdmin.from('login_history').insert(defaultLogin).select();
-      return res.json(inserted || []);
-    }
-
-    res.json(history);
+    // Real login history only — recorded on each login. No mock fallback.
+    res.json(history || []);
   } catch (error) {
     console.error('Error fetching history:', error);
     res.status(500).json({ error: error.message || 'Server error' });
