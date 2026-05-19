@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
+import ClientScalePreview from '../components/recipes/ClientScalePreview';
 
 interface Ingredient { name: string; amount?: string | number; unit?: string; }
 interface Step { title?: string; text?: string; }
@@ -241,6 +242,12 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
                   </div>
                 </div>
               </div>
+
+              {/* Client Scale Preview — available on the default recipe view */}
+              <ClientScalePreview
+                ingredients={recipe.ingredients || []}
+                calories={recipe.calories || 0}
+              />
 
               {(recipe.tags || []).length > 0 && (
                 <div className="flex flex-wrap gap-2">

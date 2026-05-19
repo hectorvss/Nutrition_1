@@ -129,39 +129,10 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 
 // --- TRAJECTORY HELPERS ---
 
-/** Classify phase rate from title/type */
-function getPhaseRates(block: RoadmapBlock): { weightRate: number; strengthRate: number } {
-  const t = (block.title + ' ' + (block.stratData?.primaryObjective || '')).toLowerCase();
-  if (block.type === 'nutrition') {
-    if (t.includes('deficit') || t.includes('cut') || t.includes('fat loss') || t.includes('pérdida')) {
-      return { weightRate: -0.45, strengthRate: 0.2 }; // Fat loss: lose weight, strength stable
-    }
-    if (t.includes('maintenance') || t.includes('mantenimiento') || t.includes('maintain')) {
-      return { weightRate: 0, strengthRate: 0.5 }; // Flat
-    }
-    if (t.includes('bulk') || t.includes('gain') || t.includes('surplus') || t.includes('volumen')) {
-      return { weightRate: 0.35, strengthRate: 1.5 }; // Bulk
-    }
-    if (t.includes('recomp') || t.includes('recompos')) {
-      return { weightRate: -0.05, strengthRate: 0.8 }; // Subtle loss, muscle gain
-    }
-    if (t.includes('reverse')) {
-      return { weightRate: 0.05, strengthRate: 0.5 }; // Reverse diet
-    }
-    return { weightRate: -0.1, strengthRate: 0.3 };
-  } else {
-    // Training block rates (strength %) per week
-    if (t.includes('strength') || t.includes('fuerza') || t.includes('peak')) {
-      return { weightRate: 0, strengthRate: 2.5 };
-    }
-    if (t.includes('hypertrophy') || t.includes('hipertrofia') || t.includes('volume') || t.includes('base')) {
-      return { weightRate: 0, strengthRate: 1.5 };
-    }
-    if (t.includes('deload') || t.includes('recovery')) {
-      return { weightRate: 0, strengthRate: 0 };
-    }
-    return { weightRate: 0, strengthRate: 1.0 };
-  }
+/** Ease-out curve (fast at first, slowing toward the goal) for a natural projection. */
+function easeOutCubic(p: number): number {
+  const c = Math.min(1, Math.max(0, p));
+  return 1 - Math.pow(1 - c, 3);
 }
 
 function computeTrajectory(
@@ -169,81 +140,78 @@ function computeTrajectory(
   checkInsByDate: { date: string; weight: number }[],
   goals: TrajectoryGoals,
   locale: string
-): { chartData: any[]; currentWeekIndex: number; anchorWeight: number; weeklyRate: number } {
+): { chartData: any[]; currentWeekIndex: number; anchorWeight: number; weeklyRate: number; observedRate: number } {
   const totalWeeks = goals.totalWeeks || roadmap.totalWeeks || 12;
-  const allBlocks = [...roadmap.nutrition, ...roadmap.training];
-
-  const programStart = goals.programStartDate
-    ? new Date(goals.programStartDate)
-    : new Date();
-
-  // Current week index (0-based)
-  const now = new Date();
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-  const currentWeekIndex = Math.max(
-    0,
-    Math.min(totalWeeks - 1, Math.floor((now.getTime() - programStart.getTime()) / msPerWeek))
-  );
+  const target = goals.targetWeight || 0;
+  const round = (n: number) => parseFloat(n.toFixed(1));
 
-  // 1. Bucket real check-ins by program week (last one of the week wins)
-  const actualByWeek: (number | undefined)[] = [];
-  for (let w = 0; w < totalWeeks; w++) {
-    const weekStart = new Date(programStart.getTime() + w * msPerWeek);
-    const weekEnd = new Date(weekStart.getTime() + msPerWeek);
-    const ci = checkInsByDate.filter(c => {
-      const d = new Date(c.date);
-      return d >= weekStart && d < weekEnd;
-    });
-    actualByWeek[w] = ci.length > 0 ? ci[ci.length - 1].weight : undefined;
+  // Real check-ins, chronologically
+  const cis = [...checkInsByDate]
+    .filter(c => typeof c.weight === 'number' && c.weight > 0)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // Timeline origin: the first real check-in, else the program start, else now.
+  const programStart = goals.programStartDate ? new Date(goals.programStartDate) : new Date();
+  const origin = cis.length > 0 ? new Date(cis[0].date) : programStart;
+
+  // Place each check-in on the week timeline from the origin. Weeks are kept
+  // strictly increasing so every check-in stays visible (start → current),
+  // even when several fall within the same calendar week.
+  const actualByWeek: Record<number, number> = {};
+  let lastActualWeek = 0;
+  let prevWk = -1;
+  cis.forEach((c, i) => {
+    let wk = Math.max(0, Math.round((new Date(c.date).getTime() - origin.getTime()) / msPerWeek));
+    if (i > 0 && wk <= prevWk) wk = prevWk + 1;
+    actualByWeek[wk] = c.weight;
+    prevWk = wk;
+    if (wk > lastActualWeek) lastActualWeek = wk;
+  });
+
+  // Anchor = the client's most recent real weight (fallbacks when no check-ins).
+  const anchorWeight = cis.length > 0
+    ? cis[cis.length - 1].weight
+    : (goals.currentWeight || goals.startWeight || 0);
+
+  // The projection runs from the latest check-in toward the TARGET weight,
+  // easing over the full program duration so it visibly heads to the goal.
+  const projEndWeek = lastActualWeek + Math.max(1, totalWeeks);
+
+  // Observed weekly rate from real check-ins (used for the honest pace banner).
+  let observedRate = 0;
+  if (cis.length >= 2 && lastActualWeek > 0) {
+    observedRate = (cis[cis.length - 1].weight - cis[0].weight) / lastActualWeek;
   }
 
-  // 2. Anchor the projection to the client's real current weight: the latest
-  //    check-in up to now. Falls back to the explicit currentWeight, then start.
-  let anchorWeight = goals.currentWeight || goals.startWeight || 0;
-  for (let w = currentWeekIndex; w >= 0; w--) {
-    if (actualByWeek[w] != null) { anchorWeight = actualByWeek[w] as number; break; }
-  }
-
-  // 3. Build the chart. Past weeks show only actual; from "now" onward the
-  //    projected line starts AT the anchor weight and applies phase rates,
-  //    so the projection visually continues from reality (not a parallel guess).
   const chartData: any[] = [];
-  let projW = anchorWeight;
-  let firstFutureRate = 0;
-  let firstFutureCaptured = false;
-
-  for (let w = 0; w < totalWeeks; w++) {
-    const weekNum = w + 1;
-    const weekDate = new Date(programStart.getTime() + w * msPerWeek);
-    const weekLabel = weekDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-
+  for (let w = 0; w <= projEndWeek; w++) {
+    const weekDate = new Date(origin.getTime() + w * msPerWeek);
     let projected: number | undefined;
-    if (w < currentWeekIndex) {
-      projected = undefined; // past — actual line only
-    } else if (w === currentWeekIndex) {
-      projected = parseFloat(anchorWeight.toFixed(1)); // anchor — joins actual & projection
+    if (w < lastActualWeek) {
+      projected = undefined;                       // past — actual line only
+    } else if (w === lastActualWeek) {
+      projected = round(anchorWeight);             // join point: actual ↔ projection
     } else {
-      const activeBlocks = allBlocks.filter(b => weekNum >= b.startWeek && weekNum <= b.endWeek);
-      let rate = 0;
-      let used = false;
-      activeBlocks.forEach(b => {
-        if (b.type === 'nutrition' && !used) { rate = getPhaseRates(b).weightRate; used = true; }
-      });
-      if (!firstFutureCaptured) { firstFutureRate = rate; firstFutureCaptured = true; }
-      projW = parseFloat((projW + rate).toFixed(2));
-      projected = projW;
+      const p = easeOutCubic((w - lastActualWeek) / (projEndWeek - lastActualWeek));
+      projected = round(anchorWeight + (target - anchorWeight) * p);
     }
-
     chartData.push({
-      week: weekNum,
-      label: weekLabel,
+      week: w + 1,
+      label: weekDate.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
       projected,
       actual: actualByWeek[w],
-      isCurrentWeek: w === currentWeekIndex,
+      isCurrentWeek: w === lastActualWeek,
     });
   }
 
-  return { chartData, currentWeekIndex, anchorWeight, weeklyRate: firstFutureRate };
+  return {
+    chartData,
+    currentWeekIndex: lastActualWeek,
+    anchorWeight,
+    weeklyRate: totalWeeks > 0 ? (target - anchorWeight) / totalWeeks : 0,
+    observedRate,
+  };
 }
 
 export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
@@ -1265,7 +1233,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             const totalWeeks = tGoals.totalWeeks || 12;
             const hasActualData = checkInsHistory.length > 0;
 
-            const { chartData, currentWeekIndex, anchorWeight, weeklyRate } = computeTrajectory(
+            const { chartData, currentWeekIndex, anchorWeight, observedRate } = computeTrajectory(
               roadmap, checkInsHistory, tGoals, locale
             );
 
@@ -1273,8 +1241,11 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             const currentW = parseFloat((anchorWeight || tGoals.currentWeight || tGoals.startWeight || 0).toFixed(1));
             const targetW = tGoals.targetWeight || 0;
             const remaining = parseFloat((targetW - currentW).toFixed(1));            // signed: + gain, - lose
-            const finalProjected = parseFloat((chartData[chartData.length - 1]?.projected ?? currentW).toFixed(1));
-            const projGap = parseFloat((finalProjected - targetW).toFixed(1));        // how far the projection lands from target
+            // The green curve always lands on the target; the banner instead
+            // reports where the client would land at their REAL observed pace.
+            const canEstimatePace = checkInsHistory.length >= 2;
+            const finalProjected = parseFloat((currentW + observedRate * totalWeeks).toFixed(1));
+            const projGap = parseFloat((finalProjected - targetW).toFixed(1));        // pace projection vs target
             const onTrack = Math.abs(projGap) <= 1;                                    // within 1 kg = on track
             const losing = remaining < 0;
             const weeksLeft = Math.max(0, totalWeeks - currentWeekIndex - 1);
@@ -1398,23 +1369,23 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
                 {/* Projection summary banner */}
                 <div className={`flex items-center gap-2.5 rounded-2xl px-4 py-3 mb-4 text-xs font-bold ${
-                  !hasActualData
+                  !canEstimatePace
                     ? 'bg-slate-50 dark:bg-slate-800/60 text-slate-500'
                     : onTrack
                       ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300'
                       : 'bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300'
                 }`}>
-                  <Icon name={!hasActualData ? 'info' : onTrack ? 'check_circle' : 'warning'} className="text-lg" />
+                  <Icon name={!canEstimatePace ? 'info' : onTrack ? 'check_circle' : 'warning'} className="text-lg" />
                   <span>
-                    {!hasActualData
-                      ? (isEs ? 'Aún no hay check-ins de peso: la proyección se basa solo en las fases del plan.' : 'No weight check-ins yet — the projection is based on plan phases only.')
+                    {!canEstimatePace
+                      ? (isEs ? 'Se necesitan al menos 2 check-ins de peso para estimar el ritmo real.' : 'At least 2 weight check-ins are needed to estimate the real pace.')
                       : onTrack
                         ? (isEs
-                            ? `A este ritmo terminará en ~${finalProjected} kg, justo en el objetivo.`
-                            : `At this pace they finish around ~${finalProjected} kg — right on target.`)
+                            ? `A su ritmo actual terminará en ~${finalProjected} kg, justo en el objetivo.`
+                            : `At their current pace they finish around ~${finalProjected} kg — right on target.`)
                         : (isEs
-                            ? `A este ritmo terminará en ~${finalProjected} kg (${projGap > 0 ? '+' : ''}${projGap} kg del objetivo). Revisa las fases del plan.`
-                            : `At this pace they finish around ~${finalProjected} kg (${projGap > 0 ? '+' : ''}${projGap} kg off target). Review the plan phases.`)}
+                            ? `A su ritmo actual terminará en ~${finalProjected} kg (${projGap > 0 ? '+' : ''}${projGap} kg del objetivo). Ajusta el plan o el ritmo.`
+                            : `At their current pace they finish around ~${finalProjected} kg (${projGap > 0 ? '+' : ''}${projGap} kg off target). Adjust the plan or pace.`)}
                   </span>
                 </div>
 
