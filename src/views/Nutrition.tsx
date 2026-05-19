@@ -16,6 +16,7 @@ export default function Nutrition() {
   const [selectedPreset, setSelectedPreset] = useState<any>(null);
   const [initialPlanData, setInitialPlanData] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<{ id: string; name: string } | null>(null);
 
   const handleNavigate = (view: 'plan-templates' | 'plan-detail' | 'food-library' | 'weekly-view', client?: any) => {
     if (client) {
@@ -63,6 +64,7 @@ export default function Nutrition() {
             onBack={() => setCurrentView('client-list')}
             onReassign={() => setCurrentView('no-plan')}
             onSelectDay={(dayId) => {
+              setEditingTemplate(null);
               setSelectedDay(dayId);
               setCurrentView('plan-detail');
             }}
@@ -72,19 +74,28 @@ export default function Nutrition() {
         return (
           <NutritionPlanTemplates
             onBack={() => setCurrentView('client-list')}
+            onEditTemplate={(id, name) => {
+              setEditingTemplate({ id, name });
+              setSelectedDay(null);
+              setInitialPlanData(null);
+              setCurrentView('plan-detail');
+            }}
           />
         );
       case 'plan-detail':
         return (
           <NutritionPlanDetail
-            client={selectedClient}
+            client={editingTemplate ? { name: editingTemplate.name } : selectedClient}
+            templateId={editingTemplate ? editingTemplate.id : null}
             isNewPlan={isNewPlan}
             initialPlanData={initialPlanData}
             selectedDay={selectedDay}
             onBack={() => {
               setInitialPlanData(null);
-              // Go back to weekly view if assigned, otherwise client list
-              if (selectedClient?.nutritionPlanAssigned) {
+              if (editingTemplate) {
+                setEditingTemplate(null);
+                setCurrentView('plan-templates');
+              } else if (selectedClient?.nutritionPlanAssigned) {
                 setCurrentView('weekly-view');
               } else {
                 setCurrentView('client-list');

@@ -37,6 +37,8 @@ interface NutritionPlanDetailProps {
   initialPlanData?: any;
   onBack: () => void;
   selectedDay?: string | null;
+  /** When set, the editor edits a nutrition TEMPLATE instead of a client plan. */
+  templateId?: string | null;
 }
 
 interface PlannedFoodItem {
@@ -83,7 +85,7 @@ interface GeneralItem {
 
 
 
-export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData, onBack, selectedDay }: NutritionPlanDetailProps) {
+export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData, onBack, selectedDay, templateId }: NutritionPlanDetailProps) {
   const { t } = useLanguage();
   
   const defaultCategories = useCallback((): MacroCategory[] => [
@@ -116,11 +118,35 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const [librarySearch, setLibrarySearch] = useState('');
 
   const [fullPlanData, setFullPlanData] = useState<any>(null);
-  const [mode, setMode] = useState<'general' | 'example'>('general');
+  // "General mode" was removed — the editor always works with specific foods.
+  const [mode] = useState<'general' | 'example'>('example');
 
   // Load existing plan on mount
   React.useEffect(() => {
+    const ICON_MAP: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
     const fetchPlan = async () => {
+      // 0. Template mode — edit a reusable template instead of a client plan.
+      if (templateId) {
+        setIsLoading(true);
+        setLoadError(null);
+        try {
+          const tpl = await fetchWithAuth(`/manager/nutrition-templates/${templateId}`);
+          const json = tpl?.data_json || {};
+          setFullPlanData(json);
+          setMeals((json.meals || []).map((m: any) => ({
+            ...m,
+            items: (m.items || []).map((i: any) => ({ ...i, quantity: i.multiplier || i.quantity || 1 })),
+            icon: ICON_MAP[m.iconName] || Sunrise,
+          })));
+        } catch (err: any) {
+          console.error('Error fetching template:', err);
+          setLoadError(err?.message || t('error_loading_data'));
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       // 1. If we have initialPlanData, prioritize it
       if (initialPlanData && initialPlanData.data_json) {
         const json = initialPlanData.data_json;
@@ -145,7 +171,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           icon: icons[m.iconName] || Sunrise
         }));
         setMeals(loadedMeals);
-        if (json.mode) setMode(json.mode);
+        /* mode toggle removed — always 'example' */
         return;
       }
 
@@ -176,7 +202,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
             icon: icons[m.iconName] || Sunrise
           }));
           setMeals(loadedMeals);
-          if (json.mode) setMode(json.mode);
+          /* mode toggle removed — always 'example' */
         } else {
           setMeals(DEFAULT_MEALS);
         }
@@ -188,9 +214,33 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       }
     };
     fetchPlan();
-  }, [client?.id, initialPlanData, selectedDay]);
+  }, [client?.id, initialPlanData, selectedDay, templateId]);
 
   const savePlan = async () => {
+    // Template mode — persist back to the template.
+    if (templateId) {
+      setIsSaving(true);
+      try {
+        const mealsToSave = meals.map(m => {
+          const { icon, ...rest } = m as any;
+          return { ...rest, iconName: (m as any).iconName || 'Cookie' };
+        });
+        const finalDataJson = { ...(fullPlanData || {}), type: 'template', meals: mealsToSave };
+        await fetchWithAuth(`/manager/nutrition-templates/${templateId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ data_json: finalDataJson }),
+        });
+        setFullPlanData(finalDataJson);
+        alert(t('plan_saved_success'));
+      } catch (err) {
+        console.error('Error saving template:', err);
+        alert(t('plan_save_error'));
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     if (!client?.id) return;
     setIsSaving(true);
     try {
@@ -577,31 +627,8 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Left Column: Plan Content */}
         <div className="flex-1 w-full flex flex-col gap-6">
-          {/* Actions Header: Mode toggle + Print/Share */}
-          <div className="bg-white rounded-2xl p-2 border border-slate-200 flex items-center justify-between shadow-sm">
-            {/* Mode Toggle */}
-            <div className="flex items-center gap-1 pl-1 bg-slate-50 rounded-xl p-1 border border-slate-200">
-              <button
-                onClick={() => setMode('general')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                  mode === 'general'
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {t('general_mode')}
-              </button>
-              <button
-                onClick={() => setMode('example')}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                  mode === 'example'
-                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                {t('example_mode')}
-              </button>
-            </div>
+          {/* Actions Header: Print/Share + Save */}
+          <div className="bg-white rounded-2xl p-2 border border-slate-200 flex items-center justify-end shadow-sm">
             <div className="flex gap-2 pr-2">
               <button 
                 onClick={savePlan}

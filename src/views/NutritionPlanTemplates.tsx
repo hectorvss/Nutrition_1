@@ -1,123 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft, Grid, Plus, Flame, Utensils, Pencil, Trash2, X,
-  ClipboardList, LayoutGrid, Rows3, Save,
+  ArrowLeft, Grid, Plus, Flame, Utensils, Pencil, Trash2,
+  ClipboardList, LayoutGrid, Rows3,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 
 interface NutritionPlanTemplatesProps {
   onBack: () => void;
+  /** Open the real plan editor on a template (create one first if needed). */
+  onEditTemplate: (templateId: string, templateName: string) => void;
 }
 
-interface FoodItem {
-  id: string; name: string;
-  calories: number; protein: number; carbs: number; fats: number; quantity: number;
-}
-interface Meal { id: string; name: string; time?: string; items: FoodItem[] }
 interface Template {
   id: string; key?: string; name: string; description?: string;
   target_calories: number; data_json?: any;
 }
-interface Draft {
-  id: string | null; name: string; description: string; target_calories: number;
-  macros: { p: number; c: number; f: number }; meals: Meal[];
-}
 
-const uid = () => Math.random().toString(36).slice(2, 9);
-const emptyItem = (): FoodItem => ({ id: uid(), name: '', calories: 0, protein: 0, carbs: 0, fats: 0, quantity: 1 });
-const emptyMeal = (n: number): Meal => ({ id: uid(), name: `Comida ${n}`, items: [emptyItem()] });
-
-const blankDraft = (): Draft => ({
-  id: null, name: '', description: '', target_calories: 1800,
-  macros: { p: 30, c: 45, f: 25 }, meals: [emptyMeal(1), emptyMeal(2), emptyMeal(3)],
-});
-
-function toDraft(tpl: Template): Draft {
-  const dj = tpl.data_json || {};
-  return {
-    id: tpl.key || tpl.id,
-    name: tpl.name,
-    description: tpl.description || '',
-    target_calories: tpl.target_calories || 0,
-    macros: { p: dj.macros?.p ?? 30, c: dj.macros?.c ?? 45, f: dj.macros?.f ?? 25 },
-    meals: (dj.meals || []).map((m: any) => ({
-      id: m.id || uid(),
-      name: m.name || 'Comida',
-      time: m.time,
-      items: (m.items || []).map((it: any) => ({
-        id: it.id || uid(), name: it.name || '',
-        calories: Number(it.calories) || 0, protein: Number(it.protein) || 0,
-        carbs: Number(it.carbs) || 0, fats: Number(it.fats) || 0,
-        quantity: Number(it.quantity) || 1,
-      })),
-    })),
-  };
-}
-
-const mealKcal = (m: Meal) => m.items.reduce((a, i) => a + i.calories * (i.quantity || 1), 0);
-
-export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplatesProps) {
+export default function NutritionPlanTemplates({ onBack, onEditTemplate }: NutritionPlanTemplatesProps) {
   const { t } = useLanguage();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [layout, setLayout] = useState<'grid' | 'rows'>('grid');
-  const [draft, setDraft] = useState<Draft | null>(null);   // when set -> editor open
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const load = () => {
     setIsLoading(true);
     fetchWithAuth('/manager/nutrition-templates')
       .then((d) => setTemplates(Array.isArray(d) ? d : []))
-      .catch((e) => setError(e?.message || 'Error'))
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   };
   useEffect(() => { load(); }, []);
 
-  const openEditor = async (tpl?: Template) => {
-    setError('');
-    if (!tpl) { setDraft(blankDraft()); return; }
-    // Fetch the full template so every meal/food is loaded for editing.
+  // Create a blank template, then jump straight into the real plan editor.
+  const createAndEdit = async () => {
+    if (busy) return;
+    setBusy(true);
     try {
-      const full = await fetchWithAuth(`/manager/nutrition-templates/${tpl.key || tpl.id}`);
-      setDraft(toDraft(full || tpl));
-    } catch {
-      setDraft(toDraft(tpl));
-    }
-  };
-
-  const save = async () => {
-    if (!draft) return;
-    if (!draft.name.trim()) { setError(t('template_name_required', { defaultValue: 'El nombre es obligatorio.' })); return; }
-    setSaving(true); setError('');
-    const data_json = {
-      type: 'template',
-      macros: draft.macros,
-      meals: draft.meals.map((m) => ({
-        id: m.id, name: m.name, time: m.time || '',
-        items: m.items.filter((i) => i.name.trim()).map((i) => ({
-          id: i.id, name: i.name, calories: i.calories, protein: i.protein,
-          carbs: i.carbs, fats: i.fats, quantity: i.quantity,
-        })),
-      })),
-    };
-    const body = JSON.stringify({
-      name: draft.name.trim(), description: draft.description.trim(),
-      target_calories: draft.target_calories, data_json,
-    });
-    try {
-      if (draft.id) {
-        await fetchWithAuth(`/manager/nutrition-templates/${draft.id}`, { method: 'PUT', body });
-      } else {
-        await fetchWithAuth('/manager/nutrition-templates', { method: 'POST', body });
-      }
-      setDraft(null);
-      load();
-    } catch (e: any) {
-      setError(e?.message || 'Error');
+      const created = await fetchWithAuth('/manager/nutrition-templates', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: t('new_template_name', { defaultValue: 'Nueva plantilla' }),
+          description: '',
+          target_calories: 2000,
+          data_json: { type: 'template', macros: { p: 30, c: 45, f: 25 }, meals: [] },
+        }),
+      });
+      onEditTemplate(created.key || created.id, created.name);
+    } catch (e) {
+      console.error('create template failed', e);
     } finally {
-      setSaving(false);
+      setBusy(false);
     }
   };
 
@@ -127,131 +61,6 @@ export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplate
     load();
   };
 
-  /* ---------- Editor ---------- */
-  if (draft) {
-    const totalKcal = draft.meals.reduce((a, m) => a + mealKcal(m), 0);
-    const patchMeal = (mi: number, m: Partial<Meal>) =>
-      setDraft({ ...draft, meals: draft.meals.map((mm, i) => i === mi ? { ...mm, ...m } : mm) });
-    const patchItem = (mi: number, ii: number, it: Partial<FoodItem>) =>
-      patchMeal(mi, { items: draft.meals[mi].items.map((x, i) => i === ii ? { ...x, ...it } : x) });
-
-    return (
-      <div className="w-full p-6 md:p-8 lg:p-10">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
-          {/* Editor header */}
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
-            <div>
-              <button onClick={() => setDraft(null)} className="text-slate-500 hover:text-emerald-500 flex items-center gap-1 text-sm font-medium mb-2">
-                <ArrowLeft className="w-4 h-4" /> {t('plan_templates_title', { defaultValue: 'Plantillas de Plan' })}
-              </button>
-              <h2 className="text-2xl font-bold text-slate-900">
-                {draft.id ? t('edit_template', { defaultValue: 'Editar plantilla' }) : t('create_template_btn', { defaultValue: 'Crear plantilla' })}
-              </h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-bold text-orange-500 flex items-center gap-1">
-                <Flame className="w-4 h-4" /> {totalKcal.toLocaleString()} kcal
-              </span>
-              <button onClick={save} disabled={saving}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-500/25 disabled:opacity-50">
-                <Save className="w-5 h-5" />
-                {saving ? t('saving', { defaultValue: 'Guardando...' }) : t('save', { defaultValue: 'Guardar' })}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
-            {/* Meta */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{t('template_name', { defaultValue: 'Nombre' })}</label>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{t('target_calories', { defaultValue: 'Calorías objetivo' })}</label>
-                <input type="number" min={0} value={draft.target_calories}
-                  onChange={(e) => setDraft({ ...draft, target_calories: parseInt(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{t('description', { defaultValue: 'Descripción' })}</label>
-                <input value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">{t('macro_split', { defaultValue: 'Reparto de macros (%)' })}</label>
-                <div className="grid grid-cols-3 gap-2 max-w-sm">
-                  {(['p', 'c', 'f'] as const).map((k) => (
-                    <div key={k} className="relative">
-                      <input type="number" min={0} max={100} value={draft.macros[k]}
-                        onChange={(e) => setDraft({ ...draft, macros: { ...draft.macros, [k]: parseInt(e.target.value) || 0 } })}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none font-bold" />
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">{k}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Meals */}
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2"><Utensils className="w-5 h-5 text-emerald-500" />{t('meals', { defaultValue: 'Comidas' })}</h3>
-                <button onClick={() => setDraft({ ...draft, meals: [...draft.meals, emptyMeal(draft.meals.length + 1)] })}
-                  className="text-sm font-semibold text-emerald-600 hover:underline flex items-center gap-1">
-                  <Plus className="w-4 h-4" /> {t('add_meal', { defaultValue: 'Añadir comida' })}
-                </button>
-              </div>
-
-              {draft.meals.map((meal, mi) => (
-                <div key={meal.id} className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 border-b border-slate-100">
-                    <input value={meal.name} onChange={(e) => patchMeal(mi, { name: e.target.value })}
-                      className="font-bold text-slate-800 bg-transparent outline-none flex-1 min-w-0" />
-                    <span className="text-xs font-bold text-orange-500">{mealKcal(meal).toLocaleString()} kcal</span>
-                    <button onClick={() => setDraft({ ...draft, meals: draft.meals.filter((_, i) => i !== mi) })}
-                      className="text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                  <div className="p-3 flex flex-col gap-2">
-                    <div className="hidden sm:grid grid-cols-12 gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-wider px-1">
-                      <span className="col-span-4">{t('food', { defaultValue: 'Alimento' })}</span>
-                      <span className="col-span-1 text-center">Qty</span>
-                      <span className="col-span-2 text-center">Kcal</span>
-                      <span className="col-span-1 text-center">P</span>
-                      <span className="col-span-1 text-center">C</span>
-                      <span className="col-span-1 text-center">F</span>
-                    </div>
-                    {meal.items.map((it, ii) => (
-                      <div key={it.id} className="grid grid-cols-12 gap-2 items-center">
-                        <input value={it.name} placeholder={t('food_name_ph', { defaultValue: 'Nombre del alimento' })}
-                          onChange={(e) => patchItem(mi, ii, { name: e.target.value })}
-                          className="col-span-12 sm:col-span-4 px-2 py-1.5 rounded-lg border border-slate-200 text-sm outline-none focus:ring-1 focus:ring-emerald-500" />
-                        {(['quantity', 'calories', 'protein', 'carbs', 'fats'] as const).map((f, idx) => (
-                          <input key={f} type="number" min={0} value={(it as any)[f]}
-                            onChange={(e) => patchItem(mi, ii, { [f]: Number(e.target.value) || 0 } as any)}
-                            className={`${idx === 0 ? 'col-span-3 sm:col-span-1' : idx === 1 ? 'col-span-3 sm:col-span-2' : 'col-span-2 sm:col-span-1'} px-1.5 py-1.5 rounded-lg border border-slate-200 text-sm text-center outline-none focus:ring-1 focus:ring-emerald-500`} />
-                        ))}
-                        <button onClick={() => patchMeal(mi, { items: meal.items.filter((_, i) => i !== ii) })}
-                          className="col-span-1 text-slate-300 hover:text-red-500 flex justify-center"><X className="w-4 h-4" /></button>
-                      </div>
-                    ))}
-                    <button onClick={() => patchMeal(mi, { items: [...meal.items, emptyItem()] })}
-                      className="text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-1 mt-1">
-                      <Plus className="w-3.5 h-3.5" /> {t('add_food', { defaultValue: 'Añadir alimento' })}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------- List ---------- */
   return (
     <div className="w-full p-6 md:p-8 lg:p-10">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
@@ -269,7 +78,6 @@ export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplate
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Grid / rows toggle */}
             <div className="flex bg-slate-100 rounded-xl p-1">
               <button onClick={() => setLayout('grid')} title={t('grid_view', { defaultValue: 'Cuadrícula' })}
                 className={`p-2 rounded-lg transition-colors ${layout === 'grid' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400'}`}>
@@ -280,8 +88,8 @@ export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplate
                 <Rows3 className="w-4 h-4" />
               </button>
             </div>
-            <button onClick={() => openEditor()}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-semibold">
+            <button onClick={createAndEdit} disabled={busy}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-semibold disabled:opacity-50">
               <Plus className="w-5 h-5" />
               {t('create_template_btn', { defaultValue: 'Crear plantilla' })}
             </button>
@@ -298,7 +106,7 @@ export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplate
             <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
               <ClipboardList className="w-10 h-10 opacity-30" />
               <p className="text-sm">{t('no_templates_yet', { defaultValue: 'Aún no hay plantillas.' })}</p>
-              <button onClick={() => openEditor()} className="text-emerald-500 font-semibold hover:underline">
+              <button onClick={createAndEdit} className="text-emerald-500 font-semibold hover:underline">
                 {t('create_first_template', { defaultValue: 'Crea la primera' })}
               </button>
             </div>
@@ -307,10 +115,10 @@ export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplate
               {templates.map((tpl) => {
                 const macros = tpl.data_json?.macros;
                 const mealCount = tpl.data_json?.meals?.length;
+                const edit = () => onEditTemplate(tpl.key || tpl.id, tpl.name);
                 if (layout === 'rows') {
                   return (
-                    <div key={tpl.id || tpl.key}
-                      onClick={() => openEditor(tpl)}
+                    <div key={tpl.id || tpl.key} onClick={edit}
                       className="group flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-colors">
                       <div className="flex items-center gap-1.5 text-orange-500 font-bold w-24 shrink-0">
                         <Flame className="w-4 h-4" />{(tpl.target_calories || 0).toLocaleString()}
@@ -322,15 +130,14 @@ export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplate
                       {macros && <span className="text-[11px] font-bold text-slate-400 hidden sm:block">{macros.p}P · {macros.c}C · {macros.f}F</span>}
                       {mealCount != null && <span className="text-[11px] font-bold text-slate-400 hidden md:flex items-center gap-1"><Utensils className="w-3.5 h-3.5" />{mealCount}</span>}
                       <div className="flex gap-1">
-                        <button onClick={(e) => { e.stopPropagation(); openEditor(tpl); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); edit(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); remove(tpl); }} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                   );
                 }
                 return (
-                  <div key={tpl.id || tpl.key}
-                    onClick={() => openEditor(tpl)}
+                  <div key={tpl.id || tpl.key} onClick={edit}
                     className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -343,7 +150,7 @@ export default function NutritionPlanTemplates({ onBack }: NutritionPlanTemplate
                         <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{tpl.description || '—'}</p>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); openEditor(tpl); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); edit(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); remove(tpl); }} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>

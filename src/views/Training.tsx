@@ -18,12 +18,14 @@ export default function Training() {
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [initialPlanData, setInitialPlanData] = useState<any>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<{ id: string; name: string } | null>(null);
 
   const handleNavigate = (view: TrainingView, clientId?: string | any) => {
     if (clientId) {
       // If it's an object (from the client list), use it directly
       const client = typeof clientId === 'object' ? clientId : { id: clientId };
       setSelectedClient(client);
+      setEditingTemplate(null);  // navigating to a real client exits template mode
 
       if (view === 'weekly-view' || view === 'workout-editor') {
         if (!client.trainingPlanAssigned) {
@@ -61,11 +63,15 @@ export default function Training() {
 
       case 'weekly-view':
         return (
-          <TrainingWeeklyView 
-            client={selectedClient}
-            initialPlanData={initialPlanData}
-            onBack={() => setCurrentView('client-list')}
-            onReassign={() => setCurrentView('no-plan')}
+          <TrainingWeeklyView
+            client={editingTemplate ? { name: editingTemplate.name } : selectedClient}
+            templateId={editingTemplate ? editingTemplate.id : null}
+            initialPlanData={editingTemplate ? null : initialPlanData}
+            onBack={() => {
+              if (editingTemplate) { setEditingTemplate(null); setCurrentView('plan-templates'); }
+              else setCurrentView('client-list');
+            }}
+            onReassign={editingTemplate ? undefined : () => setCurrentView('no-plan')}
             onSelectDay={(dayId) => {
               setSelectedDayId(dayId);
               setCurrentView('workout-editor');
@@ -102,17 +108,20 @@ export default function Training() {
 
       case 'workout-editor':
         return (
-          <WorkoutEditor 
-            clientId={selectedClient?.id}
+          <WorkoutEditor
+            clientId={editingTemplate ? null : selectedClient?.id}
+            templateId={editingTemplate ? editingTemplate.id : null}
             dayId={selectedDayId}
-            initialPlanData={initialPlanData}
+            initialPlanData={editingTemplate ? null : initialPlanData}
             onEditActivity={(id, name) => {
               if (name) setSelectedActivityName(name);
               setCurrentView('activity-editor');
             }}
             onBack={() => {
               setInitialPlanData(null);
-              if (selectedClient?.trainingPlanAssigned) {
+              if (editingTemplate) {
+                setCurrentView('weekly-view');
+              } else if (selectedClient?.trainingPlanAssigned) {
                 setCurrentView('weekly-view');
               } else {
                 setCurrentView('client-list');
@@ -122,7 +131,17 @@ export default function Training() {
         );
 
       case 'plan-templates':
-        return <TrainingPlanTemplates onBack={() => setCurrentView('client-list')} />;
+        return (
+          <TrainingPlanTemplates
+            onBack={() => setCurrentView('client-list')}
+            onEditTemplate={(id, name) => {
+              setEditingTemplate({ id, name });
+              setSelectedDayId(null);
+              setInitialPlanData(null);
+              setCurrentView('weekly-view');
+            }}
+          />
+        );
 
       case 'activity-editor':
         return (

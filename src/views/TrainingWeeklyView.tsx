@@ -25,9 +25,11 @@ interface TrainingWeeklyViewProps {
   onSelectDay: (dayId: string) => void;
   onReassign?: () => void;
   initialPlanData?: any;
+  /** When set, the view edits a training TEMPLATE instead of a client program. */
+  templateId?: string | null;
 }
 
-export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReassign, initialPlanData }: TrainingWeeklyViewProps) {
+export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReassign, initialPlanData, templateId }: TrainingWeeklyViewProps) {
   const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [planData, setPlanData] = useState<any>(null);
@@ -51,6 +53,22 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
         return;
       }
 
+      // Template mode — load the template's week.
+      if (templateId) {
+        try {
+          setIsLoading(true);
+          setLoadError(null);
+          const data = await fetchWithAuth(`/manager/training-templates/${templateId}`);
+          if (data && data.data_json) setPlanData(data);
+        } catch (error: any) {
+          console.error('Error fetching training template:', error);
+          setLoadError(error?.message || t('error_loading_data'));
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       if (!client?.id) return;
       try {
         setIsLoading(true);
@@ -67,7 +85,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       }
     };
     fetchPlanData();
-  }, [client?.id, initialPlanData]);
+  }, [client?.id, initialPlanData, templateId]);
 
   const handleUpdateDay = (dayId: string, workoutId: string | null) => {
     if (!planData || !planData.data_json) return;
@@ -95,16 +113,23 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
 
   const handleSave = async () => {
     if (!planData || !planData.data_json || !hasChanges) return;
-    
+
     setIsSaving(true);
     try {
-      await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: planData.name,
-          data_json: planData.data_json
-        })
-      });
+      if (templateId) {
+        await fetchWithAuth(`/manager/training-templates/${templateId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ data_json: planData.data_json }),
+        });
+      } else {
+        await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: planData.name,
+            data_json: planData.data_json
+          })
+        });
+      }
       setHasChanges(false);
       alert(t('plan_saved_alert'));
     } catch (e) {

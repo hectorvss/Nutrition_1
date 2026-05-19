@@ -11,6 +11,8 @@ interface WorkoutEditorProps {
   dayId?: string | null;
   mode?: 'default' | 'blank';
   initialPlanData?: any;
+  /** When set, edits a training TEMPLATE instead of a client program. */
+  templateId?: string | null;
 }
 
 interface PlannedExercise {
@@ -62,7 +64,7 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onU
   );
 };
 
-export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId, mode = 'default', initialPlanData }: WorkoutEditorProps) {
+export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId, mode = 'default', initialPlanData, templateId }: WorkoutEditorProps) {
   const { t } = useLanguage();
   const { clients } = useClient();
   const { exercises } = useExerciseContext();
@@ -105,6 +107,29 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
         return;
       }
 
+      // Template mode — load the workout for this day from a template.
+      if (templateId) {
+        setIsLoading(true);
+        setLoadError(null);
+        try {
+          const data = await fetchWithAuth(`/manager/training-templates/${templateId}`);
+          const dj = data?.data_json || {};
+          setFullPlanData(dj);
+          if (dayId && dj.weeklySchedule) {
+            const w = (dj.workouts || []).find((x: any) => x.id === dj.weeklySchedule[dayId]);
+            setBlocks(w?.blocks || []);
+          } else {
+            setBlocks(dj.blocks || []);
+          }
+        } catch (err: any) {
+          console.error('Error loading training template:', err);
+          setLoadError(err?.message || t('error_loading_data'));
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       if (!clientId) return;
       setIsLoading(true);
       setLoadError(null);
@@ -140,14 +165,54 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
       }
     };
     loadProgram();
-  }, [clientId, isBlank, dayId, initialPlanData]);
+  }, [clientId, isBlank, dayId, initialPlanData, templateId]);
+
+  const buildDataJson = () => {
+    let newDataJson = { ...fullPlanData };
+    if (dayId && newDataJson.weeklySchedule) {
+      let workoutId = newDataJson.weeklySchedule[dayId];
+      let workouts = newDataJson.workouts || [];
+      if (workoutId) {
+        workouts = workouts.map((w: any) => w.id === workoutId ? { ...w, blocks } : w);
+      } else {
+        workoutId = `w_${Date.now()}`;
+        workouts.push({ id: workoutId, name: `${t('training')} ${t(dayId)}`, blocks });
+        newDataJson.weeklySchedule[dayId] = workoutId;
+      }
+      newDataJson.workouts = workouts;
+      newDataJson.type = newDataJson.type === 'template' ? 'template' : 'weekly';
+    } else {
+      newDataJson.blocks = blocks;
+    }
+    return newDataJson;
+  };
 
   const saveProgram = async () => {
+    // Template mode — persist the workout back into the template.
+    if (templateId) {
+      setIsSaving(true);
+      try {
+        const dj = buildDataJson();
+        await fetchWithAuth(`/manager/training-templates/${templateId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ data_json: dj }),
+        });
+        setFullPlanData(dj);
+        alert(t('program_saved_success'));
+      } catch (err) {
+        console.error('Error saving training template:', err);
+        alert(t('save_program_error'));
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     if (!clientId) return;
     setIsSaving(true);
     try {
       let newDataJson = { ...fullPlanData };
-      
+
       if (dayId && newDataJson.weeklySchedule) {
         // Find existing workout ID
         let workoutId = newDataJson.weeklySchedule[dayId];
