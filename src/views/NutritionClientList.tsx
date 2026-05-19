@@ -33,10 +33,18 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
       initials: client.name.substring(0, 2).toUpperCase(),
       goal: goalLabel,
       goalRaw,
-      // Real plan-derived data is not yet wired up; show honest empty states.
-      target: hasPlan ? null : t('pending_setup'),
-      macros: null,
-      macroValues: null,
+      // Plan-derived data from the client's assigned nutrition plan.
+      target: client.nutritionPlan?.calories
+        ? `${client.nutritionPlan.calories.toLocaleString()} kcal`
+        : (hasPlan ? null : t('pending_setup')),
+      macros: client.nutritionPlan?.macros || null,
+      macroValues: client.nutritionPlan?.macros
+        ? {
+            p: `${client.nutritionPlan.macros.p}%`,
+            c: `${client.nutritionPlan.macros.c}%`,
+            f: `${client.nutritionPlan.macros.f}%`,
+          }
+        : null,
       adherence: null,
       streak: null,
       status: hasPlan ? t('active_plan_status') : t('new_client_status'),

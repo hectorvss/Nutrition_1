@@ -287,7 +287,7 @@ router.get('/clients', async (req: any, res) => {
 
     const [roadmapsRes, nutritionRes, trainingRes, unreadMsgRes] = await Promise.all([
       supabaseAdmin.from('roadmaps').select('*').in('client_id', clientIds),
-      supabaseAdmin.from('nutrition_plans').select('id, client_id, name, created_at').in('client_id', clientIds),
+      supabaseAdmin.from('nutrition_plans').select('id, client_id, name, created_at, data_json').in('client_id', clientIds),
       supabaseAdmin.from('training_programs').select('id, client_id').in('client_id', clientIds),
       // Unread messages received by this manager from each client (powers the "unread DM" task rule)
       supabaseAdmin.from('messages')
@@ -328,6 +328,35 @@ router.get('/clients', async (req: any, res) => {
       if (str.includes('50-80%')) return 65;
       if (str.includes('<50%')) return 30;
       return 0;
+    };
+
+    // Summarise a nutrition plan's data_json into calories + macro split.
+    const summarizePlan = (dj: any) => {
+      if (!dj) return null;
+      let meals: any[] = [];
+      if (Array.isArray(dj.meals)) meals = dj.meals;
+      else if (dj.days) meals = dj.days.monday?.meals || (Object.values(dj.days)[0] as any)?.meals || [];
+      let cal = 0, p = 0, c = 0, f = 0;
+      meals.forEach((m: any) => (m.items || []).forEach((i: any) => {
+        const q = Number(i.quantity || i.multiplier || 1);
+        cal += (Number(i.calories) || 0) * q;
+        p += (Number(i.protein) || 0) * q;
+        c += (Number(i.carbs) || 0) * q;
+        f += (Number(i.fats) || 0) * q;
+      }));
+      const macroCal = p * 4 + c * 4 + f * 9;
+      if (macroCal > 0) {
+        return {
+          calories: Math.round(cal || macroCal),
+          macros: {
+            p: Math.round((p * 4 / macroCal) * 100),
+            c: Math.round((c * 4 / macroCal) * 100),
+            f: Math.round((f * 9 / macroCal) * 100),
+          },
+        };
+      }
+      if (dj.macros) return { calories: Math.round(cal) || dj.targetCalories || 0, macros: dj.macros };
+      return null;
     };
 
     const formattedClients = clients.map((c: any) => {
@@ -402,6 +431,7 @@ router.get('/clients', async (req: any, res) => {
         planningAssigned: !!(c.roadmaps && c.roadmaps.length > 0),
         roadmaps: c.roadmaps || [],
         plan_name: planName,
+        nutritionPlan: summarizePlan(latestNutritionPlan?.data_json),
         progress: progressValue,
         progressLabel,
         lastActivityAt,
@@ -1732,6 +1762,54 @@ router.post('/billing/portal', async (req: any, res) => {
     res.json({ url: session.url });
   } catch (error: any) {
     console.error('Error creating billing portal session:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// List supplements (global catalog + this manager's custom ones)
+router.get('/supplements', async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('supplements')
+      .select('*')
+      .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
+      .order('category', { ascending: true })
+      .order('name', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    console.error('Error fetching supplements:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Create a custom supplement for this manager
+router.post('/supplements', async (req: any, res) => {
+  try {
+    const { name, category, purpose, recommended_dose, timing, notes, emoji, language } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    const { data, error } = await supabaseAdmin
+      .from('supplements')
+      .insert({
+        name: String(name).trim(),
+        category: category || null,
+        purpose: purpose || null,
+        recommended_dose: recommended_dose || null,
+        timing: timing || null,
+        notes: notes || null,
+        emoji: emoji || null,
+        language: language || 'es',
+        is_custom: true,
+        manager_id: req.user.id
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error creating supplement:', error);
     res.status(500).json({ error: error.message || 'Server error' });
   }
 });

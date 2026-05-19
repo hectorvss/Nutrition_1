@@ -37,6 +37,8 @@ export interface ClientData {
   // Plan assignment state (localStorage-backed or API based)
   nutritionPlanAssigned: boolean;
   trainingPlanAssigned: boolean;
+  /** Summary of the assigned nutrition plan (calories + macro split). */
+  nutritionPlan?: { calories: number; macros: { p: number; c: number; f: number } } | null;
   
   // Strategic Synchronization Layer
   planningAssigned: boolean;
@@ -218,6 +220,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
              temp_password: c.clients_profiles?.[0]?.temp_password || c.tempPassword,
              nutritionPlanAssigned: (c.nutrition_plans && c.nutrition_plans.length > 0) || c.nutritionPlanAssigned || false,
              trainingPlanAssigned: (c.training_programs && c.training_programs.length > 0) || c.trainingPlanAssigned || false,
+             nutritionPlan: c.nutritionPlan || null,
              plan: c.plan_name || 'No Plan',
              progress: c.progress || 0,
              progressLabel: c.progressLabel || 'No Data',
