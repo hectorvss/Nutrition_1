@@ -3569,7 +3569,9 @@ router.get('/nutrition-templates', async (req: any, res: any) => {
     const { data, error } = await supabaseAdmin
       .from('nutrition_templates')
       .select('id, key, name, description, target_calories, data_json')
-      .eq('language', language);
+      .eq('language', language)
+      .order('target_calories', { ascending: true })
+      .order('name', { ascending: true });
 
     if (error) throw error;
     res.json(data);
@@ -3689,7 +3691,9 @@ router.get('/training-templates', async (req: any, res: any) => {
     const { data, error } = await supabaseAdmin
       .from('training_templates')
       .select('id, key, name, description, level, type, weekly_frequency, data_json')
-      .eq('language', language);
+      .eq('language', language)
+      .order('weekly_frequency', { ascending: true })
+      .order('name', { ascending: true });
 
     if (error) throw error;
     res.json(data);
