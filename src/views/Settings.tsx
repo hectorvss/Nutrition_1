@@ -36,7 +36,6 @@ import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useIntegrations } from '../context/IntegrationsContext';
 import { Globe, X } from 'lucide-react';
-import Select from '../components/ui/Select';
 import { supabase } from '../supabase';
 
 type SettingsTab = 'general' | 'profile' | 'security' | 'billing' | 'integrations' | 'appearance';
@@ -195,20 +194,9 @@ function GeneralSettings() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('timezone')}</label>
-              <Select disabled value={t('timezone_madrid_paris_berlin')} onChange={() => {}} className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-500">
-                <option>{t('timezone_madrid_paris_berlin')}</option>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('date_format')}</label>
-              <Select disabled value={t('date_format_ddmmyyyy')} onChange={() => {}} className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-500">
-                <option>{t('date_format_ddmmyyyy')}</option>
-              </Select>
-            </div>
-          </div>
+          <p className="text-xs text-slate-400 pt-4 border-t border-slate-100">
+            {t('language_drives_formats', { defaultValue: 'El idioma seleccionado también determina el formato de fechas y números. La hora se muestra en la zona horaria de tu dispositivo.' })}
+          </p>
         </div>
       </div>
     </div>
