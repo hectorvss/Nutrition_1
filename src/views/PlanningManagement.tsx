@@ -60,9 +60,9 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full sm:w-auto">
                 <button
                   onClick={() => setStatusFilter('all')}
-                  className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap ${
+                  className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap ${
                     statusFilter === 'all'
-                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      ? 'bg-[var(--brand-primary)] text-white'
                       : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
@@ -72,7 +72,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                   onClick={() => setStatusFilter('drafting')}
                   className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
                     statusFilter === 'drafting'
-                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      ? 'bg-[var(--brand-primary)] text-white'
                       : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
@@ -83,7 +83,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                   onClick={() => setStatusFilter('active')}
                   className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
                     statusFilter === 'active'
-                      ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/10'
+                      ? 'bg-[var(--brand-primary)] text-white'
                       : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >

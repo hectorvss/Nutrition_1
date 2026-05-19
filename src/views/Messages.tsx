@@ -50,9 +50,10 @@ interface Message {
 
 interface MessagesProps {
   onNavigate?: (view: string, data?: any) => void;
+  initialClientId?: string;
 }
 
-export default function Messages({ onNavigate }: MessagesProps) {
+export default function Messages({ onNavigate, initialClientId }: MessagesProps) {
   const { user } = useAuth();
   const { clients } = useClient();
   const { t, language } = useLanguage();
@@ -100,9 +101,15 @@ export default function Messages({ onNavigate }: MessagesProps) {
   // In this simplified version, if Manager, we pick the first client or let them select.
   // If Client, we need to find their manager.
   
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
   const [activeRecipient, setActiveRecipient] = useState<any>(null);
   const locale = language === 'es' ? 'es-ES' : 'en-US';
+
+  // When opened from another screen (e.g. the "Message" button on a client
+  // profile), preselect that client's conversation.
+  useEffect(() => {
+    if (initialClientId) setSelectedClientId(initialClientId);
+  }, [initialClientId]);
 
   useEffect(() => {
     if (user?.role === 'MANAGER') {
@@ -489,8 +496,8 @@ export default function Messages({ onNavigate }: MessagesProps) {
                 <button 
                   onClick={() => setFilterType('all')}
                   className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap ${
-                    filterType === 'all' 
-                      ? 'bg-slate-800 text-white' 
+                    filterType === 'all'
+                      ? 'bg-[var(--brand-primary)] text-white'
                       : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
