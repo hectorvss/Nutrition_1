@@ -1397,14 +1397,32 @@ function IntegrationsSettings() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('google_calendar_id')}</label>
-              <input 
+              <input
                 value={localIntegrations.google_calendar_id || ''}
                 onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_calendar_id: e.target.value })}
                 type="text"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none"
                 placeholder="example@gmail.com"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('google_service_account', { defaultValue: 'Cuenta de servicio (JSON)' })}</label>
+            <textarea
+              value={localIntegrations.google_service_account
+                ? (typeof localIntegrations.google_service_account === 'string'
+                    ? localIntegrations.google_service_account
+                    : JSON.stringify(localIntegrations.google_service_account, null, 2))
+                : ''}
+              onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_service_account: e.target.value })}
+              rows={4}
+              className="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 outline-none resize-none"
+              placeholder='{ "type": "service_account", "project_id": "...", "private_key": "...", "client_email": "..." }'
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              {t('google_service_account_hint', { defaultValue: 'Pega el JSON de la cuenta de servicio de Google Cloud. Es lo que permite crear eventos — comparte tu calendario con el client_email de la cuenta de servicio.' })}
+            </p>
           </div>
 
           <div className="flex justify-end pt-2 gap-2 items-center">
