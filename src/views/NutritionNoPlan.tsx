@@ -183,41 +183,45 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     8: 'extreme_bulk'
   };
 
-  // Combine hardcoded PRESETS with DB templates, prioritizing DB templates if keys match
-  const allPresets = [...PRESETS];
-  if (Array.isArray(templates)) {
-    templates.forEach(t => {
-      const existingIdx = allPresets.findIndex(p => p.id === t.key);
-      const mapped = {
-        id: t.key,
-        calories: t.target_calories,
-        title: t.name,
-        subtitle: t.description || 'Template from database',
-        tag: t.data_json?.tag || 'SaaS Plan',
-        tagColor: t.data_json?.tagColor || 'bg-emerald-50 text-emerald-600',
-        protein: t.data_json?.macros?.p || 30,
-        carbs: t.data_json?.macros?.c || 40,
-        fats: t.data_json?.macros?.f || 30,
-        weekViewLabel: t.data_json?.weekViewLabel || 'Template',
-        structure: t.data_json?.structure || 'Custom',
-        macroId: t.data_json?.macroId || 'Custom',
-        bars: Array.isArray(t.data_json?.bars) ? t.data_json.bars : [80, 80, 80, 80, 80, 80, 80],
-        recommendedFor: Array.isArray(t.data_json?.recommendedFor) ? t.data_json.recommendedFor : [],
-        isDbTemplate: true,
-        data_json: t.data_json
-      };
-      if (existingIdx >= 0) {
-        allPresets[existingIdx] = mapped;
-      } else {
-        allPresets.push(mapped);
-      }
-    });
-  }
+  // Derive a display tag from the macro split.
+  const deriveTag = (p: number, c: number, f: number) => {
+    if (f >= 45) return { tag: t('keto_diet_goal', { defaultValue: 'Keto' }), tagColor: 'bg-amber-50 text-amber-600' };
+    if (c >= 48) return { tag: t('high_carb_tag', { defaultValue: 'Alto en carbohidratos' }), tagColor: 'bg-purple-50 text-purple-600' };
+    if (p >= 38) return { tag: t('high_protein_tag', { defaultValue: 'Alto en proteínas' }), tagColor: 'bg-red-50 text-red-600' };
+    return { tag: t('balanced_tag', { defaultValue: 'Equilibrado' }), tagColor: 'bg-blue-50 text-blue-600' };
+  };
+
+  // Show the manager's real templates (from the template library). Fall back to
+  // the built-in presets only when there are no templates yet.
+  const dbPresets = (Array.isArray(templates) ? templates : []).map(tpl => {
+    const p = tpl.data_json?.macros?.p || 30;
+    const c = tpl.data_json?.macros?.c || 40;
+    const f = tpl.data_json?.macros?.f || 30;
+    const tagInfo = deriveTag(p, c, f);
+    const mealCount = tpl.data_json?.meals?.length || 0;
+    return {
+      id: tpl.key,
+      calories: tpl.target_calories,
+      title: tpl.name,
+      subtitle: tpl.description || '',
+      tag: tagInfo.tag,
+      tagColor: tagInfo.tagColor,
+      protein: p, carbs: c, fats: f,
+      weekViewLabel: mealCount ? `${mealCount} ${t('meals', { defaultValue: 'comidas' })}` : t('meals', { defaultValue: 'comidas' }),
+      structure: mealCount ? `${mealCount} ${t('meals', { defaultValue: 'comidas' })}` : 'Custom',
+      macroId: 'Custom',
+      bars: [70, 82, 76, 88, 80, 64, 58],
+      recommendedFor: tpl.data_json?.goal ? [tpl.data_json.goal] : [],
+      isDbTemplate: true,
+      data_json: tpl.data_json,
+    };
+  });
+  const allPresets: any[] = dbPresets.length > 0 ? dbPresets : [...PRESETS];
 
   const plannedRecommendedId = client?.recommendedNutritionId ? nutritionMapping[client.recommendedNutritionId] : null;
-  const recommendedPreset = allPresets.find(p => p.id === plannedRecommendedId) || 
-                       allPresets.find(p => p.recommendedFor.includes(clientGoal)) || 
-                       allPresets[1];
+  const recommendedPreset = allPresets.find(p => p.id === plannedRecommendedId) ||
+                       allPresets.find(p => p.recommendedFor.includes(clientGoal)) ||
+                       allPresets[0];
   
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);
   
@@ -235,6 +239,16 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     setDailyStructure(preset.structure);
     setMacroSplitId(preset.macroId);
   };
+
+  // Once the real templates have loaded, snap the selection to the recommended
+  // one (the initial state was computed before templates arrived).
+  React.useEffect(() => {
+    if (isLoadingTemplates) return;
+    if (!allPresets.some(p => p.id === selectedId)) {
+      handleSelectPreset(recommendedPreset);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingTemplates]);
 
   const solveMacros = (targetP: number, targetC: number, targetF: number, f1: any, f2: any, f3: any) => {
     // 3x3 Determinant calculation
