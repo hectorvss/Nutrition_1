@@ -42,7 +42,7 @@ import { Menu } from 'lucide-react';
 import LandingPage from './views/LandingPage';
 import { useLanguage } from './context/LanguageContext';
 
-type View = 'landing' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
+type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
@@ -76,15 +76,20 @@ export default function App() {
   
   if (!user && currentView === 'landing') {
     return (
-      <LandingPage 
-        onGetStarted={() => setCurrentView('dashboard')} 
-        onLogin={() => setCurrentView('dashboard')} 
+      <LandingPage
+        onGetStarted={() => setCurrentView('signup')}
+        onLogin={() => setCurrentView('login')}
       />
     );
   }
 
   if (!user) {
-    return <Login onBackToLanding={() => setCurrentView('landing')} />;
+    return (
+      <Login
+        initialMode={currentView === 'signup' ? 'signup' : 'login'}
+        onBackToLanding={() => setCurrentView('landing')}
+      />
+    );
   }
 
   // Route to the dedicated client portal if the user is a client
@@ -188,7 +193,10 @@ export default function App() {
           />
         );
       case 'clients':
-        return <Clients />;
+        return <Clients initialClientId={selectedClientId || undefined} onNavigate={(view, data) => {
+          if (data?.clientId) setSelectedClientId(data.clientId);
+          setCurrentView(view as View);
+        }} />;
       case 'check-ins':
         return (
           <CheckIns 
@@ -201,7 +209,7 @@ export default function App() {
           />
         );
       case 'messages':
-        return <Messages onNavigate={(view, data) => {
+        return <Messages initialClientId={selectedClientId || undefined} onNavigate={(view, data) => {
           if (data?.clientId) setSelectedClientId(data.clientId);
           if (data?.checkInId) setSelectedCheckInId(data.checkInId);
           setCurrentView(view as View);

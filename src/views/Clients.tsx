@@ -5,9 +5,15 @@ import AddClient from './AddClient';
 
 export type ClientViewMode = 'list' | 'detail' | 'add';
 
-export default function Clients() {
-  const [viewMode, setViewMode] = useState<ClientViewMode>('list');
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+interface ClientsProps {
+  onNavigate?: (view: string, data?: any) => void;
+  /** When provided, open straight on that client's detail view. */
+  initialClientId?: string;
+}
+
+export default function Clients({ onNavigate, initialClientId }: ClientsProps) {
+  const [viewMode, setViewMode] = useState<ClientViewMode>(initialClientId ? 'detail' : 'list');
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
 
   const handleViewDetail = (id: string) => {
     setSelectedClientId(id);
@@ -32,9 +38,10 @@ export default function Clients() {
         />
       )}
       {viewMode === 'detail' && selectedClientId && (
-        <ClientDetail 
-          clientId={selectedClientId} 
-          onBack={handleBackToList} 
+        <ClientDetail
+          clientId={selectedClientId}
+          onBack={handleBackToList}
+          onNavigate={onNavigate}
         />
       )}
       {viewMode === 'add' && (
