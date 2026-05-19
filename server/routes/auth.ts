@@ -50,6 +50,9 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token: authData.session.access_token,
+      // refresh_token lets the browser establish a real supabase-js session
+      // (required for native MFA / 2FA enrolment and challenges).
+      refresh_token: authData.session.refresh_token,
       user: userData || {
         id: authData.user.id,
         email: authData.user.email,

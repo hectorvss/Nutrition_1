@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../api';
-import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, Play } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, Play, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { supabase } from '../supabase';
 
 export default function Login({ onBackToLanding }: { onBackToLanding?: () => void }) {
   const { t } = useLanguage();
@@ -12,9 +13,56 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
+  // 2FA challenge step (shown after password when the account has MFA enabled).
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [pendingUser, setPendingUser] = useState<any>(null);
+
   const { login } = useAuth();
   const isSuccessMessage = error === t('login_account_created');
+
+  // Establishes a real supabase-js session in the browser (needed for MFA),
+  // then completes login — challenging for a 2FA code first if required.
+  const finishAuth = async (accessToken: string, refreshToken: string | undefined, userData: any, allowMfa: boolean) => {
+    if (accessToken && refreshToken) {
+      await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    }
+    if (allowMfa) {
+      try {
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal && aal.currentLevel === 'aal1' && aal.nextLevel === 'aal2') {
+          setPendingUser(userData);
+          setMfaRequired(true);
+          setLoading(false);
+          return;
+        }
+      } catch { /* no MFA configured — continue */ }
+    }
+    login(accessToken, userData);
+  };
+
+  const handleVerifyMfa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const { data: factorsData, error: fErr } = await supabase.auth.mfa.listFactors();
+      if (fErr) throw fErr;
+      const totp = (factorsData?.totp || []).find((f: any) => f.status === 'verified');
+      if (!totp) throw new Error(t('mfa_no_factor', { defaultValue: 'No 2FA factor found for this account.' }));
+      const { data: ch, error: cErr } = await supabase.auth.mfa.challenge({ factorId: totp.id });
+      if (cErr) throw cErr;
+      const { error: vErr } = await supabase.auth.mfa.verify({ factorId: totp.id, challengeId: ch.id, code: mfaCode.trim() });
+      if (vErr) throw vErr;
+      const { data: sess } = await supabase.auth.getSession();
+      login(sess?.session?.access_token || '', pendingUser);
+    } catch (err: any) {
+      setError(err.message || t('mfa_invalid_code', { defaultValue: 'Código inválido' }));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,11 +90,11 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
       }
 
       if (isLogin) {
-        login(data.token, data.user);
+        await finishAuth(data.token, data.refresh_token, data.user, true);
       } else {
-        // After successful signup, auto-login the new account.
-        if (data.token && data.user) {
-          login(data.token, data.user);
+        // After successful signup, auto-login the new account (no MFA on a brand-new account).
+        if (data.token && data.user && data.refresh_token) {
+          await finishAuth(data.token, data.refresh_token, data.user, false);
         } else {
           // Backend did not return a session: log in with the same credentials.
           const loginResponse = await fetch(`${API_URL}/auth/login`, {
@@ -58,7 +106,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
           if (!loginResponse.ok) {
             throw new Error(loginData.error || t('login_auth_failed'));
           }
-          login(loginData.token, loginData.user);
+          await finishAuth(loginData.token, loginData.refresh_token, loginData.user, false);
         }
       }
 
@@ -127,12 +175,14 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
           />
 
           <h1 className="text-3xl font-sans font-medium tracking-tight mb-3">
-            {isLogin ? t('login_welcome') : t('login_create')}
+            {mfaRequired
+              ? t('mfa_title', { defaultValue: 'Verificación en dos pasos' })
+              : (isLogin ? t('login_welcome') : t('login_create'))}
           </h1>
           <p className="text-gray-500 text-sm mb-10 leading-relaxed">
-            {isLogin 
-              ? t('login_subtitle') 
-              : t('login_subtitle_signup')}
+            {mfaRequired
+              ? t('mfa_subtitle', { defaultValue: 'Introduce el código de 6 dígitos de tu app de autenticación.' })
+              : (isLogin ? t('login_subtitle') : t('login_subtitle_signup'))}
           </p>
 
           {/* Error Message */}
@@ -153,6 +203,51 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
             )}
           </AnimatePresence>
 
+          {mfaRequired ? (
+          <form onSubmit={handleVerifyMfa} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">
+                {t('mfa_code_label', { defaultValue: 'Código de verificación' })}
+              </label>
+              <div className="relative">
+                <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-black/5 focus:border-black outline-none transition-all text-sm tracking-[0.4em] font-bold"
+                  placeholder="000000"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading || mfaCode.length < 6}
+              className="w-full py-4 bg-black text-white font-bold rounded-full shadow-lg shadow-black/5 hover:bg-gray-900 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2 flex items-center justify-center gap-2 group cursor-pointer border-none"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+              ) : (
+                <>
+                  <span>{t('mfa_verify', { defaultValue: 'Verificar' })}</span>
+                  <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMfaRequired(false); setMfaCode(''); setError(''); }}
+              className="w-full text-[11px] font-bold text-gray-400 hover:text-black transition-colors bg-transparent border-none cursor-pointer"
+            >
+              {t('mfa_back', { defaultValue: 'Volver' })}
+            </button>
+          </form>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">
@@ -210,7 +305,9 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
               )}
             </button>
           </form>
+          )}
 
+          {!mfaRequired && (
           <div className="mt-8 text-center lg:text-left">
             <p className="text-sm text-gray-500">
               {isLogin ? t('login_no_account') : t('login_has_account')}
@@ -225,6 +322,7 @@ export default function Login({ onBackToLanding }: { onBackToLanding?: () => voi
               </button>
             </p>
           </div>
+          )}
         </motion.div>
         
         {/* Footer info at left bottom */}
