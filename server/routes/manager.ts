@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { google } from 'googleapis';
 import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
+import { vapidPublicKey, pushConfigured } from '../lib/push.js';
 
 const router = Router();
 // ... (rest of the code until POST /clients)
@@ -3868,6 +3869,52 @@ router.get('/training-templates/:id', async (req: any, res: any) => {
   } catch (error: any) {
     console.error('Error fetching training template detail:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Web Push notifications ---
+
+// Public VAPID key the browser needs to create a push subscription.
+router.get('/push/vapid-public-key', async (_req: any, res) => {
+  res.json({ key: vapidPublicKey, configured: pushConfigured });
+});
+
+// Register (or refresh) a push subscription for the current device.
+router.post('/push/subscribe', async (req: any, res) => {
+  const { endpoint, keys } = req.body || {};
+  if (!endpoint || !keys?.p256dh || !keys?.auth) {
+    return res.status(400).json({ error: 'Invalid push subscription' });
+  }
+  try {
+    const { error } = await supabaseAdmin
+      .from('push_subscriptions')
+      .upsert(
+        { user_id: req.user.id, endpoint, p256dh: keys.p256dh, auth: keys.auth },
+        { onConflict: 'endpoint' }
+      );
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error saving push subscription:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
+  }
+});
+
+// Remove a push subscription (this device opted out).
+router.post('/push/unsubscribe', async (req: any, res) => {
+  const { endpoint } = req.body || {};
+  try {
+    if (endpoint) {
+      await supabaseAdmin
+        .from('push_subscriptions')
+        .delete()
+        .eq('endpoint', endpoint)
+        .eq('user_id', req.user.id);
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error removing push subscription:', error);
+    res.status(500).json({ error: error.message || 'Server error' });
   }
 });
 

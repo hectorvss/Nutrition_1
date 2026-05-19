@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { runWorkflowsForEvent } from './workflows.js';
+import { sendPushToUser } from '../lib/push.js';
 
 const router = Router();
 
@@ -254,6 +255,14 @@ router.post('/', async (req: any, res) => {
         { clientId: sender_id, messageId: message.id }).catch(err =>
         console.error('Workflow trigger error (message_received):', err));
     }
+
+    // Push notification to the receiver (respects the new_messages_push toggle).
+    sendPushToUser(receiver_id, {
+      title: 'Nuevo mensaje',
+      body: content ? String(content).slice(0, 120) : 'Has recibido un archivo adjunto.',
+      url: '/messages',
+      prefKey: 'new_messages_push',
+    }).catch(() => {});
 
     res.json(message);
   } catch (error: any) {

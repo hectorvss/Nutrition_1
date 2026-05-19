@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
+import { sendPushToUser } from '../lib/push.js';
 import { verifyManager as _verifyManager, verifyClient as _verifyClient } from '../middleware/auth.js';
 
 const router = Router();
@@ -1401,6 +1402,13 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
       runWorkflowsForEvent(clientData.manager_id, 'trigger.checkin_submitted', { clientId }).catch(err => {
         console.error('Workflow trigger error (checkin_submitted):', err);
       });
+      // Push notification to the coach (respects the new_client_check_ins_push toggle).
+      sendPushToUser(clientData.manager_id, {
+        title: 'Nuevo check-in',
+        body: 'Un cliente ha enviado un nuevo check-in.',
+        url: '/check-ins',
+        prefKey: 'new_client_check_ins_push',
+      }).catch(() => {});
     }
 
     res.json(data);

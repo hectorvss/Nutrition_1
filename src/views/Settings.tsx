@@ -35,8 +35,9 @@ import { useProfile } from '../context/ProfileContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useIntegrations } from '../context/IntegrationsContext';
-import { Globe, X } from 'lucide-react';
+import { Globe, X, Bell } from 'lucide-react';
 import { supabase } from '../supabase';
+import { enablePush, disablePush, isPushEnabled, pushSupported } from '../push';
 
 type SettingsTab = 'general' | 'profile' | 'security' | 'billing' | 'integrations' | 'appearance';
 
@@ -1323,6 +1324,40 @@ function IntegrationsSettings() {
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
 
+  // Web Push: per-device subscription state.
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    isPushEnabled().then(setPushOn);
+  }, []);
+
+  const handleTogglePush = async () => {
+    setPushBusy(true);
+    setPushMsg(null);
+    try {
+      if (pushOn) {
+        await disablePush();
+        setPushOn(false);
+      } else {
+        const r = await enablePush();
+        if (r.ok) {
+          setPushOn(true);
+        } else {
+          const map: Record<string, string> = {
+            unsupported: t('push_unsupported', { defaultValue: 'Este navegador no admite notificaciones push.' }),
+            denied: t('push_denied', { defaultValue: 'Permiso de notificaciones denegado.' }),
+            not_configured: t('push_not_configured', { defaultValue: 'Las notificaciones push no están configuradas en el servidor.' }),
+          };
+          setPushMsg(map[r.error || ''] || t('push_error', { defaultValue: 'No se pudieron activar las notificaciones.' }));
+        }
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
   const runIntegrationAction = async (key: string, endpoint: string, okText: string) => {
     setTesting(key);
     setTestMsg(null);
@@ -1524,42 +1559,52 @@ function IntegrationsSettings() {
 
       {/* Notifications Section */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">{t('notification_preferences')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('notification_prefs_desc')}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">{t('notification_preferences')}</h2>
+            <p className="text-sm text-slate-500 mt-1">{t('notification_prefs_desc')}</p>
+          </div>
+          {pushSupported() && (
+            <button
+              onClick={handleTogglePush}
+              disabled={pushBusy}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 ${
+                pushOn
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-slate-900 text-white hover:bg-slate-800'
+              }`}
+            >
+              {pushBusy
+                ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                : <Bell className="w-4 h-4" />}
+              {pushOn
+                ? t('push_enabled_device', { defaultValue: 'Push activado en este dispositivo' })
+                : t('enable_push_device', { defaultValue: 'Activar push en este dispositivo' })}
+            </button>
+          )}
         </div>
+        {pushMsg && <div className="mb-4 text-xs font-semibold text-red-600">{pushMsg}</div>}
+        <div className="mb-6" />
         <div className="divide-y divide-slate-100">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 bg-slate-50 px-4 rounded-t-lg items-center">
-            <div className="md:col-span-6 font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('event_type')}</div>
-            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('email')}</div>
+            <div className="md:col-span-9 font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('event_type')}</div>
             <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('push')}</div>
           </div>
           {[
             { id: 'new_client_check_ins', title: t('checkins'), desc: t('new_client_check_ins_desc') },
             { id: 'new_messages', title: t('messages'), desc: t('new_messages_desc') },
-            { id: 'appointment_reminders', title: t('appointment_reminders'), desc: t('appointment_reminders_desc') },
-            { id: 'system_updates', title: t('system_updates'), desc: t('system_updates_desc'), disabled: true },
           ].map((item, i) => (
             <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-4 py-4 px-4 items-center">
-              <div className="md:col-span-6">
+              <div className="md:col-span-9">
                 <h4 className="font-semibold text-slate-900 text-sm">{item.title}</h4>
                 <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
               </div>
               <div className="md:col-span-3 flex justify-center">
-                <input 
-                  type="checkbox" 
-                  checked={settings.notification_prefs?.[`${item.id}_email`]} 
-                  onChange={() => handleTogglePreference(`${item.id}_email`)}
-                  className="w-5 h-5 text-emerald-500 border-slate-300 rounded focus:ring-emerald-500/20" 
-                />
-              </div>
-              <div className="md:col-span-3 flex justify-center">
-                <input 
-                  type="checkbox" 
-                  checked={settings.notification_prefs?.[`${item.id}_push`]} 
-                  disabled={item.disabled}
+                <input
+                  type="checkbox"
+                  checked={settings.notification_prefs?.[`${item.id}_push`] ?? true}
                   onChange={() => handleTogglePreference(`${item.id}_push`)}
-                  className={`w-5 h-5 ${item.disabled ? 'text-slate-200' : 'text-emerald-500'} border-slate-300 rounded focus:ring-emerald-500/20`} 
+                  className="w-5 h-5 text-emerald-500 border-slate-300 rounded focus:ring-emerald-500/20"
                 />
               </div>
             </div>
