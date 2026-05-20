@@ -2,6 +2,7 @@ import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
+import { logger } from '../lib/logger.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -83,9 +84,11 @@ router.post('/webhook', async (req: any, res) => {
       process.env.STRIPE_WEBHOOK_SECRET || ''
     );
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
+    logger.error('stripe.webhook.signature_failed', { err: err.message });
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
+
+  logger.info('stripe.webhook.received', { eventId: event.id, type: event.type });
 
   // Idempotency guard: skip events we have already fully processed.
   const { data: alreadyProcessed } = await supabaseAdmin
@@ -95,6 +98,7 @@ router.post('/webhook', async (req: any, res) => {
     .maybeSingle();
 
   if (alreadyProcessed) {
+    logger.info('stripe.webhook.duplicate', { eventId: event.id });
     return res.json({ received: true, duplicate: true });
   }
 
@@ -148,9 +152,10 @@ router.post('/webhook', async (req: any, res) => {
     // event is retried by Stripe instead of being silently dropped as a duplicate.
     await supabaseAdmin.from('stripe_processed_events').insert({ event_id: event.id });
 
+    logger.info('stripe.webhook.processed', { eventId: event.id, type: event.type });
     res.json({ received: true });
   } catch (error: any) {
-    console.error('Webhook Event Handler Error:', error);
+    logger.error('stripe.webhook.handler_failed', { eventId: event.id, type: event.type, err: error?.message });
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 });

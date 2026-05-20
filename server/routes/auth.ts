@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import crypto from 'crypto';
 import { supabase, supabaseAdmin } from '../db/index.js';
+import { logger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -60,6 +61,7 @@ router.post('/login', async (req, res) => {
     });
 
     if (authError || !authData.user || !authData.session) {
+      logger.warn('auth.login.failed', { email, reason: authError?.message || 'invalid_credentials' });
       return res.status(401).json({ error: authError?.message || 'Invalid credentials' });
     }
 
@@ -84,6 +86,7 @@ router.post('/login', async (req, res) => {
 
     // Record the real session + login-history entry.
     await recordLogin(authData.user.id, req);
+    logger.info('auth.login.success', { userId: authData.user.id, role: userData?.role });
 
     res.json({
       token: authData.session.access_token,
@@ -96,8 +99,8 @@ router.post('/login', async (req, res) => {
         role: 'CLIENT' // fallback
       }
     });
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    logger.error('auth.login.error', { err: error?.message });
     res.status(500).json({ error: 'Server error' });
   }
 });

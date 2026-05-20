@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { resumeWaitingWorkflows, fireScheduledWorkflows } from './workflows.js';
+import { logger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -421,7 +422,7 @@ const cronHandler = async (req: any, res: any) => {
     return res.status(403).json({ error: 'Forbidden: x-cron-secret inválido o ausente' });
   }
   try {
-    console.log('Running daily automation cron...');
+    logger.info('automations.cron.started', {});
     const today = new Date();
     
     const { data: automations } = await supabaseAdmin
@@ -560,9 +561,10 @@ const cronHandler = async (req: any, res: any) => {
     const resumed = await resumeWaitingWorkflows();
     const scheduled = await fireScheduledWorkflows();
 
+    logger.info('automations.cron.completed', { workflows: { resumed, scheduled } });
     res.json({ success: true, workflows: { resumed, scheduled } });
   } catch (error: any) {
-    console.error('Cron error:', error);
+    logger.error('automations.cron.failed', { err: error?.message });
     res.status(500).json({ error: error.message });
   }
 };
