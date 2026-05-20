@@ -20,6 +20,20 @@ export default defineConfig(() => {
       },
       rollupOptions: {
         external: ['express', 'cors', 'dotenv', 'stripe', 'googleapis', '@google/genai'],
+        output: {
+          // manualChunks separa las librerias mas pesadas en su propio chunk
+          // para que (a) no inflen el bundle principal y (b) el navegador
+          // pueda cachearlas independientemente de los cambios de codigo del
+          // app. Las paginas que no usan recharts/xyflow no las descargan.
+          manualChunks: {
+            'vendor-react':    ['react', 'react-dom'],
+            'vendor-charts':   ['recharts'],
+            'vendor-flow':     ['@xyflow/react'],
+            'vendor-motion':   ['motion'],
+            'vendor-icons':    ['lucide-react'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+          },
+        },
       },
     },
     server: {
