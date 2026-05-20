@@ -3,9 +3,32 @@ import { supabaseAdmin } from '../db/index.js';
 import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { sendPushToUser } from '../lib/push.js';
-import { verifyManager as _verifyManager, verifyClient as _verifyClient } from '../middleware/auth.js';
+import { verifyManager as _verifyManager, verifyClient as _verifyClient, type AuthedRequest } from '../middleware/auth.js';
 
 const router = Router();
+
+const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+// Minimal shape of a check-in template question. Templates and answers are
+// stored as JSON in the DB and reshaped on the fly, so we lean on a structural
+// type here rather than a full schema.
+interface CheckInQuestion {
+  id: string;
+  type?: string;
+  required?: boolean;
+  is_fixed?: boolean;
+  locked?: boolean;
+  conditional?: { questionId: string; value: unknown } | null;
+  options?: Array<{ value: string; label?: string }>;
+  [k: string]: unknown;
+}
+interface CheckInSchemaStep {
+  id?: string;
+  title?: string;
+  questions?: CheckInQuestion[];
+  [k: string]: unknown;
+}
+type CheckInAnswers = Record<string, unknown>;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -263,7 +286,7 @@ const GENERAL_CHECKIN_SCHEMA = [
   }
 ];
 
-const injectFixedQuestions = (schema: any[]) => {
+const injectFixedQuestions = (schema: CheckInSchemaStep[]) => {
   // Non-destructive injection: only add a fixed step if its question IDs
   // are not already present ANYWHERE in the existing template.
   // This way, the "General Check-in" (which already has the slider, measurements, etc.)
@@ -272,7 +295,7 @@ const injectFixedQuestions = (schema: any[]) => {
   
   // Build a set of all question IDs already in the template
   const existingQuestionIds = new Set<string>(
-    safeSchema.flatMap(step => (step.questions || []).map((q: any) => q.id))
+    safeSchema.flatMap(step => (step.questions || []).map((q: CheckInQuestion) => q.id))
   );
 
   // Build a set of step IDs already in the template (to avoid duplicates)
@@ -283,7 +306,7 @@ const injectFixedQuestions = (schema: any[]) => {
     // Skip if this step ID already exists in the template
     if (existingStepIds.has(fixedStep.id)) return false;
     // Skip if all of this step's questions are already in the template
-    const fixedQIds = (fixedStep.questions || []).map((q: any) => q.id);
+    const fixedQIds = (fixedStep.questions || []).map((q: CheckInQuestion) => q.id);
     const allPresent = fixedQIds.every((id: string) => existingQuestionIds.has(id));
     return !allPresent;
   });
@@ -295,9 +318,9 @@ const injectFixedQuestions = (schema: any[]) => {
 // answer in `answers`. Mirrors the client-side validation: conditional
 // questions that are not currently visible are skipped, and composite types
 // (measurement_group / photo_group) store values under derived keys.
-const findMissingRequired = (schema: any[], answers: any): string[] => {
+const findMissingRequired = (schema: CheckInSchemaStep[], answers: CheckInAnswers): string[] => {
   const ans = answers || {};
-  const isVisible = (q: any): boolean => {
+  const isVisible = (q: CheckInQuestion): boolean => {
     if (q.hidden) return false;
     if (!q.conditional) return true;
     const { field, operator, value } = q.conditional;
@@ -307,7 +330,7 @@ const findMissingRequired = (schema: any[], answers: any): string[] => {
     if (operator === 'contains') return Array.isArray(fv) && fv.includes(value);
     return true;
   };
-  const isAnswered = (q: any): boolean => {
+  const isAnswered = (q: CheckInQuestion): boolean => {
     if (q.type === 'measurement_group') {
       return (q.options || []).some((o: string) => {
         const v = ans[o]; return v !== undefined && v !== null && v !== '';
@@ -386,7 +409,7 @@ const verifyManager = _verifyManager;
 // go through the template-based POST /client/submissions. This stub returns
 // 410 Gone so any stale client gets a clear error instead of silently writing
 // data into the legacy table that the rest of the app no longer maintains.
-router.post('/client/check-ins', verifyClient, async (req: any, res) => {
+router.post('/client/check-ins', verifyClient, async (req: AuthedRequest, res) => {
   console.warn('[REMOVED] POST /check-ins/client/check-ins called by', req.user?.id, '— use POST /check-ins/client/submissions');
   res.status(410).json({
     error: 'This endpoint has been removed. Submit check-ins via POST /check-ins/client/submissions.'
@@ -396,7 +419,7 @@ router.post('/client/check-ins', verifyClient, async (req: any, res) => {
 // Client: Get my check-in history
 // Unified: merges legacy `check_ins` and dynamic `client_checkin_submissions`
 // so the client sees every check-in regardless of which system created it.
-router.get('/client/check-ins', verifyClient, async (req: any, res) => {
+router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) => {
   const clientId = req.user.id;
   try {
     // 1. Legacy check-ins
@@ -421,7 +444,7 @@ router.get('/client/check-ins', verifyClient, async (req: any, res) => {
     if (dynamicError) throw dynamicError;
 
     // 3. Map to unified format (same shape the manager endpoint returns)
-    const legacyParsed = (legacyData || []).map((ci: any) => ({
+    const legacyParsed = (legacyData || []).map((ci: Record<string, any>) => ({
       ...ci,
       type: 'legacy',
       reviewed_at: ci.reviewed_at || (ci.data_json?.reviewed_at) || null,
@@ -429,7 +452,7 @@ router.get('/client/check-ins', verifyClient, async (req: any, res) => {
       next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
     }));
 
-    const dynamicParsed = (dynamicData || []).map((ci: any) => ({
+    const dynamicParsed = (dynamicData || []).map((ci: Record<string, any>) => ({
       id: ci.id,
       client_id: ci.client_id,
       date: ci.submitted_at,
@@ -453,7 +476,7 @@ router.get('/client/check-ins', verifyClient, async (req: any, res) => {
     );
 
     res.json(allCheckIns);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching client check-ins:', error);
     res.status(500).json({ error: 'Server error' });
   }
@@ -462,7 +485,7 @@ router.get('/client/check-ins', verifyClient, async (req: any, res) => {
 // Client: Get a single check-in by ID
 // Unified: tries the dynamic table first, then falls back to legacy.
 // Returns { client, check_in } so the shared CheckInReview view works in client mode.
-router.get('/client/check-ins/:checkInId', verifyClient, async (req: any, res) => {
+router.get('/client/check-ins/:checkInId', verifyClient, async (req: AuthedRequest, res) => {
   const { checkInId } = req.params;
   const clientId = req.user.id;
   try {
@@ -542,14 +565,14 @@ router.get('/client/check-ins/:checkInId', verifyClient, async (req: any, res) =
     };
 
     res.json({ client, check_in: formatted });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching single check-in:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Get check-ins list for a specific client
-router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res) => {
+router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRequest, res) => {
   const { id } = req.params;
   const managerId = req.user.id;
 
@@ -607,7 +630,7 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res
     if (dynamicError) throw dynamicError;
 
     // 3. Map to unified format
-    const legacyParsed = (legacyData || []).map((ci: any) => ({
+    const legacyParsed = (legacyData || []).map((ci: Record<string, any>) => ({
       ...ci,
       type: 'legacy',
       reviewed_at: ci.reviewed_at || (ci.data_json?.reviewed_at) || null,
@@ -615,7 +638,7 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res
       next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
     }));
 
-    const dynamicParsed = (dynamicData || []).map((ci: any) => ({
+    const dynamicParsed = (dynamicData || []).map((ci: Record<string, any>) => ({
       id: ci.id,
       client_id: ci.client_id,
       date: ci.submitted_at,
@@ -639,14 +662,14 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: any, res
     );
 
     res.json({ client: client, check_ins: allCheckIns });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching client check-ins for manager:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Get a single check-in by ID
-router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (req: any, res) => {
+router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (req: AuthedRequest, res) => {
   const { id, checkInId } = req.params;
   const managerId = req.user.id;
 
@@ -736,14 +759,14 @@ router.get('/manager/clients/:id/check-ins/:checkInId', verifyManager, async (re
     };
 
     res.json({ client, check_in: formatted });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching single check-in for manager:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Save coach review/assessment for a check-in
-router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, async (req: any, res) => {
+router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, async (req: AuthedRequest, res) => {
   const { id, checkInId } = req.params;
   const { coach_notes, next_week_focus } = req.body;
   const managerId = req.user.id;
@@ -819,7 +842,7 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
     }
 
     res.json({ success: true, data: legacyUpdate, method: 'columns' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error saving coach review:', error);
     res.status(500).json({ error: 'Server error' });
   }
@@ -828,7 +851,7 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
 // --- Check-in Templates Routes ---
 
 // Manager: Get all templates (active only)
-router.get('/manager/checkin-templates', verifyManager, async (req: any, res) => {
+router.get('/manager/checkin-templates', verifyManager, async (req: AuthedRequest, res) => {
   const managerId = req.user.id;
   try {
     const { data, error } = await supabaseAdmin
@@ -841,10 +864,10 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
     if (error) throw error;
 
     // Guaranteed array — the query can return null, and we mutate it below.
-    const list: any[] = data || [];
+    const list: Record<string, any>[] = data || [];
 
     // --- AUTO-INJECT GENERAL CHECK-IN IF MISSING ---
-    const hasPermanent = list.some((t: any) => t.is_permanent || t.name === 'General Check-in');
+    const hasPermanent = list.some((t: Record<string, any>) => t.is_permanent || t.name === 'General Check-in');
     
     if (!hasPermanent) {
       console.log(`[CheckIn] General Check-in not found in list for manager: ${managerId}. Searching in all (including archived)...`);
@@ -860,7 +883,7 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
       if (existing) {
         // It exists but was filtered (archived or other reason) - unarchive it
         console.log(`[CheckIn] Found existing General Check-in (id: ${existing.id}). Restoring...`);
-        const updatePayload: any = { 
+        const updatePayload: Record<string, any> = {
           template_schema: (existing.template_schema?.length > 0) ? existing.template_schema : GENERAL_CHECKIN_SCHEMA
         };
         // Only add these if the column exists (safe to try; will be ignored if it doesn't)
@@ -882,7 +905,7 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
       } else {
         // No General Check-in exists at all — create it now
         console.log(`[CheckIn] Creating new General Check-in for manager ${managerId}...`);
-        const insertPayload: any = {
+        const insertPayload: Record<string, any> = {
           manager_id: managerId,
           name: 'General Check-in',
           description: 'Comprehensive weekly check-in template. Tracks adherence, body progress, recovery, training, and more.',
@@ -907,14 +930,14 @@ router.get('/manager/checkin-templates', verifyManager, async (req: any, res) =>
     }
 
     res.json(list);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching templates:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Create a new template
-router.post('/manager/checkin-templates', verifyManager, async (req: any, res) => {
+router.post('/manager/checkin-templates', verifyManager, async (req: AuthedRequest, res) => {
   const managerId = req.user.id;
   const { name, description, template_schema, is_default } = req.body;
 
@@ -941,14 +964,14 @@ router.post('/manager/checkin-templates', verifyManager, async (req: any, res) =
 
     if (error) throw error;
     res.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating template:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Update a template (Rename, Schema, Status)
-router.patch('/manager/checkin-templates/:id', verifyManager, async (req: any, res) => {
+router.patch('/manager/checkin-templates/:id', verifyManager, async (req: AuthedRequest, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
   // NOTE: 'is_active' is a real column; 'status' is NOT (it does not exist on
@@ -1004,14 +1027,14 @@ router.patch('/manager/checkin-templates/:id', verifyManager, async (req: any, r
       return res.status(409).json({ error: 'Template was modified concurrently. Reload and try again.' });
     }
     res.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating template:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Duplicate a template
-router.post('/manager/checkin-templates/:id/duplicate', verifyManager, async (req: any, res) => {
+router.post('/manager/checkin-templates/:id/duplicate', verifyManager, async (req: AuthedRequest, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
 
@@ -1042,14 +1065,14 @@ router.post('/manager/checkin-templates/:id/duplicate', verifyManager, async (re
 
     if (error) throw error;
     res.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error duplicating template:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Delete/Archive a template
-router.delete('/manager/checkin-templates/:id', verifyManager, async (req: any, res) => {
+router.delete('/manager/checkin-templates/:id', verifyManager, async (req: AuthedRequest, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
 
@@ -1084,7 +1107,7 @@ router.delete('/manager/checkin-templates/:id', verifyManager, async (req: any, 
 
     if (error) throw error;
     res.json({ success: true, method: 'deleted' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting template:', error);
     res.status(500).json({ error: 'Server error' });
   }
@@ -1094,7 +1117,7 @@ router.delete('/manager/checkin-templates/:id', verifyManager, async (req: any, 
 
 // GET /manager/checkin-assignments
 // List active assignments for manager's clients
-router.get('/manager/checkin-assignments', verifyManager, async (req: any, res: any) => {
+router.get('/manager/checkin-assignments', verifyManager, async (req: AuthedRequest, res) => {
   // We assume verifyManager already sets req.user and checks manager role if needed
   const managerId = req.user.id;
   try {
@@ -1112,17 +1135,17 @@ router.get('/manager/checkin-assignments', verifyManager, async (req: any, res: 
 
     // Filter by manager_id in memory or ideally via a complex join
     // Since we joined with users!client_id, we can filter
-    const filtered = (data || []).filter((a: any) => a.client?.manager_id === managerId);
+    const filtered = (data || []).filter((a: Record<string, any>) => a.client?.manager_id === managerId);
 
     res.json(filtered);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: errMessage(err) });
   }
 });
 
 // POST /manager/assign-template
 // Assign a template to a client
-router.post('/manager/assign-template', verifyManager, async (req: any, res: any) => {
+router.post('/manager/assign-template', verifyManager, async (req: AuthedRequest, res) => {
   const { client_id, template_id } = req.body;
   const managerId = req.user.id;
   try {
@@ -1171,8 +1194,8 @@ router.post('/manager/assign-template', verifyManager, async (req: any, res: any
 
     if (assignError) throw assignError;
     res.json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: errMessage(err) });
   }
 });
 
@@ -1180,7 +1203,7 @@ router.post('/manager/assign-template', verifyManager, async (req: any, res: any
 
 // GET /client/active-template
 // Resolve and return the active template for the authenticated client
-router.get('/client/active-template', verifyClient, async (req: any, res: any) => {
+router.get('/client/active-template', verifyClient, async (req: AuthedRequest, res) => {
   const clientId = req.user.id;
 
   try {
@@ -1197,7 +1220,7 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     if (assignmentError) throw assignmentError;
 
     if (assignment?.template) {
-      const template = assignment.template as any;
+      const template = assignment.template as Record<string, any>;
       if (template && !Array.isArray(template)) {
         // Inject the fixed (required, non-deletable) questions so the client
         // always collects the canonical KPI variables.
@@ -1241,13 +1264,13 @@ router.get('/client/active-template', verifyClient, async (req: any, res: any) =
     }
 
     res.json(null);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: errMessage(err) });
   }
 });
 
 // Save check-in data with template association and schema snapshot
-router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
+router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res) => {
   const clientId = req.user.id;
   const { template_id, answers_json } = req.body;
 
@@ -1270,7 +1293,7 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
     }
 
     // 2. Fetch the requested template (only if template_id is a valid UUID)
-    let template: any = null;
+    let template: Record<string, any> | null = null;
     if (template_id && UUID_RE.test(String(template_id))) {
       const { data: found } = await supabaseAdmin
         .from('checkin_templates')
@@ -1333,8 +1356,8 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
 
     // --- Sync Fixed Questions to Profile ---
     try {
-      const answers = answers_json as any;
-      const updates: any = {};
+      const answers = answers_json as Record<string, any>;
+      const updates: Record<string, any> = {};
       
       // Look for weight & macros
       const weight = answers.weight || answers.Weight || answers['Current Weight'];
@@ -1370,7 +1393,7 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
             .eq('user_id', clientId)
             .single();
           
-          const currentMetadata = (profile as any)?.metadata || {};
+          const currentMetadata = (profile as Record<string, any> | null)?.metadata || {};
           const prevMeasurements = currentMetadata.measurements || {};
 
           // Update profile
@@ -1417,14 +1440,14 @@ router.post('/client/submissions', verifyClient, async (req: any, res: any) => {
     }
 
     res.json(data);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error saving submission:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: errMessage(err) });
   }
 });
 
 // Manager: Delete check-in (Legacy)
-router.delete('/manager/check-ins/:checkInId', verifyManager, async (req: any, res) => {
+router.delete('/manager/check-ins/:checkInId', verifyManager, async (req: AuthedRequest, res) => {
   const { checkInId } = req.params;
   const managerId = req.user.id;
   try {
@@ -1454,14 +1477,14 @@ router.delete('/manager/check-ins/:checkInId', verifyManager, async (req: any, r
 
     if (deleteError) throw deleteError;
     res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error deleting legacy check-in:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Manager: Delete dynamic check-in submission
-router.delete('/manager/client-submissions/:submissionId', verifyManager, async (req: any, res) => {
+router.delete('/manager/client-submissions/:submissionId', verifyManager, async (req: AuthedRequest, res) => {
   const { submissionId } = req.params;
   const managerId = req.user.id;
   try {
@@ -1491,7 +1514,7 @@ router.delete('/manager/client-submissions/:submissionId', verifyManager, async 
 
     if (deleteError) throw deleteError;
     res.json({ success: true });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error deleting dynamic check-in:', err);
     res.status(500).json({ error: 'Server error' });
   }
@@ -1499,7 +1522,7 @@ router.delete('/manager/client-submissions/:submissionId', verifyManager, async 
 
 // Manager: the canonical fixed/locked questions injected into every check-in.
 // Exposed so the template editor can show them as read-only, non-deletable.
-router.get('/manager/fixed-questions', verifyManager, async (_req: any, res) => {
+router.get('/manager/fixed-questions', verifyManager, async (_req: AuthedRequest, res) => {
   res.json(FIXED_CHECKIN_QUESTIONS);
 });
 
