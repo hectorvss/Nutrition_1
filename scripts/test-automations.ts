@@ -199,11 +199,14 @@ async function run() {
   const authHeaders = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   const getRes = await fetch(`${API}/automations`, { headers: authHeaders });
-  const seeded = getRes.ok ? await getRes.json() : [];
+  const seededResp: any = getRes.ok ? await getRes.json() : null;
+  // El endpoint ahora devuelve { data: [...], nextCursor, hasMore }; aceptamos
+  // tambien el shape legacy array por si el handler revierte en el futuro.
+  const seeded: any[] = Array.isArray(seededResp) ? seededResp : (seededResp?.data || []);
   check('GET /automations returns 200 (no upsert/onConflict 500)', getRes.status === 200,
     `status=${getRes.status}`);
   check('GET seeds 7 default automations for a new manager',
-    Array.isArray(seeded) && seeded.length === 7, `count=${seeded?.length}`);
+    seeded.length === 7, `count=${seeded.length}`);
 
   const postRes = await fetch(`${API}/automations`, {
     method: 'POST', headers: authHeaders,
@@ -234,9 +237,10 @@ async function run() {
     method: 'DELETE', headers: authHeaders });
   check('DELETE /automations/:id removes automation', delRes.status === 200, `status=${delRes.status}`);
   const getRes2 = await fetch(`${API}/automations`, { headers: authHeaders });
-  const after = getRes2.ok ? await getRes2.json() : [];
+  const afterResp: any = getRes2.ok ? await getRes2.json() : null;
+  const after: any[] = Array.isArray(afterResp) ? afterResp : (afterResp?.data || []);
   check('deleted automation no longer listed',
-    Array.isArray(after) && !after.some((a: any) => a.id === created?.id));
+    !after.some((a: any) => a.id === created?.id));
 
   console.log(`\n=== Result: ${pass} passed, ${fail} failed ===\n`);
 }

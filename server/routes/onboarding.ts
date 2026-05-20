@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { safeErr } from '../lib/http.js';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager, verifyClient } from '../middleware/auth.js';
+import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 
 const router = Router();
 
@@ -112,19 +113,25 @@ const findMissingRequired = (schema: any[], answers: any): string[] => {
 
 // --- Onboarding Templates (Manager) ---
 
-// Get all templates (including global ones with manager_id = null)
+// Get all templates (paginado DESC por created_at; is_default tiene
+// preferencia visual pero el cursor solo opera sobre created_at + id).
 router.get('/manager/templates', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('onboarding_templates')
       .select('*')
       .or(`manager_id.eq.${managerId},manager_id.is.null`)
       .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    const { data, error } = await q;
 
     if (error) throw error;
-    res.json(data || []);
+    res.json(buildPage(data || [], page.limit, 'created_at'));
   } catch (error: any) {
     console.error('Error fetching onboarding templates:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -304,51 +311,66 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
   }
 });
 
-// Get all client assignments (for the list view)
+// Get all client assignments (paginado DESC por created_at)
 router.get('/manager/assignments', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
+  const page = parsePagination(req, { defaultLimit: 100, maxLimit: 500 });
   try {
     const { data: myClients } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('manager_id', managerId)
       .eq('role', 'CLIENT');
-    
-    const clientIds = (myClients || []).map(c => c.id);
-    if (clientIds.length === 0) return res.json([]);
 
-    const { data: assignments, error: assignErr } = await supabaseAdmin
+    const clientIds = (myClients || []).map(c => c.id);
+    if (clientIds.length === 0) {
+      return res.json(buildPage<any>([], page.limit, 'created_at'));
+    }
+
+    let q = supabaseAdmin
       .from('client_onboarding_assignments')
       .select('*, template:onboarding_templates(name)')
       .in('client_id', clientIds)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    const { data: assignments, error: assignErr } = await q;
 
     if (assignErr) throw assignErr;
-    res.json(assignments || []);
+    res.json(buildPage(assignments || [], page.limit, 'created_at'));
   } catch (error: any) {
     res.status(500).json({ error: safeErr(error) });
   }
 });
 
-// Get submissions for a manager''s clients
+// Get submissions for a manager's clients (paginado DESC por submitted_at)
 router.get('/manager/submissions', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
     const { data: myClients, error: clientsErr } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('manager_id', managerId)
       .eq('role', 'CLIENT');
-    
+
     if (clientsErr) throw clientsErr;
     const clientIds = (myClients || []).map(c => c.id);
-    if (clientIds.length === 0) return res.json([]);
+    if (clientIds.length === 0) {
+      return res.json(buildPage<any>([], page.limit, 'submitted_at'));
+    }
 
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('client_onboarding_submissions')
       .select('*, client:profiles!client_id(full_name, avatar_url), template:onboarding_templates(id, name, template_schema)')
       .in('client_id', clientIds)
-      .order('submitted_at', { ascending: false });
+      .order('submitted_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'submitted_at', 'desc');
+    const { data, error } = await q;
 
     if (error) throw error;
 
@@ -357,7 +379,7 @@ router.get('/manager/submissions', verifyManager, async (req: any, res) => {
       ...s,
       template: s.template_snapshot_json || s.template
     }));
-    res.json(result);
+    res.json(buildPage(result, page.limit, 'submitted_at'));
   } catch (error: any) {
     console.error('Error fetching onboarding submissions:', error);
     res.status(500).json({ error: safeErr(error) });

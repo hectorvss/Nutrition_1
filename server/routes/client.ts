@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { safeErr } from '../lib/http.js';
 import { supabase, supabaseAdmin } from '../db/index.js';
+import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 
 const router = Router();
 
@@ -178,18 +179,21 @@ router.post('/workout-logs', async (req: any, res) => {
   }
 });
 
-// Get my workout history
+// Get my workout history (paginado DESC por logged_at)
 router.get('/workout-logs', async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('workout_logs')
       .select('*')
       .eq('client_id', req.user.id)
       .order('logged_at', { ascending: false })
-      .limit(50);
-
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'logged_at', 'desc');
+    const { data, error } = await q;
     if (error) throw error;
-    res.json(data || []);
+    res.json(buildPage(data || [], page.limit, 'logged_at'));
   } catch (error: any) {
     console.error('Error fetching workout logs:', error);
     res.status(500).json({ error: safeErr(error) });

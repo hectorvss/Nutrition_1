@@ -47,13 +47,15 @@ async function run() {
   // [1] Templates load (the 500-bug fix)
   console.log('[1] Templates load');
   const nt = await fetch(`${API}/manager/nutrition-templates`, { headers: H });
-  const ntData = nt.ok ? await nt.json() : [];
+  const ntResp: any = nt.ok ? await nt.json() : null;
+  const ntData: any[] = Array.isArray(ntResp) ? ntResp : (ntResp?.data || []);
   check('GET nutrition-templates 200', nt.status === 200, `status=${nt.status}`);
-  check('nutrition templates seeded (>=8)', Array.isArray(ntData) && ntData.length >= 8, `count=${ntData?.length}`);
+  check('nutrition templates seeded (>=8)', ntData.length >= 8, `count=${ntData.length}`);
   const tt = await fetch(`${API}/manager/training-templates`, { headers: H });
-  const ttData = tt.ok ? await tt.json() : [];
+  const ttResp: any = tt.ok ? await tt.json() : null;
+  const ttData: any[] = Array.isArray(ttResp) ? ttResp : (ttResp?.data || []);
   check('GET training-templates 200', tt.status === 200, `status=${tt.status}`);
-  check('training templates seeded (>=8)', Array.isArray(ttData) && ttData.length >= 8, `count=${ttData?.length}`);
+  check('training templates seeded (>=8)', ttData.length >= 8, `count=${ttData.length}`);
 
   // [2] Assign a nutrition plan to the client (the ON CONFLICT bug fix)
   console.log('[2] Assign + edit nutrition plan');

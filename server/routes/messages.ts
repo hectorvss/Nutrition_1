@@ -148,7 +148,25 @@ router.get('/recent', async (req: any, res) => {
       };
     });
 
-    res.json(recentData);
+    // Paginacion in-memory por created_at DESC. La query DB ya viene
+    // ordenada por created_at DESC con cap 500 mensajes; despues del
+    // groupby el array de conversaciones esta tambien ordenado. Aplicamos
+    // cursor manualmente porque el groupby ocurre fuera de la BD.
+    recentData.sort((a: any, b: any) => {
+      const dt = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (dt !== 0) return dt;
+      return String(b.id).localeCompare(String(a.id));
+    });
+    const page = parsePagination(req, { defaultLimit: 30, maxLimit: 100 });
+    let filtered = recentData;
+    if (page.cursor) {
+      const cv = page.cursor.v, ci = page.cursor.i;
+      filtered = recentData.filter((m: any) => {
+        const ts = m.created_at;
+        return ts < cv || (ts === cv && String(m.id) < ci);
+      });
+    }
+    res.json(buildPage(filtered, page.limit, 'created_at'));
   } catch (error: any) {
     console.error('Error fetching recent messages:', error);
     res.status(500).json({ error: safeErr(error) });

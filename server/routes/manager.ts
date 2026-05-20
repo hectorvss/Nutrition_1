@@ -8,6 +8,7 @@ import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { vapidPublicKey, pushConfigured } from '../lib/push.js';
 import { nutritionPlanSchema, trainingProgramSchema } from '../schemas/plans.js';
+import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { limitsForTier, isAccessBlocked, trialDaysLeft, makeEnforceLimit, type PlanTier } from '../lib/plans.js';
 
 // Limit enforcer for client creation. Counts active clients under this manager
@@ -272,21 +273,16 @@ router.get('/integrations/stripe/balance', async (req: any, res) => {
   }
 });
 
-// Get all clients for this manager with plan status
+// Get all clients for this manager with plan status (paginado DESC por created_at)
+//
+// Cursor keyset sobre users.created_at + id. La query trae limit+1 filas;
+// los joins anidados (check_ins, submissions, workout_logs, tasks) los
+// ordena PostgREST por sus propios sort fields pero el cursor opera sobre
+// el row del USER. Asi una pagina = limit clientes con sus sub-recursos.
 router.get('/clients', async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    // Safety cap: nunca descargamos mas de 500 clientes por peticion.
-    // Hoy el SaaS no tiene managers con tantos clientes, pero esto evita un
-    // payload gigante si en algun momento se llega (~500 clientes a ~5kB
-    // cada uno = 2.5MB por response). Si se hit el cap, devolvemos los 500
-    // mas nuevos (created_at DESC) y emitimos un warning header para
-    // disparar la migracion a paginacion real en el frontend.
-    //
-    // TODO: cuando un manager llegue a >500 clientes, migrar este endpoint
-    // a cursor-based como /messages y /check-ins. El helper ya existe en
-    // server/lib/pagination.ts.
-    const HARD_CAP = 500;
-    const { data: clients, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('users')
       .select(`
         id,
@@ -304,20 +300,25 @@ router.get('/clients', async (req: any, res) => {
       .eq('role', 'CLIENT')
       .eq('tasks.manager_id', req.user.id) // Filter joined tasks by manager_id too
       .order('created_at', { ascending: false }) // orden principal estable
+      .order('id', { ascending: false })
       .order('date', { foreignTable: 'check_ins', ascending: false })
       .order('submitted_at', { foreignTable: 'client_checkin_submissions', ascending: false })
       .order('logged_at', { foreignTable: 'workout_logs', ascending: false })
-      .limit(HARD_CAP);
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    const { data: clientsRaw, error } = await q;
 
     if (error) throw error;
-    if (clients && clients.length >= HARD_CAP) {
-      // Audit-trail para descubrir cuando el cap empieza a importar.
-      // El frontend puede leer el header `X-Result-Truncated` si quiere
-      // mostrar al coach "tienes mas de 500 clientes — pagina pronto".
-      res.setHeader('X-Result-Truncated', 'true');
-      res.setHeader('X-Result-Cap', String(HARD_CAP));
+
+    // Detectamos si hay mas paginas a partir del +1. Recortamos a limit
+    // ANTES de agregar sub-recursos para no hacer trabajo extra.
+    const hasMore = (clientsRaw || []).length > page.limit;
+    const clients = hasMore ? (clientsRaw || []).slice(0, page.limit) : (clientsRaw || []);
+
+    if (clients.length === 0) {
+      // Devolvemos el shape paginado con array vacio.
+      return res.json({ data: [], nextCursor: null, hasMore: false });
     }
-    if (!clients || clients.length === 0) return res.json([]);
 
     // Fetch related plans separately since direct joins may lack foreign key mapping in cache
     const clientIds = clients.map(c => c.id);
@@ -519,7 +520,23 @@ router.get('/clients', async (req: any, res) => {
       };
     });
     
-    res.json(formattedClients);
+    // Construimos el cursor de la siguiente pagina desde el ULTIMO cliente
+    // visible (created_at + id). Solo emitimos cursor si hubo mas filas en
+    // BD (hasMore detectado al inicio).
+    let nextCursor: string | null = null;
+    if (hasMore && formattedClients.length > 0) {
+      const lastRaw = clients[clients.length - 1];
+      if (lastRaw?.created_at && lastRaw?.id) {
+        // Codifica { v: created_at, i: id } en base64. Inline en lugar
+        // de importar encodeCursor para evitar tener que cambiar la firma
+        // de buildPage (que asume sortKey en cada row del array transformado).
+        nextCursor = Buffer.from(
+          JSON.stringify({ v: String(lastRaw.created_at), i: String(lastRaw.id) }),
+          'utf8',
+        ).toString('base64');
+      }
+    }
+    res.json({ data: formattedClients, nextCursor, hasMore });
   } catch (error: any) {
     console.error('Error fetching clients:', error);
     res.status(500).json({ error: error?.message || 'Server error' });
@@ -1970,17 +1987,25 @@ router.post('/billing/portal', async (req: any, res) => {
   }
 });
 
-// List supplements (global catalog + this manager's custom ones)
+// List supplements (paginado ASC por category + id tiebreak).
+// El sort secundario por `name` se mantiene como criterio dentro de la
+// misma categoria pero NO entra en el cursor (mismo razonamiento que en
+// templates: el coach navega por categoria, name es solo presentacion).
 router.get('/supplements', async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 100, maxLimit: 300 });
   try {
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('supplements')
       .select('*')
       .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
       .order('category', { ascending: true })
-      .order('name', { ascending: true });
+      .order('name', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'category', 'asc');
+    const { data, error } = await q;
     if (error) throw error;
-    res.json(data || []);
+    res.json(buildPage(data || [], page.limit, 'category'));
   } catch (error: any) {
     console.error('Error fetching supplements:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -2058,19 +2083,21 @@ router.post('/update-password', async (req: any, res) => {
   }
 });
 
-// Get active sessions
+// Get active sessions (paginadas DESC por last_active)
 router.get('/security/sessions', async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 20, maxLimit: 100 });
   try {
-    const { data: sessions, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('user_sessions')
       .select('*')
       .eq('user_id', req.user.id)
-      .order('last_active', { ascending: false });
-
+      .order('last_active', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'last_active', 'desc');
+    const { data: sessions, error } = await q;
     if (error) throw error;
-
-    // Real sessions only — recorded on each login. No mock fallback.
-    res.json(sessions || []);
+    res.json(buildPage(sessions || [], page.limit, 'last_active'));
   } catch (error) {
     console.error('Error fetching sessions:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -2116,20 +2143,21 @@ router.post('/security/sessions/revoke-all', async (req: any, res) => {
   }
 });
 
-// Get login history
+// Get login history (paginado DESC por timestamp)
 router.get('/security/history', async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 10, maxLimit: 100 });
   try {
-    const { data: history, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('login_history')
       .select('*')
       .eq('user_id', req.user.id)
       .order('timestamp', { ascending: false })
-      .limit(10);
-
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'timestamp', 'desc');
+    const { data: history, error } = await q;
     if (error) throw error;
-
-    // Real login history only — recorded on each login. No mock fallback.
-    res.json(history || []);
+    res.json(buildPage(history || [], page.limit, 'timestamp'));
   } catch (error) {
     console.error('Error fetching history:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -3353,17 +3381,25 @@ router.post('/clients/:id/supplementation', async (req: any, res) => {
 
 // Get all tasks for this manager
 router.get('/tasks', async (req: any, res) => {
+  // Tareas paginadas cronologicamente ASC (las mas proximas primero).
+  // Cursor keyset sobre `date`; usamos `id` como tiebreaker. El campo
+  // `time` queda como sort secundario solo dentro del mismo `date` — no
+  // entra en el cursor para no triplicar la complejidad (en la practica
+  // dos tareas con el mismo date+time del mismo manager son rarisimas).
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    console.log(`GET /tasks: Fetching for manager ${req.user.id}`);
-    const { data: tasks, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('tasks')
       .select('*, users!client_id(email)')
       .eq('manager_id', req.user.id)
       .order('date', { ascending: true })
-      .order('time', { ascending: true });
-
+      .order('time', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'date', 'asc');
+    const { data: tasks, error } = await q;
     if (error) throw error;
-    res.json(tasks || []);
+    res.json(buildPage(tasks || [], page.limit, 'date'));
   } catch (error: any) {
     console.error('Error fetching tasks:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -3786,10 +3822,14 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
 });
 
 
-// Get all workout logs for a client (for trajectory chart)
+// Get workout logs for a client (paginado ASC por logged_at).
+// Default limit 200 — pensado para que el trajectory chart funcione sin
+// loadMore en la mayoria de los casos. Para historicos largos el frontend
+// debe paginar (la respuesta incluye nextCursor/hasMore).
 router.get('/clients/:id/workout-logs', async (req: any, res) => {
   const clientId = req.params.id;
   const managerId = req.user.id;
+  const page = parsePagination(req, { defaultLimit: 200, maxLimit: 500 });
   try {
     // Verify client belongs to this manager
     const { data: clientData } = await supabaseAdmin
@@ -3803,14 +3843,17 @@ router.get('/clients/:id/workout-logs', async (req: any, res) => {
       return res.status(403).json({ error: 'Access denied or client not found' });
     }
 
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('workout_logs')
       .select('id, logged_at, workout_name, exercises, session_rpe, notes')
       .eq('client_id', clientId)
-      .order('logged_at', { ascending: true });
-
+      .order('logged_at', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'logged_at', 'asc');
+    const { data, error } = await q;
     if (error) throw error;
-    res.json(data || []);
+    res.json(buildPage(data || [], page.limit, 'logged_at'));
   } catch (error: any) {
     console.error('Error fetching workout logs:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -3877,29 +3920,29 @@ router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
   }
 });
 
-// Nutrition Templates Routes
+// Nutrition Templates Routes (paginado ASC por target_calories + id tiebreak)
 router.get('/nutrition-templates', async (req: any, res: any) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    // 1. Get manager language from profiles
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('language')
       .eq('user_id', req.user.id)
       .maybeSingle();
-    
     const language = profile?.language || 'es';
 
-    // 2. Fetch templates for that language
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('nutrition_templates')
       .select('id, key, name, description, target_calories, data_json')
       .eq('language', language)
       .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
       .order('target_calories', { ascending: true })
-      .order('name', { ascending: true });
-
+      .order('id', { ascending: true })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'target_calories', 'asc');
+    const { data, error } = await q;
     if (error) throw error;
-    res.json(data);
+    res.json(buildPage(data || [], page.limit, 'target_calories'));
   } catch (error: any) {
     console.error('Error fetching nutrition templates:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -4009,29 +4052,29 @@ router.get('/nutrition-templates/:id', async (req: any, res: any) => {
   }
 });
 
-// Training Templates Routes
+// Training Templates Routes (paginado ASC por weekly_frequency + id tiebreak)
 router.get('/training-templates', async (req: any, res: any) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    // 1. Get manager language from profiles
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('language')
       .eq('user_id', req.user.id)
       .maybeSingle();
-    
     const language = profile?.language || 'es';
 
-    // 2. Fetch templates for that language
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('training_templates')
       .select('id, key, name, description, level, type, weekly_frequency, data_json')
       .eq('language', language)
       .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
       .order('weekly_frequency', { ascending: true })
-      .order('name', { ascending: true });
-
+      .order('id', { ascending: true })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'weekly_frequency', 'asc');
+    const { data, error } = await q;
     if (error) throw error;
-    res.json(data);
+    res.json(buildPage(data || [], page.limit, 'weekly_frequency'));
   } catch (error: any) {
     console.error('Error fetching training templates:', error);
     res.status(500).json({ error: safeErr(error) });

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { safeErr } from '../lib/http.js';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
+import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 
 const router = Router();
 
@@ -31,19 +32,25 @@ const getManagerLanguage = async (managerId: string): Promise<string> => {
 };
 
 // GET / — recetas del manager + las globales, en el idioma del manager
+// Paginadas DESC por created_at con keyset cursor.
 router.get('/', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
     const language = await getManagerLanguage(managerId);
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('recipes')
       .select('*')
       .eq('language', language)
       .or(`manager_id.eq.${managerId},is_global.eq.true`)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    const { data, error } = await q;
 
     if (error) throw error;
-    res.json(data || []);
+    res.json(buildPage(data || [], page.limit, 'created_at'));
   } catch (error: any) {
     console.error('Error fetching recipes:', error);
     res.status(500).json({ error: safeErr(error) });

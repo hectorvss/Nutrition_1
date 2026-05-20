@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
+import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 
 const router = Router();
 
@@ -517,25 +518,35 @@ router.get('/catalog', verifyManager, (_req, res) => {
 });
 
 router.get('/', verifyManager, async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('workflow_definitions')
       .select('*, workflow_versions!workflow_definitions_current_version_fk(status, version_number)')
       .eq('manager_id', req.user.id)
-      .order('updated_at', { ascending: false });
+      .order('updated_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'updated_at', 'desc');
+    const { data, error } = await q;
     if (error) throw error;
-    res.json(data || []);
+    res.json(buildPage(data || [], page.limit, 'updated_at'));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/runs/recent', verifyManager, async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('workflow_runs').select('*')
       .eq('manager_id', req.user.id)
-      .order('started_at', { ascending: false }).limit(50);
+      .order('started_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'started_at', 'desc');
+    const { data, error } = await q;
     if (error) throw error;
-    res.json(data || []);
+    res.json(buildPage(data || [], page.limit, 'started_at'));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

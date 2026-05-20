@@ -96,6 +96,31 @@ export function parsePagination(
   return { cursor, limit };
 }
 
+export type SortDirection = 'asc' | 'desc';
+
+/**
+ * Aplica el predicado de keyset cursor sobre un PostgrestFilterBuilder de
+ * supabase-js. Encapsula la sintaxis `.or('col.lt.V,and(col.eq.V,id.lt.I)')`
+ * para no repetirla en cada handler.
+ *
+ *   const q = supabase.from('tasks').select('*')...;
+ *   const q2 = applyCursor(q, cursor, 'date', 'asc');
+ *
+ * Para direccion ASC usa `.gt` y `id.gt`; para DESC usa `.lt` y `id.lt`.
+ * Si `cursor` es null, devuelve la query sin tocar.
+ */
+export function applyCursor<Q extends { or: (filter: string) => Q }>(
+  query: Q,
+  cursor: { v: string; i: string } | null,
+  sortKey: string,
+  direction: SortDirection = 'desc',
+  idKey = 'id',
+): Q {
+  if (!cursor) return query;
+  const cmp = direction === 'asc' ? 'gt' : 'lt';
+  return query.or(`${sortKey}.${cmp}.${cursor.v},and(${sortKey}.eq.${cursor.v},${idKey}.${cmp}.${cursor.i})`);
+}
+
 /**
  * Tras hacer `.limit(limit + 1)`, llamamos a este helper:
  * - Si vinieron `limit + 1` filas, hay siguiente pagina; emite cursor.

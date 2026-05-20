@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { safeErr } from '../lib/http.js';
+import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import crypto from 'crypto';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
@@ -252,17 +253,26 @@ export async function processTrigger(managerId: string, triggerId: string, data:
 // CRUD Operations
 
 router.get('/', verifyManager, async (req: any, res: any) => {
+  // Automations: cursor DESC sobre created_at. El seed solo corre en la
+  // primera pagina (sin cursor) y solo si la BD esta vacia para este manager.
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
+  const isFirstPage = !page.cursor;
   try {
     const managerId = req.user.id;
-    let { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('automations')
       .select('*')
-      .eq('manager_id', managerId);
-    
+      .eq('manager_id', managerId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    let { data, error } = await q;
+
     if (error) throw error;
 
-    // Seed defaults if empty
-    if (!data || data.length === 0) {
+    // Seed defaults if empty (solo primera pagina)
+    if (isFirstPage && (!data || data.length === 0)) {
       console.log('Seeding default automations for manager:', managerId);
       const defaults = [
         {
@@ -349,7 +359,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
       data = seeded;
     }
 
-    res.json(data);
+    res.json(buildPage(data || [], page.limit, 'created_at'));
   } catch (error: any) {
     res.status(500).json({ error: safeErr(error) });
   }

@@ -4,7 +4,7 @@ import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { sendPushToUser } from '../lib/push.js';
 import { verifyManager as _verifyManager, verifyClient as _verifyClient, type AuthedRequest } from '../middleware/auth.js';
-import { parsePagination, buildPage } from '../lib/pagination.js';
+import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 
 const router = Router();
 
@@ -979,23 +979,32 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
 // Manager: Get all templates (active only)
 router.get('/manager/checkin-templates', verifyManager, async (req: AuthedRequest, res) => {
   const managerId = req.user.id;
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
+  // El auto-inject del "General Check-in" SOLO corre en la primera pagina
+  // (sin cursor). En paginas subsecuentes lo skipamos porque ya estaria en
+  // la primera y reintentarlo crearia duplicados.
+  const isFirstPage = !page.cursor;
   try {
-    const { data, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('checkin_templates')
       .select('*')
-      .eq('manager_id', managerId)
+      .eq('manager_id', managerId!)
       .eq('is_archived', false)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    const { data, error } = await q;
 
     if (error) throw error;
 
     // Guaranteed array — the query can return null, and we mutate it below.
     const list: Record<string, any>[] = data || [];
 
-    // --- AUTO-INJECT GENERAL CHECK-IN IF MISSING ---
-    const hasPermanent = list.some((t: Record<string, any>) => t.is_permanent || t.name === 'General Check-in');
+    // --- AUTO-INJECT GENERAL CHECK-IN IF MISSING (solo en primera pagina) ---
+    const hasPermanent = isFirstPage && list.some((t: Record<string, any>) => t.is_permanent || t.name === 'General Check-in');
     
-    if (!hasPermanent) {
+    if (isFirstPage && !hasPermanent) {
       console.log(`[CheckIn] General Check-in not found in list for manager: ${managerId}. Searching in all (including archived)...`);
       
       // Use maybeSingle() to avoid throwing on 0 rows
@@ -1055,7 +1064,7 @@ router.get('/manager/checkin-templates', verifyManager, async (req: AuthedReques
       }
     }
 
-    res.json(list);
+    res.json(buildPage(list, page.limit, 'created_at'));
   } catch (error: unknown) {
     console.error('Error fetching templates:', error);
     res.status(500).json({ error: 'Server error' });
@@ -1242,28 +1251,47 @@ router.delete('/manager/checkin-templates/:id', verifyManager, async (req: Authe
 // --- Template Assignment Routes ---
 
 // GET /manager/checkin-assignments
-// List active assignments for manager's clients
+// List active assignments for manager's clients (paginado DESC por created_at)
+//
+// La query trae assignments con join al user; aplicamos el filtro por
+// manager_id en memoria (la implementacion previa lo hacia asi). El cursor
+// SE APLICA EN BD, asi que cargamos limit+1 filas filtrables que tras el
+// filter in-memory pueden ser menos. Si el chunk filtrado da < limit y
+// hasMore=true en BD, hacemos un segundo fetch hasta completar la pagina
+// (cap a 5 reintentos para no quemar).
 router.get('/manager/checkin-assignments', verifyManager, async (req: AuthedRequest, res) => {
-  // We assume verifyManager already sets req.user and checks manager role if needed
   const managerId = req.user.id;
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
-    // We need to fetch assignments for clients that belong to this manager
-    const { data, error } = await supabaseAdmin
+    // Pre-fetch clientIds del manager para filtrar en BD (mas eficiente que
+    // join + filter in memory; ademas permite paginar correctamente).
+    const { data: myClients } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('manager_id', managerId!)
+      .eq('role', 'CLIENT');
+    const clientIds = (myClients || []).map(c => c.id);
+    if (clientIds.length === 0) {
+      return res.json(buildPage<any>([], page.limit, 'created_at'));
+    }
+
+    let q = supabaseAdmin
       .from('client_checkin_assignments')
       .select(`
         *,
         template:checkin_templates(id, name),
         client:users!client_id(id, manager_id)
       `)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .in('client_id', clientIds)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    const { data, error } = await q;
 
     if (error) throw error;
-
-    // Filter by manager_id in memory or ideally via a complex join
-    // Since we joined with users!client_id, we can filter
-    const filtered = (data || []).filter((a: Record<string, any>) => a.client?.manager_id === managerId);
-
-    res.json(filtered);
+    res.json(buildPage(data || [], page.limit, 'created_at'));
   } catch (err: unknown) {
     res.status(500).json({ error: errMessage(err) });
   }

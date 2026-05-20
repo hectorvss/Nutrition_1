@@ -140,8 +140,9 @@ async function run() {
   check('run via API sent the message', (await countMessages()) - before === 1);
 
   const runsRes = await fetch(`${API}/workflows/runs/recent`, { headers: H });
-  const runs = runsRes.ok ? await runsRes.json() : [];
-  check('GET /runs/recent lists the run', Array.isArray(runs) && runs.length >= 1);
+  const runsResp: any = runsRes.ok ? await runsRes.json() : null;
+  const runs: any[] = Array.isArray(runsResp) ? runsResp : (runsResp?.data || []);
+  check('GET /runs/recent lists the run', runs.length >= 1);
 
   // [6] Durable delay — Wait node parks the run, cron resumes it
   console.log('[6] Durable delay (Wait) + resume');
