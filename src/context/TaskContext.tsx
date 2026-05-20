@@ -75,6 +75,372 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 
 
+type TFn = (key: string, params?: Record<string, string | number>) => string;
+
+export function buildAutomatedTasksPure(
+  clientList: ClientData[],
+  ruleList: AutomationRule[],
+  t: TFn,
+): TaskItem[] {
+  const generated: TaskItem[] = [];
+
+  const statusFor = (priority: string): TaskItem['status'] =>
+    priority === 'High' ? 'overdue' : priority === 'Low' ? 'pending' : 'today';
+
+  const HOUR = 1000 * 60 * 60;
+  const DAY = HOUR * 24;
+  const nowMs = Date.now();
+
+  clientList.forEach(client => {
+    const createdMs = client.created_at ? new Date(client.created_at).getTime() : null;
+    const daysSinceCreated = createdMs != null ? (nowMs - createdMs) / DAY : null;
+    const hoursSinceCreated = createdMs != null ? (nowMs - createdMs) / HOUR : null;
+    const realCheckInCount = Array.isArray(client.check_ins) ? client.check_ins.length : 0;
+
+    // Rule: Weekly Check-in Overdue
+    const checkinRule = ruleList.find(r => r.id === 'weekly-overdue');
+    const checkinWindowElapsed = daysSinceCreated != null && daysSinceCreated >= 7;
+    const checkinOverdue = checkinWindowElapsed && (client.lastCheckIn === 'Never' || client.status === 'Inactive');
+    if (checkinRule?.enabled && checkinOverdue) {
+      generated.push({
+        id: `auto:weekly-overdue:${client.id}`,
+        type: 'WEEKLY CHECK-IN',
+        label: t('OVERDUE CHECK-IN'),
+        title: t("Review {name}'s Status", { name: client.name }),
+        desc: t('Client has missed check-in windows. Last check-in recorded: {date}.', { date: client.lastCheckIn }),
+        client: client.name,
+        program: client.plan,
+        avatar: client.avatar,
+        status: checkinRule.priority === 'High' ? 'overdue' : 'today',
+        timeLabel: t('Overdue 2d'),
+        priority: checkinRule.priority.toLowerCase() as any,
+        clientId: client.id,
+      });
+    }
+
+    // Rule: Low Adherence
+    const adherenceRule = ruleList.find(r => r.id === 'low-adherence');
+    const adherenceHasEvidence = realCheckInCount >= 2;
+    if (adherenceRule?.enabled && adherenceHasEvidence && client.progress < 50 && client.status === 'Active') {
+      generated.push({
+        id: `auto:low-adherence:${client.id}`,
+        type: 'AUTOMATIC ALERT',
+        label: t('LOW ADHERENCE'),
+        title: t('Investigate drop in tracking'),
+        desc: t('Client\'s overall progress is at {progress}%. May need intervention.', { progress: client.progress }),
+        client: client.name,
+        program: client.plan,
+        avatar: client.avatar,
+        status: adherenceRule.priority === 'High' ? 'overdue' : 'pending',
+        timeLabel: t('Alert'),
+        priority: adherenceRule.priority.toLowerCase() as any,
+        clientId: client.id,
+      });
+    }
+
+    // Rule: Plan Update Due
+    const planRule = ruleList.find(r => r.id === 'plan-update');
+    const planGraceElapsed = hoursSinceCreated != null && hoursSinceCreated >= 48;
+    if (planRule?.enabled && planGraceElapsed && client.plan === 'No Plan' && client.status === 'Active') {
+      generated.push({
+        id: `auto:plan-update:${client.id}`,
+        type: 'PLAN UPDATE',
+        label: t('MISSING PLAN'),
+        title: t('Assign Plan to {name}', { name: client.name }),
+        desc: t('Client has no active training or nutrition plan assigned.'),
+        client: client.name,
+        program: 'None',
+        avatar: client.avatar,
+        status: 'today',
+        timeLabel: t('Due Today'),
+        priority: planRule.priority.toLowerCase() as any,
+        clientId: client.id,
+      });
+    }
+
+    // Rule: Unread Direct Messages
+    const unreadRule = ruleList.find(r => r.id === 'unread-dm');
+    if (unreadRule?.enabled && (client.unreadMessages || 0) > 0 && client.oldestUnreadAt && client.status !== 'Archived') {
+      const hoursWaiting = (nowMs - new Date(client.oldestUnreadAt).getTime()) / HOUR;
+      if (hoursWaiting > 2) {
+        generated.push({
+          id: `auto:unread-dm:${client.id}`,
+          type: 'DIRECT MESSAGE',
+          label: t('UNREAD MESSAGE'),
+          title: t('Reply to {name}', { name: client.name }),
+          desc: t('{count} unread message(s) waiting for over {hours}h.', { count: client.unreadMessages || 0, hours: Math.floor(hoursWaiting) }),
+          client: client.name,
+          program: client.plan,
+          avatar: client.avatar,
+          status: statusFor(unreadRule.priority),
+          timeLabel: t('Alert'),
+          priority: unreadRule.priority.toLowerCase() as any,
+          clientId: client.id,
+        });
+      }
+    }
+
+    // Rule: New Leads
+    const leadRule = ruleList.find(r => r.id === 'new-leads');
+    if (leadRule?.enabled && (client.status === 'Invited' || client.status === 'Pending')) {
+      generated.push({
+        id: `auto:new-leads:${client.id}`,
+        type: 'AUTOMATIC ALERT',
+        label: t('NEW LEAD'),
+        title: t('Follow up with new lead {name}', { name: client.name }),
+        desc: t('New lead awaiting first contact and onboarding.'),
+        client: client.name,
+        program: client.plan,
+        avatar: client.avatar,
+        status: statusFor(leadRule.priority),
+        timeLabel: t('Due Today'),
+        priority: leadRule.priority.toLowerCase() as any,
+        clientId: client.id,
+      });
+    }
+
+    // Rule: Sudden Weight Drop
+    const weightRule = ruleList.find(r => r.id === 'sudden-weight');
+    if (weightRule?.enabled && client.status === 'Active') {
+      const weighed = (client.check_ins || [])
+        .map((ci: any) => {
+          let d = ci.data_json;
+          if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+          const w = Number(d?.weight);
+          return { date: ci.date, weight: Number.isFinite(w) && w > 0 ? w : null };
+        })
+        .filter((x: any) => x.weight !== null && x.date)
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      if (weighed.length >= 2) {
+        const drop = (weighed[1].weight as number) - (weighed[0].weight as number);
+        const daysBetween = (new Date(weighed[0].date).getTime() - new Date(weighed[1].date).getTime()) / DAY;
+        if (drop > 2 && daysBetween <= 10) {
+          generated.push({
+            id: `auto:sudden-weight:${client.id}`,
+            type: 'AUTOMATIC ALERT',
+            label: t('WEIGHT DROP'),
+            title: t('Sudden weight drop for {name}', { name: client.name }),
+            desc: t('{name} lost {kg}kg since the previous check-in. Review for safety.', { name: client.name, kg: drop.toFixed(1) }),
+            client: client.name,
+            program: client.plan,
+            avatar: client.avatar,
+            status: statusFor(weightRule.priority),
+            timeLabel: t('Alert'),
+            priority: weightRule.priority.toLowerCase() as any,
+            clientId: client.id,
+          });
+        }
+      }
+    }
+
+    // Rule: No Login for 3+ days
+    const loginRule = ruleList.find(r => r.id === 'no-login');
+    if (loginRule?.enabled && client.status === 'Active' && client.lastActivityAt) {
+      const daysInactive = Math.floor((nowMs - new Date(client.lastActivityAt).getTime()) / DAY);
+      if (daysInactive >= 3) {
+        generated.push({
+          id: `auto:no-login:${client.id}`,
+          type: 'AUTOMATIC ALERT',
+          label: t('INACTIVE CLIENT'),
+          title: t('{name} has been inactive', { name: client.name }),
+          desc: t('No app activity (check-in or workout) for {days}+ days.', { days: daysInactive }),
+          client: client.name,
+          program: client.plan,
+          avatar: client.avatar,
+          status: statusFor(loginRule.priority),
+          timeLabel: t('Alert'),
+          priority: loginRule.priority.toLowerCase() as any,
+          clientId: client.id,
+        });
+      }
+    }
+
+    // Rule: Goal Milestone Reached
+    const milestoneRule = ruleList.find(r => r.id === 'goal-milestone');
+    if (milestoneRule?.enabled && client.status === 'Active' && client.progress >= 95) {
+      generated.push({
+        id: `auto:goal-milestone:${client.id}`,
+        type: 'AUTOMATIC ALERT',
+        label: t('MILESTONE'),
+        title: t('{name} reached a milestone', { name: client.name }),
+        desc: t('{name} is at {progress}% adherence — send some encouragement!', { name: client.name, progress: client.progress }),
+        client: client.name,
+        program: client.plan,
+        avatar: client.avatar,
+        status: statusFor(milestoneRule.priority),
+        timeLabel: t('Win'),
+        priority: milestoneRule.priority.toLowerCase() as any,
+        clientId: client.id,
+      });
+    }
+
+    // Rule: Onboarding Not Finished
+    const onboardingRule = ruleList.find(r => r.id === 'onboarding-not-finished');
+    if (onboardingRule?.enabled && client.status === 'Invited' && client.created_at) {
+      const hoursSinceInvite = (nowMs - new Date(client.created_at).getTime()) / HOUR;
+      if (hoursSinceInvite > 48) {
+        generated.push({
+          id: `auto:onboarding-not-finished:${client.id}`,
+          type: 'AUTOMATIC ALERT',
+          label: t('ONBOARDING PENDING'),
+          title: t("{name} hasn't finished onboarding", { name: client.name }),
+          desc: t('Intake questionnaire still not completed after 48 hours.'),
+          client: client.name,
+          program: client.plan,
+          avatar: client.avatar,
+          status: statusFor(onboardingRule.priority),
+          timeLabel: t('Overdue 2d'),
+          priority: onboardingRule.priority.toLowerCase() as any,
+          clientId: client.id,
+        });
+      }
+    }
+
+    // Rule: Check-in Awaiting Review
+    const reviewRule = ruleList.find(r => r.id === 'checkin-to-review');
+    if (reviewRule?.enabled && client.isUnreviewed) {
+      generated.push({
+        id: `auto:checkin-to-review:${client.id}`,
+        type: 'WEEKLY CHECK-IN',
+        label: t('CHECK-IN TO REVIEW'),
+        title: t("Review {name}'s check-in", { name: client.name }),
+        desc: t('{name} submitted a check-in that is still pending your review.', { name: client.name }),
+        client: client.name,
+        program: client.plan,
+        avatar: client.avatar,
+        status: statusFor(reviewRule.priority),
+        timeLabel: t('Alert'),
+        priority: reviewRule.priority.toLowerCase() as any,
+        clientId: client.id,
+      });
+    }
+
+    // Rule: Sudden Weight Gain
+    const weightGainRule = ruleList.find(r => r.id === 'sudden-weight-gain');
+    if (weightGainRule?.enabled && client.status === 'Active') {
+      const weighed = (client.check_ins || [])
+        .map((ci: any) => {
+          let d = ci.data_json;
+          if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+          const w = Number(d?.weight);
+          return { date: ci.date, weight: Number.isFinite(w) && w > 0 ? w : null };
+        })
+        .filter((x: any) => x.weight !== null && x.date)
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      if (weighed.length >= 2) {
+        const gain = (weighed[0].weight as number) - (weighed[1].weight as number);
+        const daysBetween = (new Date(weighed[0].date).getTime() - new Date(weighed[1].date).getTime()) / DAY;
+        if (gain > 2 && daysBetween <= 10) {
+          generated.push({
+            id: `auto:sudden-weight-gain:${client.id}`,
+            type: 'AUTOMATIC ALERT',
+            label: t('WEIGHT GAIN'),
+            title: t('Sudden weight gain for {name}', { name: client.name }),
+            desc: t('{name} gained {kg}kg since the previous check-in. Review the plan.', { name: client.name, kg: gain.toFixed(1) }),
+            client: client.name,
+            program: client.plan,
+            avatar: client.avatar,
+            status: statusFor(weightGainRule.priority),
+            timeLabel: t('Alert'),
+            priority: weightGainRule.priority.toLowerCase() as any,
+            clientId: client.id,
+          });
+        }
+      }
+    }
+
+    // Rule: Plan Older Than 4 Weeks
+    const stalePlanRule = ruleList.find(r => r.id === 'stale-plan');
+    if (stalePlanRule?.enabled && client.status === 'Active' && client.planUpdatedAt) {
+      const weeksOld = (nowMs - new Date(client.planUpdatedAt).getTime()) / (DAY * 7);
+      if (weeksOld >= 4) {
+        generated.push({
+          id: `auto:stale-plan:${client.id}`,
+          type: 'PLAN UPDATE',
+          label: t('PLAN OUTDATED'),
+          title: t('Refresh plan for {name}', { name: client.name }),
+          desc: t("{name}'s plan hasn't been updated in over 4 weeks.", { name: client.name }),
+          client: client.name,
+          program: client.plan,
+          avatar: client.avatar,
+          status: statusFor(stalePlanRule.priority),
+          timeLabel: t('Due Today'),
+          priority: stalePlanRule.priority.toLowerCase() as any,
+          clientId: client.id,
+        });
+      }
+    }
+
+    // Rule: No Upcoming Appointment
+    const apptRule = ruleList.find(r => r.id === 'no-appointment');
+    if (apptRule?.enabled && client.status === 'Active' && client.nextAppointment === 'Not Scheduled') {
+      generated.push({
+        id: `auto:no-appointment:${client.id}`,
+        type: 'AUTOMATIC ALERT',
+        label: t('NO APPOINTMENT'),
+        title: t('Schedule a session with {name}', { name: client.name }),
+        desc: t('{name} has no upcoming appointment booked.', { name: client.name }),
+        client: client.name,
+        program: client.plan,
+        avatar: client.avatar,
+        status: statusFor(apptRule.priority),
+        timeLabel: t('Due Today'),
+        priority: apptRule.priority.toLowerCase() as any,
+        clientId: client.id,
+      });
+    }
+
+    // Rule: First Check-in Completed
+    const firstCheckinRule = ruleList.find(r => r.id === 'first-checkin');
+    if (firstCheckinRule?.enabled && (client.check_ins || []).length === 1) {
+      const ci: any = (client.check_ins as any[])[0];
+      const daysSince = ci?.date ? (nowMs - new Date(ci.date).getTime()) / DAY : 999;
+      if (daysSince <= 3) {
+        generated.push({
+          id: `auto:first-checkin:${client.id}`,
+          type: 'WEEKLY CHECK-IN',
+          label: t('FIRST CHECK-IN'),
+          title: t('{name} completed their first check-in', { name: client.name }),
+          desc: t('Give {name} feedback on their first check-in to build momentum.', { name: client.name }),
+          client: client.name,
+          program: client.plan,
+          avatar: client.avatar,
+          status: statusFor(firstCheckinRule.priority),
+          timeLabel: t('Win'),
+          priority: firstCheckinRule.priority.toLowerCase() as any,
+          clientId: client.id,
+        });
+      }
+    }
+
+    // Rule: Workout Streak Broken
+    const missedWorkoutRule = ruleList.find(r => r.id === 'missed-workout');
+    if (missedWorkoutRule?.enabled && client.status === 'Active' && client.trainingPlanAssigned && client.lastWorkoutAt) {
+      const daysSinceWorkout = Math.floor((nowMs - new Date(client.lastWorkoutAt).getTime()) / DAY);
+      if (daysSinceWorkout >= 5) {
+        generated.push({
+          id: `auto:missed-workout:${client.id}`,
+          type: 'AUTOMATIC ALERT',
+          label: t('STREAK BROKEN'),
+          title: t('{name} stopped training', { name: client.name }),
+          desc: t('No workout logged for {days}+ days despite an active training plan.', { days: daysSinceWorkout }),
+          client: client.name,
+          program: client.plan,
+          avatar: client.avatar,
+          status: statusFor(missedWorkoutRule.priority),
+          timeLabel: t('Alert'),
+          priority: missedWorkoutRule.priority.toLowerCase() as any,
+          clientId: client.id,
+        });
+      }
+    }
+  });
+
+  return generated;
+}
+
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const { clients } = useClient();
   const { user } = useAuth();
@@ -268,377 +634,10 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   // ("auto:<rule>:<clientId>"). Used by both the active list and the completed
   // history, so a task keeps the same identity across renders and both views.
   const buildAutomatedTasks = useCallback((clientList: ClientData[], ruleList: AutomationRule[]): TaskItem[] => {
-    const generated: TaskItem[] = [];
-
-    // Maps a rule's configured priority to a task status bucket.
-    const statusFor = (priority: string): TaskItem['status'] =>
-      priority === 'High' ? 'overdue' : priority === 'Low' ? 'pending' : 'today';
-
-    const HOUR = 1000 * 60 * 60;
-    const DAY = HOUR * 24;
-    const nowMs = Date.now();
-
-    clientList.forEach(client => {
-      // Helpers shared across rules — every rule that warns about an absence
-      // ("missed check-in", "low adherence", "no plan yet") must require both
-      // a minimum time since the client was created (so we don't fire on day 0)
-      // and enough real data to support the alert.
-      const createdMs = client.created_at ? new Date(client.created_at).getTime() : null;
-      const daysSinceCreated = createdMs != null ? (nowMs - createdMs) / DAY : null;
-      const hoursSinceCreated = createdMs != null ? (nowMs - createdMs) / HOUR : null;
-      const realCheckInCount = Array.isArray(client.check_ins) ? client.check_ins.length : 0;
-
-      // Rule: Weekly Check-in Overdue
-      // A check-in is only "overdue" once we'd actually expect one — i.e. the
-      // client has been on the platform for at least a week. A brand-new
-      // client whose `lastCheckIn` is "Never" by definition cannot be overdue.
-      const checkinRule = ruleList.find(r => r.id === 'weekly-overdue');
-      const checkinWindowElapsed = daysSinceCreated != null && daysSinceCreated >= 7;
-      const checkinOverdue = checkinWindowElapsed && (client.lastCheckIn === 'Never' || client.status === 'Inactive');
-      if (checkinRule?.enabled && checkinOverdue) {
-        generated.push({
-          id: `auto:weekly-overdue:${client.id}`,
-          type: 'WEEKLY CHECK-IN',
-          label: t('OVERDUE CHECK-IN'),
-          title: t("Review {name}'s Status", { name: client.name }),
-          desc: t('Client has missed check-in windows. Last check-in recorded: {date}.', { date: client.lastCheckIn }),
-          client: client.name,
-          program: client.plan,
-          avatar: client.avatar,
-          status: checkinRule.priority === 'High' ? 'overdue' : 'today',
-          timeLabel: t('Overdue 2d'),
-          priority: checkinRule.priority.toLowerCase() as any,
-          clientId: client.id
-        });
-      }
-
-      // Rule: Low Adherence (based on progress)
-      // Only meaningful once we have real data. Without check-ins, progress
-      // defaults to 0 — that's not a real adherence drop, it's just absence
-      // of data, so we suppress the alert until at least 2 check-ins exist.
-      const adherenceRule = ruleList.find(r => r.id === 'low-adherence');
-      const adherenceHasEvidence = realCheckInCount >= 2;
-      if (adherenceRule?.enabled && adherenceHasEvidence && client.progress < 50 && client.status === 'Active') {
-        generated.push({
-          id: `auto:low-adherence:${client.id}`,
-          type: 'AUTOMATIC ALERT',
-          label: t('LOW ADHERENCE'),
-          title: t('Investigate drop in tracking'),
-          desc: t('Client\'s overall progress is at {progress}%. May need intervention.', { progress: client.progress }),
-          client: client.name,
-          program: client.plan,
-          avatar: client.avatar,
-          status: adherenceRule.priority === 'High' ? 'overdue' : 'pending',
-          timeLabel: t('Alert'),
-          priority: adherenceRule.priority.toLowerCase() as any,
-          clientId: client.id
-        });
-      }
-
-      // Rule: Plan Update Due (based on no plan assigned)
-      // Grace period of 48 h after a client is created so the coach has time
-      // to assign a plan before being nagged about it.
-      const planRule = ruleList.find(r => r.id === 'plan-update');
-      const planGraceElapsed = hoursSinceCreated != null && hoursSinceCreated >= 48;
-      if (planRule?.enabled && planGraceElapsed && client.plan === 'No Plan' && client.status === 'Active') {
-        generated.push({
-          id: `auto:plan-update:${client.id}`,
-          type: 'PLAN UPDATE',
-          label: t('MISSING PLAN'),
-          title: t('Assign Plan to {name}', { name: client.name }),
-          desc: t('Client has no active training or nutrition plan assigned.'),
-          client: client.name,
-          program: 'None',
-          avatar: client.avatar,
-          status: 'today',
-          timeLabel: t('Due Today'),
-          priority: planRule.priority.toLowerCase() as any,
-          clientId: client.id
-        });
-      }
-
-      // Rule: Unread Direct Messages (a client message left unread for > 2h)
-      const unreadRule = ruleList.find(r => r.id === 'unread-dm');
-      if (unreadRule?.enabled && (client.unreadMessages || 0) > 0 && client.oldestUnreadAt && client.status !== 'Archived') {
-        const hoursWaiting = (nowMs - new Date(client.oldestUnreadAt).getTime()) / HOUR;
-        if (hoursWaiting > 2) {
-          generated.push({
-            id: `auto:unread-dm:${client.id}`,
-            type: 'DIRECT MESSAGE',
-            label: t('UNREAD MESSAGE'),
-            title: t('Reply to {name}', { name: client.name }),
-            desc: t('{count} unread message(s) waiting for over {hours}h.', { count: client.unreadMessages || 0, hours: Math.floor(hoursWaiting) }),
-            client: client.name,
-            program: client.plan,
-            avatar: client.avatar,
-            status: statusFor(unreadRule.priority),
-            timeLabel: t('Alert'),
-            priority: unreadRule.priority.toLowerCase() as any,
-            clientId: client.id
-          });
-        }
-      }
-
-      // Rule: New Leads (client invited/pending awaiting first contact)
-      const leadRule = ruleList.find(r => r.id === 'new-leads');
-      if (leadRule?.enabled && (client.status === 'Invited' || client.status === 'Pending')) {
-        generated.push({
-          id: `auto:new-leads:${client.id}`,
-          type: 'AUTOMATIC ALERT',
-          label: t('NEW LEAD'),
-          title: t('Follow up with new lead {name}', { name: client.name }),
-          desc: t('New lead awaiting first contact and onboarding.'),
-          client: client.name,
-          program: client.plan,
-          avatar: client.avatar,
-          status: statusFor(leadRule.priority),
-          timeLabel: t('Due Today'),
-          priority: leadRule.priority.toLowerCase() as any,
-          clientId: client.id
-        });
-      }
-
-      // Rule: Sudden Weight Drop (> 2kg between the two most recent check-ins)
-      const weightRule = ruleList.find(r => r.id === 'sudden-weight');
-      if (weightRule?.enabled && client.status === 'Active') {
-        const weighed = (client.check_ins || [])
-          .map((ci: any) => {
-            let d = ci.data_json;
-            if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
-            const w = Number(d?.weight);
-            return { date: ci.date, weight: Number.isFinite(w) && w > 0 ? w : null };
-          })
-          .filter((x: any) => x.weight !== null && x.date)
-          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        if (weighed.length >= 2) {
-          const drop = (weighed[1].weight as number) - (weighed[0].weight as number);
-          const daysBetween = (new Date(weighed[0].date).getTime() - new Date(weighed[1].date).getTime()) / DAY;
-          if (drop > 2 && daysBetween <= 10) {
-            generated.push({
-              id: `auto:sudden-weight:${client.id}`,
-              type: 'AUTOMATIC ALERT',
-              label: t('WEIGHT DROP'),
-              title: t('Sudden weight drop for {name}', { name: client.name }),
-              desc: t('{name} lost {kg}kg since the previous check-in. Review for safety.', { name: client.name, kg: drop.toFixed(1) }),
-              client: client.name,
-              program: client.plan,
-              avatar: client.avatar,
-              status: statusFor(weightRule.priority),
-              timeLabel: t('Alert'),
-              priority: weightRule.priority.toLowerCase() as any,
-              clientId: client.id
-            });
-          }
-        }
-      }
-
-      // Rule: No Login for 3+ days (no check-in or workout activity since)
-      const loginRule = ruleList.find(r => r.id === 'no-login');
-      if (loginRule?.enabled && client.status === 'Active' && client.lastActivityAt) {
-        const daysInactive = Math.floor((nowMs - new Date(client.lastActivityAt).getTime()) / DAY);
-        if (daysInactive >= 3) {
-          generated.push({
-            id: `auto:no-login:${client.id}`,
-            type: 'AUTOMATIC ALERT',
-            label: t('INACTIVE CLIENT'),
-            title: t('{name} has been inactive', { name: client.name }),
-            desc: t('No app activity (check-in or workout) for {days}+ days.', { days: daysInactive }),
-            client: client.name,
-            program: client.plan,
-            avatar: client.avatar,
-            status: statusFor(loginRule.priority),
-            timeLabel: t('Alert'),
-            priority: loginRule.priority.toLowerCase() as any,
-            clientId: client.id
-          });
-        }
-      }
-
-      // Rule: Goal Milestone Reached (high adherence — celebrate the win)
-      const milestoneRule = ruleList.find(r => r.id === 'goal-milestone');
-      if (milestoneRule?.enabled && client.status === 'Active' && client.progress >= 95) {
-        generated.push({
-          id: `auto:goal-milestone:${client.id}`,
-          type: 'AUTOMATIC ALERT',
-          label: t('MILESTONE'),
-          title: t('{name} reached a milestone', { name: client.name }),
-          desc: t('{name} is at {progress}% adherence — send some encouragement!', { name: client.name, progress: client.progress }),
-          client: client.name,
-          program: client.plan,
-          avatar: client.avatar,
-          status: statusFor(milestoneRule.priority),
-          timeLabel: t('Win'),
-          priority: milestoneRule.priority.toLowerCase() as any,
-          clientId: client.id
-        });
-      }
-
-      // Rule: Onboarding Not Finished (invited client > 48h without completing intake)
-      const onboardingRule = ruleList.find(r => r.id === 'onboarding-not-finished');
-      if (onboardingRule?.enabled && client.status === 'Invited' && client.created_at) {
-        const hoursSinceInvite = (nowMs - new Date(client.created_at).getTime()) / HOUR;
-        if (hoursSinceInvite > 48) {
-          generated.push({
-            id: `auto:onboarding-not-finished:${client.id}`,
-            type: 'AUTOMATIC ALERT',
-            label: t('ONBOARDING PENDING'),
-            title: t("{name} hasn't finished onboarding", { name: client.name }),
-            desc: t('Intake questionnaire still not completed after 48 hours.'),
-            client: client.name,
-            program: client.plan,
-            avatar: client.avatar,
-            status: statusFor(onboardingRule.priority),
-            timeLabel: t('Overdue 2d'),
-            priority: onboardingRule.priority.toLowerCase() as any,
-            clientId: client.id
-          });
-        }
-      }
-
-      // Rule: Check-in Awaiting Review (client submitted a check-in not yet reviewed)
-      const reviewRule = ruleList.find(r => r.id === 'checkin-to-review');
-      if (reviewRule?.enabled && client.isUnreviewed) {
-        generated.push({
-          id: `auto:checkin-to-review:${client.id}`,
-          type: 'WEEKLY CHECK-IN',
-          label: t('CHECK-IN TO REVIEW'),
-          title: t("Review {name}'s check-in", { name: client.name }),
-          desc: t('{name} submitted a check-in that is still pending your review.', { name: client.name }),
-          client: client.name,
-          program: client.plan,
-          avatar: client.avatar,
-          status: statusFor(reviewRule.priority),
-          timeLabel: t('Alert'),
-          priority: reviewRule.priority.toLowerCase() as any,
-          clientId: client.id
-        });
-      }
-
-      // Rule: Sudden Weight Gain (> 2kg between the two most recent check-ins)
-      const weightGainRule = ruleList.find(r => r.id === 'sudden-weight-gain');
-      if (weightGainRule?.enabled && client.status === 'Active') {
-        const weighed = (client.check_ins || [])
-          .map((ci: any) => {
-            let d = ci.data_json;
-            if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
-            const w = Number(d?.weight);
-            return { date: ci.date, weight: Number.isFinite(w) && w > 0 ? w : null };
-          })
-          .filter((x: any) => x.weight !== null && x.date)
-          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        if (weighed.length >= 2) {
-          const gain = (weighed[0].weight as number) - (weighed[1].weight as number);
-          const daysBetween = (new Date(weighed[0].date).getTime() - new Date(weighed[1].date).getTime()) / DAY;
-          if (gain > 2 && daysBetween <= 10) {
-            generated.push({
-              id: `auto:sudden-weight-gain:${client.id}`,
-              type: 'AUTOMATIC ALERT',
-              label: t('WEIGHT GAIN'),
-              title: t('Sudden weight gain for {name}', { name: client.name }),
-              desc: t('{name} gained {kg}kg since the previous check-in. Review the plan.', { name: client.name, kg: gain.toFixed(1) }),
-              client: client.name,
-              program: client.plan,
-              avatar: client.avatar,
-              status: statusFor(weightGainRule.priority),
-              timeLabel: t('Alert'),
-              priority: weightGainRule.priority.toLowerCase() as any,
-              clientId: client.id
-            });
-          }
-        }
-      }
-
-      // Rule: Plan Older Than 4 Weeks (assigned plan not refreshed recently)
-      const stalePlanRule = ruleList.find(r => r.id === 'stale-plan');
-      if (stalePlanRule?.enabled && client.status === 'Active' && client.planUpdatedAt) {
-        const weeksOld = (nowMs - new Date(client.planUpdatedAt).getTime()) / (DAY * 7);
-        if (weeksOld >= 4) {
-          generated.push({
-            id: `auto:stale-plan:${client.id}`,
-            type: 'PLAN UPDATE',
-            label: t('PLAN OUTDATED'),
-            title: t('Refresh plan for {name}', { name: client.name }),
-            desc: t("{name}'s plan hasn't been updated in over 4 weeks.", { name: client.name }),
-            client: client.name,
-            program: client.plan,
-            avatar: client.avatar,
-            status: statusFor(stalePlanRule.priority),
-            timeLabel: t('Due Today'),
-            priority: stalePlanRule.priority.toLowerCase() as any,
-            clientId: client.id
-          });
-        }
-      }
-
-      // Rule: No Upcoming Appointment (active client with nothing scheduled)
-      const apptRule = ruleList.find(r => r.id === 'no-appointment');
-      if (apptRule?.enabled && client.status === 'Active' && client.nextAppointment === 'Not Scheduled') {
-        generated.push({
-          id: `auto:no-appointment:${client.id}`,
-          type: 'AUTOMATIC ALERT',
-          label: t('NO APPOINTMENT'),
-          title: t('Schedule a session with {name}', { name: client.name }),
-          desc: t('{name} has no upcoming appointment booked.', { name: client.name }),
-          client: client.name,
-          program: client.plan,
-          avatar: client.avatar,
-          status: statusFor(apptRule.priority),
-          timeLabel: t('Due Today'),
-          priority: apptRule.priority.toLowerCase() as any,
-          clientId: client.id
-        });
-      }
-
-      // Rule: First Check-in Completed (new client just submitted their first one)
-      const firstCheckinRule = ruleList.find(r => r.id === 'first-checkin');
-      if (firstCheckinRule?.enabled && (client.check_ins || []).length === 1) {
-        const ci: any = (client.check_ins as any[])[0];
-        const daysSince = ci?.date ? (nowMs - new Date(ci.date).getTime()) / DAY : 999;
-        if (daysSince <= 3) {
-          generated.push({
-            id: `auto:first-checkin:${client.id}`,
-            type: 'WEEKLY CHECK-IN',
-            label: t('FIRST CHECK-IN'),
-            title: t('{name} completed their first check-in', { name: client.name }),
-            desc: t('Give {name} feedback on their first check-in to build momentum.', { name: client.name }),
-            client: client.name,
-            program: client.plan,
-            avatar: client.avatar,
-            status: statusFor(firstCheckinRule.priority),
-            timeLabel: t('Win'),
-            priority: firstCheckinRule.priority.toLowerCase() as any,
-            clientId: client.id
-          });
-        }
-      }
-
-      // Rule: Workout Streak Broken (no workout logged for 5+ days with an active plan)
-      const missedWorkoutRule = ruleList.find(r => r.id === 'missed-workout');
-      if (missedWorkoutRule?.enabled && client.status === 'Active' && client.trainingPlanAssigned && client.lastWorkoutAt) {
-        const daysSinceWorkout = Math.floor((nowMs - new Date(client.lastWorkoutAt).getTime()) / DAY);
-        if (daysSinceWorkout >= 5) {
-          generated.push({
-            id: `auto:missed-workout:${client.id}`,
-            type: 'AUTOMATIC ALERT',
-            label: t('STREAK BROKEN'),
-            title: t('{name} stopped training', { name: client.name }),
-            desc: t('No workout logged for {days}+ days despite an active training plan.', { days: daysSinceWorkout }),
-            client: client.name,
-            program: client.plan,
-            avatar: client.avatar,
-            status: statusFor(missedWorkoutRule.priority),
-            timeLabel: t('Alert'),
-            priority: missedWorkoutRule.priority.toLowerCase() as any,
-            clientId: client.id
-          });
-        }
-      }
-    });
-
-    return generated;
+    return buildAutomatedTasksPure(clientList, ruleList, t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
+
 
   // Active tasks: manual (not completed) + automated (not marked done today)
   const tasks = useMemo(() => {
