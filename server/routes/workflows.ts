@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { makeEnforceLimit } from '../lib/plans.js';
+import { sendPushToUser } from '../lib/push.js';
 
 const router = Router();
 
@@ -189,6 +190,50 @@ export const WORKFLOW_CATALOG = [
       { name: 'title', label: 'Title', type: 'text' },
       { name: 'description', label: 'Description', type: 'textarea' },
     ] },
+
+  // ── TK-28: additional triggers ────────────────────────────────
+  { type: 'trigger', key: 'trigger.subscription_renewed', label: 'Subscription renewed', category: 'Triggers',
+    icon: 'RefreshCcw', description: 'Fires when the manager\'s platform subscription is successfully renewed.', configFields: [] },
+  { type: 'trigger', key: 'trigger.birthday', label: 'Client birthday', category: 'Triggers',
+    icon: 'Cake', description: 'Daily cron — fires each year on the client\'s birthday.', configFields: [] },
+
+  // ── TK-28: additional data nodes ─────────────────────────────
+  { type: 'data', key: 'data.get_client_field', label: 'Get client field', category: 'Data',
+    icon: 'UserSearch', description: 'Copy a client profile field into ctx.data.',
+    configFields: [
+      { name: 'field', label: 'Field', type: 'select',
+        options: ['weight', 'goal_weight', 'height', 'goal', 'notes', 'tags'] },
+      { name: 'as', label: 'Store as (ctx.data key)', type: 'text' },
+    ] },
+  { type: 'data', key: 'data.get_plan_field', label: 'Get plan field', category: 'Data',
+    icon: 'FileSearch', description: 'Read a field from the client\'s latest nutrition or training plan.',
+    configFields: [
+      { name: 'planKind', label: 'Plan', type: 'select', options: ['nutrition', 'training'] },
+      { name: 'field', label: 'Field', type: 'select', options: ['name', 'target_calories', 'status'] },
+      { name: 'as', label: 'Store as (ctx.data key)', type: 'text' },
+    ] },
+
+  // ── TK-28: additional actions ─────────────────────────────────
+  { type: 'action', key: 'action.send_push', label: 'Send push notification', category: 'Actions',
+    icon: 'Bell', description: 'Send a web-push notification to the client (requires VAPID keys configured).',
+    configFields: [
+      { name: 'title', label: 'Title', type: 'text' },
+      { name: 'body', label: 'Body', type: 'textarea' },
+      { name: 'url', label: 'URL (optional)', type: 'text' },
+    ] },
+  { type: 'action', key: 'action.tag_client', label: 'Tag client', category: 'Actions',
+    icon: 'Tag', description: 'Add or remove a tag on the client profile (stored in metadata.tags).',
+    configFields: [
+      { name: 'tag', label: 'Tag', type: 'text' },
+      { name: 'action', label: 'Action', type: 'select', options: ['add', 'remove'] },
+    ] },
+  { type: 'action', key: 'action.charge_fee', label: 'Charge fee', category: 'Actions',
+    icon: 'BadgeDollarSign', description: 'Create a billing task for the manager to charge the client a manual fee.',
+    configFields: [
+      { name: 'amount', label: 'Amount', type: 'number' },
+      { name: 'currency', label: 'Currency (e.g. EUR)', type: 'text' },
+      { name: 'description', label: 'Description', type: 'text' },
+    ] },
 ] as const;
 
 const CATALOG_BY_KEY = new Map<string, any>(WORKFLOW_CATALOG.map(n => [n.key, n]));
@@ -352,6 +397,8 @@ async function runLoop(p: {
         case 'trigger.workout_logged':
         case 'trigger.client_inactive':
         case 'trigger.day_of_week':
+        case 'trigger.subscription_renewed':
+        case 'trigger.birthday':
           await logStep(node, 'completed', { trigger: node.key });
           break;
 
@@ -679,6 +726,129 @@ async function runLoop(p: {
           break;
         }
 
+        // ── TK-28: new data nodes ──────────────────────────────────
+        case 'data.get_client_field': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const field = String(cfg.field || '').trim();
+          const storeAs = String(cfg.as || field).trim() || field;
+          // Try ctx.client first; for metadata fields (tags, etc.) re-query.
+          let value: any = ctx.client[field];
+          if (value === undefined) {
+            const { data: cp } = await supabaseAdmin
+              .from('clients_profiles').select('metadata')
+              .eq('user_id', ctx.client.id).maybeSingle();
+            const meta: any = cp?.metadata || {};
+            value = meta[field] ?? null;
+          }
+          if (storeAs) ctx.data[storeAs] = value;
+          await logStep(node, 'completed', { field, storeAs, value });
+          break;
+        }
+        case 'data.get_plan_field': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const planKind = cfg.planKind === 'training' ? 'training' : 'nutrition';
+          const field = String(cfg.field || 'name').trim();
+          const storeAs = String(cfg.as || field).trim() || field;
+          const planTable = planKind === 'training' ? 'training_programs' : 'nutrition_plans';
+          const { data: plan } = await supabaseAdmin
+            .from(planTable).select('name, status, data_json')
+            .eq('client_id', ctx.client.id)
+            .order('updated_at', { ascending: false }).limit(1).maybeSingle();
+          let value: any = null;
+          if (plan) {
+            if (field === 'target_calories') {
+              value = (plan as any).data_json?.config?.targetCalories
+                ?? (plan as any).data_json?.target_calories ?? null;
+            } else {
+              value = (plan as any)[field] ?? (plan as any).data_json?.[field] ?? null;
+            }
+          }
+          if (storeAs) ctx.data[storeAs] = value;
+          await logStep(node, 'completed', { planKind, field, storeAs, value, found: !!plan });
+          break;
+        }
+
+        // ── TK-28: new actions ─────────────────────────────────────
+        case 'action.send_push': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const title = renderTemplate(cfg.title || 'New notification', ctx);
+          const body = renderTemplate(cfg.body || '', ctx);
+          const url = cfg.url ? renderTemplate(String(cfg.url), ctx) : '/';
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, title, body });
+            break;
+          }
+          await sendPushToUser(ctx.client.id, { title, body, url });
+          await logStep(node, 'completed', { title, body });
+          break;
+        }
+        case 'action.tag_client': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const tag = String(cfg.tag || '').trim().toLowerCase();
+          const act = cfg.action === 'remove' ? 'remove' : 'add';
+          if (!tag) {
+            await logStep(node, 'skipped', { reason: 'no tag specified' });
+            break;
+          }
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, tag, action: act });
+            break;
+          }
+          const { data: cp } = await supabaseAdmin
+            .from('clients_profiles').select('metadata')
+            .eq('user_id', ctx.client.id).maybeSingle();
+          const meta: any = { ...(cp?.metadata || {}) };
+          let tags: string[] = Array.isArray(meta.tags) ? [...meta.tags] : [];
+          if (act === 'add' && !tags.includes(tag)) tags.push(tag);
+          else if (act === 'remove') tags = tags.filter(t => t !== tag);
+          meta.tags = tags;
+          const { error: tagErr } = await supabaseAdmin
+            .from('clients_profiles')
+            .upsert({ user_id: ctx.client.id, metadata: meta }, { onConflict: 'user_id' });
+          await logStep(node, tagErr ? 'failed' : 'completed', { tag, action: act, tags }, tagErr?.message);
+          if (tagErr) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.charge_fee': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const amount = Number(cfg.amount) || 0;
+          const currency = String(cfg.currency || 'EUR').toUpperCase();
+          const description = renderTemplate(String(cfg.description || 'Fee'), ctx);
+          if (amount <= 0) {
+            await logStep(node, 'skipped', { reason: 'amount must be > 0' });
+            break;
+          }
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, amount, currency, description });
+            break;
+          }
+          // Creates a billing task for the manager to process manually.
+          const { error: feeErr } = await insertWithRetry('tasks', {
+            manager_id: managerId, client_id: ctx.client.id,
+            title: `Charge ${amount} ${currency} — ${description}`,
+            type: 'billing', date: new Date().toISOString().split('T')[0],
+            time: '09:00', status: 'pending',
+          });
+          await logStep(node, feeErr ? 'failed' : 'completed', { amount, currency, description }, feeErr?.message);
+          if (feeErr) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+
         default:
           await logStep(node, 'skipped', { reason: `unknown node ${node.key}` });
       }
@@ -822,10 +992,11 @@ export async function fireScheduledWorkflows(): Promise<number> {
   try {
     const { data: defs } = await supabaseAdmin
       .from('workflow_definitions').select('id, manager_id, current_version_id').eq('enabled', true);
-    const today = new Date().toISOString().split('T')[0];
+    const nowDate = new Date();
+    const today = nowDate.toISOString().split('T')[0];
 
     const WEEKDAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-    const todayWeekday = WEEKDAY_NAMES[new Date().getDay()];
+    const todayWeekday = WEEKDAY_NAMES[nowDate.getDay()];
 
     for (const def of defs || []) {
       if (!def.current_version_id) continue;
@@ -838,7 +1009,7 @@ export async function fireScheduledWorkflows(): Promise<number> {
       if (!trig) continue;
 
       // Only the cron-style triggers fire from this loop.
-      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive']);
+      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive', 'trigger.birthday']);
       if (!cronTriggers.has(trig.key)) continue;
 
       // trigger.day_of_week: skip workflows whose configured weekday isn't today.
@@ -850,6 +1021,29 @@ export async function fireScheduledWorkflows(): Promise<number> {
         ? Math.max(1, Number(trig.config?.everyDays) || 1) : 1;
       const inactiveDays = trig.key === 'trigger.client_inactive'
         ? Math.max(1, Number(trig.config?.days) || 7) : 0;
+
+      // trigger.birthday: fetch only clients whose birthday falls on today (MM-DD).
+      if (trig.key === 'trigger.birthday') {
+        const { data: allClients } = await supabaseAdmin
+          .from('users')
+          .select('id, profiles!inner(birthday)')
+          .eq('manager_id', def.manager_id)
+          .eq('role', 'CLIENT');
+        for (const client of allClients || []) {
+          const profile: any = Array.isArray((client as any).profiles)
+            ? (client as any).profiles[0] : (client as any).profiles;
+          if (!profile?.birthday) continue;
+          const bday = new Date(profile.birthday);
+          if (bday.getUTCMonth() !== nowDate.getUTCMonth() || bday.getUTCDate() !== nowDate.getUTCDate()) continue;
+          const res = await executeWorkflowVersion({
+            managerId: def.manager_id, versionId: version.id, nodes, edges: version.edges || [],
+            triggerType: 'trigger.birthday', payload: { clientId: client.id },
+            dedupeKey: `${version.id}:trigger.birthday:${client.id}:${today}`,
+          });
+          if (res.status !== 'skipped') fired++;
+        }
+        continue;
+      }
 
       const { data: clients } = await supabaseAdmin
         .from('users').select('id').eq('manager_id', def.manager_id).eq('role', 'CLIENT');

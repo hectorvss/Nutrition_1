@@ -148,6 +148,19 @@ router.post('/webhook', async (req, res) => {
             current_period_end: subscriptionPeriodEnd(subscription),
             updated_at: new Date().toISOString(),
           }).eq('stripe_subscription_id', subscription.id);
+
+          // Fire subscription_renewed when the billing period advances (renewal).
+          const prevAttribs = (event.data as any).previous_attributes || {};
+          const isRenewal = event.type === 'customer.subscription.updated'
+            && subscription.status === 'active'
+            && prevAttribs.current_period_start !== undefined;
+          if (isRenewal) {
+            const { runWorkflowsForEvent } = await import('./workflows.js');
+            runWorkflowsForEvent(subData.user_id, 'trigger.subscription_renewed', {
+              subscriptionId: subscription.id,
+              planName: subscription.items?.data?.[0]?.price?.nickname || null,
+            }).catch(err => console.error('Workflow trigger error (subscription_renewed):', err));
+          }
         }
         break;
       }
