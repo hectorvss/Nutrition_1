@@ -6,7 +6,10 @@ import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { resumeWaitingWorkflows, fireScheduledWorkflows } from './workflows.js';
 import { logger } from '../lib/logger.js';
-import { makeEnforceLimit } from '../lib/plans.js';
+import { makeEnforceLimit, limitsForTier, type PlanTier } from '../lib/plans.js';
+import { TRIGGERS, TRIGGER_BY_ID, filterTriggersByTier } from '../lib/automation-triggers.js';
+import { ACTIVATION_CONDITIONS, STOP_CONDITIONS, filterConditionsByTier } from '../lib/automation-conditions.js';
+import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
 // Block automation creation once the manager hits their tier's active-automation cap.
 const enforceAutomationLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomations', async (userId: string) => {
@@ -19,6 +22,187 @@ const enforceAutomationLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomation
 });
 
 const router = Router();
+
+// ─── Multi-step engine ────────────────────────────────────────────────────
+// Una automation puede definir `delivery_rules.steps: Step[]`. Si esta vacio
+// o ausente, el flujo es el clasico (un solo mensaje en `automation.message`).
+// Si tiene steps, los ejecutamos secuencialmente; cuando llegamos a un
+// `wait` persistimos el progreso en `automation_pending_steps` y el cron
+// diario reanuda la cadena cuando vence el delay.
+
+export type AutomationStep =
+  | { kind: 'message'; message: string }
+  | { kind: 'wait'; amount: number; unit: 'hours' | 'days'; cancelIfReplied?: boolean }
+  | { kind: 'create_task'; title: string; type?: string; priority?: 'low'|'medium'|'high'; date?: string }
+  | { kind: 'set_field'; field: 'status' | 'goal' | 'notes'; value: string }
+  | { kind: 'stop_if'; conditionType: string; operator: string; value: string };
+
+interface ExecutionContext {
+  managerId: string;
+  automation: any;
+  clientId: string;
+  /** Snapshot de las variables de mensaje (Client Name, etc.). */
+  renderCtx: RenderContext;
+  /** Trigger payload original (clientId, etc.). */
+  triggerPayload: any;
+  /** Valores precomputados para evaluar conditions. */
+  conditionValues: Record<string, number | string | boolean>;
+}
+
+/**
+ * Evalua un array de conditions con shape { type, operator, value, enabled }
+ * contra el dict de valores precomputados. Para conditions tipo 'within'
+ * el `value` es un periodo (e.g. "24" horas para reply.within=24h).
+ *
+ * Devuelve true si TODAS las conditions habilitadas se cumplen (AND).
+ */
+function evalConditions(conditions: any[], values: Record<string, any>): boolean {
+  if (!Array.isArray(conditions) || conditions.length === 0) return true;
+  for (const c of conditions) {
+    if (!c?.enabled) continue;
+    const val = values[c.type];
+    if (val === undefined) {
+      // Type desconocido (e.g. condition legacy o de una version anterior del
+      // catalogo): NO se cumple. Para activation conditions esto bloquea el
+      // envio (defensivo); para stop conditions el caller pasa una sola en
+      // su loop, asi que el siguiente intento puede triggear otra que si
+      // exista.
+      return false;
+    }
+    const target = c.value === 'Target' ? values['goal_weight'] : c.value;
+    const numTarget = parseFloat(target);
+    const numVal = Number(val);
+    switch (c.operator) {
+      case '>':  if (!(numVal >  numTarget)) return false; break;
+      case '<':  if (!(numVal <  numTarget)) return false; break;
+      case '>=': if (!(numVal >= numTarget)) return false; break;
+      case '<=': if (!(numVal <= numTarget)) return false; break;
+      case '==': if (!(String(val) === String(target))) return false; break;
+      case '!=': if (!(String(val) !== String(target))) return false; break;
+      case 'within':
+        // 'within' es tiempo: la condition se cumple si el evento ocurrio
+        // en los ultimos N (horas|dias). El values[type] debe ser un numero
+        // de horas/dias desde el evento (e.g. last_message_recent_hours).
+        if (!(numVal <= numTarget)) return false;
+        break;
+    }
+  }
+  return true;
+}
+
+/**
+ * Ejecuta los steps de una automation a partir de `fromStep`. Devuelve:
+ *   - 'completed' si terminamos toda la cadena.
+ *   - 'parked'    si un `wait` parqueo la ejecucion (cron resumira).
+ *   - 'aborted'   si un `stop_if` se cumplio o un error fatal.
+ */
+async function executeAutomationSteps(opts: {
+  ctx: ExecutionContext;
+  steps: AutomationStep[];
+  fromStep: number;
+}): Promise<'completed' | 'parked' | 'aborted'> {
+  const { ctx, steps, fromStep } = opts;
+
+  for (let i = fromStep; i < steps.length; i++) {
+    const step = steps[i];
+
+    if (step.kind === 'message') {
+      const finalMessage = renderMessage(step.message, ctx.renderCtx);
+      const { error } = await supabaseAdmin.from('messages').insert({
+        sender_id: ctx.managerId,
+        receiver_id: ctx.clientId,
+        content: finalMessage,
+      });
+      if (error) {
+        console.error(`[automation ${ctx.automation.id}] message step ${i} failed:`, error);
+        return 'aborted';
+      }
+      await supabaseAdmin.from('automation_logs').insert({
+        automation_id: ctx.automation.id,
+        client_id: ctx.clientId,
+        trigger_context: { ...ctx.triggerPayload, step_index: i, step_kind: 'message' },
+        sent_at: new Date().toISOString(),
+      });
+      continue;
+    }
+
+    if (step.kind === 'wait') {
+      const ms = (step.amount || 0) * (step.unit === 'hours' ? 3600 : 86400) * 1000;
+      const resumeAt = new Date(Date.now() + ms).toISOString();
+      const { error } = await supabaseAdmin
+        .from('automation_pending_steps')
+        .insert({
+          automation_id: ctx.automation.id,
+          client_id: ctx.clientId,
+          step_index: i + 1, // queremos resumir DESDE el step siguiente al wait
+          resume_at: resumeAt,
+          context: {
+            triggerPayload: ctx.triggerPayload,
+            renderCtx: ctx.renderCtx,
+            cancelIfReplied: !!step.cancelIfReplied,
+          },
+        });
+      if (error && error.code !== '23505') {
+        // 23505 = unique-violation -> ya hay una fila parqueada para esta
+        // cadena. La nueva se descarta (no duplicamos el delay). Cualquier
+        // otro error lo loguemos y abortamos para no perder telemetria.
+        console.error(`[automation ${ctx.automation.id}] wait step ${i} parking failed:`, error);
+        return 'aborted';
+      }
+      return 'parked';
+    }
+
+    if (step.kind === 'create_task') {
+      const date = step.date || new Date().toISOString().slice(0, 10);
+      const { error } = await supabaseAdmin.from('tasks').insert({
+        manager_id: ctx.managerId,
+        client_id: ctx.clientId,
+        title: renderMessage(step.title, ctx.renderCtx),
+        type: step.type || 'Admin',
+        date,
+        time: '09:00',
+        status: 'pending',
+        priority: step.priority || 'medium',
+      });
+      if (error) {
+        console.error(`[automation ${ctx.automation.id}] create_task step ${i} failed:`, error);
+      }
+      continue;
+    }
+
+    if (step.kind === 'set_field') {
+      // Solo permitimos actualizar campos no sensibles del cliente.
+      const SAFE_FIELDS = ['status', 'goal', 'notes'];
+      if (!SAFE_FIELDS.includes(step.field)) continue;
+      const table = step.field === 'status' ? 'users' : 'clients_profiles';
+      const pk = step.field === 'status' ? 'id' : 'user_id';
+      const { error } = await supabaseAdmin.from(table)
+        .update({ [step.field]: step.value })
+        .eq(pk, ctx.clientId);
+      if (error) console.error(`[automation ${ctx.automation.id}] set_field step ${i} failed:`, error);
+      continue;
+    }
+
+    if (step.kind === 'stop_if') {
+      const condArr = [{
+        type: step.conditionType, operator: step.operator,
+        value: step.value, enabled: true,
+      }];
+      if (evalConditions(condArr, ctx.conditionValues)) {
+        // condicion cumplida -> aborto controlado.
+        await supabaseAdmin.from('automation_logs').insert({
+          automation_id: ctx.automation.id,
+          client_id: ctx.clientId,
+          trigger_context: { ...ctx.triggerPayload, step_index: i, step_kind: 'stop_if', reason: 'condition_met' },
+          sent_at: new Date().toISOString(),
+        });
+        return 'aborted';
+      }
+      continue;
+    }
+  }
+  return 'completed';
+}
 
 /**
  * Helper to process an automation trigger
@@ -86,115 +270,119 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         const { data: client, error: clientError } = await supabaseAdmin
           .from('users')
           .select(`
-            id,
+            id, email, status, created_at,
             profiles(full_name),
-            clients_profiles(goal_weight, check_in_day, last_login)
+            clients_profiles(goal_weight, check_in_day, last_login, weight, notes)
           `)
           .eq('id', clientId)
           .maybeSingle();
 
         if (clientError || !client) continue;
 
-        // Fetch latest check-in. check_ins stores all metrics inside data_json
-        // (the columns weight/mood_score/rpe_score do not exist on the table).
-        const { data: latestCheckIn } = await supabaseAdmin
+        // Fetch latest 2 check-ins (last + previous, para weight_diff)
+        const { data: lastTwo } = await supabaseAdmin
           .from('check_ins')
-          .select('data_json, date, created_at')
+          .select('data_json, date, created_at, reviewed_at')
           .eq('client_id', clientId)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(2);
+        const latestCheckIn = lastTwo?.[0] || null;
+        const prevCheckIn   = lastTwo?.[1] || null;
 
         const ciData: any = latestCheckIn?.data_json || {};
+        const prevData: any = prevCheckIn?.data_json || {};
 
-        // Habit adherence tracking is not implemented (no habit_logs table),
-        // so adherence-based automations evaluate against 0.
-        const adherence = 0;
+        const profile = Array.isArray(client.profiles) ? client.profiles[0] : (client.profiles as any);
+        const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : (client.clients_profiles as any);
 
-        const profile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles;
-        const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
+        const currentWeight = Number(ciData.weight ?? ciData.avgWeight ?? ciData.bodyWeight ?? cProfile?.weight) || 0;
+        const prevWeight    = Number(prevData.weight ?? prevData.avgWeight ?? prevData.bodyWeight) || currentWeight;
+        const weightDiff    = Math.abs(currentWeight - prevWeight);
+        const goalWeight    = Number(cProfile?.goal_weight) || 0;
+        const goalWeightDiff = goalWeight ? Math.abs(currentWeight - goalWeight) : 0;
 
-        const currentWeight = Number(ciData.weight ?? ciData.avgWeight ?? ciData.bodyWeight) || 0;
-        const goalWeight = cProfile?.goal_weight || 0;
         const lastLogin = cProfile?.last_login ? new Date(cProfile.last_login) : new Date();
-        const daysInactive = Math.floor((new Date().getTime() - lastLogin.getTime()) / (1000 * 3600 * 24));
-        const checkInDay = cProfile?.check_in_day || 'Monday';
+        const daysInactive = Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 3600 * 24));
+        const daysSinceLogin = daysInactive;
 
-        // Days since last check-in
         const lastCheckinRaw = latestCheckIn?.created_at || latestCheckIn?.date || null;
         const lastCheckinDate = lastCheckinRaw ? new Date(lastCheckinRaw) : null;
         const daysSinceCheckin = lastCheckinDate
-          ? Math.floor((new Date().getTime() - lastCheckinDate.getTime()) / (1000 * 3600 * 24))
+          ? Math.floor((Date.now() - lastCheckinDate.getTime()) / (1000 * 3600 * 24))
           : 999;
+        const createdAt = (client as any).created_at ? new Date((client as any).created_at) : new Date();
+        const daysAsClient = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 3600 * 24));
+
+        const adherencePct = Number(ciData.nutrition_adherence_score ?? ciData.adherence_score);
+        const adherence    = Number.isFinite(adherencePct) ? adherencePct * 10 : 0;
 
         const mood = Number(ciData.mood ?? ciData.mood_score) || 0;
-        const rpe = Number(ciData.rpe ?? ciData.rpe_score) || 0;
+        const rpe  = Number(ciData.rpe ?? ciData.rpe_score) || 0;
+        const bodyFat = Number(ciData.body_fat ?? ciData.bodyFat) || 0;
 
-        // 4. Unified Condition Evaluation Helper
-        const evalConditions = (conditions: any[]) => {
-          if (!conditions || conditions.length === 0) return true;
-          for (const cond of conditions) {
-            if (!cond.enabled) continue;
-            
-            let val = 0;
-            if (cond.type === 'weight') val = currentWeight;
-            else if (cond.type === 'activity') val = daysInactive;
-            else if (cond.type === 'adherence') val = adherence;
-            else if (cond.type === 'last_checkin') val = daysSinceCheckin;
-            else if (cond.type === 'mood') val = mood;
-            else if (cond.type === 'rpe') val = rpe;
-            else if (cond.type === 'weight_goal') val = currentWeight; // For stop conditions
-            
-            const target = cond.value === 'Target' ? goalWeight : parseFloat(cond.value) || 0;
-            
-            if (cond.operator === '>' && !(val > target)) return false;
-            if (cond.operator === '<' && !(val < target)) return false;
-            if (cond.operator === '==' && !(val === target)) return false;
-            if (cond.operator === '<=' && !(val <= target)) return false;
-            if (cond.operator === '>=' && !(val >= target)) return false;
-          }
-          return true;
+        // Anti-spam helpers: ¿hubo mensaje reciente? ¿el coach respondio?
+        const sixHoursAgo = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
+        const { count: recentMsgCount } = await supabaseAdmin
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .or(`and(sender_id.eq.${managerId},receiver_id.eq.${clientId}),and(sender_id.eq.${clientId},receiver_id.eq.${managerId})`)
+          .gte('created_at', sixHoursAgo);
+        const hoursSinceLastMsg = (recentMsgCount || 0) > 0 ? 0 : 999;
+
+        // Diccionario unico — el evaluator de conditions solo consulta esto.
+        const conditionValues: Record<string, any> = {
+          weight: currentWeight,
+          // weight_goal es un alias historico de `weight` (se comparaba contra
+          // goal). El catalogo nuevo usa `weight` + value='Target', pero
+          // mantenemos esta clave para automations creadas antes del refactor.
+          weight_goal: currentWeight,
+          weight_diff: weightDiff,
+          goal_weight: goalWeight,
+          goal_weight_diff: goalWeightDiff,
+          body_fat: bodyFat,
+          adherence,
+          adherence_avg_4w: adherence, // simplificacion: mismo valor (TODO: media real)
+          mood, rpe,
+          last_checkin: daysSinceCheckin,
+          last_login_days: daysSinceLogin,
+          activity: daysInactive,
+          days_as_client: daysAsClient,
+          streak_workouts: 0, // TODO: calcular desde workout_logs
+          unread_messages_count: 0, // TODO
+          has_active_plan: true, // TODO: leer de nutrition_plans/training_programs
+          // Stop conditions (event-based + anti-spam)
+          reply: (triggerId === 'client-reply') ? 0 : 999, // 'within' compara: 0 = "ahora", 999 = "hace mucho"
+          checkin: (triggerId === 'checkin-submitted') ? 0 : daysSinceCheckin,
+          weight_goal_reached: goalWeight && currentWeight <= goalWeight ? 'true' : 'false',
+          client_archived: ((client as any).status === 'Archived' || (client as any).status === 'archived') ? 'true' : 'false',
+          coach_replied: hoursSinceLastMsg,
+          last_message_recent: hoursSinceLastMsg,
+          max_sends_per_week: 0, // TODO: count automation_logs ultima semana
+          workflow_paused: 'false', // si llegamos aqui es porque enabled=true
+          on_vacation: 'false',
+          plan_completed: 'false',
         };
 
-        // 4a. Check Activation Conditions
-        if (!evalConditions(rules.activation_conditions)) continue;
+        // 4a. Activation conditions
+        if (!evalConditions(rules.activation_conditions, conditionValues)) continue;
 
-        // 4b. Check Stop Conditions
-        if (rules.stop_conditions && rules.stop_conditions.length > 0) {
-          // Special cases for triggers like 'reply' or 'checkin'
-          let stopMet = false;
-          for (const cond of rules.stop_conditions) {
-            if (!cond.enabled) continue;
-            
-            // System event stop conditions (requires data from the trigger)
-            if (cond.type === 'reply' && triggerId === 'client-reply') stopMet = true;
-            if (cond.type === 'checkin' && triggerId === 'checkin-submitted') stopMet = true;
-            
-            // Data-based stop conditions
-            if (['weight_goal', 'adherence', 'activity'].includes(cond.type)) {
-              if (evalConditions([cond])) stopMet = true;
-            }
-            if (stopMet) break;
-          }
-          
-          if (stopMet) {
-            console.log(`Automation ${automation.id} stopped for client ${clientId} due to stop condition.`);
-            // Optionally disable the automation for this client if it's recurring?
-            // For now, we just skip sending.
-            continue;
-          }
+        // 4b. Stop conditions (OR: con que UNA se cumpla, paramos)
+        let stopMet = false;
+        for (const cond of (rules.stop_conditions || [])) {
+          if (!cond?.enabled) continue;
+          if (evalConditions([cond], conditionValues)) { stopMet = true; break; }
+        }
+        if (stopMet) {
+          console.log(`[automation ${automation.id}] stopped by stop_condition for client ${clientId}`);
+          continue;
         }
 
-        // 5. "Once" rules: claim delivery slot atomically via INSERT to a dedicated tracker.
-        // The PRIMARY KEY (automation_id, client_id) makes this race-free — two concurrent
-        // workers cannot both succeed, the loser gets a unique-violation and skips.
+        // 5. "Once" rules
         if (rules.frequency === 'Once') {
           const { error: claimError } = await supabaseAdmin
             .from('automation_once_deliveries')
             .insert({ automation_id: automation.id, client_id: clientId });
-
           if (claimError) {
-            // 23505 = unique violation → already delivered. Any other error: log and skip too.
             if (claimError.code !== '23505') {
               console.error(`automation_once_deliveries claim failed for ${automation.id}/${clientId}:`, claimError);
             }
@@ -202,47 +390,26 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           }
         }
 
-        // 6. Replace placeholders (manager profile se cachea por automation arriba)
-        const coachName = _cachedCoachName;
+        // 6. Construir contexto para steps
+        const renderCtx: RenderContext = {
+          client: { id: clientId, email: (client as any).email, full_name: profile?.full_name },
+          profile: cProfile || null,
+          coachName: _cachedCoachName,
+          latestCheckIn: ciData,
+        };
 
-        const clientName = profile?.full_name || 'there';
-        const firstName = clientName.split(' ')[0];
-        const coachFirstName = coachName.split(' ')[0];
-        let finalMessage = automation.message
-          .replace(/{Client Name}/g, () => clientName)
-          .replace(/{First Name}/g, () => firstName)
-          .replace(/{Coach Name}/g, () => coachName)
-          .replace(/{Coach First Name}/g, () => coachFirstName)
-          .replace(/{Current Weight}/g, () => currentWeight.toString())
-          .replace(/{Goal Weight}/g, () => goalWeight.toString())
-          .replace(/{Adherence Rate}/g, () => `${adherence}%`)
-          .replace(/{Check-in Day}/g, () => checkInDay)
-          .replace(/{Days Inactive}/g, () => daysInactive.toString())
-          .replace(/{Days Until Expiry}/g, () => "30");
-        
-        // 7. Send message
-        const { error: sendError } = await supabaseAdmin
-          .from('messages')
-          .insert({
-            sender_id: managerId,
-            receiver_id: clientId,
-            content: finalMessage
-          });
-        
-        if (sendError) {
-          console.error(`Error sending automated message to ${clientId}:`, sendError);
-          continue;
-        }
+        const execCtx: ExecutionContext = {
+          managerId, automation, clientId, renderCtx,
+          triggerPayload: data, conditionValues,
+        };
 
-        // 8. Log the delivery
-        await supabaseAdmin
-          .from('automation_logs')
-          .insert({
-            automation_id: automation.id,
-            client_id: clientId,
-            trigger_context: data,
-            sent_at: new Date().toISOString()
-          });
+        // 7. Ejecutar steps. Si la automation no define steps multi-step,
+        // sintetizamos un unico step `message` desde automation.message.
+        const steps: AutomationStep[] = Array.isArray(rules.steps) && rules.steps.length > 0
+          ? rules.steps
+          : [{ kind: 'message', message: automation.message || '' }];
+
+        await executeAutomationSteps({ ctx: execCtx, steps, fromStep: 0 });
       }
     }
   } catch (error) {
@@ -376,15 +543,77 @@ function pickAutomationFields(body: any): Record<string, any> {
   return out;
 }
 
-router.post('/', verifyManager, enforceAutomationLimit, async (req: any, res) => {
-  const payload = { ...pickAutomationFields(req.body), manager_id: req.user.id };
+/**
+ * Devuelve el catalogo de triggers + conditions filtrado por el tier del
+ * manager. Frontend lo consume al abrir el wizard de crear automation.
+ */
+router.get('/catalog', verifyManager, async (req: any, res) => {
   try {
+    const { data: sub } = await supabaseAdmin
+      .from('manager_subscriptions')
+      .select('plan_tier')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    const tier = (sub?.plan_tier as PlanTier) || 'trial';
+    const limits = limitsForTier(tier);
+    const triggerCatalogTier = limits.automationTriggerTier;
+
+    res.json({
+      tier,
+      limits: {
+        maxStepsPerFlow: limits.automationMaxStepsPerFlow,
+        activeAutomations: limits.activeAutomations,
+        triggerTier: triggerCatalogTier,
+      },
+      triggers: filterTriggersByTier(triggerCatalogTier),
+      activationConditions: filterConditionsByTier(ACTIVATION_CONDITIONS, triggerCatalogTier),
+      stopConditions: filterConditionsByTier(STOP_CONDITIONS, triggerCatalogTier),
+    });
+  } catch (error: any) {
+    logger.error('automations.catalog.failed', { err: error?.message });
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+/**
+ * Valida el campo `steps` antes de persistirlo. Aplica el cap del tier
+ * (automationMaxStepsPerFlow) y descarta steps de tipos desconocidos.
+ * No throws — devuelve un { ok, error?, steps? } para que el handler decida.
+ */
+async function validateSteps(req: any, steps: any): Promise<{ ok: boolean; error?: string; steps?: AutomationStep[] }> {
+  if (!Array.isArray(steps) || steps.length === 0) return { ok: true, steps: [] };
+  const VALID_KINDS = ['message', 'wait', 'create_task', 'set_field', 'stop_if'];
+  const cleaned: AutomationStep[] = [];
+  for (const s of steps) {
+    if (!s || typeof s !== 'object' || !VALID_KINDS.includes(s.kind)) continue;
+    cleaned.push(s as AutomationStep);
+  }
+  // Cap por tier.
+  const { data: sub } = await supabaseAdmin
+    .from('manager_subscriptions').select('plan_tier').eq('user_id', req.user.id).maybeSingle();
+  const tier = (sub?.plan_tier as PlanTier) || 'trial';
+  const max = limitsForTier(tier).automationMaxStepsPerFlow;
+  if (max != null && cleaned.length > max) {
+    return { ok: false, error: `Tu plan ${tier} permite maximo ${max} paso(s) por automation.` };
+  }
+  return { ok: true, steps: cleaned };
+}
+
+router.post('/', verifyManager, enforceAutomationLimit, async (req: any, res) => {
+  try {
+    const fields = pickAutomationFields(req.body);
+    // Validar steps si vienen en delivery_rules.steps
+    if (fields.delivery_rules?.steps) {
+      const v = await validateSteps(req, fields.delivery_rules.steps);
+      if (!v.ok) return res.status(400).json({ error: v.error });
+      fields.delivery_rules.steps = v.steps;
+    }
+    const payload = { ...fields, manager_id: req.user.id };
     const { data, error } = await supabaseAdmin
       .from('automations')
       .insert(payload)
       .select()
       .single();
-
     if (error) throw error;
     res.json(data);
   } catch (error: any) {
@@ -394,14 +623,20 @@ router.post('/', verifyManager, enforceAutomationLimit, async (req: any, res) =>
 
 router.put('/:id', verifyManager, async (req: any, res) => {
   try {
+    const fields = pickAutomationFields(req.body);
+    if (fields.delivery_rules?.steps) {
+      const v = await validateSteps(req, fields.delivery_rules.steps);
+      if (!v.ok) return res.status(400).json({ error: v.error });
+      fields.delivery_rules.steps = v.steps;
+    }
     const { data, error } = await supabaseAdmin
       .from('automations')
-      .update(pickAutomationFields(req.body))
+      .update(fields)
       .eq('id', req.params.id)
       .eq('manager_id', req.user.id)
       .select()
       .single();
-    
+
     if (error) throw error;
     res.json(data);
   } catch (error: any) {
@@ -579,6 +814,71 @@ const cronHandler = async (req: any, res: any) => {
       }
     }
 
+    // Reanuda cadenas multi-step de simple automations parqueadas (los
+    // pasos `wait`). Las filas con resume_at <= now() se procesan en lote;
+    // si la cadena termina o vuelve a parquear, la fila se borra/reemplaza.
+    let stepsResumed = 0;
+    try {
+      const { data: pending } = await supabaseAdmin
+        .from('automation_pending_steps')
+        .select('*')
+        .lte('resume_at', new Date().toISOString())
+        .limit(200);
+
+      for (const row of pending || []) {
+        const { data: automation } = await supabaseAdmin
+          .from('automations').select('*').eq('id', row.automation_id).maybeSingle();
+        if (!automation || !automation.enabled) {
+          await supabaseAdmin.from('automation_pending_steps').delete().eq('id', row.id);
+          continue;
+        }
+
+        const steps: AutomationStep[] = automation.delivery_rules?.steps || [];
+        const ctx0 = row.context || {};
+
+        // cancelIfReplied: si en el wait previo se pidio cancelar si el
+        // cliente respondio, comprobamos antes de seguir.
+        if (ctx0.cancelIfReplied) {
+          const { data: lastReply } = await supabaseAdmin
+            .from('messages').select('id')
+            .eq('sender_id', row.client_id)
+            .eq('receiver_id', automation.manager_id)
+            .gte('created_at', row.created_at)
+            .limit(1).maybeSingle();
+          if (lastReply) {
+            await supabaseAdmin.from('automation_pending_steps').delete().eq('id', row.id);
+            stepsResumed++;
+            continue;
+          }
+        }
+
+        // Reconstruir un context minimo. Las conditions ya no pueden
+        // evaluarse contra datos frescos sin re-fetch — por ahora vacio
+        // (los stop_if dentro de la cadena no se evaluan en resume).
+        const execCtx: ExecutionContext = {
+          managerId: automation.manager_id,
+          automation, clientId: row.client_id,
+          renderCtx: ctx0.renderCtx || {},
+          triggerPayload: ctx0.triggerPayload || {},
+          conditionValues: ctx0.conditionValues || {},
+        };
+
+        const result = await executeAutomationSteps({
+          ctx: execCtx, steps, fromStep: row.step_index,
+        });
+
+        // El insert de wait en executeAutomationSteps creo una fila NUEVA
+        // (porque el unique-index por (automation_id, client_id) hubiera
+        // dado conflict si reusamos). Borramos la fila previa siempre que
+        // hayamos completado o aborted; si el siguiente wait parqueo otra,
+        // tambien borramos la primera (la nueva tiene id distinto).
+        await supabaseAdmin.from('automation_pending_steps').delete().eq('id', row.id);
+        stepsResumed++;
+      }
+    } catch (e: any) {
+      logger.error('automations.steps.resume_failed', { err: e?.message });
+    }
+
     // Advanced Workflows: resume parked (Wait) runs + fire scheduled workflows.
     const resumed = await resumeWaitingWorkflows();
     const scheduled = await fireScheduledWorkflows();
@@ -602,8 +902,8 @@ const cronHandler = async (req: any, res: any) => {
       logger.error('billing.trials.expire_failed', { err: e?.message });
     }
 
-    logger.info('automations.cron.completed', { workflows: { resumed, scheduled }, trialsExpired });
-    res.json({ success: true, workflows: { resumed, scheduled }, trialsExpired });
+    logger.info('automations.cron.completed', { workflows: { resumed, scheduled }, trialsExpired, stepsResumed });
+    res.json({ success: true, workflows: { resumed, scheduled }, trialsExpired, stepsResumed });
   } catch (error: any) {
     logger.error('automations.cron.failed', { err: error?.message });
     res.status(500).json({ error: safeErr(error) });

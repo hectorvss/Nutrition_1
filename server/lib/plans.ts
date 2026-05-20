@@ -12,6 +12,20 @@ export interface PlanLimits {
   storageGB: number | null;
   activeAutomations: number | null;
   activeAlerts: number | null;
+  /** Advanced Workflow Builder — separate from the simple `activeAutomations`
+   *  bucket because workflows are more powerful and we want to gate them harder. */
+  activeWorkflows: number | null;
+  /**
+   * Limites sobre el motor de automatizaciones simples (workflow simple).
+   * - `automationTriggerTier`: 'basic' = solo triggers core (lifecycle,
+   *    weekly check-in reminder, inactivity, birthday). 'advanced' = TODO
+   *    el catalogo (peso, adherencia, workouts, métricas avanzadas).
+   * - `automationMaxStepsPerFlow`: longitud maxima de la cadena multi-step.
+   *    1 = solo mensaje unico (compat). >=2 = encadenar wait + message +
+   *    create_task + set_field + stop_if. null = sin limite.
+   */
+  automationTriggerTier: 'basic' | 'advanced';
+  automationMaxStepsPerFlow: number | null;
 }
 
 export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
@@ -23,6 +37,9 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     storageGB: 10,
     activeAutomations: 10,
     activeAlerts: 25,
+    activeWorkflows: 3,
+    automationTriggerTier: 'advanced',     // trial = experiencia completa
+    automationMaxStepsPerFlow: 5,
   },
   professional: {
     activeClients: 20,
@@ -30,6 +47,9 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     storageGB: 10,
     activeAutomations: 10,
     activeAlerts: 25,
+    activeWorkflows: 3,
+    automationTriggerTier: 'basic',        // solo triggers core
+    automationMaxStepsPerFlow: 1,          // solo mensaje unico
   },
   scale: {
     activeClients: 60,
@@ -37,6 +57,9 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     storageGB: 50,
     activeAutomations: 30,
     activeAlerts: 100,
+    activeWorkflows: 10,
+    automationTriggerTier: 'advanced',
+    automationMaxStepsPerFlow: 5,
   },
   unlimited: {
     activeClients: null,
@@ -44,6 +67,9 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     storageGB: null,
     activeAutomations: null,
     activeAlerts: null,
+    activeWorkflows: null,
+    automationTriggerTier: 'advanced',
+    automationMaxStepsPerFlow: null,
   },
 };
 
@@ -136,9 +162,15 @@ export function makeEnforceLimit(
       }
 
       const tier = (sub?.plan_tier as PlanTier) || 'trial';
-      const limit = limitsForTier(tier)[resource];
-      if (limit == null) return next(); // unlimited
+      const limitRaw = limitsForTier(tier)[resource];
+      // El enforce middleware solo aplica a resources NUMERICOS (cap por
+      // cantidad). Para fields no numericos (e.g. automationTriggerTier que
+      // es string) no enforces, simplemente pasamos. Es responsabilidad del
+      // handler/route hacer el chequeo enum-based.
+      if (limitRaw == null) return next(); // unlimited
+      if (typeof limitRaw !== 'number') return next(); // resource no numerico
 
+      const limit: number = limitRaw;
       const used = await countFn(userId);
       if (used >= limit) {
         return res.status(402).json({
