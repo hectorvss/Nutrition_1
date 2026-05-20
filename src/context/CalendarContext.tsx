@@ -9,7 +9,7 @@ export type EventType = 'Video Call' | 'In-Person' | 'Training' | 'Nutrition' | 
 export interface CalendarEvent {
   id: string;
   time: string; // e.g. "09:00" or "14:30"
-  endTime?: string; // e.g. "10:30" 
+  endTime?: string; // e.g. "10:30"
   date: string; // YYYY-MM-DD format ideally
   duration: string; // e.g. "30m", "1h", "1h 30m"
   title: string;
@@ -20,16 +20,31 @@ export interface CalendarEvent {
   initials?: string;
   clientId?: string; // Optional reference to actual client
   status: 'pending' | 'completed' | 'in_progress';
+  /**
+   * Prioridad visual de la tarea. Determina en que columna aparece en la
+   * pantalla Tasks (`Tasks.tsx` agrupa por `priority`). Persistida en BD
+   * como columna `tasks.priority` (CHECK enum low/medium/high).
+   */
+  priority?: 'low' | 'medium' | 'high';
   linkUrl?: string;
+  // Recurrence metadata. Present for both parent and virtual instance rows.
+  // `isVirtual` distinguishes a generated occurrence from a stored DB row;
+  // `recurrenceParentId` points to the parent task for virtual instances.
+  recurrenceRule?: string | null;
+  recurrenceEnd?: string | null;
+  recurrenceParentId?: string | null;
+  isVirtual?: boolean;
+  repeat?: string; // legacy UI selector value (Daily/Weekly/Monthly/Custom)
 }
 
 interface CalendarContextType {
   events: CalendarEvent[];
-  addEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
-  deleteEvent: (id: string) => Promise<void>;
-  updateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<CalendarEvent>;
+  addEvent: (event: Omit<CalendarEvent, 'id'> & { repeat?: string; recurrenceRule?: string; recurrenceEnd?: string }) => Promise<CalendarEvent>;
+  deleteEvent: (id: string, scope?: 'instance' | 'series') => Promise<void>;
+  updateEvent: (id: string, updates: Partial<CalendarEvent> & { repeat?: string; recurrenceRule?: string; recurrenceEnd?: string }, scope?: 'instance' | 'series') => Promise<CalendarEvent>;
   getEventsForDate: (dateStr: string) => CalendarEvent[];
   refreshEvents: () => Promise<void>;
+  loadRange: (from: string, to: string) => Promise<void>;
 }
 
 // Initial dummy data aligned with the design, but now dynamic
@@ -94,7 +109,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     return {
       id: t.id,
       time: t.time ? t.time.substring(0, 5) : '09:00',
-      endTime: (t.end_time || t.endTime) ? (t.end_time || t.endTime).substring(0, 5) : null,
+      endTime: (t.end_time || t.endTime) ? (t.end_time || t.endTime).substring(0, 5) : undefined,
       date: t.date,
       duration: t.duration || t.duration_mins || '1h',
       title: t.title,
@@ -105,8 +120,40 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       initials: !t.users?.profiles?.[0]?.avatar_url ? (t.users?.profiles?.[0]?.full_name?.[0] || t.users?.email?.[0] || 'G') : undefined,
       clientId: t.client_id,
       status: t.status as any || 'pending',
-      linkUrl: t.link_url || t.linkUrl
+      // Mapeamos priority del backend; fallback 'medium' para filas legacy
+      // creadas antes de la columna (la migracion ya pone DEFAULT 'medium').
+      priority: (t.priority as 'low' | 'medium' | 'high') || 'medium',
+      linkUrl: t.link_url || t.linkUrl,
+      recurrenceRule: t.recurrence_rule ?? null,
+      recurrenceEnd: t.recurrence_end ?? null,
+      recurrenceParentId: t.recurrence_parent_id ?? null,
+      isVirtual: Boolean(t.is_virtual),
     };
+  };
+
+  // Default fetch covers a wide window so Dashboard ("upcoming"), Calendar
+  // (Day/Week/Month) and ClientDetail all have what they need without each
+  // having to query their own range. Calendar.tsx can call loadRange to
+  // extend coverage when the user navigates outside this window.
+  const defaultRange = () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const to   = new Date(now.getFullYear(), now.getMonth() + 12, 0);
+    return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+  };
+
+  const loadRange = async (from: string, to: string) => {
+    if (!user) return;
+    try {
+      setIsLoading(true);
+      const data = await fetchWithAuth(`/manager/tasks?from=${from}&to=${to}`);
+      const arr: any[] = Array.isArray(data?.tasks) ? data.tasks : Array.isArray(data) ? data : [];
+      setEvents(arr.map(mapBackendToFrontend));
+    } catch (error) {
+      console.error('Failed to load range:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchTasks = async () => {
@@ -115,23 +162,15 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       return;
     }
-    
-    try {
-      setIsLoading(true);
-      const data = unwrapList(await fetchWithAuth('/manager/tasks?limit=200'));
-      setEvents((data || []).map(mapBackendToFrontend));
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    const { from, to } = defaultRange();
+    await loadRange(from, to);
   };
 
   useEffect(() => {
     fetchTasks();
   }, [user]);
 
-  const addEvent = async (event: Omit<CalendarEvent, 'id'>) => {
+  const addEvent = async (event: Omit<CalendarEvent, 'id'> & { repeat?: string; recurrenceRule?: string; recurrenceEnd?: string }) => {
     try {
       const newEvent = await fetchWithAuth('/manager/tasks', {
         method: 'POST',
@@ -145,9 +184,21 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
           duration: event.duration || '1h',
           client_id: event.clientId,
           status: event.status || 'pending',
-          link_url: event.linkUrl
+          // Pasamos la prioridad al backend; sin ella la BD usa default 'medium'.
+          priority: event.priority,
+          link_url: event.linkUrl,
+          repeat: event.repeat,
+          recurrence_rule: event.recurrenceRule,
+          recurrence_end: event.recurrenceEnd,
         })
       });
+      // If we just created a recurring task the local list needs every
+      // virtual instance in the visible window — reload the range so the
+      // calendar shows all the occurrences at once.
+      if (newEvent?.recurrence_rule) {
+        await fetchTasks();
+        return mapBackendToFrontend(newEvent);
+      }
       const mapped = mapBackendToFrontend(newEvent);
       setEvents(prev => [...prev, mapped]);
       return mapped;
@@ -157,19 +208,29 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteEvent = async (id: string) => {
+  // Edits / deletes accept a `scope` so the UI can pick "this occurrence only"
+  // or "the whole series". For one-off tasks the scope is irrelevant and
+  // ignored by the backend.
+  const deleteEvent = async (id: string, scope: 'instance' | 'series' = 'series') => {
     try {
-      await fetchWithAuth(`/manager/tasks/${id}`, { method: 'DELETE' });
-      setEvents(prev => prev.filter(e => e.id !== id));
+      await fetchWithAuth(`/manager/tasks/${encodeURIComponent(id)}?scope=${scope}`, { method: 'DELETE' });
+      // Easiest correct behaviour: reload the visible range. Optimistic local
+      // pruning is tempting but gets tangled when an instance edit creates an
+      // exception that the next render needs.
+      await fetchTasks();
     } catch (error) {
       console.error('Failed to delete event:', error);
       throw error;
     }
   };
 
-  const updateEvent = async (id: string, updates: Partial<CalendarEvent>) => {
+  const updateEvent = async (
+    id: string,
+    updates: Partial<CalendarEvent> & { repeat?: string; recurrenceRule?: string; recurrenceEnd?: string },
+    scope: 'instance' | 'series' = 'series',
+  ) => {
     try {
-      const updatedEvent = await fetchWithAuth(`/manager/tasks/${id}`, {
+      const updatedEvent = await fetchWithAuth(`/manager/tasks/${encodeURIComponent(id)}?scope=${scope}`, {
         method: 'PATCH',
         body: JSON.stringify({
           title: updates.title,
@@ -181,12 +242,18 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
           duration: updates.duration,
           client_id: updates.clientId,
           status: updates.status || 'pending',
-          link_url: updates.linkUrl
+          // Solo enviamos priority si se incluyo explicitamente en el update —
+          // asi un PATCH de "marca completada" no resetea la prioridad.
+          ...(updates.priority !== undefined ? { priority: updates.priority } : {}),
+          link_url: updates.linkUrl,
+          repeat: updates.repeat,
+          recurrence_rule: updates.recurrenceRule,
+          recurrence_end: updates.recurrenceEnd,
         })
       });
-      const mapped = mapBackendToFrontend(updatedEvent);
-      setEvents(prev => prev.map(e => e.id === id ? mapped : e));
-      return mapped;
+      // Reload so series-wide changes and exception inserts are reflected.
+      await fetchTasks();
+      return mapBackendToFrontend(updatedEvent || { id, ...updates });
     } catch (error) {
       console.error('Failed to update event:', error);
       throw error;
@@ -198,7 +265,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <CalendarContext.Provider value={{ events, addEvent, deleteEvent, updateEvent, getEventsForDate, refreshEvents: fetchTasks }}>
+    <CalendarContext.Provider value={{ events, addEvent, deleteEvent, updateEvent, getEventsForDate, refreshEvents: fetchTasks, loadRange }}>
       {children}
     </CalendarContext.Provider>
   );

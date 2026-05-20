@@ -10,6 +10,7 @@ import { vapidPublicKey, pushConfigured } from '../lib/push.js';
 import { nutritionPlanSchema, trainingProgramSchema } from '../schemas/plans.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { limitsForTier, isAccessBlocked, trialDaysLeft, makeEnforceLimit, type PlanTier } from '../lib/plans.js';
+import { repeatLabelToRrule, expandTaskDates, applyExceptions, virtualInstanceId, parseVirtualId, type TaskRow, type TaskException } from '../lib/recurrence.js';
 
 // Limit enforcer for client creation. Counts active clients under this manager
 // and blocks POST /clients when the tier cap is reached.
@@ -3381,6 +3382,83 @@ router.post('/clients/:id/supplementation', async (req: any, res) => {
 
 // Get all tasks for this manager
 router.get('/tasks', async (req: any, res) => {
+  // Two modes:
+  //   • Range mode (?from=YYYY-MM-DD&to=YYYY-MM-DD): used by the calendar.
+  //     We return every one-off task whose date falls in the range PLUS
+  //     virtual instances expanded from recurring tasks. Exceptions (skip
+  //     / override) are applied here so the frontend sees a flat list.
+  //   • Paginated mode (default, no from/to): keeps the old keyset cursor
+  //     behaviour used by Tasks.tsx so we don't break that view.
+  const from = typeof req.query.from === 'string' ? req.query.from : null;
+  const to   = typeof req.query.to   === 'string' ? req.query.to   : null;
+
+  if (from && to) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+      return res.status(400).json({ error: 'from/to must be YYYY-MM-DD' });
+    }
+    try {
+      // Pull one-offs in range + every recurring parent that could possibly
+      // touch the range (starts on/before `to`). The expansion below filters
+      // by recurrence_end so series that already finished don't leak in.
+      const { data: oneOffs, error: oneOffErr } = await supabaseAdmin
+        .from('tasks')
+        .select('*, users!client_id(email)')
+        .eq('manager_id', req.user.id)
+        .is('recurrence_rule', null)
+        .gte('date', from)
+        .lte('date', to);
+      if (oneOffErr) throw oneOffErr;
+
+      const { data: recurring, error: recErr } = await supabaseAdmin
+        .from('tasks')
+        .select('*, users!client_id(email)')
+        .eq('manager_id', req.user.id)
+        .not('recurrence_rule', 'is', null)
+        .lte('date', to);
+      if (recErr) throw recErr;
+
+      const fromDate = new Date(`${from}T00:00:00`);
+      const toDate   = new Date(`${to}T23:59:59`);
+
+      // Fetch exceptions for the recurring tasks in this window once.
+      const recurringIds = (recurring || []).map((t: any) => t.id);
+      let exceptionsByTask: Record<string, TaskException[]> = {};
+      if (recurringIds.length) {
+        const { data: exData } = await supabaseAdmin
+          .from('task_exceptions')
+          .select('*')
+          .in('task_id', recurringIds);
+        for (const ex of (exData || []) as TaskException[]) {
+          (exceptionsByTask[ex.task_id] ||= []).push(ex);
+        }
+      }
+
+      const virtualInstances: any[] = [];
+      for (const parent of (recurring || []) as TaskRow[]) {
+        const dates = expandTaskDates(parent, fromDate, toDate);
+        const { kept, overrides } = applyExceptions(dates, exceptionsByTask[parent.id] || []);
+        for (const d of kept) {
+          const ov = overrides.get(d);
+          virtualInstances.push({
+            ...parent,
+            id: virtualInstanceId(parent.id, d),
+            date: d,
+            recurrence_parent_id: parent.id,
+            is_virtual: true,
+            ...(ov?.override_payload || {}),
+          });
+        }
+      }
+
+      res.json({ tasks: [...(oneOffs || []), ...virtualInstances] });
+      return;
+    } catch (error: any) {
+      console.error('Error expanding tasks:', error);
+      res.status(500).json({ error: safeErr(error) });
+      return;
+    }
+  }
+
   // Tareas paginadas cronologicamente ASC (las mas proximas primero).
   // Cursor keyset sobre `date`; usamos `id` como tiebreaker. El campo
   // `time` queda como sort secundario solo dentro del mismo `date` — no
@@ -3448,17 +3526,39 @@ async function syncToGoogleCalendar(managerId: string, task: any, operation: 'IN
     const derivedEndHour = (parseInt(timeStr.split(':')[0]) + 1) % 24;
     const endStr = task.end_time || (derivedEndHour.toString().padStart(2, '0') + ':' + timeStr.split(':')[1]);
 
-    const eventBody = {
+    const eventBody: any = {
       summary: task.title,
       description: task.description || task.desc || '',
       start: {
-        dateTime: `${dateStr}T${timeStr}:00Z`, 
+        dateTime: `${dateStr}T${timeStr}:00Z`,
       },
       end: {
         dateTime: `${dateStr}T${endStr}:00Z`,
       },
       timeZone: 'UTC' // Standardize
     };
+
+    // If this is a recurring series, attach the RRULE. Google Calendar accepts
+    // the same iCalendar string we already store, with an UNTIL=YYYYMMDDTHHMMSSZ
+    // suffix when we want a bounded series.
+    if (task.recurrence_rule) {
+      const rrule = String(task.recurrence_rule).toUpperCase();
+      let line = `RRULE:${rrule}`;
+      if (task.recurrence_end) {
+        const until = new Date(task.recurrence_end);
+        if (!Number.isNaN(until.getTime())) {
+          const yyyy = until.getUTCFullYear();
+          const mm = String(until.getUTCMonth() + 1).padStart(2, '0');
+          const dd = String(until.getUTCDate()).padStart(2, '0');
+          const hh = String(until.getUTCHours()).padStart(2, '0');
+          const mi = String(until.getUTCMinutes()).padStart(2, '0');
+          const ss = String(until.getUTCSeconds()).padStart(2, '0');
+          const sep = line.endsWith(rrule) ? ';' : ';';
+          line += `${sep}UNTIL=${yyyy}${mm}${dd}T${hh}${mi}${ss}Z`;
+        }
+      }
+      eventBody.recurrence = [line];
+    }
 
     console.log('Google Event Data:', JSON.stringify(eventBody, null, 2));
 
@@ -3526,6 +3626,26 @@ router.post('/tasks', async (req: any, res) => {
     const computedEnd = (parseInt(timeStr.split(':')[0] || '09', 10) + 1).toString().padStart(2, '0')
       + ':' + (timeStr.split(':')[1] || '00');
 
+    // Recurrence: the form sends either a UI label ("Weekly") or, for Custom,
+    // a raw RRULE string in `recurrence_rule`. We honour an explicit RRULE
+    // first; otherwise we derive one from the label. recurrence_end defaults
+    // to 1 year out so expansions stay bounded.
+    const explicitRule = typeof req.body.recurrence_rule === 'string' && req.body.recurrence_rule.trim()
+      ? req.body.recurrence_rule.trim()
+      : null;
+    const derivedRule = explicitRule || repeatLabelToRrule(req.body.repeat, req.body.date);
+    const recurrenceEnd = derivedRule
+      ? (req.body.recurrence_end || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString())
+      : null;
+
+    // Priority del form -> columna `priority` en BD. Validamos contra el
+    // enum (CHECK constraint en BD lo refuerza); fallback 'medium'.
+    const VALID_PRIORITIES = ['low', 'medium', 'high'] as const;
+    const rawPrio = String(req.body.priority || '').toLowerCase();
+    const priority = (VALID_PRIORITIES as readonly string[]).includes(rawPrio)
+      ? rawPrio
+      : 'medium';
+
     const { data, error } = await supabaseAdmin
       .from('tasks')
       .insert({
@@ -3538,7 +3658,10 @@ router.post('/tasks', async (req: any, res) => {
         duration: req.body.duration,
         client_id: req.body.client_id,
         status: req.body.status || 'pending',
+        priority,
         manager_id: req.user.id,
+        recurrence_rule: derivedRule,
+        recurrence_end: recurrenceEnd,
         created_at: new Date().toISOString()
       })
       .select()
@@ -3659,23 +3782,82 @@ router.post('/integrations/stripe/test', async (req: any, res) => {
 // Update a task
 router.patch('/tasks/:id', async (req: any, res) => {
   try {
-    if (!UUID_RE.test(String(req.params.id))) {
+    // Two id shapes are accepted:
+    //   • Real UUID — edits the stored task. If scope=series we update every
+    //     future occurrence at once (it's the recurring parent itself).
+    //   • Virtual id "<parentUuid>:<YYYY-MM-DD>" — represents one occurrence
+    //     of a recurring series. With scope=instance (default for virtual
+    //     ids) we persist an override into task_exceptions instead of
+    //     touching the parent. With scope=series we redirect to the parent.
+    const rawId = String(req.params.id);
+    const scope = req.query.scope === 'instance' ? 'instance' : 'series';
+    const virtual = parseVirtualId(rawId);
+
+    const buildUpdates = () => {
+      const updates: any = { updated_at: new Date().toISOString() };
+      const allowedFields = ['title', 'description', 'type', 'date', 'time', 'end_time', 'duration', 'client_id', 'status', 'priority', 'recurrence_rule', 'recurrence_end'];
+      allowedFields.forEach(field => {
+        if (req.body[field] !== undefined) updates[field] = req.body[field];
+      });
+      if (updates.priority !== undefined) {
+        const VALID_PRIORITIES = ['low', 'medium', 'high'] as const;
+        const norm = String(updates.priority).toLowerCase();
+        if (!(VALID_PRIORITIES as readonly string[]).includes(norm)) {
+          return { error: `priority must be one of: ${VALID_PRIORITIES.join(', ')}` };
+        }
+        updates.priority = norm;
+      }
+      // `repeat` label → RRULE, but only when an explicit RRULE wasn't passed
+      // already. Edits to one-off tasks may include `repeat` to convert the
+      // task into a recurring series.
+      if (req.body.repeat !== undefined && updates.recurrence_rule === undefined) {
+        const anchor = updates.date || req.body.anchor_date;
+        if (anchor) updates.recurrence_rule = repeatLabelToRrule(req.body.repeat, anchor);
+      }
+      return { updates };
+    };
+
+    if (virtual && scope === 'instance') {
+      // Verify the parent belongs to this manager before writing exceptions.
+      const { data: parent } = await supabaseAdmin
+        .from('tasks')
+        .select('id, manager_id')
+        .eq('id', virtual.parentId)
+        .eq('manager_id', req.user.id)
+        .maybeSingle();
+      if (!parent) return res.status(404).json({ error: 'Task not found or access denied' });
+
+      const built = buildUpdates();
+      if ('error' in built) return res.status(400).json({ error: built.error });
+      // override_payload mirrors what the calendar would render for this date.
+      const payload = { ...built.updates };
+      delete payload.updated_at;
+      const { error: exErr } = await supabaseAdmin
+        .from('task_exceptions')
+        .upsert({
+          task_id: virtual.parentId,
+          original_date: virtual.date,
+          action: 'override',
+          override_payload: payload,
+        }, { onConflict: 'task_id,original_date' });
+      if (exErr) throw exErr;
+      return res.json({ id: rawId, ...payload, is_virtual: true, recurrence_parent_id: virtual.parentId });
+    }
+
+    // From here we're editing a real row. Virtual id with scope=series points
+    // at the parent.
+    const realId = virtual ? virtual.parentId : rawId;
+    if (!UUID_RE.test(realId)) {
       return res.status(400).json({ error: 'Invalid task id format' });
     }
-    // Filter out undefined fields to allow safe partial updates
-    const updates: any = { updated_at: new Date().toISOString() };
-    const allowedFields = ['title', 'description', 'type', 'date', 'time', 'end_time', 'duration', 'client_id', 'status'];
 
-    allowedFields.forEach(field => {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
-    });
+    const built = buildUpdates();
+    if ('error' in built) return res.status(400).json({ error: built.error });
 
     const { data, error } = await supabaseAdmin
       .from('tasks')
-      .update(updates)
-      .eq('id', req.params.id)
+      .update(built.updates)
+      .eq('id', realId)
       .eq('manager_id', req.user.id)
       .select()
       .maybeSingle();
@@ -3683,7 +3865,6 @@ router.patch('/tasks/:id', async (req: any, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Task not found or access denied' });
 
-    // Sync to Google Calendar
     await syncToGoogleCalendar(req.user.id, data, 'UPDATE');
 
     res.json(data);
@@ -3693,31 +3874,63 @@ router.patch('/tasks/:id', async (req: any, res) => {
   }
 });
 
-// Delete a task
+// Delete a task. Mirrors the PATCH semantics:
+//   • Real id, scope=series (default) → delete the row; the FK ON DELETE
+//     CASCADE on task_exceptions removes related exceptions too.
+//   • Virtual id, scope=instance (default for virtual ids) → insert a `skip`
+//     exception so this one occurrence disappears from future expansions.
+//   • Virtual id, scope=series → delete the parent.
 router.delete('/tasks/:id', async (req: any, res) => {
   try {
-    // 1. Get task first to get google_event_id
+    const rawId = String(req.params.id);
+    const scope = req.query.scope === 'instance' ? 'instance' : 'series';
+    const virtual = parseVirtualId(rawId);
+
+    if (virtual && scope === 'instance') {
+      const { data: parent } = await supabaseAdmin
+        .from('tasks')
+        .select('id, manager_id')
+        .eq('id', virtual.parentId)
+        .eq('manager_id', req.user.id)
+        .maybeSingle();
+      if (!parent) return res.status(404).json({ error: 'Task not found or access denied' });
+
+      const { error: exErr } = await supabaseAdmin
+        .from('task_exceptions')
+        .upsert({
+          task_id: virtual.parentId,
+          original_date: virtual.date,
+          action: 'skip',
+          override_payload: null,
+        }, { onConflict: 'task_id,original_date' });
+      if (exErr) throw exErr;
+      return res.json({ success: true, scope: 'instance', date: virtual.date });
+    }
+
+    const realId = virtual ? virtual.parentId : rawId;
+    if (!UUID_RE.test(realId)) {
+      return res.status(400).json({ error: 'Invalid task id format' });
+    }
+
     const { data: task } = await supabaseAdmin
       .from('tasks')
       .select('*')
-      .eq('id', req.params.id)
+      .eq('id', realId)
       .eq('manager_id', req.user.id)
       .maybeSingle();
 
     if (task) {
-      // 2. Sync (Delete) to Google Calendar
       await syncToGoogleCalendar(req.user.id, task, 'DELETE');
     }
 
-    // 3. Delete from DB
     const { error } = await supabaseAdmin
       .from('tasks')
       .delete()
-      .eq('id', req.params.id)
+      .eq('id', realId)
       .eq('manager_id', req.user.id);
 
     if (error) throw error;
-    res.json({ success: true });
+    res.json({ success: true, scope: 'series' });
   } catch (error: any) {
     console.error('Error deleting task:', error);
     res.status(500).json({ error: safeErr(error) });
