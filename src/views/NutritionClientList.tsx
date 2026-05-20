@@ -16,8 +16,9 @@ interface NutritionClientListProps {
 export default function NutritionClientList({ onNavigate }: NutritionClientListProps) {
   const { t } = useLanguage();
   const { clients: globalClients } = useClient();
+  const [search, setSearch] = React.useState('');
 
-  const clients = globalClients.map((client) => {
+  const allClients = globalClients.map((client) => {
     const hasPlan = client.nutritionPlanAssigned;
     // Resolve the goal: profile goal → plan/roadmap goal → (if a plan exists) the
     // plan's name → only then "Not Set". A client WITH a plan never shows "Not Set".
@@ -58,6 +59,10 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
     };
   });
 
+  const clients = allClients.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="w-full p-6 md:p-8 lg:p-10">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
@@ -68,13 +73,23 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
               <h2 className="text-2xl font-bold text-slate-900">{t('nutrition')}</h2>
               <p className="text-sm text-slate-500 mt-1">{t('nutrition_subtitle')}</p>
             </div>
-            <button 
+            <button
               onClick={() => onNavigate('plan-templates')}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-semibold"
             >
               <ClipboardList className="w-5 h-5" />
               <span>{t('plan_templates_btn')}</span>
             </button>
+          </div>
+          <div className="relative w-full sm:w-96">
+            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+              className="w-full pl-11 pr-4 py-3 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all font-medium"
+              placeholder={t('search_client_placeholder', { defaultValue: 'Buscar cliente por nombre...' })}
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
         </div>
 
