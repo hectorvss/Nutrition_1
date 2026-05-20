@@ -2,8 +2,20 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
+import { makeEnforceLimit } from '../lib/plans.js';
 
 const router = Router();
+
+// Block workflow activation once the manager reaches their tier's active
+// workflow cap (PLAN_LIMITS.activeWorkflows). Counts `enabled=true` definitions.
+const enforceWorkflowLimit = makeEnforceLimit(supabaseAdmin, 'activeWorkflows', async (userId: string) => {
+  const { count } = await supabaseAdmin
+    .from('workflow_definitions')
+    .select('id', { count: 'exact', head: true })
+    .eq('manager_id', userId)
+    .eq('enabled', true);
+  return count ?? 0;
+});
 
 /* ============================================================
  * Advanced Workflow builder — backend
@@ -87,6 +99,95 @@ export const WORKFLOW_CATALOG = [
     configFields: [
       { name: 'title', label: 'Title', type: 'text' },
       { name: 'type', label: 'Type', type: 'text' },
+    ] },
+
+  // ── New triggers ─────────────────────────────────────────────
+  { type: 'trigger', key: 'trigger.weight_change', label: 'Weight change', category: 'Triggers',
+    icon: 'Scale', description: 'Fires when a check-in records a weight change above the threshold (kg).',
+    configFields: [
+      { name: 'directionn', label: 'Direction', type: 'select', options: ['any', 'gain', 'loss'] },
+      { name: 'minKg', label: 'Min change (kg)', type: 'number' },
+    ] },
+  { type: 'trigger', key: 'trigger.plan_assigned', label: 'Plan assigned', category: 'Triggers',
+    icon: 'FileCheck', description: 'Fires when a nutrition or training plan is assigned to a client.', configFields: [] },
+  { type: 'trigger', key: 'trigger.payment_succeeded', label: 'Payment succeeded', category: 'Triggers',
+    icon: 'CircleDollarSign', description: 'Fires when Stripe confirms a successful invoice payment.', configFields: [] },
+  { type: 'trigger', key: 'trigger.payment_failed', label: 'Payment failed', category: 'Triggers',
+    icon: 'TriangleAlert', description: 'Fires when Stripe reports a failed invoice payment.', configFields: [] },
+  { type: 'trigger', key: 'trigger.workout_logged', label: 'Workout logged', category: 'Triggers',
+    icon: 'Dumbbell', description: 'Fires when a client logs a workout session.', configFields: [] },
+  { type: 'trigger', key: 'trigger.client_inactive', label: 'Client inactive', category: 'Triggers',
+    icon: 'AlarmClockOff', description: 'Daily cron — fires when a client has no activity for N+ days.',
+    configFields: [{ name: 'days', label: 'Inactive for (days)', type: 'number' }] },
+  { type: 'trigger', key: 'trigger.day_of_week', label: 'Day of week', category: 'Triggers',
+    icon: 'CalendarDays', description: 'Daily cron — fires on the selected weekday for every client.',
+    configFields: [
+      { name: 'day', label: 'Day', type: 'select',
+        options: ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] },
+    ] },
+
+  // ── New conditions / shortcuts on flow.if ────────────────────
+  { type: 'condition', key: 'flow.has_plan', label: 'Has plan assigned', category: 'Logic',
+    icon: 'BadgeCheck', description: 'Branch on whether the client has a nutrition or training plan.',
+    branches: ['true', 'false'],
+    configFields: [{ name: 'planKind', label: 'Plan', type: 'select',
+                     options: ['any', 'nutrition', 'training'] }] },
+  { type: 'condition', key: 'flow.has_checkin', label: 'Has recent check-in', category: 'Logic',
+    icon: 'ClipboardList', description: 'Branch on whether the client has submitted a check-in in the last N days.',
+    branches: ['true', 'false'],
+    configFields: [{ name: 'days', label: 'Within (days)', type: 'number' }] },
+  { type: 'condition', key: 'flow.days_since', label: 'Days since…', category: 'Logic',
+    icon: 'CalendarClock', description: 'Branch on how many days ago an event happened.',
+    branches: ['true', 'false'],
+    configFields: [
+      { name: 'event', label: 'Event', type: 'select',
+        options: ['last_check_in', 'last_workout', 'created_at'] },
+      { name: 'operator', label: 'Operator', type: 'select', options: ['>', '<', '>=', '<=', '=='] },
+      { name: 'days', label: 'Days', type: 'number' },
+    ] },
+
+  // ── New data nodes ───────────────────────────────────────────
+  { type: 'data', key: 'data.get_latest_checkin', label: 'Get latest check-in', category: 'Data',
+    icon: 'Database', description: 'Hydrate ctx.latestCheckin with the client\'s most recent submission.',
+    configFields: [] },
+  { type: 'data', key: 'data.compute_bmi', label: 'Compute BMI', category: 'Data',
+    icon: 'Calculator', description: 'Compute BMI from client.weight and client.height into ctx.data.bmi.',
+    configFields: [] },
+
+  // ── New actions ──────────────────────────────────────────────
+  { type: 'action', key: 'action.schedule_appointment', label: 'Schedule appointment', category: 'Actions',
+    icon: 'CalendarPlus', description: 'Create an appointment task for the client.',
+    configFields: [
+      { name: 'title', label: 'Title', type: 'text' },
+      { name: 'type', label: 'Type', type: 'select',
+        options: ['Video Call', 'In-Person', 'Training', 'Nutrition', 'Internal'] },
+      { name: 'date', label: 'Date (YYYY-MM-DD or `today+Nd`)', type: 'text' },
+      { name: 'time', label: 'Time (HH:MM)', type: 'text' },
+      { name: 'duration', label: 'Duration (e.g. 30m, 1h)', type: 'text' },
+    ] },
+  { type: 'action', key: 'action.assign_plan', label: 'Assign plan template', category: 'Actions',
+    icon: 'ClipboardPlus', description: 'Assign a nutrition or training template to the client.',
+    configFields: [
+      { name: 'planKind', label: 'Plan', type: 'select', options: ['nutrition', 'training'] },
+      { name: 'templateName', label: 'Template name', type: 'text' },
+    ] },
+  { type: 'action', key: 'action.assign_onboarding', label: 'Assign onboarding', category: 'Actions',
+    icon: 'UserCog', description: 'Assign an onboarding template to the client.',
+    configFields: [{ name: 'templateName', label: 'Template name', type: 'text' }] },
+  { type: 'action', key: 'action.request_checkin', label: 'Request check-in', category: 'Actions',
+    icon: 'ClipboardCheck', description: 'Assign a check-in template the client must fill in.',
+    configFields: [{ name: 'templateName', label: 'Check-in template name', type: 'text' }] },
+  { type: 'action', key: 'action.set_client_field', label: 'Set client field', category: 'Actions',
+    icon: 'PenSquare', description: 'Update a field on the client profile (notes, goal, etc.).',
+    configFields: [
+      { name: 'field', label: 'Field', type: 'select', options: ['notes', 'goal', 'weight', 'height'] },
+      { name: 'value', label: 'Value', type: 'text' },
+    ] },
+  { type: 'action', key: 'action.notify_coach', label: 'Notify coach', category: 'Actions',
+    icon: 'BellRing', description: 'Create an internal task for the manager (no client attached).',
+    configFields: [
+      { name: 'title', label: 'Title', type: 'text' },
+      { name: 'description', label: 'Description', type: 'textarea' },
     ] },
 ] as const;
 
@@ -244,6 +345,13 @@ async function runLoop(p: {
         case 'trigger.checkin_submitted':
         case 'trigger.message_received':
         case 'trigger.schedule':
+        case 'trigger.weight_change':
+        case 'trigger.plan_assigned':
+        case 'trigger.payment_succeeded':
+        case 'trigger.payment_failed':
+        case 'trigger.workout_logged':
+        case 'trigger.client_inactive':
+        case 'trigger.day_of_week':
           await logStep(node, 'completed', { trigger: node.key });
           break;
 
@@ -304,6 +412,270 @@ async function runLoop(p: {
             await logStep(node, error ? 'failed' : 'completed', { title: cfg.title }, error?.message);
             if (error) { status = 'failed'; return { status, steps, ctx }; }
           }
+          break;
+        }
+
+        // ── New condition shortcuts ───────────────────────────────
+        case 'flow.has_plan': {
+          if (!ctx.client?.id) {
+            followHandle = 'false';
+            await logStep(node, 'completed', { reason: 'no client', branch: 'false' });
+            break;
+          }
+          const kind = cfg.planKind || 'any';
+          let has = false;
+          if (kind === 'any' || kind === 'nutrition') {
+            const { count } = await supabaseAdmin
+              .from('nutrition_plans').select('id', { count: 'exact', head: true })
+              .eq('client_id', ctx.client.id);
+            if ((count || 0) > 0) has = true;
+          }
+          if (!has && (kind === 'any' || kind === 'training')) {
+            const { count } = await supabaseAdmin
+              .from('training_programs').select('id', { count: 'exact', head: true })
+              .eq('client_id', ctx.client.id);
+            if ((count || 0) > 0) has = true;
+          }
+          followHandle = has ? 'true' : 'false';
+          await logStep(node, 'completed', { planKind: kind, hasPlan: has });
+          break;
+        }
+        case 'flow.has_checkin': {
+          if (!ctx.client?.id) {
+            followHandle = 'false';
+            await logStep(node, 'completed', { reason: 'no client', branch: 'false' });
+            break;
+          }
+          const days = Number(cfg.days) || 7;
+          const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+          const { count } = await supabaseAdmin
+            .from('client_checkin_submissions').select('id', { count: 'exact', head: true })
+            .eq('client_id', ctx.client.id).gte('submitted_at', since);
+          const has = (count || 0) > 0;
+          followHandle = has ? 'true' : 'false';
+          await logStep(node, 'completed', { days, hasRecentCheckin: has });
+          break;
+        }
+        case 'flow.days_since': {
+          if (!ctx.client?.id) {
+            followHandle = 'false';
+            await logStep(node, 'completed', { reason: 'no client', branch: 'false' });
+            break;
+          }
+          let refDate: string | null = null;
+          if (cfg.event === 'last_check_in') {
+            const { data } = await supabaseAdmin
+              .from('client_checkin_submissions').select('submitted_at')
+              .eq('client_id', ctx.client.id)
+              .order('submitted_at', { ascending: false }).limit(1).maybeSingle();
+            refDate = data?.submitted_at || null;
+          } else if (cfg.event === 'last_workout') {
+            const { data } = await supabaseAdmin
+              .from('workout_logs').select('logged_at')
+              .eq('client_id', ctx.client.id)
+              .order('logged_at', { ascending: false }).limit(1).maybeSingle();
+            refDate = data?.logged_at || null;
+          } else if (cfg.event === 'created_at') {
+            const { data } = await supabaseAdmin
+              .from('users').select('created_at').eq('id', ctx.client.id).maybeSingle();
+            refDate = data?.created_at || null;
+          }
+          const days = refDate
+            ? Math.floor((Date.now() - new Date(refDate).getTime()) / 86400000)
+            : Number.POSITIVE_INFINITY;
+          const result = compare(days, cfg.operator || '>', Number(cfg.days) || 0);
+          followHandle = result ? 'true' : 'false';
+          await logStep(node, 'completed', { event: cfg.event, days, operator: cfg.operator, threshold: cfg.days, result });
+          break;
+        }
+
+        // ── New data nodes ─────────────────────────────────────────
+        case 'data.get_latest_checkin': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client' });
+            break;
+          }
+          const { data } = await supabaseAdmin
+            .from('client_checkin_submissions')
+            .select('id, submitted_at, answers_json')
+            .eq('client_id', ctx.client.id)
+            .order('submitted_at', { ascending: false }).limit(1).maybeSingle();
+          ctx.latestCheckin = data ? { ...data, ...(data.answers_json || {}) } : null;
+          await logStep(node, 'completed', { found: !!data });
+          break;
+        }
+        case 'data.compute_bmi': {
+          const w = parseFloat(ctx.client?.weight);
+          const h = parseFloat(ctx.client?.height) / 100; // cm → m
+          if (Number.isFinite(w) && Number.isFinite(h) && h > 0) {
+            ctx.data.bmi = +(w / (h * h)).toFixed(1);
+            await logStep(node, 'completed', { bmi: ctx.data.bmi });
+          } else {
+            await logStep(node, 'skipped', { reason: 'missing weight or height' });
+          }
+          break;
+        }
+
+        // ── New actions ────────────────────────────────────────────
+        case 'action.schedule_appointment': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          // Resolve "today+Nd" or YYYY-MM-DD; default to today.
+          let date = String(cfg.date || '').trim();
+          const m = date.match(/^today\+(\d+)d$/i);
+          if (m) {
+            const d = new Date();
+            d.setDate(d.getDate() + parseInt(m[1], 10));
+            date = d.toISOString().split('T')[0];
+          } else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            date = new Date().toISOString().split('T')[0];
+          }
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, date, time: cfg.time, type: cfg.type });
+          } else {
+            const { error } = await insertWithRetry('tasks', {
+              manager_id: managerId, client_id: ctx.client.id,
+              title: renderTemplate(cfg.title || 'Appointment', ctx),
+              type: cfg.type || 'Video Call',
+              date,
+              time: cfg.time || '09:00',
+              duration: cfg.duration || '30m',
+              status: 'pending',
+            });
+            await logStep(node, error ? 'failed' : 'completed', { date, time: cfg.time }, error?.message);
+            if (error) { status = 'failed'; return { status, steps, ctx }; }
+          }
+          break;
+        }
+        case 'action.assign_plan': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const planKind = cfg.planKind === 'training' ? 'training' : 'nutrition';
+          const tplName = String(cfg.templateName || '').trim();
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, planKind, tplName });
+            break;
+          }
+          // Look up the manager's template by name (most recent if duplicates).
+          const tplTable = planKind === 'training' ? 'training_templates' : 'nutrition_templates';
+          const { data: tpl } = await supabaseAdmin
+            .from(tplTable).select('id, name, data_json')
+            .eq('created_by', managerId).eq('name', tplName)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          if (!tpl) {
+            await logStep(node, 'skipped', { reason: `template "${tplName}" not found` });
+            break;
+          }
+          const planTable = planKind === 'training' ? 'training_programs' : 'nutrition_plans';
+          const { error } = await insertWithRetry(planTable, {
+            client_id: ctx.client.id, created_by: managerId,
+            name: tpl.name, data_json: tpl.data_json || {},
+          });
+          await logStep(node, error ? 'failed' : 'completed', { planKind, tplName }, error?.message);
+          if (error) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.assign_onboarding': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const tplName = String(cfg.templateName || '').trim();
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, tplName });
+            break;
+          }
+          const { data: tpl } = await supabaseAdmin
+            .from('onboarding_templates').select('id, name')
+            .eq('manager_id', managerId).eq('name', tplName)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          if (!tpl) {
+            await logStep(node, 'skipped', { reason: `template "${tplName}" not found` });
+            break;
+          }
+          // Deactivate previous, then insert.
+          await supabaseAdmin.from('client_onboarding_assignments')
+            .update({ is_active: false })
+            .eq('client_id', ctx.client.id).eq('is_active', true);
+          const { error } = await insertWithRetry('client_onboarding_assignments', {
+            client_id: ctx.client.id, template_id: tpl.id,
+            assigned_by: managerId, is_active: true,
+            assigned_at: new Date().toISOString(),
+          });
+          await logStep(node, error ? 'failed' : 'completed', { tplName }, error?.message);
+          if (error) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.request_checkin': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const tplName = String(cfg.templateName || '').trim();
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, tplName });
+            break;
+          }
+          const { data: tpl } = await supabaseAdmin
+            .from('checkin_templates').select('id, name')
+            .eq('created_by', managerId).eq('name', tplName)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          if (!tpl) {
+            await logStep(node, 'skipped', { reason: `check-in template "${tplName}" not found` });
+            break;
+          }
+          const { error } = await insertWithRetry('client_checkin_assignments', {
+            client_id: ctx.client.id, template_id: tpl.id,
+            assigned_by: managerId, is_active: true,
+            assigned_at: new Date().toISOString(),
+          });
+          await logStep(node, error ? 'failed' : 'completed', { tplName }, error?.message);
+          if (error) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.set_client_field': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const field = String(cfg.field || '').trim();
+          if (!['notes', 'goal', 'weight', 'height'].includes(field)) {
+            await logStep(node, 'skipped', { reason: `field "${field}" not allowed` });
+            break;
+          }
+          const value = field === 'weight' || field === 'height'
+            ? Number(renderTemplate(String(cfg.value || ''), ctx)) || null
+            : renderTemplate(String(cfg.value || ''), ctx);
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, field, value });
+            break;
+          }
+          const { error } = await supabaseAdmin
+            .from('clients_profiles')
+            .upsert({ user_id: ctx.client.id, [field]: value }, { onConflict: 'user_id' });
+          await logStep(node, error ? 'failed' : 'completed', { field, value }, error?.message);
+          if (error) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.notify_coach': {
+          const title = renderTemplate(cfg.title || 'Workflow notification', ctx);
+          const description = renderTemplate(cfg.description || '', ctx);
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, title });
+            break;
+          }
+          const { error } = await insertWithRetry('tasks', {
+            manager_id: managerId, client_id: null,
+            title, description, type: 'workflow',
+            date: new Date().toISOString().split('T')[0],
+            time: '09:00', status: 'pending',
+          });
+          await logStep(node, error ? 'failed' : 'completed', { title }, error?.message);
+          if (error) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
 
@@ -452,6 +824,9 @@ export async function fireScheduledWorkflows(): Promise<number> {
       .from('workflow_definitions').select('id, manager_id, current_version_id').eq('enabled', true);
     const today = new Date().toISOString().split('T')[0];
 
+    const WEEKDAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    const todayWeekday = WEEKDAY_NAMES[new Date().getDay()];
+
     for (const def of defs || []) {
       if (!def.current_version_id) continue;
       const { data: version } = await supabaseAdmin
@@ -460,15 +835,44 @@ export async function fireScheduledWorkflows(): Promise<number> {
       if (!version || version.status !== 'published') continue;
       const nodes: WorkflowNode[] = version.nodes || [];
       const trig = nodes.find(n => n.type === 'trigger');
-      if (!trig || trig.key !== 'trigger.schedule') continue;
-      const everyDays = Math.max(1, Number(trig.config?.everyDays) || 1);
+      if (!trig) continue;
+
+      // Only the cron-style triggers fire from this loop.
+      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive']);
+      if (!cronTriggers.has(trig.key)) continue;
+
+      // trigger.day_of_week: skip workflows whose configured weekday isn't today.
+      if (trig.key === 'trigger.day_of_week' && trig.config?.day && trig.config.day !== todayWeekday) {
+        continue;
+      }
+
+      const everyDays = trig.key === 'trigger.schedule'
+        ? Math.max(1, Number(trig.config?.everyDays) || 1) : 1;
+      const inactiveDays = trig.key === 'trigger.client_inactive'
+        ? Math.max(1, Number(trig.config?.days) || 7) : 0;
 
       const { data: clients } = await supabaseAdmin
         .from('users').select('id').eq('manager_id', def.manager_id).eq('role', 'CLIENT');
 
       for (const client of clients || []) {
-        // everyDays gap: skip if a schedule run happened too recently.
-        if (everyDays > 1) {
+        // trigger.client_inactive: fire only if the client has been inactive long enough.
+        if (trig.key === 'trigger.client_inactive') {
+          const [{ data: ci }, { data: wl }] = await Promise.all([
+            supabaseAdmin.from('client_checkin_submissions').select('submitted_at')
+              .eq('client_id', client.id).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
+            supabaseAdmin.from('workout_logs').select('logged_at')
+              .eq('client_id', client.id).order('logged_at', { ascending: false }).limit(1).maybeSingle(),
+          ]);
+          const lastDates: number[] = [];
+          if (ci?.submitted_at) lastDates.push(new Date(ci.submitted_at).getTime());
+          if (wl?.logged_at) lastDates.push(new Date(wl.logged_at).getTime());
+          const lastActivity = lastDates.length ? Math.max(...lastDates) : 0;
+          const daysSince = lastActivity ? Math.floor((Date.now() - lastActivity) / 86400000) : Number.POSITIVE_INFINITY;
+          if (daysSince < inactiveDays) continue;
+        }
+
+        // everyDays gap (schedule only): skip if a schedule run happened too recently.
+        if (trig.key === 'trigger.schedule' && everyDays > 1) {
           const { data: last } = await supabaseAdmin
             .from('workflow_runs').select('started_at')
             .eq('workflow_version_id', version.id).eq('client_id', client.id)
@@ -478,8 +882,8 @@ export async function fireScheduledWorkflows(): Promise<number> {
         }
         const res = await executeWorkflowVersion({
           managerId: def.manager_id, versionId: version.id, nodes, edges: version.edges || [],
-          triggerType: 'trigger.schedule', payload: { clientId: client.id },
-          dedupeKey: `${version.id}:schedule:${client.id}:${today}`,
+          triggerType: trig.key, payload: { clientId: client.id },
+          dedupeKey: `${version.id}:${trig.key}:${client.id}:${today}`,
         });
         if (res.status !== 'skipped') fired++;
       }
@@ -661,7 +1065,8 @@ router.post('/:id/validate', verifyManager, async (req: any, res) => {
 });
 
 // Publish: validate, mark current version published, enable the workflow.
-router.post('/:id/publish', verifyManager, async (req: any, res) => {
+// Plan-gated: the manager's tier caps how many workflows can be enabled at once.
+router.post('/:id/publish', verifyManager, enforceWorkflowLimit, async (req: any, res) => {
   try {
     const { data: def } = await supabaseAdmin
       .from('workflow_definitions').select('*')

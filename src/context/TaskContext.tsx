@@ -105,23 +105,47 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   // addEvent/updateEvent/deleteEvent in CalendarContext propagates here at the
   // same render — no separate fetch, no stale cache.
   const { events, addEvent, updateEvent, refreshEvents } = useCalendar();
-  const manualTasks: TaskItem[] = useMemo(() => events.map((ev: CalendarEvent): TaskItem => ({
-    id: ev.id,
-    title: ev.title,
-    desc: ev.desc || '',
-    client: ev.client || 'General',
-    program: 'Custom',
-    avatar: ev.avatar || '',
-    label: '',
-    status: (ev.status === 'completed' ? 'completed' : 'today') as TaskItem['status'],
-    timeLabel: ev.time || '',
-    endTime: ev.endTime,
-    duration: ev.duration,
-    date: ev.date,
-    priority: ev.priority || 'medium',
-    type: ev.type,
-    clientId: ev.clientId,
-  })), [events]);
+  const manualTasks: TaskItem[] = useMemo(() => {
+    // Tasks should only surface what the coach has to act on TODAY (or before).
+    // Future-dated events (including the many instances a recurring event
+    // materialises in the calendar) stay in the calendar view; otherwise a
+    // single weekly recurrence would flood Tasks with 50+ entries.
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return events
+      .filter(ev => {
+        if (!ev.date) return true; // events with no date stay (defensive)
+        const d = new Date(`${ev.date}T00:00:00`);
+        return d.getTime() <= today.getTime();
+      })
+      .map((ev: CalendarEvent): TaskItem => {
+        let status: TaskItem['status'];
+        if (ev.status === 'completed') {
+          status = 'completed';
+        } else if (ev.date) {
+          const d = new Date(`${ev.date}T00:00:00`).getTime();
+          status = d < today.getTime() ? 'overdue' : 'today';
+        } else {
+          status = 'today';
+        }
+        return {
+          id: ev.id,
+          title: ev.title,
+          desc: ev.desc || '',
+          client: ev.client || 'General',
+          program: 'Custom',
+          avatar: ev.avatar || '',
+          label: '',
+          status,
+          timeLabel: ev.time || '',
+          endTime: ev.endTime,
+          duration: ev.duration,
+          date: ev.date,
+          priority: ev.priority || 'medium',
+          type: ev.type,
+          clientId: ev.clientId,
+        };
+      });
+  }, [events]);
 
   const refreshTasks = refreshEvents;
 

@@ -172,6 +172,23 @@ router.post('/workout-logs', async (req: any, res) => {
       .single();
 
     if (error) throw error;
+
+    // Fire trigger.workout_logged for the client's manager (workflow listeners).
+    try {
+      const { data: clientRow } = await supabaseAdmin
+        .from('users').select('manager_id').eq('id', req.user.id).maybeSingle();
+      if (clientRow?.manager_id) {
+        const { runWorkflowsForEvent } = await import('./workflows.js');
+        runWorkflowsForEvent(clientRow.manager_id, 'trigger.workout_logged', {
+          clientId: req.user.id,
+          workoutId: data?.id,
+          loggedAt: data?.logged_at,
+        }).catch(err => console.error('Workflow trigger error (workout_logged):', err));
+      }
+    } catch (wErr) {
+      console.error('workout_logged trigger derivation failed:', wErr);
+    }
+
     res.json(data);
   } catch (error: any) {
     console.error('Error saving workout log:', error);

@@ -1584,6 +1584,33 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
       runWorkflowsForEvent(clientData.manager_id, 'trigger.checkin_submitted', { clientId }).catch(err => {
         console.error('Workflow trigger error (checkin_submitted):', err);
       });
+
+      // Weight change trigger: compare against the previous submission's weight
+      // if this one carries one. Payload includes delta so workflows can branch.
+      try {
+        const newWeight = Number((data as any)?.answers_json?.weight);
+        if (Number.isFinite(newWeight)) {
+          const { data: prev } = await supabaseAdmin
+            .from('client_checkin_submissions')
+            .select('answers_json')
+            .eq('client_id', clientId)
+            .neq('id', data.id)
+            .order('submitted_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const prevWeight = Number((prev as any)?.answers_json?.weight);
+          const delta = Number.isFinite(prevWeight) ? +(newWeight - prevWeight).toFixed(2) : null;
+          runWorkflowsForEvent(clientData.manager_id, 'trigger.weight_change', {
+            clientId,
+            weight: newWeight,
+            previousWeight: Number.isFinite(prevWeight) ? prevWeight : null,
+            delta,
+            direction: delta == null ? 'unknown' : delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'flat',
+          }).catch(err => console.error('Workflow trigger error (weight_change):', err));
+        }
+      } catch (wErr) {
+        console.error('weight_change trigger derivation failed:', wErr);
+      }
       // Push notification to the coach (respects the new_client_check_ins_push toggle).
       sendPushToUser(clientData.manager_id, {
         title: 'Nuevo check-in',

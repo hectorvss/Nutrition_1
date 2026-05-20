@@ -151,6 +151,27 @@ router.post('/webhook', async (req, res) => {
         }
         break;
       }
+
+      case 'invoice.payment_succeeded':
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as any;
+        const customerId = (invoice.customer as string) || null;
+        if (!customerId) break;
+        const { data: subRow } = await supabaseAdmin
+          .from('manager_subscriptions').select('user_id')
+          .eq('stripe_customer_id', customerId).maybeSingle();
+        if (!subRow?.user_id) break;
+        const trigger = event.type === 'invoice.payment_succeeded'
+          ? 'trigger.payment_succeeded' : 'trigger.payment_failed';
+        const { runWorkflowsForEvent } = await import('./workflows.js');
+        runWorkflowsForEvent(subRow.user_id, trigger, {
+          amount: invoice.amount_paid ?? invoice.amount_due ?? null,
+          currency: invoice.currency || null,
+          invoiceId: invoice.id || null,
+          attemptCount: invoice.attempt_count ?? null,
+        }).catch(err => console.error(`Workflow trigger error (${trigger}):`, err));
+        break;
+      }
     }
 
     // Record the event as processed ONLY after successful handling, so a failed

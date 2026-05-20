@@ -9,6 +9,9 @@ import {
   ArrowLeft, Save, Rocket, Play, Trash2, X, Search,
   Zap, GitBranch, Send, Clock, Square, Pencil, ListTodo, Shuffle,
   UserPlus, ClipboardCheck, MessageCircle, GripVertical,
+  Scale, FileCheck, CircleDollarSign, TriangleAlert, Dumbbell,
+  AlarmClockOff, CalendarDays, BadgeCheck, ClipboardList, CalendarClock,
+  Database, Calculator, CalendarPlus, ClipboardPlus, UserCog, PenSquare, BellRing,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
@@ -27,46 +30,85 @@ interface WorkflowBuilderProps {
 }
 
 const ICONS: Record<string, React.ElementType> = {
-  Play: Zap, UserPlus, ClipboardCheck, MessageCircle, Clock,
+  // Existing
+  Play, UserPlus, ClipboardCheck, MessageCircle, Clock,
   GitBranch, Shuffle, Timer: Clock, Square, Pencil, Send, ListTodo,
+  // New triggers
+  Scale, FileCheck, CircleDollarSign, TriangleAlert, Dumbbell,
+  AlarmClockOff, CalendarDays,
+  // New conditions
+  BadgeCheck, ClipboardList, CalendarClock,
+  // New data + actions
+  Database, Calculator,
+  CalendarPlus, ClipboardPlus, UserCog, PenSquare, BellRing,
 };
-const TYPE_COLOR: Record<string, string> = {
-  trigger: 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20',
-  condition: 'border-amber-400 bg-amber-50 dark:bg-amber-900/20',
-  flow: 'border-slate-400 bg-slate-100 dark:bg-slate-800/60',
-  data: 'border-blue-400 bg-blue-50 dark:bg-blue-900/20',
-  action: 'border-violet-400 bg-violet-50 dark:bg-violet-900/20',
+
+// Minimalist palette: one colour accent per node type rendered as a thin left
+// strip + a soft icon badge. The card itself stays white for a clean,
+// professional look that doesn't visually compete with the canvas.
+interface TypeStyle { stripe: string; iconBg: string; iconText: string }
+const TYPE_STYLE: Record<string, TypeStyle> = {
+  trigger:   { stripe: 'bg-emerald-500', iconBg: 'bg-emerald-50',  iconText: 'text-emerald-600' },
+  condition: { stripe: 'bg-amber-500',   iconBg: 'bg-amber-50',    iconText: 'text-amber-600'   },
+  flow:      { stripe: 'bg-slate-400',   iconBg: 'bg-slate-100',   iconText: 'text-slate-600'   },
+  data:      { stripe: 'bg-blue-500',    iconBg: 'bg-blue-50',     iconText: 'text-blue-600'    },
+  action:    { stripe: 'bg-violet-500',  iconBg: 'bg-violet-50',   iconText: 'text-violet-600'  },
 };
+const styleFor = (t: string): TypeStyle => TYPE_STYLE[t] || TYPE_STYLE.flow;
+
 const DND_MIME = 'application/wf-node';
 
-/* ---- custom node ---- */
+/* ---- custom node — minimalist, professional ---- */
 function WorkflowNodeCard({ data, selected }: NodeProps) {
   const nd: any = data;
   const Icon = ICONS[nd.icon] || Zap;
   const branches: string[] = nd.branches || [];
   const isStop = nd.key === 'flow.stop';
+  const s = styleFor(nd.nodeType);
   return (
-    <div className={`rounded-xl border-2 shadow-sm px-3 py-2 min-w-[180px] ${TYPE_COLOR[nd.nodeType] || TYPE_COLOR.flow} ${selected ? 'ring-2 ring-emerald-500' : ''}`}>
-      {nd.nodeType !== 'trigger' && <Handle type="target" position={Position.Top} />}
-      <div className="flex items-center gap-2">
-        <Icon className="w-4 h-4 text-slate-700 dark:text-slate-200 shrink-0" />
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wide text-slate-400 font-bold">{nd.nodeType}</div>
-          <div className="text-sm font-semibold text-slate-800 dark:text-white truncate">{nd.label}</div>
+    <div
+      className={`relative bg-white dark:bg-slate-900 rounded-lg border min-w-[210px] overflow-hidden transition-shadow ${
+        selected
+          ? 'border-emerald-400 shadow-md ring-2 ring-emerald-500/15'
+          : 'border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md'
+      }`}
+    >
+      {/* Left accent strip — only colour signal for the node type. */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${s.stripe}`} />
+
+      {nd.nodeType !== 'trigger' && (
+        <Handle type="target" position={Position.Top}
+          className="!w-2 !h-2 !bg-slate-300 !border-2 !border-white" />
+      )}
+
+      <div className="pl-3 pr-3 py-2.5 flex items-center gap-2.5">
+        <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${s.iconBg}`}>
+          <Icon className={`w-3.5 h-3.5 ${s.iconText}`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[9px] uppercase tracking-[0.08em] font-semibold text-slate-400 leading-tight">
+            {nd.nodeType}
+          </div>
+          <div className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-tight mt-0.5">
+            {nd.label}
+          </div>
         </div>
       </div>
+
       {branches.length > 0 ? (
-        <div className="flex justify-around mt-2 pt-1">
+        <div className="flex border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
           {branches.map((b, i) => (
-            <div key={b} className="relative px-3">
-              <span className="text-[9px] font-bold text-slate-500">{b}</span>
+            <div key={b} className="relative flex-1 px-2 py-1.5 text-center first:border-r first:border-slate-100 dark:first:border-slate-800">
+              <span className="text-[9px] uppercase tracking-wide font-semibold text-slate-500">{b}</span>
               <Handle type="source" position={Position.Bottom} id={b}
+                className="!w-2 !h-2 !bg-slate-300 !border-2 !border-white"
                 style={{ left: `${((i + 0.5) / branches.length) * 100}%` }} />
             </div>
           ))}
         </div>
       ) : !isStop ? (
-        <Handle type="source" position={Position.Bottom} />
+        <Handle type="source" position={Position.Bottom}
+          className="!w-2 !h-2 !bg-slate-300 !border-2 !border-white" />
       ) : null}
     </div>
   );
@@ -212,7 +254,17 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
       setStatus(r.warnings?.length
         ? t('published_with_warnings', { defaultValue: `Published (${r.warnings.length} warnings)`, n: r.warnings.length })
         : t('published_ok', { defaultValue: 'Published ✓' }));
-    } catch (err: any) { setStatus('Publish failed: ' + err.message); }
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      // Detect the plan-cap 402 response from the backend (makeEnforceLimit).
+      if (msg.includes('plan_limit_reached') || msg.toLowerCase().includes('activeworkflows')) {
+        setStatus(t('workflow_limit_reached', {
+          defaultValue: 'You have reached the active-workflow limit for your plan. Unpublish one or upgrade to activate this workflow.',
+        }));
+      } else {
+        setStatus('Publish failed: ' + msg);
+      }
+    }
   };
 
   const runNow = async () => {
@@ -277,18 +329,22 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
             {Object.entries(grouped).map(([cat, items]) => (
               <div key={cat}>
                 <div className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">{cat}</div>
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1">
                   {(items as CatalogNode[]).map(c => {
                     const Icon = ICONS[c.icon] || Zap;
+                    const s = styleFor(c.type);
                     return (
                       <div key={c.key} draggable
                         onDragStart={e => onDragStart(e, c.key)}
                         onClick={() => clickAdd(c)}
                         title={c.description}
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-grab active:cursor-grabbing hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-slate-800 transition-colors ${TYPE_COLOR[c.type] || 'border-slate-200 dark:border-slate-700'}`}>
-                        <GripVertical className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                        <Icon className="w-4 h-4 text-slate-600 dark:text-slate-300 shrink-0" />
-                        <span className="text-xs font-semibold text-slate-800 dark:text-white truncate">{c.label}</span>
+                        className="group relative flex items-center gap-2.5 pl-3 pr-2.5 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 cursor-grab active:cursor-grabbing hover:border-emerald-300 hover:shadow-sm transition-all overflow-hidden">
+                        <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${s.stripe}`} />
+                        <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${s.iconBg}`}>
+                          <Icon className={`w-3 h-3 ${s.iconText}`} />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate flex-1">{c.label}</span>
+                        <GripVertical className="w-3 h-3 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                       </div>
                     );
                   })}

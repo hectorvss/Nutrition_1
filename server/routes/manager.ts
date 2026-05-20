@@ -861,6 +861,12 @@ router.post('/clients/:id/nutrition-plan', async (req: any, res) => {
       .single();
 
     if (planError) throw planError;
+
+    // Fire trigger.plan_assigned for any workflow listening on this event.
+    runWorkflowsForEvent(managerId, 'trigger.plan_assigned', {
+      clientId: id, planKind: 'nutrition', planId: planData?.id,
+    }).catch(err => console.error('Workflow trigger error (plan_assigned/nutrition):', err));
+
     res.json(planData);
   } catch (error: any) {
     console.error('Error saving nutrition plan:', error);
@@ -918,6 +924,12 @@ router.post('/clients/:id/training-program', async (req: any, res) => {
       .single();
 
     if (programError) throw programError;
+
+    // Fire trigger.plan_assigned for any workflow listening on this event.
+    runWorkflowsForEvent(managerId, 'trigger.plan_assigned', {
+      clientId: id, planKind: 'training', planId: programData?.id,
+    }).catch(err => console.error('Workflow trigger error (plan_assigned/training):', err));
+
     res.json(programData);
   } catch (error: any) {
     console.error('Error saving training program:', error);
@@ -4098,6 +4110,12 @@ router.post('/clients/:id/workout-logs', async (req: any, res) => {
       .single();
 
     if (error) throw error;
+
+    // Fire trigger.workout_logged for the manager's workflows.
+    runWorkflowsForEvent(managerId, 'trigger.workout_logged', {
+      clientId, workoutId: data?.id, loggedAt: data?.logged_at,
+    }).catch(err => console.error('Workflow trigger error (workout_logged):', err));
+
     res.json(data);
   } catch (error: any) {
     console.error('Error saving workout log:', error);

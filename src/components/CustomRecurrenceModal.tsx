@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import Select from './ui/Select';
 
 // Lightweight modal mirroring Google Calendar's "Custom recurrence" dialog.
 // Outputs a vanilla iCalendar RRULE string (e.g. "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE")
@@ -141,15 +142,15 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
                 onChange={e => setInterval(Math.max(1, parseInt(e.target.value, 10) || 1))}
                 className="w-20 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
               />
-              <select
+              <Select
                 value={freq}
-                onChange={e => setFreq(e.target.value as Freq)}
+                onChange={(v) => setFreq(v as Freq)}
                 className="flex-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
               >
                 <option value="DAILY">{interval > 1 ? t('days', { defaultValue: 'días' }) : t('day', { defaultValue: 'día' })}</option>
                 <option value="WEEKLY">{interval > 1 ? t('weeks', { defaultValue: 'semanas' }) : t('week', { defaultValue: 'semana' })}</option>
                 <option value="MONTHLY">{interval > 1 ? t('months', { defaultValue: 'meses' }) : t('month', { defaultValue: 'mes' })}</option>
-              </select>
+              </Select>
             </div>
           </div>
 

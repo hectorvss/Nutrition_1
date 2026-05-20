@@ -19,6 +19,7 @@ import { useTask } from '../context/TaskContext';
 import { useCalendar } from '../context/CalendarContext';
 import { supabase } from '../supabase';
 import Select from '../components/ui/Select';
+import TimeSelect from '../components/ui/TimeSelect';
 import CustomRecurrenceModal from '../components/CustomRecurrenceModal';
 import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
 import { useLanguage } from '../context/LanguageContext';
@@ -524,20 +525,18 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                     <div className="flex gap-3">
                       <div className="flex-1">
                         <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('start_time')}</label>
-                        <input 
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3" 
-                          type="time" 
+                        <TimeSelect
                           value={startTime}
-                          onChange={e => setStartTime(e.target.value)}
+                          onChange={setStartTime}
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                         />
                       </div>
                       <div className="flex-1">
                         <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('end_time')}</label>
-                        <input 
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3" 
-                          type="time" 
+                        <TimeSelect
                           value={endTime}
-                          onChange={e => setEndTime(e.target.value)}
+                          onChange={setEndTime}
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                         />
                       </div>
                     </div>
