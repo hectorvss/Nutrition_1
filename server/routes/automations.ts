@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { safeErr } from '../lib/http.js';
 import crypto from 'crypto';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
@@ -339,7 +340,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
 
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -366,7 +367,7 @@ router.post('/', verifyManager, async (req: any, res) => {
     if (error) throw error;
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -383,7 +384,7 @@ router.put('/:id', verifyManager, async (req: any, res) => {
     if (error) throw error;
     res.json(data);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -398,7 +399,7 @@ router.delete('/:id', verifyManager, async (req: any, res) => {
     if (error) throw error;
     res.json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -565,7 +566,7 @@ const cronHandler = async (req: any, res: any) => {
     res.json({ success: true, workflows: { resumed, scheduled } });
   } catch (error: any) {
     logger.error('automations.cron.failed', { err: error?.message });
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 };
 

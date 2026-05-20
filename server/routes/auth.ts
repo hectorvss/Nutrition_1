@@ -4,6 +4,7 @@ import type { Request } from 'express';
 import { supabase, supabaseAdmin } from '../db/index.js';
 import { logger } from '../lib/logger.js';
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas/auth.js';
+import { safeErr } from '../lib/http.js';
 
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -218,7 +219,10 @@ router.post('/setup', async (req, res) => {
     });
 
     if (error) {
-      return res.status(400).json({ error: error.message });
+      logger.warn('auth.setup.supabase_create_failed', { err: error.message });
+      // En prod no revelamos el mensaje exacto de Supabase Auth (puede filtrar
+      // si un email ya existe). En dev se ve para diagnostico.
+      return res.status(400).json({ error: safeErr(error, 'Failed to create user') });
     }
 
     if (req.body.managerId && data.user) {
@@ -314,7 +318,8 @@ router.post('/reset-password', async (req, res) => {
     );
 
     if (error) {
-      return res.status(400).json({ error: error.message });
+      logger.warn('auth.reset_password.failed', { err: error.message });
+      return res.status(400).json({ error: safeErr(error, 'No se pudo cambiar la contraseña') });
     }
 
     res.json({ success: true, message: 'Contraseña actualizada correctamente' });

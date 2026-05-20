@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { safeErr } from '../lib/http.js';
 import { supabase, supabaseAdmin } from '../db/index.js';
 import Stripe from 'stripe';
 import { google } from 'googleapis';
@@ -68,7 +69,7 @@ router.get('/profile', async (req: any, res) => {
     res.json(profile || { user_id: req.user.id });
   } catch (error: any) {
     console.error('Error fetching profile:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -142,7 +143,7 @@ router.post('/profile', async (req: any, res) => {
     res.json(result.data);
   } catch (error: any) {
     console.error('Error saving profile:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -165,7 +166,7 @@ router.get('/integrations', async (req: any, res) => {
     res.json(integrations || { user_id: req.user.id });
   } catch (error: any) {
     console.error('Error fetching integrations:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -213,7 +214,7 @@ router.post('/integrations', async (req: any, res) => {
     res.json(result.data);
   } catch (error: any) {
     console.error('Error saving integrations:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -253,7 +254,7 @@ router.get('/integrations/stripe/balance', async (req: any, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching stripe balance:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -517,7 +518,7 @@ router.patch('/clients/:id/status', async (req: any, res) => {
 
     if (error) {
       console.error('Supabase error updating status:', error);
-      return res.status(500).json({ error: error.message, details: error });
+      return res.status(500).json({ error: safeErr(error) });
     }
     if (!updatedUser) {
       return res.status(404).json({ error: 'Client not found or access denied' });
@@ -594,7 +595,7 @@ router.patch('/clients/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error updating client:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -626,7 +627,7 @@ router.post('/clients/:id/reset-password', async (req: any, res) => {
     res.json({ success: true, password: newPassword });
   } catch (error: any) {
     console.error('Error resetting client password:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -707,7 +708,7 @@ router.post('/clients', async (req: any, res) => {
     res.json({ success: true, client_id: clientId });
   } catch (error: any) {
     console.error('Error creating client:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -755,7 +756,7 @@ router.delete('/clients/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting client:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -775,7 +776,7 @@ router.get('/clients/:id/nutrition-plan', async (req: any, res) => {
     res.json(plan || null);
   } catch (error) {
     console.error('Error fetching nutrition plan:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -811,7 +812,7 @@ router.post('/clients/:id/nutrition-plan', async (req: any, res) => {
     res.json(planData);
   } catch (error: any) {
     console.error('Error saving nutrition plan:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -868,7 +869,7 @@ router.post('/clients/:id/training-program', async (req: any, res) => {
     res.json(programData);
   } catch (error: any) {
     console.error('Error saving training program:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -902,7 +903,7 @@ router.get('/master-plans/:slug', async (req: any, res) => {
     res.json({ ...plan, meals });
   } catch (error: any) {
     console.error('Error fetching master plan:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1479,7 +1480,7 @@ router.post('/clients/:id/apply-master-plan', async (req: any, res) => {
     res.json(result.data);
   } catch (error: any) {
     console.error('Error applying master plan:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1722,7 +1723,7 @@ router.post('/clients/:id/apply-training-master-plan', async (req: any, res: any
     res.json(result.data);
   } catch (error: any) {
     console.error('Error applying training master plan:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1759,7 +1760,7 @@ router.get('/settings', async (req: any, res) => {
     });
   } catch (error) {
     console.error('Error fetching settings:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1785,7 +1786,7 @@ router.post('/settings', async (req: any, res) => {
     res.json(data);
   } catch (error) {
     console.error('Error updating settings:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1830,7 +1831,7 @@ router.get('/billing', async (req: any, res) => {
     res.json({ subscription: sub || null, invoices, paymentMethod });
   } catch (error: any) {
     console.error('Error fetching billing:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1859,7 +1860,7 @@ router.post('/billing/portal', async (req: any, res) => {
     res.json({ url: session.url });
   } catch (error: any) {
     console.error('Error creating billing portal session:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1876,7 +1877,7 @@ router.get('/supplements', async (req: any, res) => {
     res.json(data || []);
   } catch (error: any) {
     console.error('Error fetching supplements:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1916,7 +1917,7 @@ router.post('/supplements', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error creating supplement:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1947,7 +1948,7 @@ router.post('/update-password', async (req: any, res) => {
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Error updating password:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1966,7 +1967,7 @@ router.get('/security/sessions', async (req: any, res) => {
     res.json(sessions || []);
   } catch (error) {
     console.error('Error fetching sessions:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -1983,7 +1984,7 @@ router.delete('/security/sessions/:id', async (req: any, res) => {
     res.json({ message: 'Session revoked' });
   } catch (error) {
     console.error('Error revoking session:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -2005,7 +2006,7 @@ router.post('/security/sessions/revoke-all', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error revoking all sessions:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -2025,7 +2026,7 @@ router.get('/security/history', async (req: any, res) => {
     res.json(history || []);
   } catch (error) {
     console.error('Error fetching history:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -2051,7 +2052,7 @@ router.post('/security/2fa/toggle', async (req: any, res) => {
     res.json({ success: true, mfa_enabled: enabled });
   } catch (error) {
     console.error('Error toggling 2FA:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });// Get real aggregated analytics for this manager
 router.get('/analytics', async (req: any, res) => {
@@ -2621,7 +2622,7 @@ router.get('/analytics', async (req: any, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching analytics:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 ;
@@ -3259,7 +3260,7 @@ router.get('/tasks', async (req: any, res) => {
     res.json(tasks || []);
   } catch (error: any) {
     console.error('Error fetching tasks:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3409,7 +3410,7 @@ router.post('/tasks', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error creating task:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3484,7 +3485,7 @@ router.post('/integrations/google-calendar/test', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Google test error:', error);
-    let msg = error.message || 'Error de conexión';
+    let msg = safeErr(error, 'Error de conexión');
     if (error.code === 401) msg = 'No autorizado (revisa tu API Key/JSON)';
     if (error.code === 403) msg = 'Acceso denegado (¿has compartido el calendario con el email de la cuenta de servicio?)';
     res.json({ success: false, message: msg });
@@ -3509,7 +3510,7 @@ router.post('/integrations/stripe/test', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Stripe test error:', error);
-    res.json({ success: false, message: error.message || 'Clave de Stripe inválida' });
+    res.json({ success: false, message: safeErr(error, 'Clave de Stripe inválida') });
   }
 });
 
@@ -3546,7 +3547,7 @@ router.patch('/tasks/:id', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating task:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3577,7 +3578,7 @@ router.delete('/tasks/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting task:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3609,7 +3610,7 @@ router.get('/clients/:clientId/roadmap', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching roadmap:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3674,7 +3675,7 @@ router.post('/clients/:clientId/roadmap', async (req: any, res) => {
     res.json(result);
   } catch (error: any) {
     console.error('Error saving roadmap:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3706,7 +3707,7 @@ router.get('/clients/:id/workout-logs', async (req: any, res) => {
     res.json(data || []);
   } catch (error: any) {
     console.error('Error fetching workout logs:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3738,7 +3739,7 @@ router.post('/clients/:id/workout-logs', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error saving workout log:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3766,7 +3767,7 @@ router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating workout log:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3795,7 +3796,7 @@ router.get('/nutrition-templates', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching nutrition templates:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3828,7 +3829,7 @@ router.post('/nutrition-templates', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error creating nutrition template:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3853,7 +3854,7 @@ router.put('/nutrition-templates/:id', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating nutrition template:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3871,7 +3872,7 @@ router.delete('/nutrition-templates/:id', async (req: any, res: any) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting nutrition template:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3898,7 +3899,7 @@ router.get('/nutrition-templates/:id', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching template detail:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3927,7 +3928,7 @@ router.get('/training-templates', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching training templates:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3962,7 +3963,7 @@ router.post('/training-templates', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error creating training template:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -3985,7 +3986,7 @@ router.put('/training-templates/:id', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating training template:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -4003,7 +4004,7 @@ router.delete('/training-templates/:id', async (req: any, res: any) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error deleting training template:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -4027,7 +4028,7 @@ router.get('/training-templates/:id', async (req: any, res: any) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching training template detail:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -4055,7 +4056,7 @@ router.post('/push/subscribe', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error saving push subscription:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -4073,7 +4074,7 @@ router.post('/push/unsubscribe', async (req: any, res) => {
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error removing push subscription:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 

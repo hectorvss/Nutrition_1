@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { safeErr } from '../lib/http.js';
 import { supabaseAdmin } from '../db/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { runWorkflowsForEvent } from './workflows.js';
@@ -68,7 +69,7 @@ router.get('/unread-count', async (req: any, res) => {
     res.json({ unreadCount: count || 0 });
   } catch (error: any) {
     console.error('Error fetching unread count:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -130,7 +131,7 @@ router.get('/recent', async (req: any, res) => {
     res.json(recentData);
   } catch (error: any) {
     console.error('Error fetching recent messages:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -158,7 +159,7 @@ router.get('/:otherUserId', requireUuidParam('otherUserId'), async (req: any, re
     res.json(filtered);
   } catch (error: any) {
     console.error('Error fetching messages:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -179,7 +180,7 @@ router.post('/:otherUserId/read', requireUuidParam('otherUserId'), async (req: a
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error marking messages as read:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -270,7 +271,7 @@ router.post('/', async (req: any, res) => {
     res.json(message);
   } catch (error: any) {
     console.error('Error sending message:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -289,7 +290,7 @@ router.delete('/:otherUserId', requireUuidParam('otherUserId'), async (req: any,
     res.json({ success: true });
   } catch (error: any) {
     console.error('Error clearing messages:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { safeErr } from '../lib/http.js';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager, verifyClient } from '../middleware/auth.js';
 
@@ -126,7 +127,7 @@ router.get('/manager/templates', verifyManager, async (req: any, res) => {
     res.json(data || []);
   } catch (error: any) {
     console.error('Error fetching onboarding templates:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -297,7 +298,7 @@ router.post('/manager/assign', verifyManager, async (req: any, res) => {
   } catch (error: any) {
     console.error('Error assigning onboarding:', error);
     res.status(500).json({ 
-      error: `Server error: ${error.message || 'Unknown database error'}`,
+      error: safeErr(error),
       details: error
     });
   }
@@ -325,7 +326,7 @@ router.get('/manager/assignments', verifyManager, async (req: any, res) => {
     if (assignErr) throw assignErr;
     res.json(assignments || []);
   } catch (error: any) {
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -359,7 +360,7 @@ router.get('/manager/submissions', verifyManager, async (req: any, res) => {
     res.json(result);
   } catch (error: any) {
     console.error('Error fetching onboarding submissions:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -390,7 +391,7 @@ router.get('/manager/submissions/:id', verifyManager, async (req: any, res) => {
     res.json({ ...data, template: data.template_snapshot_json || data.template });
   } catch (error: any) {
     console.error('Error fetching onboarding submission:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 

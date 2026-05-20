@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { safeErr } from '../lib/http.js';
 import { supabase, supabaseAdmin } from '../db/index.js';
 
 const router = Router();
@@ -120,7 +121,7 @@ router.get('/roadmap', async (req: any, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching roadmap:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -173,7 +174,7 @@ router.post('/workout-logs', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error saving workout log:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -191,7 +192,7 @@ router.get('/workout-logs', async (req: any, res) => {
     res.json(data || []);
   } catch (error: any) {
     console.error('Error fetching workout logs:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -233,7 +234,7 @@ router.patch('/workout-logs/:id', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating workout log:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -290,7 +291,7 @@ router.post('/onboarding/active/:id/action', async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating onboarding status:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 

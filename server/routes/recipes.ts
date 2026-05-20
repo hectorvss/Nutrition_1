@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { safeErr } from '../lib/http.js';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 
@@ -45,7 +46,7 @@ router.get('/', verifyManager, async (req: any, res) => {
     res.json(data || []);
   } catch (error: any) {
     console.error('Error fetching recipes:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -65,7 +66,7 @@ router.get('/:id', verifyManager, async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error fetching recipe:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -90,7 +91,7 @@ router.post('/', verifyManager, async (req: any, res) => {
     res.status(201).json(data);
   } catch (error: any) {
     console.error('Error creating recipe:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -112,7 +113,7 @@ router.patch('/:id', verifyManager, async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     console.error('Error updating recipe:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -133,7 +134,7 @@ router.delete('/:id', verifyManager, async (req: any, res) => {
     res.status(204).end();
   } catch (error: any) {
     console.error('Error deleting recipe:', error);
-    res.status(500).json({ error: 'Server error', message: error.message });
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
