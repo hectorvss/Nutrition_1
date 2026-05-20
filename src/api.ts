@@ -40,6 +40,20 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {})
     // 403 (forbidden) is NOT a dead session — e.g. a client hitting a
     // manager-only endpoint. Surface it as a normal error, never log out.
     const errorData = await response.json().catch(() => ({}));
+
+    // 402 = the manager hit a plan limit or their trial/sub is blocked.
+    // Notify the app (BillingContext listens for this) and throw an enriched
+    // error so the UI can render an upgrade prompt instead of a generic toast.
+    if (response.status === 402) {
+      try {
+        window.dispatchEvent(new CustomEvent('billing:limit', { detail: errorData }));
+      } catch { /* SSR-safe */ }
+      const err: any = new Error(errorData.message || errorData.error || 'Plan limit reached');
+      err.code = errorData.error;
+      err.billing = errorData;
+      throw err;
+    }
+
     throw new Error(errorData.error || 'API Request Failed');
   }
 

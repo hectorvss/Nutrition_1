@@ -35,6 +35,7 @@ import { useProfile } from '../context/ProfileContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useIntegrations } from '../context/IntegrationsContext';
+import { useBilling } from '../context/BillingContext';
 import { Globe, X, Bell } from 'lucide-react';
 import { supabase } from '../supabase';
 import { enablePush, disablePush, isPushEnabled, pushSupported } from '../push';
@@ -1052,6 +1053,7 @@ const BILLING_PLANS = [
 function BillingSettings() {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { status: billingStatus, refresh: refreshBilling } = useBilling();
   const [billing, setBilling] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -1206,6 +1208,58 @@ function BillingSettings() {
           </div>
         )}
       </div>
+
+      {/* Plan Usage — live counters against the limits of the current tier */}
+      {billingStatus && (
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">{t('plan_usage', { defaultValue: 'Uso del plan' })}</h2>
+              <p className="text-sm text-slate-500 mt-1">{t('plan_usage_desc', { defaultValue: 'Consumo actual frente a los límites de tu plan.' })}</p>
+            </div>
+            <button
+              onClick={() => refreshBilling()}
+              className="text-emerald-600 text-xs font-semibold hover:underline"
+            >
+              {t('refresh', { defaultValue: 'Actualizar' })}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {([
+              { key: 'activeClients',     label: t('active_clients_label',     { defaultValue: 'Clientes activos' }) },
+              { key: 'monthlyMessages',   label: t('monthly_messages_label',   { defaultValue: 'Mensajes este mes' }) },
+              { key: 'activeAutomations', label: t('active_automations_label', { defaultValue: 'Automatizaciones activas' }) },
+              { key: 'activeAlerts',      label: t('active_alerts_label',      { defaultValue: 'Alertas activas' }) },
+              { key: 'storageGB',         label: t('storage_label',            { defaultValue: 'Almacenamiento (GB)' }) },
+            ] as const).map(row => {
+              const used = (billingStatus.usage as any)[row.key] ?? 0;
+              const limit = (billingStatus.limits as any)[row.key];
+              const pct = limit == null ? 0 : Math.min(100, Math.round((used / Math.max(1, limit)) * 100));
+              const isUnlimited = limit == null;
+              const danger = !isUnlimited && pct >= 90;
+              const warn = !isUnlimited && pct >= 70 && pct < 90;
+              return (
+                <div key={row.key} className="border border-slate-200 rounded-xl p-4">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{row.label}</span>
+                    <span className="text-sm font-bold text-slate-900">
+                      {used}{isUnlimited ? ` / ${t('unlimited', { defaultValue: 'Ilimitado' })}` : ` / ${limit}`}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        isUnlimited ? 'bg-emerald-300' : danger ? 'bg-red-500' : warn ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: isUnlimited ? '100%' : `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Payment Method */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
@@ -1501,7 +1555,12 @@ function IntegrationsSettings() {
             <button
               onClick={() => runIntegrationAction('gcal-sync', '/manager/integrations/google-calendar/sync-all', t('settings_saved', { defaultValue: 'OK' }))}
               disabled={testing !== null}
-              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 disabled:opacity-50"
+              style={{
+                color: 'var(--brand-primary)',
+                backgroundColor: 'color-mix(in srgb, var(--brand-primary) 10%, white)',
+                borderColor: 'color-mix(in srgb, var(--brand-primary) 25%, white)'
+              }}
+              className="text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors border hover:brightness-95 disabled:opacity-50"
             >
               <Share2 className="w-3 h-3" />
               {testing === 'gcal-sync' ? t('saving') : t('sync_existing')}
@@ -1509,7 +1568,12 @@ function IntegrationsSettings() {
             <button
               onClick={() => runIntegrationAction('gcal-test', '/manager/integrations/google-calendar/test', t('connected_stripe', { defaultValue: 'OK' }))}
               disabled={testing !== null}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 disabled:opacity-50"
+              style={{
+                color: 'var(--brand-primary)',
+                backgroundColor: 'color-mix(in srgb, var(--brand-primary) 10%, white)',
+                borderColor: 'color-mix(in srgb, var(--brand-primary) 25%, white)'
+              }}
+              className="text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors border hover:brightness-95 disabled:opacity-50"
             >
               {testing === 'gcal-test' ? t('saving') : t('test_connection')}
             </button>
@@ -1524,8 +1588,15 @@ function IntegrationsSettings() {
             <h2 className="text-lg font-bold text-slate-900">{t('stripe_payments')}</h2>
             <p className="text-sm text-slate-500 mt-1">{t('stripe_payments_desc')}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-[#635BFF] shadow-lg flex items-center justify-center">
-            <CreditCard className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+            {/* Official Stripe "S" mark — same treatment as the Google Calendar logo above */}
+            <svg viewBox="0 0 32 32" className="w-7 h-7" xmlns="http://www.w3.org/2000/svg" aria-label="Stripe">
+              <rect width="32" height="32" rx="6" fill="#635BFF" />
+              <path
+                fill="#FFFFFF"
+                d="M14.36 12.5c0-.72.6-1 1.6-1 1.43 0 3.24.43 4.67 1.2v-4.3a12.4 12.4 0 0 0-4.67-.86c-3.82 0-6.36 2-6.36 5.34 0 5.21 7.17 4.38 7.17 6.63 0 .85-.74 1.13-1.79 1.13-1.56 0-3.55-.64-5.13-1.5v4.36c1.75.75 3.52 1.07 5.13 1.07 3.91 0 6.6-1.94 6.6-5.32 0-5.62-7.22-4.62-7.22-6.75Z"
+              />
+            </svg>
           </div>
         </div>
 
@@ -1561,33 +1632,55 @@ function IntegrationsSettings() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('secret_key')}</label>
-              <input 
+              <input
                 value={localIntegrations.stripe_secret_key || ''}
                 onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_secret_key: e.target.value })}
                 type="password"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none"
                 placeholder="sk_test_..."
               />
             </div>
           </div>
+
+          {/* Action footer — mirrors the Google Calendar card so both
+              integrations share the same layout and button style. */}
+          <div className="flex justify-end pt-2 gap-2 items-center">
+            <button
+              onClick={() => runIntegrationAction('stripe-test', '/manager/integrations/stripe/test', t('connected_stripe', { defaultValue: 'OK' }))}
+              disabled={testing !== null}
+              style={{
+                color: 'var(--brand-primary)',
+                backgroundColor: 'color-mix(in srgb, var(--brand-primary) 10%, white)',
+                borderColor: 'color-mix(in srgb, var(--brand-primary) 25%, white)'
+              }}
+              className="text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors border hover:brightness-95 disabled:opacity-50"
+            >
+              {testing === 'stripe-test' ? t('saving') : t('test_stripe')}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4">
-        <button 
+      {/* Global save — applies to all integration cards above. Same chip
+          family as the per-card buttons but slightly more prominent. */}
+      <div className="flex justify-end pt-4">
+        <button
           onClick={handleSaveIntegrations}
           disabled={isSaving}
-          className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 disabled:opacity-50"
+          style={{
+            color: 'var(--brand-primary)',
+            backgroundColor: 'color-mix(in srgb, var(--brand-primary) 10%, white)',
+            borderColor: 'color-mix(in srgb, var(--brand-primary) 25%, white)'
+          }}
+          className="text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors border hover:brightness-95 disabled:opacity-50"
         >
-          {isSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+          {isSaving && (
+            <div
+              className="w-3 h-3 border-2 rounded-full animate-spin"
+              style={{ borderColor: 'color-mix(in srgb, var(--brand-primary) 30%, white)', borderTopColor: 'var(--brand-primary)' }}
+            />
+          )}
           {isSaving ? t('saving') : t('save_all_integrations')}
-        </button>
-        <button
-          onClick={() => runIntegrationAction('stripe-test', '/manager/integrations/stripe/test', t('connected_stripe', { defaultValue: 'OK' }))}
-          disabled={testing !== null}
-          className="px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all shadow-lg disabled:opacity-50"
-        >
-          {testing === 'stripe-test' ? t('saving') : t('test_stripe')}
         </button>
       </div>
 

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '../db/index.js';
 import { verifyManager, type AuthedRequest } from '../middleware/auth.js';
 import { logger } from '../lib/logger.js';
 import { newStripeClient } from '../lib/stripe.js';
+import { tierFromPriceId } from '../lib/plans.js';
 
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 import dotenv from 'dotenv';
@@ -122,7 +123,8 @@ router.post('/webhook', async (req, res) => {
             user_id: userId,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            plan_tier: priceId ? getPlanTier(priceId) : 'professional',
+            plan_tier: tierFromPriceId(priceId),
+            trial_ends_at: null, // user converted from trial → clear the trial deadline
             status: subscription.status,
             current_period_end: subscriptionPeriodEnd(subscription),
             updated_at: new Date().toISOString(),
@@ -174,22 +176,6 @@ function subscriptionPeriodEnd(subscription: any): string | null {
     ?? subscription?.items?.data?.[0]?.current_period_end;
   if (!raw || typeof raw !== 'number') return null;
   return new Date(raw * 1000).toISOString();
-}
-
-// Helper to map Price IDs to Tiers
-function getPlanTier(priceId: string): string {
-  const priceToTier: Record<string, string> = {
-    // Monthly
-    "price_1TCN9vCR4WvolxlpwC33dk8J": "professional",
-    "price_1TCNAHCR4WvolxlpwpLRfmwX": "scale",
-    "price_1TCNAcCR4WvolxlptLzNYdsz": "unlimited",
-    // Annual (20% discount)
-    "price_1TCf4PCR4Wvolxlp3MoDzi0J": "professional",
-    "price_1TCf52CR4WvolxlpcMMLOVpv": "scale",
-    "price_1TCf5cCR4WvolxlpWGhpOgnI": "unlimited"
-  };
-
-  return priceToTier[priceId] || 'professional';
 }
 
 export default router;

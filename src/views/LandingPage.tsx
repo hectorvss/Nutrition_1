@@ -81,13 +81,16 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               
               <div className="flex items-center bg-gray-100 rounded-full px-6 py-3 text-base shadow-sm">
                 <span className="text-gray-500 mr-4 font-medium">{t('landing_ready_to_scale')}</span>
-                <button 
+                <button
                   onClick={onGetStarted}
                   className="bg-black text-white px-6 py-2.5 rounded-full font-medium text-sm hover:bg-gray-800 transition-colors cursor-pointer border-none"
                 >
-                  {t('start_free')}
+                  {t('start_free_trial', { defaultValue: t('start_free') })}
                 </button>
               </div>
+              <p className="text-xs text-emerald-700 font-semibold tracking-wide uppercase">
+                {t('trial_microcopy', { defaultValue: '14 días de prueba gratis — sin tarjeta' })}
+              </p>
               
               <p className="text-sm text-gray-500 mt-2">
                 {t('landing_personalized_walkthrough')} <button type="button" onClick={() => setCurrentPage('pricing')} className="underline font-medium text-black bg-transparent border-none cursor-pointer p-0">{t('book_a_demo')}</button>
@@ -183,7 +186,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="text-4xl md:text-[72px] md:leading-[92px] font-medium mb-10 text-black"
+                className="text-4xl md:text-[72px] md:leading-[92px] font-medium pb-2 mb-10 text-black"
               >
                 {t('landing_bottom_title_line_1')} <br /> {t('landing_bottom_title_line_2')}
               </motion.h2>
@@ -281,11 +284,11 @@ function FeatureSequenceSection({ title, subtitle, highlight, description, modul
 
   return (
     <div ref={containerRef} className="relative h-[400vh]">
-      <div className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden">
+      <div className="sticky top-0 min-h-screen flex flex-col justify-center py-12">
         <div className="w-full max-w-6xl mx-auto px-6 text-center">
           {/* Static Header Content - Title, Subtitle, and Description remain fixed */}
           <div className="max-w-4xl mx-auto mb-12">
-            <h2 className="text-4xl md:text-[72px] md:leading-[92px] font-medium mb-2">
+            <h2 className="text-4xl md:text-[72px] md:leading-[92px] font-medium pb-2 mb-2">
               {title[0]} <br /> {title[1]}
             </h2>
             <p className="text-gray-500 mb-12">{subtitle}</p>

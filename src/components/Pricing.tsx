@@ -75,6 +75,20 @@ export default function Pricing({ onGetStarted }: PricingProps) {
           <p className="text-on-surface-variant text-lg leading-relaxed font-medium">
             {isEs ? 'Obtén acceso completo a la plataforma desde el primer día y elige el plan que encaje con tus clientes activos.' : 'Get full access to the platform from day one, and choose the plan that matches the number of active clients you manage.'}
           </p>
+          {!user && (
+            <div className="mt-8 inline-flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 rounded-full">
+              <Verified className="w-5 h-5 text-emerald-600" />
+              <span className="font-semibold text-sm">
+                {isEs ? 'Comienza tus 14 días de prueba gratis — sin tarjeta.' : 'Start your 14-day free trial — no card required.'}
+              </span>
+              <button
+                onClick={() => onGetStarted?.()}
+                className="ml-2 px-4 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
+              >
+                {isEs ? 'Empezar gratis' : 'Start free'}
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Pricing Toggle */}

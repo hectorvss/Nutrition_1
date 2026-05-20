@@ -5,6 +5,25 @@ import { authenticate } from '../middleware/auth.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { sendPushToUser } from '../lib/push.js';
 import { parsePagination, buildPage } from '../lib/pagination.js';
+import { makeEnforceLimit } from '../lib/plans.js';
+
+// Enforce the manager's monthly-message cap. Only runs for MANAGER senders;
+// clients respond freely under whatever quota their manager has.
+const _msgLimit = makeEnforceLimit(supabaseAdmin, 'monthlyMessages', async (userId: string) => {
+  const d = new Date();
+  const monthStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
+  const { count } = await supabaseAdmin
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('sender_id', userId)
+    .gte('created_at', monthStart);
+  return count ?? 0;
+});
+const enforceMonthlyMessages = async (req: any, res: any, next: any) => {
+  // Clients aren't on a subscription tier; skip enforcement entirely for them.
+  if (req.user?.role !== 'MANAGER') return next();
+  return _msgLimit(req, res, next);
+};
 
 const router = Router();
 
@@ -199,7 +218,7 @@ router.post('/:otherUserId/read', requireUuidParam('otherUserId'), async (req: a
 });
 
 // Send a message — con validación de que el receiver es un contacto legítimo del sender
-router.post('/', async (req: any, res) => {
+router.post('/', enforceMonthlyMessages, async (req: any, res) => {
   const sender_id = req.user.id;
   const { receiver_id, content, attachment_url, attachment_type, attachment_name } = req.body;
 

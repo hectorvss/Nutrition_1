@@ -141,6 +141,19 @@ router.post('/register', async (req, res) => {
         .upsert({ user_id: data.user.id, full_name: String(name).trim() }, { onConflict: 'user_id' });
     }
 
+    // Start a 14-day free trial automatically so the new manager has access
+    // out of the gate. tier=trial mirrors Professional limits in server/lib/plans.ts.
+    {
+      const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      await supabaseAdmin.from('manager_subscriptions').upsert({
+        user_id: data.user.id,
+        plan_tier: 'trial',
+        status: 'trialing',
+        trial_ends_at: trialEnd,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    }
+
     // Sign the new manager in straight away so the funnel doesn't dead-end.
     const { data: sess } = await supabase.auth.signInWithPassword({ email, password });
     if (sess?.session) {

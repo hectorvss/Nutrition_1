@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './context/AuthContext';
+import { BillingProvider } from './context/BillingContext';
 import { ClientProvider } from './context/ClientContext';
 import { TaskProvider } from './context/TaskContext';
 import { CalendarProvider } from './context/CalendarContext';
@@ -142,6 +143,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <GlobalErrorBoundary>
       <AuthProvider>
+        <BillingProvider>
         <LanguageProvider>
           <ThemeProvider>
             <IntegrationsProvider>
@@ -163,6 +165,7 @@ createRoot(document.getElementById('root')!).render(
             </IntegrationsProvider>
           </ThemeProvider>
         </LanguageProvider>
+        </BillingProvider>
       </AuthProvider>
     </GlobalErrorBoundary>
   </StrictMode>

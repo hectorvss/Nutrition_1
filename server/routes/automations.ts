@@ -5,6 +5,17 @@ import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { resumeWaitingWorkflows, fireScheduledWorkflows } from './workflows.js';
 import { logger } from '../lib/logger.js';
+import { makeEnforceLimit } from '../lib/plans.js';
+
+// Block automation creation once the manager hits their tier's active-automation cap.
+const enforceAutomationLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomations', async (userId: string) => {
+  const { count } = await supabaseAdmin
+    .from('automations')
+    .select('id', { count: 'exact', head: true })
+    .eq('manager_id', userId)
+    .eq('enabled', true);
+  return count ?? 0;
+});
 
 const router = Router();
 
@@ -355,7 +366,7 @@ function pickAutomationFields(body: any): Record<string, any> {
   return out;
 }
 
-router.post('/', verifyManager, async (req: any, res) => {
+router.post('/', verifyManager, enforceAutomationLimit, async (req: any, res) => {
   const payload = { ...pickAutomationFields(req.body), manager_id: req.user.id };
   try {
     const { data, error } = await supabaseAdmin
@@ -562,8 +573,27 @@ const cronHandler = async (req: any, res: any) => {
     const resumed = await resumeWaitingWorkflows();
     const scheduled = await fireScheduledWorkflows();
 
-    logger.info('automations.cron.completed', { workflows: { resumed, scheduled } });
-    res.json({ success: true, workflows: { resumed, scheduled } });
+    // Expire trials whose deadline has passed and that never converted to a paid sub.
+    // Move them to status='past_due' so the frontend renders the paywall.
+    let trialsExpired = 0;
+    try {
+      const nowIso = new Date().toISOString();
+      const { data: expired } = await supabaseAdmin
+        .from('manager_subscriptions')
+        .update({ status: 'past_due', updated_at: nowIso })
+        .eq('plan_tier', 'trial')
+        .lt('trial_ends_at', nowIso)
+        .neq('status', 'past_due')
+        .is('stripe_subscription_id', null)
+        .select('user_id');
+      trialsExpired = expired?.length ?? 0;
+      if (trialsExpired) logger.info('billing.trials.expired', { count: trialsExpired });
+    } catch (e: any) {
+      logger.error('billing.trials.expire_failed', { err: e?.message });
+    }
+
+    logger.info('automations.cron.completed', { workflows: { resumed, scheduled }, trialsExpired });
+    res.json({ success: true, workflows: { resumed, scheduled }, trialsExpired });
   } catch (error: any) {
     logger.error('automations.cron.failed', { err: error?.message });
     res.status(500).json({ error: safeErr(error) });

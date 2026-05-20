@@ -8,6 +8,19 @@ import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { vapidPublicKey, pushConfigured } from '../lib/push.js';
 import { nutritionPlanSchema, trainingProgramSchema } from '../schemas/plans.js';
+import { limitsForTier, isAccessBlocked, trialDaysLeft, makeEnforceLimit, type PlanTier } from '../lib/plans.js';
+
+// Limit enforcer for client creation. Counts active clients under this manager
+// and blocks POST /clients when the tier cap is reached.
+const enforceClientLimit = makeEnforceLimit(supabaseAdmin, 'activeClients', async (userId: string) => {
+  const { count } = await supabaseAdmin
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('manager_id', userId)
+    .eq('role', 'CLIENT')
+    .neq('status', 'inactive');
+  return count ?? 0;
+});
 
 const router = Router();
 // ... (rest of the code until POST /clients)
@@ -653,7 +666,7 @@ router.post('/clients/:id/reset-password', async (req: any, res) => {
 });
 
 // Create a new client under this manager
-router.post('/clients', async (req: any, res) => {
+router.post('/clients', enforceClientLimit, async (req: any, res) => {
   const { email, password, profile, name } = req.body;
   const managerId = req.user.id;
 
@@ -1852,6 +1865,78 @@ router.get('/billing', async (req: any, res) => {
     res.json({ subscription: sub || null, invoices, paymentMethod });
   } catch (error: any) {
     console.error('Error fetching billing:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// Canonical billing status — single endpoint the frontend hits to know the tier,
+// remaining trial days, configured limits, and live usage counts. Used by the
+// trial banner, the paywall, and the Settings/Billing card.
+router.get('/billing/status', async (req: any, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { data: sub } = await supabaseAdmin
+      .from('manager_subscriptions')
+      .select('plan_tier, status, current_period_end, trial_ends_at, stripe_customer_id, stripe_subscription_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const tier: PlanTier = (sub?.plan_tier as PlanTier) || 'trial';
+    const limits = limitsForTier(tier);
+    const blocked = isAccessBlocked({
+      tier,
+      status: sub?.status,
+      trialEndsAt: sub?.trial_ends_at,
+    });
+
+    // Live usage counts. Resources that don't have a backing table yet report 0.
+    const monthStartIso = (() => {
+      const d = new Date();
+      return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
+    })();
+
+    const [clientsCount, automationsCount, monthlyMsgCount] = await Promise.all([
+      supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('manager_id', userId)
+        .eq('role', 'CLIENT')
+        .neq('status', 'inactive'),
+      supabaseAdmin
+        .from('automations')
+        .select('id', { count: 'exact', head: true })
+        .eq('manager_id', userId)
+        .eq('enabled', true),
+      supabaseAdmin
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('sender_id', userId)
+        .gte('created_at', monthStartIso),
+    ]);
+
+    const usage = {
+      activeClients: clientsCount.count ?? 0,
+      activeAutomations: automationsCount.count ?? 0,
+      monthlyMessages: monthlyMsgCount.count ?? 0,
+      activeAlerts: 0,
+      storageGB: 0,
+    };
+
+    res.json({
+      tier,
+      status: sub?.status || (tier === 'trial' ? 'trialing' : 'inactive'),
+      isTrial: tier === 'trial',
+      trialEndsAt: sub?.trial_ends_at || null,
+      trialDaysLeft: trialDaysLeft(sub?.trial_ends_at),
+      currentPeriodEnd: sub?.current_period_end || null,
+      hasStripeSubscription: Boolean(sub?.stripe_subscription_id),
+      accessBlocked: blocked,
+      limits,
+      usage,
+    });
+  } catch (error: any) {
+    console.error('Error fetching billing status:', error);
     res.status(500).json({ error: safeErr(error) });
   }
 });

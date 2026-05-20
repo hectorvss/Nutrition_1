@@ -45,6 +45,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
 import LandingPage from './views/LandingPage';
 import { useLanguage } from './context/LanguageContext';
+import { useBilling } from './context/BillingContext';
+import TrialBanner from './components/TrialBanner';
+import Paywall from './components/Paywall';
 
 type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
 
@@ -66,6 +69,7 @@ export default function App() {
   
   const { user, isLoading } = useAuth();
   const { profile } = useProfile();
+  const { status: billingStatus } = useBilling();
 
   // Redirect to dashboard if logged in and on landing page
   React.useEffect(() => {
@@ -302,9 +306,17 @@ export default function App() {
     );
   }
 
+  // Trial expired / subscription blocked → full paywall over the app.
+  // Settings stays accessible so the manager can manage billing from inside
+  // the paywall flow (they're already on the Pricing grid, so this is mostly
+  // a safety net if they cancel mid-upgrade).
+  if (billingStatus?.accessBlocked && currentView !== 'settings') {
+    return <Paywall />;
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden">
-      <Sidebar 
+      <Sidebar
         currentView={currentView} 
         onNavigate={(view) => {
           if (['check-ins', 'clients', 'dashboard', 'analytics'].includes(view)) {
@@ -318,6 +330,7 @@ export default function App() {
       />
       
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <TrialBanner onUpgrade={() => setCurrentView('settings')} />
         {/* Mobile Header Toggle */}
         <div className="lg:hidden p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
