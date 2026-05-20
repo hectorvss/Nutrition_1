@@ -105,7 +105,13 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const mapBackendToFrontend = (t: any): CalendarEvent => {
-    const clientName = t.client || t.users?.name || t.users?.email || 'General';
+    // The /manager/tasks join now nests the client's profile inline. Supabase
+    // may return `profiles` as an array or a single object — handle both.
+    const profile = Array.isArray(t.users?.profiles) ? t.users.profiles[0] : t.users?.profiles;
+    const clientName =
+      profile?.full_name
+      || t.users?.email?.split('@')[0]
+      || (t.client_id ? 'Client' : 'General');
     return {
       id: t.id,
       time: t.time ? t.time.substring(0, 5) : '09:00',
@@ -116,8 +122,8 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
       type: t.type,
       desc: t.description || t.desc || '',
       client: clientName,
-      avatar: t.users?.profiles?.[0]?.avatar_url,
-      initials: !t.users?.profiles?.[0]?.avatar_url ? (t.users?.profiles?.[0]?.full_name?.[0] || t.users?.email?.[0] || 'G') : undefined,
+      avatar: profile?.avatar_url || undefined,
+      initials: !profile?.avatar_url ? (profile?.full_name?.[0] || t.users?.email?.[0] || 'G') : undefined,
       clientId: t.client_id,
       status: t.status as any || 'pending',
       // Mapeamos priority del backend; fallback 'medium' para filas legacy

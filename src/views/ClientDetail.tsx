@@ -61,6 +61,7 @@ import {
   Legend
 } from 'recharts';
 import { useClient } from '../context/ClientContext';
+import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
 import CheckInHistory from './CheckInHistory';
 import CheckInReview from './CheckInReview';
 import CheckInReviewRenderer from '../components/checkin/CheckInReviewRenderer';
@@ -444,8 +445,11 @@ const TrainingProgramCard = ({ program }: { program: any }) => {
 
 
 export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDetailProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { clients, deleteClient, reloadClients } = useClient();
+  // Subscribe to the shared calendar store so newly created/edited/deleted
+  // appointments for this client appear instantly, without a page reload.
+  const { events: calendarEvents } = useCalendar();
   const [activeTab, setActiveTab] = useState<Tab>('Information');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
   const [onboardingSubmission, setOnboardingSubmission] = useState<any>(null);
@@ -1541,7 +1545,69 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
     );
   };
 
-  const renderInsights = () => (
+  const renderInsights = () => {
+    // Upcoming appointments for THIS client, derived live from the shared
+    // CalendarContext. Any addEvent/updateEvent/deleteEvent in the app re-renders
+    // this list immediately — no fetch, no reload.
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcomingAppointments = (calendarEvents || [])
+      .filter(ev => ev.clientId === clientId && ev.date >= todayStr && ev.status !== 'completed')
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return (a.time || '').localeCompare(b.time || '');
+      })
+      .slice(0, 6);
+    const locale = language === 'es' ? 'es-ES' : 'en-US';
+    const formatAppointmentDate = (dateStr: string) => {
+      const d = new Date(`${dateStr}T12:00:00`);
+      if (Number.isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+    };
+
+    return (
+    <>
+    {/* Upcoming Appointments — live from CalendarContext, no reload needed */}
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-8">
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
+        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-emerald-500" />
+          {t('upcoming_appointments', { defaultValue: 'Próximas citas' })}
+        </h3>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          {upcomingAppointments.length} {upcomingAppointments.length === 1 ? t('item', { defaultValue: 'cita' }) : t('items', { defaultValue: 'citas' })}
+        </span>
+      </div>
+      {upcomingAppointments.length === 0 ? (
+        <div className="p-8 text-center">
+          <Calendar className="w-10 h-10 mx-auto mb-3 text-slate-200" />
+          <p className="text-sm font-medium text-slate-500">{t('no_upcoming_appointments', { defaultValue: 'Este cliente no tiene citas próximas agendadas.' })}</p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {upcomingAppointments.map(ev => {
+            const presentation = getEventPresentationInfo(ev.type as EventType);
+            const EventIcon = presentation.icon;
+            return (
+              <li key={ev.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                  <EventIcon className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-900 truncate">{ev.title}</p>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {formatAppointmentDate(ev.date)} · {ev.time || '--:--'}
+                    {ev.duration ? ` · ${ev.duration}` : ''}
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 shrink-0">
+                  {t(ev.type)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
       {/* Latest Measurements */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
@@ -1694,7 +1760,9 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
         </div>
       </div>
     </div>
-  );
+    </>
+    );
+  };
 
     const onboardingAnswers = onboardingSubmission?.answers_json || {};
     const displayGender = onboardingAnswers.genero || onboardingAnswers.gender || client.gender || t('unknown');

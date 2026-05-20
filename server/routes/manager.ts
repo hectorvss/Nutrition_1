@@ -3402,7 +3402,7 @@ router.get('/tasks', async (req: any, res) => {
       // by recurrence_end so series that already finished don't leak in.
       const { data: oneOffs, error: oneOffErr } = await supabaseAdmin
         .from('tasks')
-        .select('*, users!client_id(email)')
+        .select('*, users!client_id(email, profiles!user_id(full_name, avatar_url))')
         .eq('manager_id', req.user.id)
         .is('recurrence_rule', null)
         .gte('date', from)
@@ -3411,7 +3411,7 @@ router.get('/tasks', async (req: any, res) => {
 
       const { data: recurring, error: recErr } = await supabaseAdmin
         .from('tasks')
-        .select('*, users!client_id(email)')
+        .select('*, users!client_id(email, profiles!user_id(full_name, avatar_url))')
         .eq('manager_id', req.user.id)
         .not('recurrence_rule', 'is', null)
         .lte('date', to);
@@ -3468,7 +3468,7 @@ router.get('/tasks', async (req: any, res) => {
   try {
     let q = supabaseAdmin
       .from('tasks')
-      .select('*, users!client_id(email)')
+      .select('*, users!client_id(email, profiles!user_id(full_name, avatar_url))')
       .eq('manager_id', req.user.id)
       .order('date', { ascending: true })
       .order('time', { ascending: true })

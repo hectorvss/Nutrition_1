@@ -2,8 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { useClient, ClientData } from './ClientContext';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { fetchWithAuth } from '../api';
-import { unwrapList } from '../api/unwrap';
+import { useCalendar, CalendarEvent } from './CalendarContext';
 
 export interface AutomationRule {
   id: string;
@@ -100,44 +99,31 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   ], [t]);
 
   const [rules, setRules] = useState<AutomationRule[]>(localizedDefaultRules);
-  const [manualTasks, setManualTasks] = useState<TaskItem[]>([]);
   const [completedAutomatedIds, setCompletedAutomatedIds] = useState<Record<string, string>>({}); // { id: dateStr }
-  const [isLoading, setIsLoading] = useState(true);
 
-  const fetchManualTasks = async () => {
-    if (!user) {
-      setManualTasks([]);
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      const data = unwrapList(await fetchWithAuth('/manager/tasks?limit=200'));
-      // ... mapping logic remains the same ...
-      const formatted: TaskItem[] = (data || []).map((taskData: any) => ({
-        id: taskData.id,
-        title: taskData.title,
-        desc: taskData.description || '',
-        client: taskData.users?.name || 'General',
-        program: 'Custom',
-        avatar: '',
-        status: taskData.status as any || 'today',
-        timeLabel: taskData.time,
-        endTime: taskData.end_time || taskData.endTime,
-        duration: taskData.duration,
-        date: taskData.date,
-        priority: taskData.priority || 'medium',
-        type: taskData.type,
-        clientId: taskData.client_id || taskData.clientId
-      }));
-      setManualTasks(formatted);
-    } catch (error) {
-      console.error('Failed to fetch manual tasks:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Single source of truth: derive manual tasks from CalendarContext.events. Any
+  // addEvent/updateEvent/deleteEvent in CalendarContext propagates here at the
+  // same render — no separate fetch, no stale cache.
+  const { events, addEvent, updateEvent, refreshEvents } = useCalendar();
+  const manualTasks: TaskItem[] = useMemo(() => events.map((ev: CalendarEvent): TaskItem => ({
+    id: ev.id,
+    title: ev.title,
+    desc: ev.desc || '',
+    client: ev.client || 'General',
+    program: 'Custom',
+    avatar: ev.avatar || '',
+    label: '',
+    status: (ev.status === 'completed' ? 'completed' : 'today') as TaskItem['status'],
+    timeLabel: ev.time || '',
+    endTime: ev.endTime,
+    duration: ev.duration,
+    date: ev.date,
+    priority: ev.priority || 'medium',
+    type: ev.type,
+    clientId: ev.clientId,
+  })), [events]);
+
+  const refreshTasks = refreshEvents;
 
   useEffect(() => {
     const savedRules = localStorage.getItem('automation_rules');
@@ -175,7 +161,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    fetchManualTasks();
+    // Manual tasks now derive from CalendarContext.events (single source of truth),
+    // which already refetches on user change.
   }, [user]); // Re-run when user changes
 
   const updateRule = (id: string, updates: Partial<AutomationRule>) => {
@@ -199,17 +186,12 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Manual (DB-persisted) task — optimistic: update the UI instantly so the
-    // completion animation never waits on the network; roll back only on error.
-    setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
+    // Manual (DB-persisted) task — route through CalendarContext so the shared
+    // event store updates instantly. updateEvent itself is optimistic enough.
     try {
-      await fetchWithAuth(`/manager/tasks/${taskId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'completed' })
-      });
+      await updateEvent(String(taskId), { status: 'completed' });
     } catch (error) {
       console.error('Failed to mark manual task as done:', error);
-      setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'pending' } : t));
     }
   };
 
@@ -225,46 +207,34 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // Optimistic: restore the task instantly, roll back on error.
-    setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'pending' } : t));
+    // Route through CalendarContext so the shared event store updates instantly.
     try {
-      await fetchWithAuth(`/manager/tasks/${taskId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: 'pending' })
-      });
+      await updateEvent(String(taskId), { status: 'pending' });
     } catch (error) {
       console.error('Failed to mark manual task as pending:', error);
-      setManualTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t));
     }
   };
 
   const addManualTask = async (task: ManualTaskInput) => {
+    // Route through CalendarContext so the new task lives in the shared event
+    // store and any view subscribed to it (Tasks, ClientDetail, Calendar) sees
+    // it instantly.
     try {
-      // Map TaskItem structure back to SQL table structure
-      const payload = {
+      const timeLabel = task.timeLabel || '09:00';
+      const endTime = task.endTime
+        || `${(parseInt(timeLabel.split(':')[0]) + 1).toString().padStart(2, '0')}:${timeLabel.split(':')[1]}`;
+      await addEvent({
         title: task.title,
-        description: task.desc,
-        type: task.type || 'MANUAL TASK',
+        desc: task.desc,
+        type: (task.type as any) || 'Internal',
         date: task.date || new Date().toISOString().split('T')[0],
-        time: task.timeLabel || '09:00',
-        end_time: task.endTime || (parseInt((task.timeLabel || '09:00').split(':')[0]) + 1).toString().padStart(2, '0') + ':' + (task.timeLabel || '09:00').split(':')[1],
+        time: timeLabel,
+        endTime,
         duration: task.duration || '1h',
-        priority: task.priority || 'medium'
-      };
-      
-      const response = await fetchWithAuth('/manager/tasks', {
-        method: 'POST',
-        body: JSON.stringify(payload)
+        clientId: task.clientId,
+        client: task.client,
+        status: 'pending',
       });
-      
-      const newTask: TaskItem = {
-        ...task,
-        id: response.id,
-        type: task.type || 'MANUAL TASK',
-        label: task.label || 'USER CREATED',
-        avatar: task.avatar || 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=100&h=100&fit=crop',
-      };
-      setManualTasks(prev => [...prev, newTask]);
     } catch (error) {
       console.error('Failed to add manual task:', error);
     }
@@ -670,7 +640,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   }, [clients, rules, manualTasks, completedAutomatedIds, buildAutomatedTasks, t]);
 
   return (
-    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks: fetchManualTasks, markTaskAsDone, markTaskAsPending, completedTasks }}>
+    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks, markTaskAsDone, markTaskAsPending, completedTasks }}>
       {children}
     </TaskContext.Provider>
   );

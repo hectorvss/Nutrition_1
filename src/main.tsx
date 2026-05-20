@@ -149,8 +149,8 @@ createRoot(document.getElementById('root')!).render(
             <IntegrationsProvider>
               <ProfileProvider>
                 <ClientProvider>
-                  <TaskProvider>
-                    <CalendarProvider>
+                  <CalendarProvider>
+                    <TaskProvider>
                       <AutomationProvider>
                         <FoodProvider>
                           <ExerciseProvider>
@@ -158,8 +158,8 @@ createRoot(document.getElementById('root')!).render(
                           </ExerciseProvider>
                         </FoodProvider>
                       </AutomationProvider>
-                    </CalendarProvider>
-                  </TaskProvider>
+                    </TaskProvider>
+                  </CalendarProvider>
                 </ClientProvider>
               </ProfileProvider>
             </IntegrationsProvider>

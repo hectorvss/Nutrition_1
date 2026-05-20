@@ -41,12 +41,15 @@ export interface TaskException {
 }
 
 // Map of UI day → RRule weekday constant. Sunday-first convention.
-const WD_MAP: Record<string, Weekday> = {
+// `Weekday` comes from rrule via CommonJS interop above — it's an `any` value
+// at compile time, so we annotate with `any` (the rrule typings aren't usable
+// without proper named exports under the ESM bridge).
+const WD_MAP: Record<string, any> = {
   MO: RRule.MO, TU: RRule.TU, WE: RRule.WE, TH: RRule.TH,
   FR: RRule.FR, SA: RRule.SA, SU: RRule.SU,
 };
 
-const DOW_BY_INDEX: Weekday[] = [RRule.SU, RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA];
+const DOW_BY_INDEX: any[] = [RRule.SU, RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA];
 
 // Translate the legacy free-text "repeat" value the UI sends into a proper
 // RRULE. The selector currently emits localised labels in some languages; we
@@ -93,7 +96,7 @@ export function rruleToRepeatLabel(rule: string | null | undefined): string {
 
 // Build an RRuleSet for a task: the base RRULE constrained by DTSTART and
 // optionally UNTIL (recurrence_end). Returns null when the task isn't recurring.
-function buildRuleSet(task: TaskRow): RRuleSet | null {
+function buildRuleSet(task: TaskRow): any {
   if (!task.recurrence_rule) return null;
   try {
     const dtstart = new Date(`${task.date}T${task.time || '00:00:00'}`);

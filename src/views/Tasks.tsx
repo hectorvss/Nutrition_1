@@ -264,7 +264,23 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                     </div>
                                   </div>
                                   <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1 truncate">{task.title}</h3>
-                                  <p className="text-xs sm:text-sm text-slate-500 mb-4 line-clamp-2">{task.desc}</p>
+                                  <p className="text-xs sm:text-sm text-slate-500 mb-3 line-clamp-2">{task.desc}</p>
+                                  {(task.date || task.timeLabel) && (
+                                    <div className="flex items-center gap-2 mb-3 text-[11px] sm:text-xs font-bold text-slate-500">
+                                      <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                      <span>
+                                        {task.date && (() => {
+                                          const d = new Date(`${task.date}T12:00:00`);
+                                          return Number.isNaN(d.getTime())
+                                            ? task.date
+                                            : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+                                        })()}
+                                        {task.date && task.timeLabel ? ' · ' : ''}
+                                        {task.timeLabel}
+                                        {task.duration ? ` · ${task.duration}` : ''}
+                                      </span>
+                                    </div>
+                                  )}
                                   <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-2 min-w-0">
                                       {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full" referrerPolicy="no-referrer" />}

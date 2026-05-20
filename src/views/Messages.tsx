@@ -33,6 +33,7 @@ import {
 import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
 import { fetchWithAuth, getAuthToken } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 
