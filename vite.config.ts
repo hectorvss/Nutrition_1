@@ -21,17 +21,28 @@ export default defineConfig(() => {
       rollupOptions: {
         external: ['express', 'cors', 'dotenv', 'stripe', 'googleapis', '@google/genai'],
         output: {
-          // manualChunks separa las librerias mas pesadas en su propio chunk
-          // para que (a) no inflen el bundle principal y (b) el navegador
-          // pueda cachearlas independientemente de los cambios de codigo del
-          // app. Las paginas que no usan recharts/xyflow no las descargan.
-          manualChunks: {
-            'vendor-react':    ['react', 'react-dom'],
-            'vendor-charts':   ['recharts'],
-            'vendor-flow':     ['@xyflow/react'],
-            'vendor-motion':   ['motion'],
-            'vendor-icons':    ['lucide-react'],
-            'vendor-supabase': ['@supabase/supabase-js'],
+          // manualChunks como funcion (no objeto) para que el matching de
+          // node_modules sea robusto. La forma de objeto fallaba para
+          // react/react-dom (chunk vacio porque Rollup no los aislaba).
+          //
+          // Cada chunk vendor-* se cachea por el navegador independientemente
+          // del codigo del app, asi que cambios de UI no invalidan estos
+          // chunks pesados.
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined;
+            // ORDEN IMPORTA: las librerias que CONTIENEN "react" en su path
+            // (@xyflow/react, lucide-react) deben emparejar PRIMERO con su
+            // propio nombre. Si no, el regex generico de react las absorbe
+            // y crea el ciclo vendor-flow -> vendor-charts -> vendor-react.
+            if (id.includes('@xyflow'))              return 'vendor-flow';
+            if (id.includes('recharts'))             return 'vendor-charts';
+            if (id.includes('lucide-react'))         return 'vendor-icons';
+            if (id.includes('@supabase'))            return 'vendor-supabase';
+            // motion v12 publica como 'motion/react' — atrapar tambien.
+            if (id.includes('/motion/') || id.includes('framer-motion')) return 'vendor-motion';
+            // Solo despues de descartar lo anterior emparejamos react/dom.
+            if (id.match(/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/)) return 'vendor-react';
+            return undefined;
           },
         },
       },

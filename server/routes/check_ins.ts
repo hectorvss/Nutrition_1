@@ -9,17 +9,28 @@ const router = Router();
 
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-// Minimal shape of a check-in template question. Templates and answers are
-// stored as JSON in the DB and reshaped on the fly, so we lean on a structural
-// type here rather than a full schema.
+// Minimal shape of a check-in template question. Templates and answers son
+// JSON arbitrario en BD: el manager edita libremente y se reescribe con shape
+// nuevo cada vez que el editor añade un tipo. Mantenemos un index signature
+// permisivo y solo declaramos los campos que SI consume el backend.
+//
+// Campos especificos observados en FIXED_CHECKIN_QUESTIONS + en plantillas
+// dinamicas: id, type, required, is_fixed, locked, options (array suelto —
+// string[] para measurement_group, objetos para multi_choice, etc.),
+// conditional ({ field, operator, value } para visibilidad condicional),
+// hidden, y N campos de presentacion (title, subtitle, meta, unit) que el
+// backend no toca.
 interface CheckInQuestion {
   id: string;
   type?: string;
   required?: boolean;
   is_fixed?: boolean;
   locked?: boolean;
-  conditional?: { questionId: string; value: unknown } | null;
-  options?: Array<{ value: string; label?: string }>;
+  hidden?: boolean;
+  conditional?: { field: string; operator: string; value: unknown } | null;
+  // options puede ser string[] (measurement_group) o array de objetos
+  // ({value,label}) en multi_choice. No fijamos shape para no romper.
+  options?: unknown[];
   [k: string]: unknown;
 }
 interface CheckInSchemaStep {
@@ -332,8 +343,11 @@ const findMissingRequired = (schema: CheckInSchemaStep[], answers: CheckInAnswer
   };
   const isAnswered = (q: CheckInQuestion): boolean => {
     if (q.type === 'measurement_group') {
-      return (q.options || []).some((o: string) => {
-        const v = ans[o]; return v !== undefined && v !== null && v !== '';
+      return (q.options || []).some((o) => {
+        // options en measurement_group son strings sueltos (keys de answers).
+        const key = typeof o === 'string' ? o : (o as { value?: string })?.value || '';
+        if (!key) return false;
+        const v = ans[key]; return v !== undefined && v !== null && v !== '';
       });
     }
     if (q.type === 'photo_group') {
@@ -444,7 +458,9 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
     if (dynamicError) throw dynamicError;
 
     // 3. Map to unified format (same shape the manager endpoint returns)
-    const legacyParsed = (legacyData || []).map((ci: Record<string, any>) => ({
+    // Cast a Record<string,any> para que el spread preserve los campos del row
+    // (incluyendo `date`) y el sort posterior pueda leerlos sin error de tipo.
+    const legacyParsed: Record<string, any>[] = (legacyData || []).map((ci: Record<string, any>) => ({
       ...ci,
       type: 'legacy',
       reviewed_at: ci.reviewed_at || (ci.data_json?.reviewed_at) || null,
@@ -452,7 +468,7 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
       next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
     }));
 
-    const dynamicParsed = (dynamicData || []).map((ci: Record<string, any>) => ({
+    const dynamicParsed: Record<string, any>[] = (dynamicData || []).map((ci: Record<string, any>) => ({
       id: ci.id,
       client_id: ci.client_id,
       date: ci.submitted_at,
@@ -630,7 +646,9 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
     if (dynamicError) throw dynamicError;
 
     // 3. Map to unified format
-    const legacyParsed = (legacyData || []).map((ci: Record<string, any>) => ({
+    // Cast a Record<string,any> para que el spread preserve los campos del row
+    // (incluyendo `date`) y el sort posterior pueda leerlos sin error de tipo.
+    const legacyParsed: Record<string, any>[] = (legacyData || []).map((ci: Record<string, any>) => ({
       ...ci,
       type: 'legacy',
       reviewed_at: ci.reviewed_at || (ci.data_json?.reviewed_at) || null,
@@ -638,7 +656,7 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
     }));
 
-    const dynamicParsed = (dynamicData || []).map((ci: Record<string, any>) => ({
+    const dynamicParsed: Record<string, any>[] = (dynamicData || []).map((ci: Record<string, any>) => ({
       id: ci.id,
       client_id: ci.client_id,
       date: ci.submitted_at,

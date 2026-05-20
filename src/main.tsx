@@ -23,7 +23,12 @@ interface ErrorBoundaryState {
 }
 
 class GlobalErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  // Con useDefineForClassFields=false (ver tsconfig.json) TS necesita
+  // declarar explicitamente los miembros heredados de React.Component
+  // para que `this.props` y `this.setState` esten accesibles dentro de
+  // la subclase sin que la inicializacion de `state` los oculte.
   declare props: { children: React.ReactNode };
+  declare setState: React.Component<{ children: React.ReactNode }, ErrorBoundaryState>['setState'];
   state: ErrorBoundaryState = { hasError: false, error: null, errorInfo: null };
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
