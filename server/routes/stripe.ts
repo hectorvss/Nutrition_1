@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager, type AuthedRequest } from '../middleware/auth.js';
 import { logger } from '../lib/logger.js';
+import { newStripeClient } from '../lib/stripe.js';
 
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 import dotenv from 'dotenv';
@@ -10,7 +11,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' as any })
+  ? newStripeClient(process.env.STRIPE_SECRET_KEY)
   : null;
 
 if (!stripe) {

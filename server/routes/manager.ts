@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { safeErr } from '../lib/http.js';
 import { supabase, supabaseAdmin } from '../db/index.js';
 import Stripe from 'stripe';
+import { newStripeClient } from '../lib/stripe.js';
 import { google } from 'googleapis';
 import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
@@ -233,7 +234,7 @@ router.get('/integrations/stripe/balance', async (req: any, res) => {
       return res.status(400).json({ error: 'Stripe not connected' });
     }
 
-    const stripe = new Stripe(integrations.stripe_secret_key);
+    const stripe = newStripeClient(integrations.stripe_secret_key);
     
     // Fetch real balance
     const balance = await stripe.balance.retrieve();
@@ -1806,7 +1807,7 @@ router.get('/billing', async (req: any, res) => {
     const platformKey = process.env.STRIPE_SECRET_KEY;
     if (sub?.stripe_customer_id && platformKey) {
       try {
-        const stripe = new Stripe(platformKey);
+        const stripe = newStripeClient(platformKey);
         const inv = await stripe.invoices.list({ customer: sub.stripe_customer_id, limit: 12 });
         invoices = inv.data.map(i => ({
           id: i.id,
@@ -1852,7 +1853,7 @@ router.post('/billing/portal', async (req: any, res) => {
       return res.status(404).json({ error: 'No subscription found for this account.' });
     }
 
-    const stripe = new Stripe(platformKey);
+    const stripe = newStripeClient(platformKey);
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/settings`
@@ -2529,7 +2530,7 @@ router.get('/analytics', async (req: any, res) => {
 
     if (integrations?.stripe_enabled && integrations?.stripe_secret_key) {
       try {
-        const stripe = new Stripe(integrations.stripe_secret_key);
+        const stripe = newStripeClient(integrations.stripe_secret_key);
         const startOfYear = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
         const charges = await stripe.charges.list({ created: { gte: startOfYear }, limit: 100 });
         charges.data.forEach(c => {
@@ -3505,7 +3506,7 @@ router.post('/integrations/stripe/test', async (req: any, res) => {
       return res.json({ success: false, message: 'Falta la Secret Key' });
     }
 
-    const stripe = new Stripe(integrations.stripe_secret_key);
+    const stripe = newStripeClient(integrations.stripe_secret_key);
     await stripe.balance.retrieve();
     res.json({ success: true });
   } catch (error: any) {

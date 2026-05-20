@@ -165,15 +165,30 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   useEffect(() => {
     if (user?.role === 'MANAGER' && !selectedClientId) {
       loadLatestMessages();
-      const interval = setInterval(loadLatestMessages, 10000);
-      return () => clearInterval(interval);
+      // Pausa polling cuando la pestana esta oculta: el navegador permite
+      // setInterval en background pero gastamos red/CPU sin que el usuario lo vea.
+      const tick = () => { if (!document.hidden) loadLatestMessages(); };
+      const interval = setInterval(tick, 10000);
+      const onVisible = () => { if (!document.hidden) loadLatestMessages(); };
+      document.addEventListener('visibilitychange', onVisible);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVisible);
+      };
     }
   }, [user, selectedClientId]);
 
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 5000); // Polling for simplicity
-    return () => clearInterval(interval);
+    // Polling agresivo (5s) solo cuando la pestana esta activa.
+    const tick = () => { if (!document.hidden) loadMessages(); };
+    const interval = setInterval(tick, 5000);
+    const onVisible = () => { if (!document.hidden) loadMessages(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [activeRecipient]);
 
   // Mark as read when entering a chat — applies to both MANAGER and CLIENT

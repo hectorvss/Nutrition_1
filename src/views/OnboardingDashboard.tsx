@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import OnboardingList from './OnboardingList';
 import OnboardingHistory from './OnboardingHistory';
 import OnboardingReview from './OnboardingReview';
 import OnboardingTemplates from './OnboardingTemplates';
-import OnboardingFlowEditor from './OnboardingFlowEditor';
+// Editor visual de flujos de onboarding — pesado, lazy.
+const OnboardingFlowEditor = lazy(() => import('./OnboardingFlowEditor'));
 import { useLanguage } from '../context/LanguageContext';
 
 export type OnboardingViewMode = 'list' | 'history' | 'review' | 'templates' | 'editor';
@@ -92,10 +93,16 @@ export default function OnboardingDashboard({ initialClientId, initialSubmission
       )}
 
       {viewMode === 'editor' && editingTemplateId && (
-        <OnboardingFlowEditor 
-          flowId={editingTemplateId} 
-          onBack={() => setViewMode('templates')} 
-        />
+        <Suspense fallback={
+          <div className="p-10 flex items-center justify-center min-h-[400px]">
+            <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          <OnboardingFlowEditor
+            flowId={editingTemplateId}
+            onBack={() => setViewMode('templates')}
+          />
+        </Suspense>
       )}
     </div>
   );

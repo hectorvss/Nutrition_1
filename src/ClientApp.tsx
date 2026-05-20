@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './context/AuthContext';
 import ClientSidebar from './components/client/ClientSidebar';
@@ -7,7 +7,8 @@ import ClientCheckIns from './views/client/ClientCheckIns';
 import ClientNutrition from './views/client/ClientNutrition';
 import ClientTraining from './views/client/ClientTraining';
 import ClientRoadmap from './views/client/ClientRoadmap';
-import Settings from './views/Settings';
+// Settings (1663 LOC) lazy: rara vez se entra desde la app cliente.
+const Settings = lazy(() => import('./views/Settings'));
 import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
 import ActivityEditor from './views/ActivityEditor';
@@ -155,7 +156,14 @@ export default function ClientApp() {
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="h-full"
             >
-              {renderView()}
+              {/* Suspense para los componentes lazy (Settings). */}
+              <Suspense fallback={
+                <div className="p-10 flex items-center justify-center min-h-[400px]">
+                  <div className="w-10 h-10 border-4 border-[#17cf54] border-t-transparent rounded-full animate-spin" />
+                </div>
+              }>
+                {renderView()}
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </div>

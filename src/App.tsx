@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './views/Dashboard';
 import Tasks from './views/Tasks';
@@ -15,7 +15,14 @@ import { useClient } from './context/ClientContext';
 import CalendarView from './views/Calendar';
 import CreateTask from './views/CreateTask';
 import PlanningManagement from './views/PlanningManagement';
-import PlanningDetail from './views/PlanningDetail';
+// Vistas pesadas con `React.lazy()` para que no entren al bundle principal.
+// Cada una se descarga la primera vez que el usuario navega a ella.
+// Justificacion (LOC): PlanningDetail 1922, Settings 1663, NutritionPlanDetail
+// 1332, Messages 1183, Analytics 774, ClientProgress 773, WorkoutEditor 677.
+const PlanningDetail        = lazy(() => import('./views/PlanningDetail'));
+const Analytics             = lazy(() => import('./views/Analytics'));
+const Settings              = lazy(() => import('./views/Settings'));
+const OnboardingFlowEditor  = lazy(() => import('./views/OnboardingFlowEditor'));
 import PlanningTemplateSelector from './views/PlanningTemplateSelector';
 import TaskIntelligence from './views/TaskIntelligence';
 import Clients from './views/Clients';
@@ -32,10 +39,7 @@ import TrainingLibrary from './views/TrainingLibrary';
 import ExerciseCreate from './views/ExerciseCreate';
 import Training from './views/Training';
 import ExerciseDetail from './views/ExerciseDetail';
-import Analytics from './views/Analytics';
-import Settings from './views/Settings';
 import OnboardingDashboard from './views/OnboardingDashboard';
-import OnboardingFlowEditor from './views/OnboardingFlowEditor';
 import ClientApp from './ClientApp';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
@@ -347,7 +351,16 @@ export default function App() {
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="h-full"
             >
-              {renderView()}
+              {/* Suspense fallback se muestra durante la primera descarga
+                  de los chunks lazy (PlanningDetail, Analytics, Settings,
+                  OnboardingFlowEditor). Despues queda cacheado. */}
+              <Suspense fallback={
+                <div className="p-10 flex items-center justify-center min-h-[400px]">
+                  <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              }>
+                {renderView()}
+              </Suspense>
             </motion.div>
           </AnimatePresence>
         </div>

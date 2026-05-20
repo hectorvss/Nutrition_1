@@ -46,14 +46,19 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
       }
     };
     fetchUnread();
-    const interval = setInterval(fetchUnread, 15000);
-    
+    // Pausa el polling cuando la pestana esta oculta y refresca al volver.
+    const tick = () => { if (!document.hidden) fetchUnread(); };
+    const interval = setInterval(tick, 15000);
+    const onVisible = () => { if (!document.hidden) fetchUnread(); };
+
     // Listen for manual updates (when marking as read)
     window.addEventListener('updateUnreadCount', fetchUnread);
-    
+    document.addEventListener('visibilitychange', onVisible);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('updateUnreadCount', fetchUnread);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, [user]);
 
