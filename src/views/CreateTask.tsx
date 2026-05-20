@@ -262,21 +262,21 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 <div className="md:col-span-10 space-y-5 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('task_title')}</label>
-                    <input 
+                    <input
                       required
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                       placeholder={t('task_title_placeholder')} 
                       type="text" 
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('task_description')}</label>
-                    <textarea 
+                    <textarea
                       value={description}
                       onChange={e => setDescription(e.target.value)}
-                      className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                       placeholder={t('task_description_placeholder')} 
                       rows={4}
                     />
@@ -391,7 +391,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                             value={linkUrl}
                             onChange={e => setLinkUrl(e.target.value)}
                             placeholder={t('meeting_url_placeholder')}
-                            className="w-full rounded-lg border-slate-200 bg-slate-50 text-sm py-2.5 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 text-sm py-2.5 px-3 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         ) : (
                           <div className={`flex items-center gap-3 px-4 py-2.5 rounded-full border shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 ${
@@ -431,7 +431,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                       <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('date')}</label>
                       <div className="relative">
                         <input 
-                          className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3" 
                           type="date" 
                           value={date}
                           onChange={e => setDate(e.target.value)}
@@ -442,7 +442,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                       <div className="flex-1">
                         <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('start_time')}</label>
                         <input 
-                          className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3" 
                           type="time" 
                           value={startTime}
                           onChange={e => setStartTime(e.target.value)}
@@ -451,7 +451,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                       <div className="flex-1">
                         <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('end_time')}</label>
                         <input 
-                          className="w-full rounded-lg border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5" 
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3" 
                           type="time" 
                           value={endTime}
                           onChange={e => setEndTime(e.target.value)}
