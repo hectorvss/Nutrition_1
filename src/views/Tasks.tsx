@@ -317,9 +317,16 @@ export default function Tasks({ onNavigate }: TasksProps) {
                 </div>
               ) : (
                 completedTasks.map((task) => (
-                  <div 
+                  <div
                     key={task.id}
-                    className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 opacity-60 grayscale transition-all border-l-4 border-l-slate-400"
+                    // The "completed" look comes from the muted slate-* text
+                    // colors + `line-through` on the title + the avatar opacity
+                    // below. We drop both the card-wide `opacity-60` AND the
+                    // `grayscale` filter — together they killed the Reopen
+                    // affordance. The card still reads as completed (line-
+                    // through title, muted slates, "Done today" pill) but
+                    // without the dead-overlay vibe.
+                    className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 transition-all border-l-4 border-l-slate-400"
                   >
                     <div className="flex items-start gap-3 sm:gap-4">
                       <div className="pt-1 hidden sm:block">
@@ -339,21 +346,31 @@ export default function Tasks({ onNavigate }: TasksProps) {
                              {t('done_today')}
                           </div>
                         </div>
-                        <h3 className="text-base sm:text-lg font-bold text-slate-400 mb-1 truncate line-through">{task.title}</h3>
-                        <p className="text-xs sm:text-sm text-slate-300 mb-4 line-clamp-2">{task.desc}</p>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-500 mb-1 truncate line-through">{task.title}</h3>
+                        <p className="text-xs sm:text-sm text-slate-400 mb-4 line-clamp-2">{task.desc}</p>
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2 min-w-0">
-                            {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full opacity-50" referrerPolicy="no-referrer" />}
-                            <span className="text-[11px] sm:text-xs font-bold text-slate-400 truncate">{task.client}</span>
-                            <span className="text-[11px] sm:text-xs text-slate-300 shrink-0">•</span>
-                            <span className="text-[11px] sm:text-xs text-slate-300 truncate">{task.program}</span>
+                            {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full opacity-70" referrerPolicy="no-referrer" />}
+                            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">{task.client}</span>
+                            <span className="text-[11px] sm:text-xs text-slate-400 shrink-0">•</span>
+                            <span className="text-[11px] sm:text-xs text-slate-400 truncate">{task.program}</span>
                           </div>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               markTaskAsPending(task.id);
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg text-[11px] sm:text-xs font-bold shadow-sm hover:bg-slate-50 hover:text-slate-700 transition-all shrink-0"
+                            // Reopen: the only coloured element on a muted
+                            // card. Uses the user's theme color (brand) so it
+                            // clearly reads as actionable, in the same tonal
+                            // chip style as the Integrations buttons. Card
+                            // stays grey — only this button adopts brand.
+                            style={{
+                              color: 'var(--brand-primary)',
+                              backgroundColor: 'color-mix(in srgb, var(--brand-primary) 12%, white)',
+                              borderColor: 'color-mix(in srgb, var(--brand-primary) 35%, white)'
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-[11px] sm:text-xs font-bold shadow-sm hover:brightness-95 active:scale-95 transition-all shrink-0"
                             title={t('mark_as_pending')}
                           >
                             <RotateCcw className="w-3.5 h-3.5" />

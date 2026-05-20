@@ -1661,25 +1661,17 @@ function IntegrationsSettings() {
         </div>
       </div>
 
-      {/* Global save — applies to all integration cards above. Same chip
-          family as the per-card buttons but slightly more prominent. */}
+      {/* Global save — applies to all integration cards above. Uses the same
+          prominent filled style as "Save Notification Preferences" below so
+          both primary save actions in Settings share one visual language. */}
       <div className="flex justify-end pt-4">
         <button
           onClick={handleSaveIntegrations}
           disabled={isSaving}
-          style={{
-            color: 'var(--brand-primary)',
-            backgroundColor: 'color-mix(in srgb, var(--brand-primary) 10%, white)',
-            borderColor: 'color-mix(in srgb, var(--brand-primary) 25%, white)'
-          }}
-          className="text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors border hover:brightness-95 disabled:opacity-50"
+          style={{ backgroundColor: 'var(--brand-primary)', color: 'white' }}
+          className="px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm hover:brightness-95 flex items-center gap-2 disabled:opacity-50"
         >
-          {isSaving && (
-            <div
-              className="w-3 h-3 border-2 rounded-full animate-spin"
-              style={{ borderColor: 'color-mix(in srgb, var(--brand-primary) 30%, white)', borderTopColor: 'var(--brand-primary)' }}
-            />
-          )}
+          {isSaving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
           {isSaving ? t('saving') : t('save_all_integrations')}
         </button>
       </div>
@@ -1695,15 +1687,19 @@ function IntegrationsSettings() {
             <button
               onClick={handleTogglePush}
               disabled={pushBusy}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 shrink-0 ${
-                pushOn
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : 'bg-slate-900 text-white hover:bg-slate-800'
-              }`}
+              // Same tonal chip family as the Integrations action buttons
+              // (Test Stripe, Test Google Calendar, …) — uses the user's
+              // theme color via --brand-primary instead of black/emerald.
+              style={{
+                color: 'var(--brand-primary)',
+                backgroundColor: 'color-mix(in srgb, var(--brand-primary) 10%, white)',
+                borderColor: 'color-mix(in srgb, var(--brand-primary) 25%, white)'
+              }}
+              className="text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-colors border hover:brightness-95 disabled:opacity-50 shrink-0"
             >
               {pushBusy
-                ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                : <Bell className="w-4 h-4" />}
+                ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                : <Bell className="w-3 h-3" />}
               {pushOn
                 ? t('push_enabled_device', { defaultValue: 'Push activado en este dispositivo' })
                 : t('enable_push_device', { defaultValue: 'Activar push en este dispositivo' })}
@@ -1740,10 +1736,13 @@ function IntegrationsSettings() {
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
-        <button 
+        <button
           onClick={handleSaveGeneralSettings}
           disabled={saving}
-          className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-colors shadow-sm shadow-emerald-500/30 flex items-center gap-2"
+          // Identical style to "Save All Integrations" above — both primary
+          // save buttons in Settings now share one brand-driven look.
+          style={{ backgroundColor: 'var(--brand-primary)', color: 'white' }}
+          className="px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm hover:brightness-95 flex items-center gap-2 disabled:opacity-50"
         >
           {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
           {saving ? t('saving') : t('save_notification_prefs')}
