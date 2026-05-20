@@ -173,11 +173,12 @@ export default function ClientRoadmap() {
 
       setSelectedNutritionId(currentNut?.id || roadmapData.nutrition[0]?.id || null);
       setSelectedTrainingId(currentTra?.id || roadmapData.training[0]?.id || null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // fetchWithAuth throws on non-ok responses. Surface a real error
       // state instead of silently showing invented data.
       console.error('Error loading roadmap:', error);
-      setLoadError(error?.message || t('error_loading_data', { defaultValue: 'Error loading data' }));
+      const msg = error instanceof Error ? error.message : String(error);
+      setLoadError(msg || t('error_loading_data', { defaultValue: 'Error loading data' }));
       setRoadmap(null);
     } finally {
       setLoading(false);
@@ -197,6 +198,11 @@ export default function ClientRoadmap() {
   const isEmptyRoadmap = !!roadmap &&
     (isDraftStatus || (roadmap.nutrition.length === 0 && roadmap.training.length === 0));
   const safeTotalWeeks = (roadmap && roadmap.totalWeeks > 0) ? roadmap.totalWeeks : 12;
+  // currentWeek puede llegar undefined si el JSON es viejo o vacio — defaultea a 1
+  // para que el indicador "Hoy" no acabe en NaN cuando Math.max(undefined,1).
+  const safeCurrentWeek = (roadmap && typeof roadmap.currentWeek === 'number' && roadmap.currentWeek > 0)
+    ? roadmap.currentWeek
+    : 1;
 
   if (loading) return (
     <div className="p-10 flex items-center justify-center min-h-[400px]">
@@ -275,14 +281,14 @@ export default function ClientRoadmap() {
               <div className="min-w-[1240px] space-y-6 relative">
                  <div className="flex justify-between px-4 text-[11px] font-bold text-slate-300 uppercase tracking-[0.2em]">
                   {Array.from({ length: safeTotalWeeks }).map((_, i) => (
-                    <span key={i} style={{ width: `${100 / safeTotalWeeks}%` }} className={`text-center ${i + 1 === roadmap.currentWeek ? 'text-[#17cf54] font-black' : ''}`}>{t('planning_week_label_short', { week: i + 1 })}</span>
+                    <span key={i} style={{ width: `${100 / safeTotalWeeks}%` }} className={`text-center ${i + 1 === safeCurrentWeek ? 'text-[#17cf54] font-black' : ''}`}>{t('planning_week_label_short', { week: i + 1 })}</span>
                   ))}
                 </div>
 
                 {/* Today Indicator Line */}
                 <div
                   className="absolute top-0 bottom-0 w-px bg-[#17cf54] z-20 pointer-events-none"
-                  style={{ left: `${(Math.min(Math.max(roadmap.currentWeek, 1), safeTotalWeeks) - 0.5) / safeTotalWeeks * 100}%` }}
+                  style={{ left: `${(Math.min(Math.max(safeCurrentWeek, 1), safeTotalWeeks) - 0.5) / safeTotalWeeks * 100}%` }}
                 >
                   <div className="absolute top-0 -translate-x-1/2 bg-[#17cf54] text-white text-[8px] font-black px-2 py-1 rounded-full shadow-lg shadow-emerald-500/20 tracking-tighter uppercase leading-none">{t('today')}</div>
                 </div>
@@ -402,7 +408,7 @@ export default function ClientRoadmap() {
                            {t('micronutrient_optimization')}
                         </h5>
                         <div className="grid grid-cols-2 gap-4">
-                          {activeNutrition.micros?.map((m: any, i: number) => (
+                          {activeNutrition.micros?.map((m: { label: string; value: string }, i: number) => (
                             <div key={i} className="p-4 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">{m.label}</p>
                               <p className="text-sm font-bold text-slate-900 dark:text-white font-semibold">{m.value}</p>
