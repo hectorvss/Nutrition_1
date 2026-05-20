@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import type { Request } from 'express';
 import { supabase, supabaseAdmin } from '../db/index.js';
 import { logger } from '../lib/logger.js';
+import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas/auth.js';
 
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -51,11 +52,11 @@ const recordLogin = async (userId: string, req: Request) => {
 
 // Login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
-  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  const parsed = loginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
   }
+  const { email, password } = parsed.data;
 
   try {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -110,18 +111,12 @@ router.post('/login', async (req, res) => {
 
 // Open manager self-registration (the public landing "Create account" flow).
 router.post('/register', async (req, res) => {
-  const { email, password, name } = req.body;
-
-  if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  // Validacion con zod: una sola fuente de verdad para el shape.
+  const parsed = registerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
   }
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!EMAIL_RE.test(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
-  }
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
-  }
+  const { email, password, name } = parsed.data;
 
   try {
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -272,10 +267,11 @@ router.get('/me', async (req, res) => {
 
 // POST /forgot-password — Enviar email de reset via Supabase
 router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email requerido' });
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Formato de email inválido' });
+  const parsed = forgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
+  }
+  const { email } = parsed.data;
 
   try {
     const redirectUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
@@ -299,14 +295,11 @@ router.post('/forgot-password', async (req, res) => {
 
 // POST /reset-password — Cambiar contraseña con token de Supabase
 router.post('/reset-password', async (req, res) => {
-  const { access_token, new_password } = req.body;
-  if (!access_token || !new_password) {
-    return res.status(400).json({ error: 'Token y nueva contraseña requeridos' });
+  const parsed = resetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
   }
-
-  if (new_password.length < 8) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
-  }
+  const { access_token, new_password } = parsed.data;
 
   try {
     // Usar el token del email para obtener al usuario y actualizar su password
