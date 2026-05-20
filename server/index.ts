@@ -1,6 +1,17 @@
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+
+// Initialize Sentry before Express setup. Only active when SENTRY_DSN is set.
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    release: process.env.VERCEL_GIT_COMMIT_SHA,
+    tracesSampleRate: 0.1,
+  });
+}
 import authRoutes from './routes/auth.js';
 import managerRoutes from './routes/manager.js';
 import clientRoutes from './routes/client.js';
@@ -102,6 +113,9 @@ app.use((req, res) => {
 // Error handler middleware (must be last)
 app.use((err: any, req: any, res: any, next: any) => {
   console.error('Server error:', err);
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+  }
   res.status(err.status || 500).json({
     error: err.message || 'Internal server error'
   });

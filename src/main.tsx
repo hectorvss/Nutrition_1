@@ -1,7 +1,28 @@
 import React, {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
+import * as Sentry from '@sentry/react';
 import App from './App.tsx';
 import './index.css';
+
+// Initialize Sentry before anything else. Only active when VITE_SENTRY_DSN is set.
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    environment: import.meta.env.MODE,
+    release: import.meta.env.VITE_GIT_SHA,
+    tracesSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    replaysSessionSampleRate: 0.0,
+    beforeSend(event) {
+      // Drop noisy browser-level errors that aren't actionable
+      const msg = event.exception?.values?.[0]?.value ?? '';
+      if (/ResizeObserver loop|Non-Error promise rejection|Network request failed/.test(msg)) {
+        return null;
+      }
+      return event;
+    },
+  });
+}
 import { AuthProvider } from './context/AuthContext';
 import { BillingProvider } from './context/BillingContext';
 import { ClientProvider } from './context/ClientContext';
@@ -39,6 +60,7 @@ class GlobalErrorBoundary extends React.Component<{ children: React.ReactNode },
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("APP CRASH:", error, errorInfo);
     this.setState({ errorInfo });
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
   }
 
   private buildBugReport = (): string => {
@@ -136,6 +158,7 @@ if (typeof window !== 'undefined') {
     console.group('CRITICAL RUNTIME ERROR');
     console.error('StackTrace:', error?.stack);
     console.groupEnd();
+    if (error) Sentry.captureException(error);
   };
 }
 
