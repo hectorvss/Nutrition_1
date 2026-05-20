@@ -81,6 +81,37 @@
   html, body {
     scrollbar-gutter: stable;
   }
+
+  /*
+   * Cursor affordance — Tailwind v4 (like v3) does NOT add `cursor: pointer`
+   * to <button> by default, which leaves most buttons in the SaaS with the
+   * default arrow. These rules give every interactive element the right
+   * cursor without having to sprinkle `cursor-pointer` on every component.
+   *
+   * Order matters: the disabled rule comes last so it overrides the pointer
+   * applied to button/a[role=button] when the same element is disabled.
+   */
+  button,
+  a[href],
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  summary,
+  label[for],
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  [data-disabled="true"],
+  .is-disabled {
+    cursor: not-allowed;
+  }
+
+  /* Inputs/textareas keep the browser default (text caret), don't override. */
 }
 
 @layer utilities {
