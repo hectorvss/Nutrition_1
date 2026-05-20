@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../../api';
+import { unwrapList } from '../../api/unwrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import WeeklyCheckinFlow from './WeeklyCheckinFlow';
@@ -17,8 +18,8 @@ export default function ClientCheckIns() {
   const loadCheckIns = async () => {
     try {
       setIsLoading(true);
-      const data = await fetchWithAuth('/check-ins/client/check-ins');
-      setCheckIns(data || []);
+      const data = await fetchWithAuth('/check-ins/client/check-ins?limit=100');
+      setCheckIns(unwrapList(data));
     } catch (err) {
       console.error('Error loading check-ins:', err);
     } finally {
@@ -31,11 +32,11 @@ export default function ClientCheckIns() {
     const load = async () => {
       try {
         const [data, template] = await Promise.all([
-          fetchWithAuth('/check-ins/client/check-ins'),
+          fetchWithAuth('/check-ins/client/check-ins?limit=100'),
           fetchWithAuth('/check-ins/client/active-template')
         ]);
         if (!mounted) return;
-        setCheckIns(data || []);
+        setCheckIns(unwrapList(data));
         if (template) {
           setActiveTemplate({
             ...template,

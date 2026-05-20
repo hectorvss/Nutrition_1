@@ -152,8 +152,14 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     try {
       setIsLoading(true);
-      const data = await fetchWithAuth(`/manager/tasks?from=${from}&to=${to}`);
-      const arr: any[] = Array.isArray(data?.tasks) ? data.tasks : Array.isArray(data) ? data : [];
+      const data = await fetchWithAuth(`/manager/tasks?from=${from}&to=${to}&limit=200`);
+      // Endpoint paginado devuelve { data: T[], nextCursor, hasMore }; tambien
+      // hay rutas legacy que devuelven { tasks: T[] } o un array directo.
+      const arr: any[] = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data?.tasks) ? data.tasks
+        : Array.isArray(data) ? data
+        : [];
       setEvents(arr.map(mapBackendToFrontend));
     } catch (error) {
       console.error('Failed to load range:', error);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, ArrowLeft, Workflow, Trash2, CheckCircle2, CircleDashed } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useLanguage } from '../context/LanguageContext';
 
 interface WorkflowsListProps {
@@ -23,8 +24,8 @@ export default function WorkflowsList({ onBack, onOpen }: WorkflowsListProps) {
 
   const load = () => {
     setLoading(true);
-    fetchWithAuth('/workflows')
-      .then(d => setItems(d || []))
+    fetchWithAuth('/workflows?limit=200')
+      .then(d => setItems(unwrapList<WorkflowRow>(d)))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   };

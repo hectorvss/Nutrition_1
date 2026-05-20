@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ClientView } from '../../ClientApp';
 import { fetchWithAuth } from '../../api';
+import { unwrapList } from '../../api/unwrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -22,18 +23,19 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       try {
         const [plansData, checkInsData, profileData] = await Promise.all([
           fetchWithAuth('/client/plans'),
-          fetchWithAuth('/check-ins/client/check-ins'),
+          fetchWithAuth('/check-ins/client/check-ins?limit=50'),
           fetchWithAuth('/client/profile')
         ]);
 
         if (!mounted) return;
         setPlans(plansData);
-        setCheckIns(checkInsData || []);
+        setCheckIns(unwrapList(checkInsData));
 
         if (profileData?.manager_id) {
-          const conversation = await fetchWithAuth(`/messages/${profileData.manager_id}`);
+          const conversation = await fetchWithAuth(`/messages/${profileData.manager_id}?limit=50`);
           if (!mounted) return;
-          const coachMessages = conversation.filter((m: any) => m.sender_id === profileData.manager_id);
+          const msgs = unwrapList<any>(conversation);
+          const coachMessages = msgs.filter((m: any) => m.sender_id === profileData.manager_id);
           setMessages(coachMessages.reverse());
         }
       } catch (err) {
