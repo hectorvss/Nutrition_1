@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import {
   Search,
   Download,
@@ -31,7 +32,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     async function loadAssignments() {
       setIsAssignmentsLoading(true);
       try {
-        const data = await fetchWithAuth('/check-ins/manager/checkin-assignments');
+        const data = unwrapList(await fetchWithAuth('/check-ins/manager/checkin-assignments?limit=200'));
         const map: Record<string, string> = {};
         data.forEach((a: any) => {
           map[a.client_id] = a.template.name;
@@ -51,7 +52,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     setSelectedClient(client);
     setIsModalOpen(true);
     try {
-      const templates = await fetchWithAuth('/check-ins/manager/checkin-templates');
+      const templates = unwrapList(await fetchWithAuth('/check-ins/manager/checkin-templates?limit=200'));
       setAvailableTemplates(templates);
     } catch (err) {
       console.error('Error loading templates:', err);

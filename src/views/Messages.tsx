@@ -220,7 +220,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   const loadLatestMessages = async () => {
     if (user?.role !== 'MANAGER') return;
     try {
-      const data = await fetchWithAuth('/messages/recent');
+      const data = unwrapList(await fetchWithAuth('/messages/recent?limit=100'));
       const latestMap: Record<string, Message> = {};
       data.forEach((msg: Message) => {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;

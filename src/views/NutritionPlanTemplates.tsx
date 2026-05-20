@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 
 interface NutritionPlanTemplatesProps {
   onBack: () => void;
@@ -26,7 +27,7 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
 
   const load = () => {
     setIsLoading(true);
-    fetchWithAuth('/manager/nutrition-templates')
+    fetchWithAuth('/manager/nutrition-templates?limit=200').then(unwrapList)
       .then((d) => setTemplates(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setIsLoading(false));

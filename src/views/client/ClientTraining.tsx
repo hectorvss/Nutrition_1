@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useExerciseContext } from '../../context/ExerciseContext';
 import { fetchWithAuth } from '../../api';
+import { unwrapList } from '../../api/unwrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -109,7 +110,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
 
     const fetchWorkoutHistory = async () => {
       try {
-        const history = await fetchWithAuth('/client/workout-logs');
+        const history = unwrapList(await fetchWithAuth('/client/workout-logs?limit=200'));
         if (!mounted) return;
         if (Array.isArray(history)) {
           setAllLogs(prev => {

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useAuth } from './AuthContext';
 import { getRecommendationsByPlanningId } from '../constants/planMappings';
 
@@ -196,7 +197,7 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
       // Better: Backend should return the assignment status in /manager/clients.
       // Let's check if I can modify /manager/clients to include this.
       
-      const data = await fetchWithAuth('/manager/clients');
+      const data = unwrapList(await fetchWithAuth('/manager/clients?limit=200'));
       
       const formatted = data.map((c: any) => {
           let dj = {};

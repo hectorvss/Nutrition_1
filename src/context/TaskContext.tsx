@@ -3,6 +3,7 @@ import { useClient, ClientData } from './ClientContext';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 
 export interface AutomationRule {
   id: string;
@@ -112,7 +113,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       setIsLoading(true);
-      const data = await fetchWithAuth('/manager/tasks');
+      const data = unwrapList(await fetchWithAuth('/manager/tasks?limit=200'));
       // ... mapping logic remains the same ...
       const formatted: TaskItem[] = (data || []).map((taskData: any) => ({
         id: taskData.id,

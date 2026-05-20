@@ -13,6 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -40,10 +41,11 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
     async function loadTemplate() {
       setIsLoading(true);
       try {
-        const [data, fixed] = await Promise.all([
-          fetchWithAuth(`/check-ins/manager/checkin-templates`),
+        const [tplResp, fixed] = await Promise.all([
+          fetchWithAuth(`/check-ins/manager/checkin-templates?limit=200`),
           fetchWithAuth(`/check-ins/manager/fixed-questions`).catch(() => [])
         ]);
+        const data = unwrapList(tplResp);
         const found = data.find((t: any) => t.id === templateId);
         if (found) {
           const customSchema: any[] = found.template_schema || found.templateSchema || [];

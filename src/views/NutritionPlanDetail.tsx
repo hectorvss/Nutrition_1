@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useFoodContext, FoodItem } from '../context/FoodContext';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -229,7 +230,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
   // Load the supplement database (global catalog + this manager's custom ones).
   React.useEffect(() => {
-    fetchWithAuth('/manager/supplements')
+    fetchWithAuth('/manager/supplements?limit=300').then(unwrapList)
       .then(d => setSupplementCatalog(Array.isArray(d) ? d : []))
       .catch(() => setSupplementCatalog([]));
   }, []);

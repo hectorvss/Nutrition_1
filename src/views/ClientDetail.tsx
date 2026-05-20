@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { 
   ArrowLeft, 
   MessageSquare, 
@@ -553,7 +554,7 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
       setIsLoadingOnboarding(true);
       setOnboardingError(null);
       try {
-        const submissions = await fetchWithAuth('/onboarding/manager/submissions');
+        const submissions = unwrapList(await fetchWithAuth('/onboarding/manager/submissions?limit=200'));
         const clientSubmission = (submissions || [])
           .filter((s: any) => s.client_id === clientId)
           .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())[0];
@@ -1428,16 +1429,48 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
     );
   };
 
-  const renderMindset = () => (
+  const renderMindset = () => {
+    // Coerce a mindset metric to a finite number, or null when missing/'--'.
+    const m = stats?.mindset || {};
+    const num1to10 = (k: string): number | null => {
+      const v = Number((m as any)[k]);
+      return Number.isFinite(v) && v > 0 ? v : null;
+    };
+    const mood = num1to10('mood');
+    const stress = num1to10('stress');
+    const motivation = num1to10('motivation');
+    const energy = num1to10('energy');
+    const sleep = num1to10('sleep');
+
+    // Composite burnout risk: combines sustained stress, low sleep and low
+    // motivation. Returns null when none of the inputs has data, so the card
+    // shows '—' instead of inventing a value for brand-new clients.
+    const burnoutRisk = (() => {
+      if (stress == null && sleep == null && motivation == null) return null;
+      let score = 0;
+      let count = 0;
+      if (stress != null)     { score += stress >= 8 ? 2 : stress >= 6 ? 1 : 0; count++; }
+      if (sleep != null)      { score += sleep <= 5  ? 2 : sleep <= 6  ? 1 : 0; count++; }
+      if (motivation != null) { score += motivation <= 3 ? 2 : motivation <= 5 ? 1 : 0; count++; }
+      const avg = score / Math.max(count, 1);
+      if (avg >= 1.5) return 'High';
+      if (avg >= 0.6) return 'Medium';
+      return 'Low';
+    })();
+
+    const valueOrDash = (n: number | null) => (n != null ? n : '--');
+    const statusOrDash = (n: number | null, hi: string, lo: string) => (n != null ? (n > 7 ? hi : lo) : '--');
+
+    return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[
-          { label: 'MOOD', value: stats?.mindset?.mood || '--', status: stats?.mindset?.mood > 7 ? 'Good' : 'Avg', icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
-          { label: 'STRESS', value: stats?.mindset?.stress || '--', status: stats?.mindset?.stress > 7 ? 'High' : 'Normal', icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
-          { label: 'MOTIVATION', value: stats?.mindset?.motivation || '--', status: stats?.mindset?.motivation > 7 ? 'High' : 'Low', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
-          { label: 'ENERGY', value: stats?.mindset?.energy || '--', status: stats?.mindset?.energy > 7 ? 'High' : 'Low', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
-          { label: 'SLEEP', value: stats?.mindset?.sleep || '--', status: 'Avg', icon: Moon, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'sleep' },
-          { label: 'BURNOUT RISK', value: stats?.mindset?.stress > 8 ? 'High' : 'Low', status: '', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'stress' },
+          { label: 'MOOD', value: valueOrDash(mood), status: statusOrDash(mood, 'Good', 'Avg'), icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
+          { label: 'STRESS', value: valueOrDash(stress), status: statusOrDash(stress, 'High', 'Normal'), icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
+          { label: 'MOTIVATION', value: valueOrDash(motivation), status: statusOrDash(motivation, 'High', 'Low'), icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
+          { label: 'ENERGY', value: valueOrDash(energy), status: statusOrDash(energy, 'High', 'Low'), icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
+          { label: 'SLEEP', value: valueOrDash(sleep), status: statusOrDash(sleep, 'Good', 'Low'), icon: Moon, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'sleep' },
+          { label: 'BURNOUT RISK', value: burnoutRisk ?? '--', status: '', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'stress' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
             <div className="flex justify-between items-start mb-4">
@@ -1505,7 +1538,8 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderInsights = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">

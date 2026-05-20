@@ -15,6 +15,7 @@ import {
 import { useFoodContext } from '../context/FoodContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 
 type Tab = 'recipes' | 'food' | 'supplements';
 
@@ -57,7 +58,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
     setRecipesLoading(true);
     setRecipesError(null);
     try {
-      const data = await fetchWithAuth('/recipes');
+      const data = unwrapList(await fetchWithAuth('/recipes?limit=200'));
       setRecipes(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setRecipesError(err.message || 'Error loading recipes');
@@ -72,7 +73,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
   const loadSupplements = async () => {
     setSupplementsLoading(true);
     try {
-      const data = await fetchWithAuth('/manager/supplements');
+      const data = unwrapList(await fetchWithAuth('/manager/supplements?limit=300'));
       setSupplementsList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading supplements:', err);

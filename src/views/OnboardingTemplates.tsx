@@ -18,6 +18,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -44,7 +45,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
   const loadTemplates = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchWithAuth('/onboarding/manager/templates');
+      const data = unwrapList(await fetchWithAuth('/onboarding/manager/templates?limit=200'));
       const normalized = data.map((t: any) => ({
         ...t,
         templateSchema: t.template_schema || t.templateSchema || []

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Utensils, Dumbbell, ClipboardCheck, Video, MapPin, User, LucideIcon } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 
 export type EventType = 'Video Call' | 'In-Person' | 'Training' | 'Nutrition' | 'Internal' | 'Training Analysis';
 
@@ -117,7 +118,7 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       setIsLoading(true);
-      const data = await fetchWithAuth('/manager/tasks');
+      const data = unwrapList(await fetchWithAuth('/manager/tasks?limit=200'));
       setEvents((data || []).map(mapBackendToFrontend));
     } catch (error) {
       console.error('Failed to fetch tasks:', error);

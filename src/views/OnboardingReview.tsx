@@ -7,6 +7,7 @@ import {
   FileText
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import CheckInReviewRenderer from '../components/checkin/CheckInReviewRenderer';
 import { useLanguage } from '../context/LanguageContext';
@@ -32,7 +33,7 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
         try {
           submission = await fetchWithAuth(`/onboarding/manager/submissions/${submissionId}`);
         } catch (byIdErr) {
-          const all = await fetchWithAuth('/onboarding/manager/submissions');
+          const all = unwrapList(await fetchWithAuth('/onboarding/manager/submissions?limit=200'));
           submission = (all || []).find((s: any) => s.id === submissionId) || null;
         }
         // `data` stays null when nothing matched, which renders the "not found" state.

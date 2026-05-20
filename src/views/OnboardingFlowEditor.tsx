@@ -12,6 +12,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -42,10 +43,11 @@ export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowE
       }
       setIsLoading(true);
       try {
-        const [data, fixed] = await Promise.all([
-          fetchWithAuth(`/onboarding/manager/templates`),
+        const [tplResp, fixed] = await Promise.all([
+          fetchWithAuth(`/onboarding/manager/templates?limit=200`),
           fetchWithAuth(`/onboarding/manager/fixed-questions`).catch(() => [])
         ]);
+        const data = unwrapList(tplResp);
         const found = data.find((t: any) => t.id === flowId);
         if (found) {
           const customSchema: any[] = found.template_schema || found.templateSchema || [];

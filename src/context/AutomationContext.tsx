@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useAuth } from './AuthContext';
 
 export type TriggerCategory = 'check-in' | 'activity' | 'milestone' | 'logistics' | 'custom';
@@ -68,7 +69,7 @@ export const AutomationProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(true);
     try {
-      const data = await fetchWithAuth('/automations');
+      const data = unwrapList(await fetchWithAuth('/automations?limit=200'));
       setAutomations(data || []);
     } catch (e) {
       console.error('Failed to load automations', e);

@@ -7,6 +7,7 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -30,7 +31,7 @@ export default function OnboardingHistory({ clientId, onBack, onViewReview }: On
       setIsLoading(true);
       try {
         // We can fetch submissions for this client
-        const data = await fetchWithAuth('/onboarding/manager/submissions');
+        const data = unwrapList(await fetchWithAuth('/onboarding/manager/submissions?limit=200'));
         // Filter for this client (Ideally we'd have a specific endpoint but this works for now)
         const clientSubmissions = (data || []).filter((s: any) => s.client_id === clientId);
         setSubmissions(clientSubmissions);

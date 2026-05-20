@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import {
   Search,
   Download,
@@ -33,12 +34,14 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
     async function loadAssignments() {
       setIsAssignmentsLoading(true);
       try {
-        const [data, submissions] = await Promise.all([
-          fetchWithAuth('/onboarding/manager/assignments'),
-          fetchWithAuth('/onboarding/manager/submissions').catch(() => [])
+        const [assignResp, subsResp] = await Promise.all([
+          fetchWithAuth('/onboarding/manager/assignments?limit=500'),
+          fetchWithAuth('/onboarding/manager/submissions?limit=200').catch(() => [])
         ]);
+        const data = unwrapList<any>(assignResp);
+        const submissions = unwrapList<any>(subsResp);
         const map: Record<string, string> = {};
-        (data || []).forEach((a: any) => {
+        data.forEach((a: any) => {
           map[a.client_id] = a.template?.name || t('assigned');
         });
         setAssignments(map);
@@ -63,7 +66,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
     setSelectedClient(client);
     setIsModalOpen(true);
     try {
-      const templates = await fetchWithAuth('/onboarding/manager/templates');
+      const templates = unwrapList(await fetchWithAuth('/onboarding/manager/templates?limit=200'));
       setAvailableTemplates(templates || []);
     } catch (err) {
       console.error('Error loading onboarding templates:', err);

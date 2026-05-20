@@ -16,6 +16,7 @@ import {
   Archive
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { DEFAULT_CHECKIN_TEMPLATE } from '../constants/defaultCheckInTemplate';
@@ -38,7 +39,7 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
   const loadTemplates = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchWithAuth('/check-ins/manager/checkin-templates');
+      const data = unwrapList(await fetchWithAuth('/check-ins/manager/checkin-templates?limit=200'));
       // Normalize templates from API
       const normalized = data.map((t: any) => ({
         ...t,

@@ -13,6 +13,7 @@ import {
   FileText
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -30,7 +31,7 @@ export default function OnboardingSubmissions() {
   const loadSubmissions = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchWithAuth('/onboarding/manager/submissions');
+      const data = unwrapList(await fetchWithAuth('/onboarding/manager/submissions?limit=200'));
       setSubmissions(data);
     } catch (err) {
       console.error('Error loading submissions:', err);
@@ -41,7 +42,7 @@ export default function OnboardingSubmissions() {
 
   const loadTemplates = async () => {
     try {
-      const data = await fetchWithAuth('/onboarding/manager/templates');
+      const data = unwrapList(await fetchWithAuth('/onboarding/manager/templates?limit=200'));
       setTemplates(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error loading onboarding templates:', err);

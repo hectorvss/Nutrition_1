@@ -3,6 +3,7 @@ import { useClient } from '../context/ClientContext';
 import { useFoodContext } from '../context/FoodContext';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
 
@@ -159,7 +160,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     const fetchTemplates = async () => {
       try {
         setIsLoadingTemplates(true);
-        const data = await fetchWithAuth('/manager/nutrition-templates');
+        const data = unwrapList(await fetchWithAuth('/manager/nutrition-templates?limit=200'));
         setTemplates(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching templates in NoPlan:', err);
