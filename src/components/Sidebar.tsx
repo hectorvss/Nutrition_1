@@ -39,7 +39,6 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
       try {
         const data = await fetchWithAuth(`/messages/unread-count?t=${new Date().getTime()}`);
         if (data && typeof data.unreadCount === 'number') {
-          console.log('[Sidebar] Unread count:', data.unreadCount);
           setUnreadCount(data.unreadCount);
         }
       } catch (e) {

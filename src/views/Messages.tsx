@@ -269,14 +269,12 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
 
   const uploadToStorage = async (file: File | Blob, path: string): Promise<string> => {
     const token = getAuthToken();
-    console.log('Upload process started. User ID:', user?.id, 'Has Token:', !!token);
-    
+
     if (token) {
       await supabase.auth.setSession({ access_token: token, refresh_token: '' });
     }
 
     const uploadPath = `${user?.id || 'anonymous'}/${Date.now()}-${path}`;
-    console.log('Target upload path:', uploadPath);
 
     const { data, error } = await supabase.storage
       .from('messages-media')
@@ -294,7 +292,6 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if ((!newMessage.trim() && !selectedFile && !audioBlob) || !activeRecipient || isSending) {
-      console.log('Send blocked:', { newMessage, selectedFile, audioBlob, activeRecipient, isSending });
       return;
     }
 
@@ -307,11 +304,9 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
     try {
       if (selectedFile) {
         setUploading(true);
-        console.log('Uploading file...', selectedFile.file.name);
         attachment_url = await uploadToStorage(selectedFile.file, selectedFile.file.name);
         attachment_type = selectedFile.type;
         attachment_name = selectedFile.file.name;
-        console.log('File uploaded:', attachment_url);
       } else if (audioBlob) {
         const ALLOWED_AUDIO_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav'];
         if (!ALLOWED_AUDIO_TYPES.includes(audioBlob.type)) {
@@ -322,25 +317,15 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
           return;
         }
         setUploading(true);
-        console.log('Uploading audio...');
         attachment_url = await uploadToStorage(audioBlob, 'voice-message.webm');
         attachment_type = 'audio';
         attachment_name = t('voice_message');
-        console.log('Audio uploaded:', attachment_url);
       }
 
       // Small delay to ensure storage consistency and schema cache availability
       if (attachment_url) {
-        console.log('Waiting 1s for consistency...');
         await new Promise(r => setTimeout(r, 1000));
       }
-
-      console.log('Sending message payload...', { 
-        receiver_id: activeRecipient.id, 
-        content: newMessage, 
-        attachment_url, 
-        attachment_type 
-      });
 
       const sent = await fetchWithAuth('/messages', {
         method: 'POST',
@@ -352,7 +337,6 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
           attachment_name
         })
       });
-      console.log('Message sent successfully:', sent);
       setMessages(prev => [...prev, sent]);
       setNewMessage('');
       setSelectedFile(null);
