@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import type { Request } from 'express';
 import { supabase, supabaseAdmin } from '../db/index.js';
 import { logger } from '../lib/logger.js';
+
+const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 const router = Router();
 
@@ -28,7 +31,7 @@ const parseUA = (ua: string) => {
 
 // Records a real login: marks previous sessions as not-current, inserts the
 // new session and a login-history row. Best-effort — never blocks login.
-const recordLogin = async (userId: string, req: any) => {
+const recordLogin = async (userId: string, req: Request) => {
   try {
     const ua = (req.headers['user-agent'] as string) || '';
     const { browser, device } = parseUA(ua);
@@ -99,14 +102,14 @@ router.post('/login', async (req, res) => {
         role: 'CLIENT' // fallback
       }
     });
-  } catch (error: any) {
-    logger.error('auth.login.error', { err: error?.message });
+  } catch (error: unknown) {
+    logger.error('auth.login.error', { err: errMessage(error) });
     res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Open manager self-registration (the public landing "Create account" flow).
-router.post('/register', async (req: any, res) => {
+router.post('/register', async (req, res) => {
   const { email, password, name } = req.body;
 
   if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
@@ -153,16 +156,16 @@ router.post('/register', async (req: any, res) => {
       });
     }
     res.json({ success: true, id: data.user.id });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Register error:', error);
-    res.status(400).json({ error: error.message || 'Failed to register' });
+    res.status(400).json({ error: errMessage(error) || 'Failed to register' });
   }
 });
 
 // Create user — protegido por rol
 // - Para crear MANAGER: requiere cabecera x-setup-secret con SETUP_SECRET del .env
 // - Para crear CLIENT: requiere JWT válido de un MANAGER autenticado
-router.post('/setup', async (req: any, res) => {
+router.post('/setup', async (req, res) => {
   const { email, password, role = 'CLIENT', managerId } = req.body;
   const targetRole = (role || 'CLIENT').toUpperCase();
 
@@ -231,15 +234,15 @@ router.post('/setup', async (req: any, res) => {
     }
 
     res.json({ success: true, id: data.user?.id });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Setup error:', error);
-    res.status(400).json({ error: error.message || 'Failed to create user' });
+    res.status(400).json({ error: errMessage(error) || 'Failed to create user' });
   }
 });
 
 // GET /me — Endpoint para validar sesión y obtener rol desde el servidor
 // El frontend lo usa al arrancar para no depender solo de localStorage
-router.get('/me', async (req: any, res) => {
+router.get('/me', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token' });
 
@@ -295,7 +298,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // POST /reset-password — Cambiar contraseña con token de Supabase
-router.post('/reset-password', async (req: any, res) => {
+router.post('/reset-password', async (req, res) => {
   const { access_token, new_password } = req.body;
   if (!access_token || !new_password) {
     return res.status(400).json({ error: 'Token y nueva contraseña requeridos' });

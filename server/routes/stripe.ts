@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { supabaseAdmin } from '../db/index.js';
-import { verifyManager } from '../middleware/auth.js';
+import { verifyManager, type AuthedRequest } from '../middleware/auth.js';
 import { logger } from '../lib/logger.js';
+
+const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -25,7 +27,7 @@ router.use((req, res, next) => {
 });
 
 // 1. Create Checkout Session
-router.post('/create-checkout-session', verifyManager, async (req: any, res) => {
+router.post('/create-checkout-session', verifyManager, async (req: AuthedRequest, res) => {
   const { priceId, userId, userEmail } = req.body;
 
   if (!priceId || !userId) {
@@ -33,7 +35,7 @@ router.post('/create-checkout-session', verifyManager, async (req: any, res) => 
   }
 
   // Ensure the authenticated manager can only create sessions for themselves
-  if (req.user.id !== userId) {
+  if (req.user?.id !== userId) {
     return res.status(403).json({ error: 'Forbidden: userId mismatch' });
   }
 
@@ -65,27 +67,27 @@ router.post('/create-checkout-session', verifyManager, async (req: any, res) => 
     });
 
     res.json({ url: session.url });
-  } catch (error: any) {
-    console.error('Stripe Checkout Error:', error);
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    logger.error('stripe.checkout.create_failed', { err: errMessage(error) });
+    res.status(500).json({ error: errMessage(error) });
   }
 });
 
 // 2. Webhook Handler
 // Note: This requires the raw body to be passed from the main index.ts
-router.post('/webhook', async (req: any, res) => {
-  const sig = req.headers['stripe-signature'];
+router.post('/webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'] as string | undefined;
   let event;
 
   try {
     event = stripe!.webhooks.constructEvent(
       req.body, // This MUST be the raw body (Buffer)
-      sig,
+      sig as string,
       process.env.STRIPE_WEBHOOK_SECRET || ''
     );
-  } catch (err: any) {
-    logger.error('stripe.webhook.signature_failed', { err: err.message });
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+  } catch (err: unknown) {
+    logger.error('stripe.webhook.signature_failed', { err: errMessage(err) });
+    return res.status(400).send(`Webhook Error: ${errMessage(err)}`);
   }
 
   logger.info('stripe.webhook.received', { eventId: event.id, type: event.type });
@@ -154,14 +156,18 @@ router.post('/webhook', async (req: any, res) => {
 
     logger.info('stripe.webhook.processed', { eventId: event.id, type: event.type });
     res.json({ received: true });
-  } catch (error: any) {
-    logger.error('stripe.webhook.handler_failed', { eventId: event.id, type: event.type, err: error?.message });
+  } catch (error: unknown) {
+    logger.error('stripe.webhook.handler_failed', { eventId: event.id, type: event.type, err: errMessage(error) });
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 });
 
 // Resolves the subscription period end across Stripe API versions.
 // Newer versions moved current_period_end onto the subscription item.
+// `any` aqui es intencional: la firma admite tanto el shape antiguo
+// (Stripe.Subscription con current_period_end en la raiz) como el nuevo
+// (con current_period_end dentro de items.data[0]). Tipar estrictamente
+// rompe segun la version de @types/stripe instalada.
 function subscriptionPeriodEnd(subscription: any): string | null {
   const raw = subscription?.current_period_end
     ?? subscription?.items?.data?.[0]?.current_period_end;

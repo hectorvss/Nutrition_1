@@ -1,10 +1,21 @@
+import type { Request, Response, NextFunction } from 'express';
+import type { User } from '@supabase/supabase-js';
 import { supabase, supabaseAdmin } from '../db/index.js';
+
+/**
+ * Express Request enriquecido por verifyManager / verifyClient / authenticate.
+ * Los middlewares cuelgan el `user` autenticado (Supabase Auth) en `req.user`.
+ * Los handlers deberian usar este tipo en lugar de `req: any`.
+ */
+export interface AuthedRequest extends Request {
+  user?: User;
+}
 
 /**
  * Middleware que verifica que el token JWT es válido y el usuario tiene rol MANAGER.
  * Se usa en todas las rutas de /api/manager, /api/check-ins/manager, /api/onboarding/manager, etc.
  */
-export const verifyManager = async (req: any, res: any, next: any) => {
+export const verifyManager = async (req: AuthedRequest, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
@@ -46,7 +57,7 @@ export const verifyManager = async (req: any, res: any, next: any) => {
  * Middleware que verifica que el token JWT es válido y el usuario tiene rol CLIENT.
  * Se usa en todas las rutas de /api/client, /api/check-ins/client, /api/onboarding/client, etc.
  */
-export const verifyClient = async (req: any, res: any, next: any) => {
+export const verifyClient = async (req: AuthedRequest, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
@@ -87,7 +98,7 @@ export const verifyClient = async (req: any, res: any, next: any) => {
  * Middleware que acepta cualquier usuario autenticado (CLIENT o MANAGER).
  * Se usa en /api/messages que es bidireccional.
  */
-export const authenticate = async (req: any, res: any, next: any) => {
+export const authenticate = async (req: AuthedRequest, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
