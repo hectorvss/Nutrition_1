@@ -284,9 +284,23 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     const nowMs = Date.now();
 
     clientList.forEach(client => {
+      // Helpers shared across rules — every rule that warns about an absence
+      // ("missed check-in", "low adherence", "no plan yet") must require both
+      // a minimum time since the client was created (so we don't fire on day 0)
+      // and enough real data to support the alert.
+      const createdMs = client.created_at ? new Date(client.created_at).getTime() : null;
+      const daysSinceCreated = createdMs != null ? (nowMs - createdMs) / DAY : null;
+      const hoursSinceCreated = createdMs != null ? (nowMs - createdMs) / HOUR : null;
+      const realCheckInCount = Array.isArray(client.check_ins) ? client.check_ins.length : 0;
+
       // Rule: Weekly Check-in Overdue
+      // A check-in is only "overdue" once we'd actually expect one — i.e. the
+      // client has been on the platform for at least a week. A brand-new
+      // client whose `lastCheckIn` is "Never" by definition cannot be overdue.
       const checkinRule = ruleList.find(r => r.id === 'weekly-overdue');
-      if (checkinRule?.enabled && (client.lastCheckIn === 'Never' || client.status === 'Inactive')) {
+      const checkinWindowElapsed = daysSinceCreated != null && daysSinceCreated >= 7;
+      const checkinOverdue = checkinWindowElapsed && (client.lastCheckIn === 'Never' || client.status === 'Inactive');
+      if (checkinRule?.enabled && checkinOverdue) {
         generated.push({
           id: `auto:weekly-overdue:${client.id}`,
           type: 'WEEKLY CHECK-IN',
@@ -304,8 +318,12 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Rule: Low Adherence (based on progress)
+      // Only meaningful once we have real data. Without check-ins, progress
+      // defaults to 0 — that's not a real adherence drop, it's just absence
+      // of data, so we suppress the alert until at least 2 check-ins exist.
       const adherenceRule = ruleList.find(r => r.id === 'low-adherence');
-      if (adherenceRule?.enabled && client.progress < 50 && client.status === 'Active') {
+      const adherenceHasEvidence = realCheckInCount >= 2;
+      if (adherenceRule?.enabled && adherenceHasEvidence && client.progress < 50 && client.status === 'Active') {
         generated.push({
           id: `auto:low-adherence:${client.id}`,
           type: 'AUTOMATIC ALERT',
@@ -323,8 +341,11 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Rule: Plan Update Due (based on no plan assigned)
+      // Grace period of 48 h after a client is created so the coach has time
+      // to assign a plan before being nagged about it.
       const planRule = ruleList.find(r => r.id === 'plan-update');
-      if (planRule?.enabled && client.plan === 'No Plan' && client.status === 'Active') {
+      const planGraceElapsed = hoursSinceCreated != null && hoursSinceCreated >= 48;
+      if (planRule?.enabled && planGraceElapsed && client.plan === 'No Plan' && client.status === 'Active') {
         generated.push({
           id: `auto:plan-update:${client.id}`,
           type: 'PLAN UPDATE',
