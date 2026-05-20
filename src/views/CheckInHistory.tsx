@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import { usePagination } from '../hooks/usePagination';
 
 interface CheckInHistoryProps {
   clientId: string;
@@ -24,33 +25,30 @@ interface CheckInHistoryProps {
 
 export default function CheckInHistory({ clientId, onBack, onViewReview, hideHeader = false, isClient = false }: CheckInHistoryProps) {
   const { t, language } = useLanguage();
-  const [checkIns, setCheckIns] = useState<any[]>([]);
+  // Paginacion cursor-based: cargamos de 30 en 30 (sincronizado con
+  // el defaultLimit del backend para los endpoints de check-ins).
+  const endpoint = isClient
+    ? `/check-ins/client/check-ins`
+    : `/check-ins/manager/clients/${clientId}/check-ins`;
+  const { items: checkIns, loadMore, hasMore, isLoading, pagesLoaded, reload } =
+    usePagination<any>(endpoint, { limit: 30 });
+  // El endpoint del manager devuelve tambien `client` en el wrap; lo
+  // capturamos en una sola peticion paralela (ligera) para no perder
+  // contexto de la cabecera del listado.
   const [client, setClient] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        if (isClient) {
-          const data = await fetchWithAuth(`/check-ins/client/check-ins`);
-          setCheckIns(data || []);
-          // For client view, we don't need the client object from history as it's the user themselves
-        } else {
-          const data = await fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins`);
-          if (data) {
-            setClient(data.client);
-            setCheckIns(data.check_ins || []);
-          }
-        }
-      } catch (err) {
-        console.error('Error loading check-in history:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+    if (isClient) return;
+    let cancelled = false;
+    fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins?limit=1`)
+      .then((data) => { if (!cancelled && data?.client) setClient(data.client); })
+      .catch((err) => console.error('Error loading client header:', err));
+    return () => { cancelled = true; };
   }, [clientId, isClient]);
+  // Mutate optimistico tras eliminar — solo reusamos el setter del hook
+  // recargando desde cero cuando hace falta. Mientras tanto, una variable
+  // local refleja deletions sin volver a pegar al backend.
+  const [locallyDeleted, setLocallyDeleted] = useState<Set<string>>(new Set());
+  const visibleCheckIns = checkIns.filter(ci => !locallyDeleted.has(ci.id));
 
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -69,7 +67,11 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
         : `/check-ins/manager/check-ins/${item.id}`;
       
       await fetchWithAuth(endpoint, { method: 'DELETE' });
-      setCheckIns(prev => prev.filter(ci => ci.id !== item.id));
+      setLocallyDeleted(prev => {
+        const next = new Set(prev);
+        next.add(item.id);
+        return next;
+      });
       setConfirmDelete(null);
     } catch (err) {
       console.error('Error deleting check-in:', err);
@@ -145,7 +147,7 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
                   <History className="w-3 h-3" /> {t('history')}
                 </span>
               </div>
-              <p className="text-slate-500 text-sm mt-1 font-medium">{t('checkins_submitted_count', { count: checkIns.length })}</p>
+              <p className="text-slate-500 text-sm mt-1 font-medium">{t('checkins_submitted_count', { count: visibleCheckIns.length })}</p>
             </div>
           </div>
         </div>
@@ -153,11 +155,11 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
       )}
 
       <div className="space-y-4">
-        {checkIns.length === 0 ? (
+        {visibleCheckIns.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
             <p className="text-slate-400 font-medium text-sm">{t('no_checkins_submitted_yet')}</p>
           </div>
-        ) : checkIns.map((item, idx) => {
+        ) : visibleCheckIns.map((item, idx) => {
           const dj = item.data_json || {};
           const compliance = getComplianceScore(dj);
           const reviewedAt = item.reviewed_at || item.data_json?.reviewed_at;
@@ -175,7 +177,7 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
               <div className="flex items-center gap-6 min-w-[180px] pl-2">
                 <div className="flex flex-col">
                   <span className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    {idx === 0 ? t('latest_checkin') : t('checkin_number', { number: checkIns.length - idx })}
+                    {idx === 0 ? t('latest_checkin') : t('checkin_number', { number: visibleCheckIns.length - idx })}
                     {isNew && (
                       <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold animate-pulse">{t('new')}</span>
                     )}
@@ -259,6 +261,26 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
             </div>
           );
         })}
+
+        {/* Boton "Cargar mas" para la paginacion cursor-based */}
+        {hasMore && visibleCheckIns.length > 0 && (
+          <div className="flex justify-center pt-2">
+            <button
+              onClick={loadMore}
+              disabled={isLoading}
+              className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isLoading && pagesLoaded > 0 ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin" />
+                  {t('loading') || 'Cargando…'}
+                </>
+              ) : (
+                t('load_more') || 'Cargar más'
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '../db/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { sendPushToUser } from '../lib/push.js';
+import { parsePagination, buildPage } from '../lib/pagination.js';
 
 const router = Router();
 
@@ -140,13 +141,26 @@ router.get('/:otherUserId', requireUuidParam('otherUserId'), async (req: any, re
   const userId = req.user.id;
   const { otherUserId } = req.params;
 
+  // Paginacion cursor-based: traemos los mensajes mas recientes primero,
+  // el frontend los invierte para mostrarlos cronologicamente (viejos arriba).
+  // "Load more" carga los mas viejos hacia atras. Default 50, max 100.
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 100 });
+
   try {
-    const { data: messages, error } = await supabaseAdmin
+    let q = supabaseAdmin
       .from('messages')
       .select('*')
       .or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1); // +1 para detectar si hay mas paginas
 
+    if (page.cursor) {
+      // Keyset: WHERE (created_at, id) < (cursor.v, cursor.i)
+      q = q.or(`created_at.lt.${page.cursor.v},and(created_at.eq.${page.cursor.v},id.lt.${page.cursor.i})`);
+    }
+
+    const { data: messages, error } = await q;
     if (error) throw error;
 
     // Filtrar mensajes soft-deleted para este usuario
@@ -156,7 +170,7 @@ router.get('/:otherUserId', requireUuidParam('otherUserId'), async (req: any, re
       return true;
     });
 
-    res.json(filtered);
+    res.json(buildPage(filtered, page.limit, 'created_at'));
   } catch (error: any) {
     console.error('Error fetching messages:', error);
     res.status(500).json({ error: safeErr(error) });

@@ -4,6 +4,7 @@ import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { sendPushToUser } from '../lib/push.js';
 import { verifyManager as _verifyManager, verifyClient as _verifyClient, type AuthedRequest } from '../middleware/auth.js';
+import { parsePagination, buildPage } from '../lib/pagination.js';
 
 const router = Router();
 
@@ -434,27 +435,44 @@ router.post('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =
 // Unified: merges legacy `check_ins` and dynamic `client_checkin_submissions`
 // so the client sees every check-in regardless of which system created it.
 router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) => {
-  const clientId = req.user.id;
+  const clientId = req.user?.id;
+  // Paginacion cursor-based unificada para legacy + dynamic.
+  // Pedimos `limit+1` de cada tabla; mergeamos, ordenamos por date DESC y
+  // recortamos. Asi siempre tenemos suficiente material para una pagina
+  // completa aunque una de las dos tablas tenga pocas filas.
+  const page = parsePagination(req, { defaultLimit: 30, maxLimit: 100 });
+  // Cursor unificado: { v: date ISO string, i: row id }.
+  const cur = page.cursor;
   try {
     // 1. Legacy check-ins
-    const { data: legacyData, error: legacyError } = await supabaseAdmin
+    let legacyQ = supabaseAdmin
       .from('check_ins')
       .select('*')
-      .eq('client_id', clientId)
-      .order('date', { ascending: false });
-
+      .eq('client_id', clientId!)
+      .order('date', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    if (cur) {
+      legacyQ = legacyQ.or(`date.lt.${cur.v},and(date.eq.${cur.v},id.lt.${cur.i})`);
+    }
+    const { data: legacyData, error: legacyError } = await legacyQ;
     if (legacyError) throw legacyError;
 
     // 2. Dynamic template-based submissions
-    const { data: dynamicData, error: dynamicError } = await supabaseAdmin
+    let dynamicQ = supabaseAdmin
       .from('client_checkin_submissions')
       .select(`
         *,
         template:checkin_templates(*)
       `)
-      .eq('client_id', clientId)
-      .order('submitted_at', { ascending: false });
-
+      .eq('client_id', clientId!)
+      .order('submitted_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    if (cur) {
+      dynamicQ = dynamicQ.or(`submitted_at.lt.${cur.v},and(submitted_at.eq.${cur.v},id.lt.${cur.i})`);
+    }
+    const { data: dynamicData, error: dynamicError } = await dynamicQ;
     if (dynamicError) throw dynamicError;
 
     // 3. Map to unified format (same shape the manager endpoint returns)
@@ -486,12 +504,16 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
       next_week_focus: ci.next_week_focus || null
     }));
 
-    // 4. Merge and sort by date descending
-    const allCheckIns = [...legacyParsed, ...dynamicParsed].sort((a, b) =>
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    // 4. Merge and sort by date descending; desempata por id descendente
+    // (necesario para que el keyset cursor sea estable cuando dos rows
+    // tienen el mismo date).
+    const allCheckIns = [...legacyParsed, ...dynamicParsed].sort((a, b) => {
+      const da = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (da !== 0) return da;
+      return String(b.id).localeCompare(String(a.id));
+    });
 
-    res.json(allCheckIns);
+    res.json(buildPage(allCheckIns, page.limit, 'date'));
   } catch (error: unknown) {
     console.error('Error fetching client check-ins:', error);
     res.status(500).json({ error: 'Server error' });
@@ -625,24 +647,38 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       avatar: profile?.avatar_url
     };
 
+    // Paginacion cursor-based: limit+1 de cada tabla, merge, sort, recorte.
+    const page = parsePagination(req, { defaultLimit: 30, maxLimit: 100 });
+    const cur = page.cursor;
+
     // 2. Fetch check-ins from both legacy and dynamic tables
-    const { data: legacyData, error: legacyError } = await supabaseAdmin
+    let legacyQ = supabaseAdmin
       .from('check_ins')
       .select('*')
       .eq('client_id', id)
-      .order('date', { ascending: false });
-
+      .order('date', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    if (cur) {
+      legacyQ = legacyQ.or(`date.lt.${cur.v},and(date.eq.${cur.v},id.lt.${cur.i})`);
+    }
+    const { data: legacyData, error: legacyError } = await legacyQ;
     if (legacyError) throw legacyError;
 
-    const { data: dynamicData, error: dynamicError } = await supabaseAdmin
+    let dynamicQ = supabaseAdmin
       .from('client_checkin_submissions')
       .select(`
         *,
         template:checkin_templates(*)
       `)
       .eq('client_id', id)
-      .order('submitted_at', { ascending: false });
-
+      .order('submitted_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    if (cur) {
+      dynamicQ = dynamicQ.or(`submitted_at.lt.${cur.v},and(submitted_at.eq.${cur.v},id.lt.${cur.i})`);
+    }
+    const { data: dynamicData, error: dynamicError } = await dynamicQ;
     if (dynamicError) throw dynamicError;
 
     // 3. Map to unified format
@@ -674,12 +710,16 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       next_week_focus: ci.next_week_focus || null
     }));
 
-    // Merge and sort
-    const allCheckIns = [...legacyParsed, ...dynamicParsed].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+    // Merge and sort. Desempate por id descendente para keyset estable.
+    const allCheckIns = [...legacyParsed, ...dynamicParsed].sort((a, b) => {
+      const da = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (da !== 0) return da;
+      return String(b.id).localeCompare(String(a.id));
+    });
 
-    res.json({ client: client, check_ins: allCheckIns });
+    const paged = buildPage(allCheckIns, page.limit, 'date');
+    // Mantenemos el wrap `client` + spread del PaginatedResponse.
+    res.json({ client, ...paged, check_ins: paged.data });
   } catch (error: unknown) {
     console.error('Error fetching client check-ins for manager:', error);
     res.status(500).json({ error: 'Server error' });

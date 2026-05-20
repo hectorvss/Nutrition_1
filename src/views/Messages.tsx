@@ -137,13 +137,43 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
     }
   }, [user, clients, selectedClientId, t]);
 
+  // Cursor para "cargar mensajes anteriores" (paginacion hacia atras).
+  // Los mensajes NUEVOS llegan por polling/envio y se anaden al final.
+  // Los VIEJOS se cargan bajo demanda con olderCursor y se prependen.
+  const [olderCursor, setOlderCursor] = useState<string | null>(null);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+
   const loadMessages = async () => {
     if (!activeRecipient) return;
     try {
-      const data = await fetchWithAuth(`/messages/${activeRecipient.id}`);
-      setMessages(data || []);
+      // Sin cursor = primera pagina (los mas recientes). Backend devuelve
+      // DESC para luego invertirlos en orden cronologico aqui.
+      const resp = await fetchWithAuth(`/messages/${activeRecipient.id}?limit=50`);
+      const arr = Array.isArray(resp) ? resp : (resp?.data || []);
+      setMessages([...arr].reverse()); // viejo->nuevo para mostrar
+      setOlderCursor(resp?.nextCursor || null);
+      setHasOlder(Boolean(resp?.hasMore));
     } catch (err) {
       console.error('Failed to load messages:', err);
+    }
+  };
+
+  const loadOlderMessages = async () => {
+    if (!olderCursor || !activeRecipient || isLoadingOlder) return;
+    setIsLoadingOlder(true);
+    try {
+      const resp = await fetchWithAuth(
+        `/messages/${activeRecipient.id}?limit=50&cursor=${encodeURIComponent(olderCursor)}`
+      );
+      const arr = (resp?.data || []).reverse();
+      setMessages(prev => [...arr, ...prev]);
+      setOlderCursor(resp?.nextCursor || null);
+      setHasOlder(Boolean(resp?.hasMore));
+    } catch (err) {
+      console.error('Failed to load older messages:', err);
+    } finally {
+      setIsLoadingOlder(false);
     }
   };
 
@@ -179,8 +209,13 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   }, [user, selectedClientId]);
 
   useEffect(() => {
+    // Cambio de chat: reset del cursor de paginacion hacia atras.
+    setOlderCursor(null);
+    setHasOlder(false);
     loadMessages();
     // Polling agresivo (5s) solo cuando la pestana esta activa.
+    // El polling solo refresca la primera pagina (mensajes nuevos al final);
+    // no toca los olderCursor ya cargados.
     const tick = () => { if (!document.hidden) loadMessages(); };
     const interval = setInterval(tick, 5000);
     const onVisible = () => { if (!document.hidden) loadMessages(); };
@@ -914,6 +949,27 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
 
       {/* Messages Scroll Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+        {/* Boton para cargar mensajes anteriores. Aparece arriba (los viejos
+            estan al principio de la lista). Cuando se pulsa, el scroll se
+            queda igual visualmente porque solo se anaden filas arriba. */}
+        {hasOlder && (
+          <div className="flex justify-center -mt-2">
+            <button
+              onClick={loadOlderMessages}
+              disabled={isLoadingOlder}
+              className="text-xs font-bold text-slate-500 hover:text-slate-700 bg-white border border-slate-200 hover:border-slate-300 px-4 py-2 rounded-full transition-all flex items-center gap-2 disabled:opacity-60"
+            >
+              {isLoadingOlder ? (
+                <>
+                  <div className="w-3 h-3 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin" />
+                  {t('loading') || 'Cargando…'}
+                </>
+              ) : (
+                t('load_older_messages') || 'Cargar mensajes anteriores'
+              )}
+            </button>
+          </div>
+        )}
         {messages.map((msg, idx) => {
           const isOwn = msg.sender_id === user?.id;
           const msgDate = new Date(msg.created_at);
