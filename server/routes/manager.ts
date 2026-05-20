@@ -5,6 +5,7 @@ import { google } from 'googleapis';
 import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { vapidPublicKey, pushConfigured } from '../lib/push.js';
+import { nutritionPlanSchema, trainingProgramSchema } from '../schemas/plans.js';
 
 const router = Router();
 // ... (rest of the code until POST /clients)
@@ -781,7 +782,11 @@ router.get('/clients/:id/nutrition-plan', async (req: any, res) => {
 // Create or update nutrition plan for a client
 router.post('/clients/:id/nutrition-plan', async (req: any, res) => {
   const { id } = req.params;
-  const { name, data_json } = req.body;
+  const parsed = nutritionPlanSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
+  }
+  const { name, data_json } = parsed.data;
   const managerId = req.user.id;
   try {
     const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
@@ -824,16 +829,21 @@ router.get('/clients/:id/training-program', async (req: any, res) => {
 
     if (error) throw error;
     res.json(program || null);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching training program:', error);
-    res.status(500).json({ error: error.message || 'Server error' });
+    const msg = error instanceof Error ? error.message : 'Server error';
+    res.status(500).json({ error: msg });
   }
 });
 
 // Create or update training program for a client
 router.post('/clients/:id/training-program', async (req: any, res) => {
   const { id } = req.params;
-  const { name, data_json } = req.body;
+  const parsed = trainingProgramSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid input' });
+  }
+  const { name, data_json } = parsed.data;
   const managerId = req.user.id;
   try {
     const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
