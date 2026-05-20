@@ -19,6 +19,8 @@ import { useTask } from '../context/TaskContext';
 import { useCalendar } from '../context/CalendarContext';
 import { supabase } from '../supabase';
 import Select from '../components/ui/Select';
+import CustomRecurrenceModal from '../components/CustomRecurrenceModal';
+import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
 import { useLanguage } from '../context/LanguageContext';
 
 interface CreateTaskProps {
@@ -43,6 +45,15 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
   const [repeat, setRepeat] = useState('Does not repeat');
+  // Custom recurrence: when the user selects "Custom" in the Select we open
+  // the modal and store the resulting RRULE / until here. The dropdown still
+  // shows "Custom" while these are set; clearing them reverts to no-repeat.
+  const [customRule, setCustomRule] = useState<string | null>(null);
+  const [customUntil, setCustomUntil] = useState<string | null>(null);
+  const [customModalOpen, setCustomModalOpen] = useState(false);
+  // Scope dialog for edit/delete on a recurring event. We capture the pending
+  // action so we can resume it after the user picks instance vs series.
+  const [scopeDialog, setScopeDialog] = useState<null | { mode: 'edit' | 'delete' }>(null);
   const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -98,7 +109,24 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
         }
         if (task.clientId) setSelectedClientId(task.clientId);
         setLinkUrl(task.linkUrl || '');
-        if ((task as any).repeat) setRepeat((task as any).repeat);
+        // Derive the dropdown value from the stored RRULE so the form
+        // reflects what's actually persisted, not whatever legacy `repeat`
+        // string the row may have.
+        const rule = (task as any).recurrenceRule as string | undefined;
+        const ruleEnd = (task as any).recurrenceEnd as string | undefined;
+        if (rule) {
+          const upper = rule.trim().toUpperCase();
+          if (upper === 'FREQ=DAILY') setRepeat('Daily');
+          else if (/^FREQ=WEEKLY(;BYDAY=[A-Z]{2})?$/.test(upper)) setRepeat('Weekly');
+          else if (/^FREQ=MONTHLY(;BYMONTHDAY=\d{1,2})?$/.test(upper)) setRepeat('Monthly');
+          else {
+            setRepeat('Custom');
+            setCustomRule(rule);
+            if (ruleEnd) setCustomUntil(ruleEnd);
+          }
+        } else if ((task as any).repeat) {
+          setRepeat((task as any).repeat);
+        }
       }
       // Fallback: if the task is never found (e.g. a non-event id), stop the
       // loader after a short wait instead of spinning forever.
@@ -168,17 +196,33 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       priority: priority.toLowerCase(),
       status: (editId && events.find(e => e.id === editId)?.status) || 'pending',
       linkUrl: linkUrl,
-      repeat: repeat
+      repeat: repeat,
+      // For Custom recurrence we send the explicit RRULE the modal produced;
+      // the backend prefers this over the label-based mapping. For Daily /
+      // Weekly / Monthly the server derives the RRULE from `repeat` itself.
+      recurrenceRule: repeat === 'Custom' ? customRule || undefined : undefined,
+      recurrenceEnd:  repeat === 'Custom' ? customUntil || undefined : undefined,
     };
 
     try {
       if (editId) {
+        // For a recurring event the user must choose whether the change
+        // applies to this occurrence only or to the whole series. The dialog
+        // resumes the save via performSave below.
+        const editing = events.find(e => e.id === editId);
+        const isRecurring = Boolean(editing?.recurrenceRule || editing?.recurrenceParentId || editing?.isVirtual);
+        if (isRecurring) {
+          pendingSavePayload.current = taskData;
+          setScopeDialog({ mode: 'edit' });
+          setLoading(false);
+          return;
+        }
         await updateEvent(editId, taskData);
       } else {
         await addEvent(taskData);
       }
 
-      await refreshTasks(); 
+      await refreshTasks();
       onNavigate('calendar');
     } catch (error) {
       console.error("Failed to save task", error);
@@ -188,10 +232,34 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
     }
   };
 
+  // Cached payload for the resumed save/delete after the user picks a scope.
+  const pendingSavePayload = React.useRef<any>(null);
+
+  const performScopedSave = async (scope: 'instance' | 'series') => {
+    if (!editId || !pendingSavePayload.current) return;
+    setLoading(true);
+    try {
+      await updateEvent(editId, pendingSavePayload.current, scope);
+      await refreshTasks();
+      onNavigate('calendar');
+    } catch (e) {
+      console.error('Scoped save failed', e);
+      alert(t('task_save_error'));
+    } finally {
+      pendingSavePayload.current = null;
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!editId) return;
+    const editing = events.find(e => e.id === editId);
+    const isRecurring = Boolean(editing?.recurrenceRule || editing?.recurrenceParentId || editing?.isVirtual);
+    if (isRecurring) {
+      setScopeDialog({ mode: 'delete' });
+      return;
+    }
     if (!window.confirm(t('confirm_delete_task'))) return;
-    
     setIsDeleting(true);
     try {
       await deleteEvent(editId);
@@ -199,6 +267,21 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
       onNavigate('calendar');
     } catch (error) {
       console.error("Failed to delete task", error);
+      alert(t('task_delete_error'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const performScopedDelete = async (scope: 'instance' | 'series') => {
+    if (!editId) return;
+    setIsDeleting(true);
+    try {
+      await deleteEvent(editId, scope);
+      await refreshTasks();
+      onNavigate('calendar');
+    } catch (error) {
+      console.error("Scoped delete failed", error);
       alert(t('task_delete_error'));
     } finally {
       setIsDeleting(false);
@@ -463,7 +546,14 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                     <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('repeat_label')}</label>
                     <Select
                       value={repeat}
-                      onChange={(val) => setRepeat(val)}
+                      onChange={(val) => {
+                        setRepeat(val);
+                        // Opening the modal as a side effect of selecting Custom
+                        // keeps the dropdown a single source of truth — no
+                        // separate "configure" button cluttering the form.
+                        if (val === 'Custom') setCustomModalOpen(true);
+                        else { setCustomRule(null); setCustomUntil(null); }
+                      }}
                       className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                     >
                       <option>{t('does_not_repeat')}</option>
@@ -472,6 +562,15 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                       <option>{t('monthly')}</option>
                       <option>{t('custom')}</option>
                     </Select>
+                    {repeat === 'Custom' && customRule && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomModalOpen(true)}
+                        className="mt-1.5 text-xs text-emerald-600 hover:underline font-semibold"
+                      >
+                        {t('edit_custom_recurrence', { defaultValue: 'Editar recurrencia personalizada' })} — {customRule}
+                      </button>
+                    )}
                   </div>
                 </div>
               </section>
@@ -518,6 +617,33 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           )}
         </div>
       </div>
+      <RecurrenceScopeDialog
+        open={Boolean(scopeDialog)}
+        mode={scopeDialog?.mode || 'edit'}
+        onClose={() => { setScopeDialog(null); pendingSavePayload.current = null; }}
+        onPick={(scope) => {
+          if (scopeDialog?.mode === 'delete') performScopedDelete(scope);
+          else performScopedSave(scope);
+        }}
+      />
+      <CustomRecurrenceModal
+        open={customModalOpen}
+        onClose={() => {
+          setCustomModalOpen(false);
+          // If the user closes without ever saving and there's no rule yet,
+          // bounce the dropdown back to "Does not repeat" so the form state
+          // doesn't claim a custom rule that doesn't exist.
+          if (!customRule) setRepeat('Does not repeat');
+        }}
+        initialRule={customRule}
+        initialUntil={customUntil}
+        anchorDate={date}
+        onSave={(rule, until) => {
+          setCustomRule(rule);
+          setCustomUntil(until);
+          setRepeat('Custom');
+        }}
+      />
     </div>
   );
 }
