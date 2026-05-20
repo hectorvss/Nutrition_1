@@ -1,138 +1,87 @@
-import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Search, 
-  Repeat, 
-  ClipboardCheck, 
-  AlertTriangle, 
-  UserPlus, 
-  Smartphone, 
-  TrendingUp, 
-  Cake, 
-  Plus 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  ArrowLeft, Search,
+  // 26+ iconos del catalogo backend (se referencian por string id).
+  Repeat, ClipboardCheck, AlertTriangle, UserPlus, Smartphone, TrendingUp,
+  TrendingDown, Cake, Plus, CheckCircle2, AlertCircle, Trophy,
+  CreditCard, Clock, Send, Eye, XCircle, MessageCircle, MessageSquareWarning,
+  Target, Minus, Award, Flame, Gift, Moon, CalendarClock, CalendarX,
+  Lock,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { fetchWithAuth } from '../api';
 
-interface Trigger {
-  id: string;
-  name: string;
-  desc: string;
-  icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
-  iconName: string;
-  category: string;
-  recommended?: boolean;
+// Mapping string -> componente. El backend solo manda el `icon` como string.
+const ICONS: Record<string, React.ElementType> = {
+  Repeat, ClipboardCheck, AlertTriangle, UserPlus, Smartphone, TrendingUp,
+  TrendingDown, Cake, Plus, CheckCircle2, AlertCircle, Trophy,
+  CreditCard, Clock, Send, Eye, XCircle, MessageCircle, MessageSquareWarning,
+  Target, Minus, Award, Flame, Gift, Moon, CalendarClock, CalendarX,
+};
+
+// Estilo (bg + color tailwind) por categoria — coherente con la version anterior.
+const CATEGORY_STYLE: Record<string, { bg: string; color: string; label: string }> = {
+  lifecycle: { bg: 'bg-purple-100 dark:bg-purple-900/30', color: 'text-purple-600 dark:text-purple-400', label: 'Ciclo de vida' },
+  checkins:  { bg: 'bg-blue-100 dark:bg-blue-900/30',     color: 'text-blue-600 dark:text-blue-400',     label: 'Check-ins' },
+  messaging: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', color: 'text-emerald-600 dark:text-emerald-400', label: 'Mensajeria' },
+  metrics:   { bg: 'bg-amber-100 dark:bg-amber-900/30',   color: 'text-amber-600 dark:text-amber-400',   label: 'Peso y metricas' },
+  training:  { bg: 'bg-rose-100 dark:bg-rose-900/30',     color: 'text-rose-600 dark:text-rose-400',     label: 'Entrenamiento' },
+  schedule:  { bg: 'bg-indigo-100 dark:bg-indigo-900/30', color: 'text-indigo-600 dark:text-indigo-400', label: 'Agenda y tiempo' },
+};
+
+interface BackendTrigger {
+  id: string; name: string; desc: string; icon: string;
+  category: keyof typeof CATEGORY_STYLE;
+  tier: 'basic' | 'advanced';
+  wired: boolean;
+  params?: Array<{ key: string; label: string; type: string; defaultValue: any; unit?: string }>;
 }
-
-const triggers: Trigger[] = [
-  {
-    id: 'weekly-checkin',
-    name: 'Weekly Check-in Reminder',
-    desc: 'Automatically nudge clients to complete their check-in form every week.',
-    icon: Repeat,
-    iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-    iconColor: 'text-blue-600 dark:text-blue-400',
-    iconName: 'Repeat',
-    category: 'Check-ins',
-    recommended: true
-  },
-  {
-    id: 'checkin-overdue',
-    name: 'Overdue Check-in',
-    desc: 'Follow up when a client misses their scheduled check-in deadline.',
-    icon: ClipboardCheck,
-    iconBg: 'bg-red-100 dark:bg-red-900/30',
-    iconColor: 'text-red-600 dark:text-red-400',
-    iconName: 'ClipboardCheck',
-    category: 'Check-ins'
-  },
-  {
-    id: 'inactivity',
-    name: 'No Activity Alert',
-    desc: "Re-engage clients who haven't logged any activity for 3 consecutive days.",
-    icon: AlertTriangle,
-    iconBg: 'bg-orange-100 dark:bg-orange-900/30',
-    iconColor: 'text-orange-600 dark:text-orange-400',
-    iconName: 'AlertTriangle',
-    category: 'Activity'
-  },
-  {
-    id: 'new-client',
-    name: 'New Client Added',
-    desc: 'Trigger immediately when you add a new client to send a welcome message.',
-    icon: UserPlus,
-    iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-    iconColor: 'text-purple-600 dark:text-purple-400',
-    iconName: 'UserPlus',
-    category: 'Logistics'
-  },
-  {
-    id: 'app-setup',
-    name: 'App Setup Reminder',
-    desc: "Nudge clients who haven't completed their initial app profile setup.",
-    icon: Smartphone,
-    iconBg: 'bg-indigo-100 dark:bg-indigo-900/30',
-    iconColor: 'text-indigo-600 dark:text-indigo-400',
-    iconName: 'Smartphone',
-    category: 'Logistics'
-  },
-  {
-    id: 'adherence-high',
-    name: 'Weekly Adherence High',
-    desc: 'Congratulate clients who achieved >90% habit adherence this week.',
-    icon: TrendingUp,
-    iconBg: 'bg-teal-100 dark:bg-teal-900/30',
-    iconColor: 'text-teal-600 dark:text-teal-400',
-    iconName: 'TrendingUp',
-    category: 'Activity'
-  },
-  {
-    id: 'birthday',
-    name: 'Client Birthday',
-    desc: "Send a personalized greeting on your client's special day.",
-    icon: Cake,
-    iconBg: 'bg-pink-100 dark:bg-pink-900/30',
-    iconColor: 'text-pink-600 dark:text-pink-400',
-    iconName: 'Cake',
-    category: 'Monthly'
-  },
-  {
-    id: 'custom',
-    name: 'Custom Trigger',
-    desc: 'Create a trigger based on specific custom events or API calls.',
-    icon: Plus,
-    iconBg: 'bg-gray-100 dark:bg-slate-800',
-    iconColor: 'text-gray-600 dark:text-gray-400',
-    iconName: 'Plus',
-    category: 'Custom'
-  }
-];
-
-const categories = ['All', 'Recommended', 'Check-ins', 'Activity', 'Training', 'Nutrition', 'Monthly', 'Logistics', 'Custom'];
 
 interface AutomationCreateTriggerProps {
   onBack: () => void;
-  onNext: (triggerId: string, triggerName: string, iconName: string, iconBg: string, iconColor: string) => void;
+  onNext: (
+    triggerId: string,
+    triggerName: string,
+    iconName: string,
+    iconBg: string,
+    iconColor: string,
+  ) => void;
 }
 
 export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCreateTriggerProps) {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [triggers, setTriggers] = useState<BackendTrigger[]>([]);
+  const [tier, setTier] = useState<string>('trial');
+  const [loading, setLoading] = useState(true);
 
-  // Translation keys use underscores; trigger ids may contain hyphens (e.g. "weekly-checkin").
-  const triggerKey = (id: string) => id.replace(/-/g, '_');
-  const getTriggerName = (id: string, fallback: string) => t(`trigger_${triggerKey(id)}_name`, { defaultValue: fallback });
-  const getTriggerDesc = (id: string, fallback: string) => t(`trigger_${triggerKey(id)}_desc`, { defaultValue: fallback });
-  const getTriggerCategory = (category: string) => t(`trigger_category_${category.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, { defaultValue: category });
+  // Cargar catalogo del backend (filtrado por tier del manager).
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchWithAuth('/automations/catalog');
+        setTriggers(data?.triggers || []);
+        setTier(data?.tier || 'trial');
+      } catch (e) {
+        console.error('Failed to load automations catalog:', e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  const filtered = triggers.filter(t => {
-    const localizedName = getTriggerName(t.id, t.name);
-    const localizedDesc = getTriggerDesc(t.id, t.desc);
-    const localizedCategory = getTriggerCategory(t.category);
-    const matchSearch = localizedName.toLowerCase().includes(search.toLowerCase()) || localizedDesc.toLowerCase().includes(search.toLowerCase());
-    const matchCat = activeCategory === 'All' || (activeCategory === 'Recommended' && t.recommended) || localizedCategory === activeCategory || t.category === activeCategory;
+  // Las categorias visibles son las que tienen al menos un trigger.
+  const categories = useMemo(() => {
+    const set = new Set<string>(triggers.map(tr => tr.category));
+    return ['All', ...Array.from(set)];
+  }, [triggers]);
+
+  const filtered = triggers.filter(tr => {
+    const matchSearch = !search ||
+      tr.name.toLowerCase().includes(search.toLowerCase()) ||
+      tr.desc.toLowerCase().includes(search.toLowerCase());
+    const matchCat = activeCategory === 'All' || tr.category === activeCategory;
     return matchSearch && matchCat;
   });
 
@@ -149,8 +98,8 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
             </div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('create_new_automation')}</h1>
           </div>
-          
-          {/* Step Indicator */}
+
+          {/* Step indicator (sin cambios respecto a la version anterior) */}
           <div className="flex items-center">
             <div className="flex items-center relative">
               <div className="flex flex-col items-center relative z-10">
@@ -180,52 +129,77 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
               </div>
               <div className="relative w-full md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input 
+                <input
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400 outline-none" 
-                  placeholder={t('search_triggers')} 
-                  type="text" 
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 placeholder-slate-400 outline-none"
+                  placeholder={t('search_triggers')}
+                  type="text"
                 />
               </div>
             </div>
             <div className="flex flex-wrap gap-2 pb-2 overflow-x-auto scrollbar-hide">
-              {categories.map((cat) => (
-                <button 
+              {categories.map(cat => (
+                <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   className={`px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all ${
                     activeCategory === cat
-                      ? 'bg-emerald-500 text-white shadow-emerald-500/20' 
+                      ? 'bg-emerald-500 text-white shadow-emerald-500/20'
                       : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
-                  {cat === 'All' ? t('all') : cat === 'Recommended' ? t('recommended') : getTriggerCategory(cat)}
+                  {cat === 'All' ? t('all') : (CATEGORY_STYLE[cat]?.label || cat)}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 overflow-y-auto pr-2 pb-6 flex-1 scrollbar-hide">
-            {filtered.map((trigger) => (
-              <button 
-                key={trigger.id}
-                onClick={() => onNext(trigger.id, getTriggerName(trigger.id, trigger.name), trigger.iconName, trigger.iconBg, trigger.iconColor)}
-                className="group relative flex flex-col items-start p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-500/5 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800 transition-all text-left"
-              >
-                {trigger.recommended && (
-                  <div className="absolute top-4 right-4 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide">
-                    {t('recommended')}
-                  </div>
-                )}
-                <div className={`w-12 h-12 rounded-xl ${trigger.iconBg} ${trigger.iconColor} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform`}>
-                  <trigger.icon className="w-6 h-6" />
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 overflow-y-auto pr-2 pb-6 flex-1 scrollbar-hide">
+              {filtered.map(trigger => {
+                const style = CATEGORY_STYLE[trigger.category] || { bg: 'bg-slate-100', color: 'text-slate-600', label: trigger.category };
+                const Icon = ICONS[trigger.icon] || Plus;
+                const disabled = !trigger.wired;
+                return (
+                  <button
+                    key={trigger.id}
+                    disabled={disabled}
+                    onClick={() => !disabled && onNext(trigger.id, trigger.name, trigger.icon, style.bg, style.color)}
+                    className={`group relative flex flex-col items-start p-5 rounded-2xl border border-slate-200 dark:border-slate-800 transition-all text-left
+                      ${disabled
+                        ? 'opacity-50 cursor-not-allowed bg-slate-50/30 dark:bg-slate-900/30'
+                        : 'hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-500/5 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800'}`}
+                  >
+                    {trigger.tier === 'advanced' && tier === 'professional' && (
+                      <div className="absolute top-4 right-4 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Scale+
+                      </div>
+                    )}
+                    {!trigger.wired && (
+                      <div className="absolute top-4 right-4 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded-md tracking-wide">
+                        Coming soon
+                      </div>
+                    )}
+                    <div className={`w-12 h-12 rounded-xl ${style.bg} ${style.color} flex items-center justify-center mb-4 group-hover:scale-105 transition-transform`}>
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-base">{trigger.name}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{trigger.desc}</p>
+                  </button>
+                );
+              })}
+              {filtered.length === 0 && (
+                <div className="col-span-full text-center py-12 text-slate-400 text-sm italic">
+                  {t('no_matching_triggers') || 'Sin triggers que coincidan con la busqueda'}
                 </div>
-                <h3 className="font-bold text-slate-900 dark:text-white mb-2 text-base">{getTriggerName(trigger.id, trigger.name)}</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{getTriggerDesc(trigger.id, trigger.desc)}</p>
-              </button>
-            ))}
-          </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-auto pt-6 flex justify-end border-t border-slate-100 dark:border-slate-800">
             <span className="text-xs text-slate-500 dark:text-slate-400 italic">{t('select_trigger_to_continue')}</span>

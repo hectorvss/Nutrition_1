@@ -29,6 +29,9 @@ import { AutomationDeliveryRules, AutomationCondition } from '../context/Automat
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
+import TimeSelect from '../components/ui/TimeSelect';
+import { fetchWithAuth } from '../api';
+import StepSequence, { AutomationStep } from '../components/automations/StepSequence';
 
 interface AutomationCreateMessageProps {
   triggerName: string;
@@ -89,6 +92,44 @@ export default function AutomationCreateMessage({
   const [showClientSelector, setShowClientSelector] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Catalogo dinamico desde el backend — filtra triggers/conditions por
+  // tier del manager y nos da `maxStepsPerFlow` para gatear la secuencia.
+  const [catalog, setCatalog] = useState<{
+    triggers: any[];
+    activationConditions: any[];
+    stopConditions: any[];
+    limits: { maxStepsPerFlow: number | null; triggerTier: string };
+    tier: string;
+  } | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchWithAuth('/automations/catalog');
+        setCatalog(data);
+      } catch (e) {
+        console.error('Failed to load automations catalog:', e);
+      }
+    })();
+  }, []);
+
+  // Multi-step: si `rules.steps` viene del backend lo usamos; si no,
+  // sintetizamos un step inicial con el `initialMessage` y mantenemos
+  // sincronizado el `message` por compat (POST sigue aceptando ambos).
+  const [steps, setSteps] = useState<AutomationStep[]>(
+    Array.isArray((initialRules as any)?.steps) && (initialRules as any).steps.length > 0
+      ? (initialRules as any).steps
+      : [{ kind: 'message', message: initialMessage || '' }],
+  );
+
+  // Cuando el coach edita el textarea principal, sincronizamos al step 0
+  // si es un `message`. Asi el experience sigue siendo "escribo y ya esta"
+  // para el caso de un solo mensaje (el 80% de los flows).
+  useEffect(() => {
+    if (steps.length === 1 && steps[0].kind === 'message' && steps[0].message !== message) {
+      setSteps([{ kind: 'message', message }]);
+    }
+  }, [message]);
 
   const updateRule = <K extends keyof AutomationDeliveryRules>(key: K, value: AutomationDeliveryRules[K]) => {
     setRules(prev => ({ ...prev, [key]: value }));
@@ -384,41 +425,60 @@ export default function AutomationCreateMessage({
                         ))}
                       </div>
                       {rules.deliveryTime === 'Custom' && (
-                        <input 
-                          type="time" 
+                        <TimeSelect
                           value={rules.customTime || '09:00'}
-                          onChange={e => updateRule('customTime', e.target.value)}
-                          className="w-40 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500"
+                          onChange={(v) => updateRule('customTime', v)}
+                          className="w-40 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
                         />
                       )}
                     </div>
 
-                    {/* Unified Condition Builder */}
+                    {/* Multi-step sequence (NUEVO) */}
+                    <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight block">{t('message_sequence_title') || 'Secuencia de mensajes'}</label>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">{t('message_sequence_desc') || 'Encadena mensajes, esperas y tareas. La cadena se ejecuta paso a paso.'}</p>
+                        </div>
+                        {catalog?.limits?.maxStepsPerFlow === 1 && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-1 rounded">
+                            Scale+ para multi-step
+                          </span>
+                        )}
+                      </div>
+                      <StepSequence
+                        steps={steps}
+                        onChange={(next) => {
+                          setSteps(next);
+                          // Sincronizar legacy `message` con step[0] si es un mensaje
+                          if (next[0]?.kind === 'message') setMessage(next[0].message);
+                        }}
+                        maxSteps={catalog?.limits?.maxStepsPerFlow ?? null}
+                        conditionCatalog={(catalog?.stopConditions || []).map(c => ({ id: c.id, label: c.label }))}
+                        variables={VARIABLES}
+                      />
+                    </div>
+
+                    {/* Condition builder — chips del catalogo */}
                     <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-8">
-                      {/* Activation Conditions */}
+                      {/* Activation Conditions (chips del catalogo backend) */}
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col">
                           <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">{t('activation_triggers')}</label>
                           <p className="text-xs text-slate-500 dark:text-slate-400">{t('activation_triggers_desc')}</p>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-2">
-                          {[
-                            { type: 'weight', label: 'Weight Goal', op: '>', val: 'Target', color: 'bg-blue-500' },
-                            { type: 'activity', label: 'Inactivity', op: '>', val: '3', color: 'bg-orange-500' },
-                            { type: 'adherence', label: 'Low Adherence', op: '<', val: '70', color: 'bg-red-500' },
-                            { type: 'last_checkin', label: 'Last Check-in', op: '>', val: '7', color: 'bg-purple-500' },
-                            { type: 'mood', label: 'Low Mood', op: '<', val: '3', color: 'bg-indigo-500' },
-                            { type: 'rpe', label: 'High RPE', op: '>', val: '8', color: 'bg-rose-500' }
-                          ].map(cond => {
-                            const active = rules.activation_conditions?.some(c => c.type === cond.type && c.enabled);
+                          {(catalog?.activationConditions || []).map((cond: any) => {
+                            const active = rules.activation_conditions?.some(c => c.type === cond.id && c.enabled);
                             return (
                               <button
-                                key={cond.type}
-                                onClick={() => toggleCondition('activation_conditions', cond.type, cond.op as any, cond.val)}
+                                key={cond.id}
+                                onClick={() => toggleCondition('activation_conditions', cond.id, cond.defaultOperator, cond.defaultValue)}
+                                title={cond.desc}
                                 className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-2 ${
-                                  active 
-                                    ? `${cond.color} border-transparent text-white shadow-sm ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-${cond.color.split('-')[1]}-500/50` 
+                                  active
+                                    ? `${cond.color} border-transparent text-white shadow-sm`
                                     : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50'
                                 }`}
                               >
@@ -470,28 +530,24 @@ export default function AutomationCreateMessage({
                         )}
                       </div>
 
-                      {/* Stop Conditions */}
+                      {/* Stop Conditions (chips del catalogo backend) */}
                       <div className="flex flex-col gap-4">
                         <div className="flex flex-col">
                           <label className="text-sm font-bold text-slate-900 dark:text-white mb-1 tracking-tight">{t('stop_conditions')}</label>
                           <p className="text-xs text-slate-500 dark:text-slate-400">{t('stop_conditions_desc')}</p>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-2">
-                          {[
-                            { type: 'reply', label: 'Client Replies', op: 'is', val: 'true', color: 'bg-emerald-500' },
-                            { type: 'checkin', label: 'Check-in Done', op: 'is', val: 'true', color: 'bg-cyan-500' },
-                            { type: 'weight_goal', label: 'Weight Reached', op: '<=', val: 'Target', color: 'bg-rose-500' },
-                            { type: 'manual', label: 'Manual Stop', op: 'is', val: 'true', color: 'bg-slate-500' }
-                          ].map(cond => {
-                            const active = rules.stop_conditions?.some(c => c.type === cond.type && c.enabled);
+                          {(catalog?.stopConditions || []).map((cond: any) => {
+                            const active = rules.stop_conditions?.some(c => c.type === cond.id && c.enabled);
                             return (
                               <button
-                                key={cond.type}
-                                onClick={() => toggleCondition('stop_conditions', cond.type, cond.op as any, cond.val)}
+                                key={cond.id}
+                                onClick={() => toggleCondition('stop_conditions', cond.id, cond.defaultOperator, cond.defaultValue)}
+                                title={cond.desc}
                                 className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-2 ${
-                                  active 
-                                    ? `${cond.color} border-transparent text-white shadow-sm ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ring-${cond.color.split('-')[1]}-500/50` 
+                                  active
+                                    ? `${cond.color} border-transparent text-white shadow-sm`
                                     : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-500/50'
                                 }`}
                               >
@@ -528,9 +584,21 @@ export default function AutomationCreateMessage({
                   >
                     {t('back')}
                   </button>
-                  <button 
-                    onClick={() => onNext(message, rules)}
-                    disabled={!message.trim()}
+                  <button
+                    onClick={() => {
+                      // Empaqueta los steps dentro de delivery_rules.steps SOLO si
+                      // hay mas de uno o el unico no es un simple mensaje. Con un
+                      // unico step `message` mantenemos la forma legacy.
+                      const onlyOneMessage = steps.length === 1 && steps[0].kind === 'message';
+                      const enrichedRules: any = onlyOneMessage
+                        ? { ...rules }
+                        : { ...rules, steps };
+                      onNext(message, enrichedRules);
+                    }}
+                    disabled={
+                      steps.length === 0 ||
+                      (steps.length === 1 && steps[0].kind === 'message' && !steps[0].message.trim())
+                    }
                     className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm shadow-emerald-500/25 transition-colors flex items-center gap-2"
                   >
                     {t('continue_to_review')}

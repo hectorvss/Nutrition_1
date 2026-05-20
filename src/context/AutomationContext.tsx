@@ -18,10 +18,17 @@ export interface AutomationDeliveryRules {
   frequencyUnit: 'Days' | 'Weeks' | 'Months';
   deliveryTime: 'Morning' | 'Afternoon' | 'Evening' | 'Custom';
   customTime?: string;
-  audience: 'All Clients' | 'Specific Clients'; 
+  audience: 'All Clients' | 'Specific Clients';
   selected_client_ids?: string[];
   activation_conditions: AutomationCondition[];
   stop_conditions: AutomationCondition[];
+  /**
+   * Multi-step sequence. Si esta vacio/ausente la automation usa la forma
+   * legacy (un solo `message`). El backend valida tipos y respeta el cap
+   * por tier (maxStepsPerFlow). Definicion del tipo en
+   * `src/components/automations/StepSequence.tsx`.
+   */
+  steps?: any[];
 }
 
 export interface Automation {
