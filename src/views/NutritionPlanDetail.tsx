@@ -1,4 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { arrayMove } from '@dnd-kit/sortable';
+import { SortableList } from '../components/dnd/SortableList';
+import { SortableItem } from '../components/dnd/SortableItem';
 import {
   ArrowLeft,
   ArrowRight,
@@ -383,7 +386,6 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const [editingQty, setEditingQty] = useState<string>('1');
 
   // ─── Block drag-reorder state ─────────────────────────────────────────────
-  const dragBlockRef = useRef<number | null>(null);  // meal.id being dragged
   const [dragOverBlockId, setDragOverBlockId] = useState<number | null>(null);
 
   // ─── Block inline edit state ──────────────────────────────────────────────
@@ -434,14 +436,12 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const handleDragStart = (food: FoodItem) => {
     dragFoodRef.current = food;
     dragGeneralRef.current = null;
-    dragBlockRef.current = null; // clear block drag
   };
 
   // ─── Drag from General Mode library ───────────────────────────────────────
   const handleGeneralDragStart = (item: GeneralItem) => {
     dragGeneralRef.current = item;
     dragFoodRef.current = null;
-    dragBlockRef.current = null;
   };
 
   const handleDragOver = useCallback((e: React.DragEvent, mealId: number) => {
@@ -495,39 +495,14 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
     dragFoodRef.current = null;
   }, []);
 
-  // ─── Block drag-to-reorder ────────────────────────────────────────────────
-  const handleBlockDragStart = (e: React.DragEvent, mealId: number) => {
-    dragFoodRef.current = null;  // clear food drag
-    dragBlockRef.current = mealId;
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleBlockDragOver = (e: React.DragEvent, mealId: number) => {
-    e.preventDefault();
-    if (dragBlockRef.current === null || dragBlockRef.current === mealId) return;
-    setDragOverBlockId(mealId);
-  };
-
-  const handleBlockDrop = (e: React.DragEvent, targetMealId: number) => {
-    e.preventDefault();
-    setDragOverBlockId(null);
-    const fromId = dragBlockRef.current;
-    dragBlockRef.current = null;
-    if (fromId === null || fromId === targetMealId) return;
+  // ─── Block drag-to-reorder via @dnd-kit ──────────────────────────────────
+  const handleMealReorder = (activeId: string, overId: string) => {
     setMeals(prev => {
-      const fromIdx = prev.findIndex(m => m.id === fromId);
-      const toIdx = prev.findIndex(m => m.id === targetMealId);
+      const fromIdx = prev.findIndex(m => String(m.id) === activeId);
+      const toIdx = prev.findIndex(m => String(m.id) === overId);
       if (fromIdx === -1 || toIdx === -1) return prev;
-      const next = [...prev];
-      const [removed] = next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, removed);
-      return next;
+      return arrayMove(prev, fromIdx, toIdx);
     });
-  };
-
-  const handleBlockDragEnd = () => {
-    dragBlockRef.current = null;
-    setDragOverBlockId(null);
   };
 
   // ─── Block inline edit ────────────────────────────────────────────────────
@@ -763,22 +738,26 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   <p className="text-sm font-medium">{t('no_meals_in_plan')}</p>
                 </div>
               ) : (
-                meals.map((meal) => {
+                <SortableList<MealBlock>
+                  items={meals}
+                  getId={(m) => String(m.id)}
+                  onReorder={handleMealReorder}
+                  getLabel={(m) => m.name}
+                >
+                {meals.map((meal) => {
                 const mealCals = meal.items.reduce((a, i) => a + i.calories * i.quantity, 0);
                 const isDropTarget = dragOverMealId === meal.id;
 
                 return (
+                  <React.Fragment key={meal.id}>
+                  <SortableItem
+                    id={String(meal.id)}
+                    ariaLabel={`${meal.name}, position ${meals.indexOf(meal) + 1} of ${meals.length}. Press Space to reorder.`}
+                  >
+                  {({ dragHandleProps, isDragging }) => (
                   <div
-                    key={meal.id}
-                    draggable
-                    onDragStart={(e) => handleBlockDragStart(e, meal.id)}
-                    onDragOver={(e) => handleBlockDragOver(e, meal.id)}
-                    onDrop={(e) => handleBlockDrop(e, meal.id)}
-                    onDragEnd={handleBlockDragEnd}
-                    className={`border rounded-xl p-5 transition-all bg-white shadow-sm ${
-                      dragOverBlockId === meal.id
-                        ? 'border-emerald-400 border-2 shadow-emerald-100 shadow-md'
-                        : isDropTarget
+                    className={`border rounded-xl p-5 transition-all bg-white shadow-sm ${isDragging ? 'opacity-50' : ''} ${
+                      isDropTarget
                         ? 'border-emerald-400 bg-emerald-50/40 shadow-emerald-200 shadow-md'
                         : 'border-slate-200 hover:border-emerald-500/50'
                     }`}
@@ -787,7 +766,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         {/* Drag handle for block reorder */}
-                        <GripVertical className="w-5 h-5 text-slate-300 cursor-grab shrink-0" />
+                        <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 shrink-0 focus-visible:outline-2 focus-visible:outline-emerald-500 focus-visible:rounded">
+                          <GripVertical className="w-5 h-5" />
+                        </div>
                         <div className={`${meal.iconColor} p-3 rounded-xl shrink-0`}>
                           <meal.icon className="w-6 h-6" />
                         </div>
@@ -983,8 +964,12 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     )}
 
                   </div>
+                  )}
+                  </SortableItem>
+                  </React.Fragment>
                 );
-              })
+              })}
+              </SortableList>
             )}
             { !isLoading && meals.length > 0 && (
               <div className="pt-4 flex justify-center">

@@ -36,6 +36,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   const [hasChanges, setHasChanges] = useState(false);
   const [draggedDayId, setDraggedDayId] = useState<string | null>(null);
   const [dragOverDayId, setDragOverDayId] = useState<string | null>(null);
+  const [selectedForSwap, setSelectedForSwap] = useState<string | null>(null);
   const [showPlanPicker, setShowPlanPicker] = useState<string | null>(null);
 
   useEffect(() => {
@@ -118,6 +119,35 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   const handleDragEnd = () => {
     setDraggedDayId(null);
     setDragOverDayId(null);
+  };
+
+  const swapDays = (a: string, b: string) => {
+    if (a === b || !planData?.data_json?.days) return;
+    const newDays = { ...planData.data_json.days };
+    const srcData = newDays[a];
+    const tgtData = newDays[b];
+    if (srcData) newDays[b] = srcData; else delete newDays[b];
+    if (tgtData) newDays[a] = tgtData; else delete newDays[a];
+    const updatedDataJson = { ...planData.data_json, days: newDays };
+    setPlanData({ ...planData, data_json: updatedDataJson });
+    handleSave(updatedDataJson);
+    setHasChanges(true);
+  };
+
+  const handleDayKeyDown = (e: React.KeyboardEvent, dayId: string) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedForSwap === null) {
+        setSelectedForSwap(dayId);
+      } else if (selectedForSwap === dayId) {
+        setSelectedForSwap(null);
+      } else {
+        swapDays(selectedForSwap, dayId);
+        setSelectedForSwap(null);
+      }
+    } else if (e.key === 'Escape') {
+      setSelectedForSwap(null);
+    }
   };
 
   const daysConfig = [
@@ -210,13 +240,18 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
   const renderDayCard = (day: DayPlan, keyPrefix: string, drag: boolean) => (
     <div
       key={`${keyPrefix}${day.id}`}
-      className={`relative transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.01] -translate-y-1' : ''}`}
+      className={`relative transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.01] -translate-y-1' : ''} ${selectedForSwap === day.id ? 'ring-2 ring-emerald-500 rounded-3xl' : ''}`}
       draggable={drag}
       onDragStart={drag ? (e) => handleDragStart(e, day.id) : undefined}
       onDragOver={drag ? (e) => handleDragOver(e, day.id) : undefined}
       onDragLeave={drag ? () => setDragOverDayId(null) : undefined}
       onDrop={drag ? (e) => handleDrop(e, day.id) : undefined}
       onDragEnd={drag ? handleDragEnd : undefined}
+      onKeyDown={drag ? (e) => handleDayKeyDown(e, day.id) : undefined}
+      tabIndex={drag ? 0 : undefined}
+      role={drag ? 'button' : undefined}
+      aria-label={drag ? `${day.name}: ${day.weekViewLabel}. ${selectedForSwap ? (selectedForSwap === day.id ? 'Selected for swap. Press Space to deselect.' : 'Press Space to swap.') : 'Press Space to select for swap.'}` : undefined}
+      aria-pressed={drag ? selectedForSwap === day.id : undefined}
     >
       <button
         onClick={() => onSelectDay(day.id)}

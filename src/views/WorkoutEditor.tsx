@@ -3,6 +3,9 @@ import { useClient } from '../context/ClientContext';
 import { useExerciseContext, Exercise } from '../context/ExerciseContext';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import { arrayMove } from '@dnd-kit/sortable';
+import { SortableList } from '../components/dnd/SortableList';
+import { SortableItem } from '../components/dnd/SortableItem';
 
 interface WorkoutEditorProps {
   onBack: () => void;
@@ -260,7 +263,6 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   
   // Drag and drop state
   const dragExerciseRef = useRef<Exercise | null>(null);
-  const dragBlockRef = useRef<number | null>(null);
   const [dragOverBlockId, setDragOverBlockId] = useState<number | null>(null);
 
   // Edit blocks inline
@@ -273,7 +275,6 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   // Drag from Library
   const handleDragStart = (ex: Exercise) => {
     dragExerciseRef.current = ex;
-    dragBlockRef.current = null;
   };
 
   const handleDragOver = useCallback((e: React.DragEvent, blockId: number) => {
@@ -306,40 +307,14 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
     dragExerciseRef.current = null;
   }, []);
 
-  // Drag Blocks for reordering
-  const handleBlockDragStart = (e: React.DragEvent, blockId: number) => {
-    dragExerciseRef.current = null;
-    dragBlockRef.current = blockId;
-    e.dataTransfer.effectAllowed = 'move';
-  };
-  
-  const handleBlockDragOver = (e: React.DragEvent, blockId: number) => {
-    e.preventDefault();
-    if (dragBlockRef.current === null || dragBlockRef.current === blockId) return;
-    setDragOverBlockId(blockId);
-  };
-  
-  const handleBlockDrop = (e: React.DragEvent, targetBlockId: number) => {
-    e.preventDefault();
-    setDragOverBlockId(null);
-    const fromId = dragBlockRef.current;
-    dragBlockRef.current = null;
-    if (fromId === null || fromId === targetBlockId) return;
-    
+  // Block reorder via @dnd-kit (keyboard + pointer, screen-reader announcements)
+  const handleBlockReorder = (activeId: string, overId: string) => {
     setBlocks(prev => {
-      const fromIdx = prev.findIndex(b => b.id === fromId);
-      const toIdx = prev.findIndex(b => b.id === targetBlockId);
+      const fromIdx = prev.findIndex(b => String(b.id) === activeId);
+      const toIdx = prev.findIndex(b => String(b.id) === overId);
       if (fromIdx === -1 || toIdx === -1) return prev;
-      const next = [...prev];
-      const [removed] = next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, removed);
-      return next;
+      return arrayMove(prev, fromIdx, toIdx);
     });
-  };
-
-  const handleBlockDragEnd = () => {
-    dragBlockRef.current = null;
-    setDragOverBlockId(null);
   };
 
   const addBlock = () => {
@@ -443,22 +418,28 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                 <p className="text-sm font-bold text-red-600">{loadError}</p>
               </div>
             )}
+            <SortableList<WorkoutBlock>
+              items={blocks}
+              getId={(b) => String(b.id)}
+              onReorder={handleBlockReorder}
+              getLabel={(b) => b.name}
+            >
             {blocks.map((block) => {
               const isDropTarget = dragOverBlockId === block.id;
 
               return (
-                <div 
-                  key={block.id}
-                  draggable
-                  onDragStart={(e) => handleBlockDragStart(e, block.id)}
-                  onDragOver={(e) => handleBlockDragOver(e, block.id)}
-                  onDrop={(e) => handleBlockDrop(e, block.id)}
-                  onDragEnd={handleBlockDragEnd}
-                  className={`bg-white rounded-3xl border transition-all overflow-hidden ${isDropTarget ? 'border-emerald-400 shadow-emerald-100 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 shadow-sm'}`}
+                <React.Fragment key={block.id}>
+                <SortableItem
+                  id={String(block.id)}
+                  ariaLabel={`${block.name}, position ${blocks.indexOf(block) + 1} of ${blocks.length}. Press Space to reorder.`}
                 >
+                  {({ dragHandleProps, isDragging }) => (
+                  <div
+                    className={`bg-white rounded-3xl border transition-all overflow-hidden ${isDragging ? 'opacity-50' : ''} ${isDropTarget ? 'border-emerald-400 shadow-emerald-100 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 shadow-sm'}`}
+                  >
                   <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                     <div className="flex items-center gap-3">
-                      <div className="cursor-grab text-slate-300 hover:text-slate-500 mr-2">
+                      <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 mr-2 focus-visible:outline-2 focus-visible:outline-emerald-500 focus-visible:rounded">
                          <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
                       </div>
                       <div className={`w-10 h-10 rounded-xl ${block.iconBg} flex items-center justify-center`}>
@@ -567,8 +548,12 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                     )}
                   </div>
                 </div>
+              )}
+              </SortableItem>
+              </React.Fragment>
               );
             })}
+            </SortableList>
 
             <button onClick={addBlock} className="w-full py-6 rounded-3xl border-2 border-dashed border-slate-300 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 transition-all flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs shrink-0">
               <span className="material-symbols-outlined">add_circle</span> {t('add_training_block')}
