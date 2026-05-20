@@ -262,11 +262,22 @@ router.get('/integrations/stripe/balance', async (req: any, res) => {
 // Get all clients for this manager with plan status
 router.get('/clients', async (req: any, res) => {
   try {
+    // Safety cap: nunca descargamos mas de 500 clientes por peticion.
+    // Hoy el SaaS no tiene managers con tantos clientes, pero esto evita un
+    // payload gigante si en algun momento se llega (~500 clientes a ~5kB
+    // cada uno = 2.5MB por response). Si se hit el cap, devolvemos los 500
+    // mas nuevos (created_at DESC) y emitimos un warning header para
+    // disparar la migracion a paginacion real en el frontend.
+    //
+    // TODO: cuando un manager llegue a >500 clientes, migrar este endpoint
+    // a cursor-based como /messages y /check-ins. El helper ya existe en
+    // server/lib/pagination.ts.
+    const HARD_CAP = 500;
     const { data: clients, error } = await supabaseAdmin
       .from('users')
       .select(`
-        id, 
-        email, 
+        id,
+        email,
         created_at,
         status,
         profiles!user_id (full_name, avatar_url),
@@ -279,11 +290,20 @@ router.get('/clients', async (req: any, res) => {
       .eq('manager_id', req.user.id)
       .eq('role', 'CLIENT')
       .eq('tasks.manager_id', req.user.id) // Filter joined tasks by manager_id too
+      .order('created_at', { ascending: false }) // orden principal estable
       .order('date', { foreignTable: 'check_ins', ascending: false })
       .order('submitted_at', { foreignTable: 'client_checkin_submissions', ascending: false })
-      .order('logged_at', { foreignTable: 'workout_logs', ascending: false });
-      
+      .order('logged_at', { foreignTable: 'workout_logs', ascending: false })
+      .limit(HARD_CAP);
+
     if (error) throw error;
+    if (clients && clients.length >= HARD_CAP) {
+      // Audit-trail para descubrir cuando el cap empieza a importar.
+      // El frontend puede leer el header `X-Result-Truncated` si quiere
+      // mostrar al coach "tienes mas de 500 clientes — pagina pronto".
+      res.setHeader('X-Result-Truncated', 'true');
+      res.setHeader('X-Result-Cap', String(HARD_CAP));
+    }
     if (!clients || clients.length === 0) return res.json([]);
 
     // Fetch related plans separately since direct joins may lack foreign key mapping in cache
