@@ -55,9 +55,23 @@ function normalize<T>(payload: unknown): PaginatedResponse<T> {
 
 export function usePagination<T>(
   endpoint: string | null,
-  opts: { limit?: number; enabled?: boolean } = {},
+  opts: {
+    limit?: number;
+    enabled?: boolean;
+    /**
+     * Callback con el payload crudo de la primera pagina, util para
+     * extraer metadata "wrap" del endpoint (e.g. `client` en
+     * /manager/clients/:id/check-ins) sin hacer una segunda peticion.
+     * Se invoca solo en la primera pagina, no en loadMore ni reload.
+     */
+    onFirstPagePayload?: (payload: unknown) => void;
+  } = {},
 ): UsePaginationResult<T> {
-  const { limit = 50, enabled = true } = opts;
+  const { limit = 50, enabled = true, onFirstPagePayload } = opts;
+  // Capturamos la version mas reciente del callback en una ref para que el
+  // useCallback de fetchPage no tenga que recrearse cuando cambia.
+  const onFirstRef = useRef(onFirstPagePayload);
+  onFirstRef.current = onFirstPagePayload;
   const [items, setItems] = useState<T[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -85,6 +99,12 @@ export function usePagination<T>(
         // Si llego una respuesta "obsoleta" (el usuario llamo reload() o cambio
         // endpoint mientras esta peticion estaba en vuelo), la descartamos.
         if (token !== fetchTokenRef.current) return;
+        // Si es la primera pagina (resetFirst=true) y hay callback, lo
+        // invocamos con el payload crudo — asi el consumer puede leer
+        // wrappers como `client`, `meta`, etc. sin segunda peticion.
+        if (resetFirst && onFirstRef.current) {
+          try { onFirstRef.current(payload); } catch { /* nunca rompe el fetch */ }
+        }
         const page = normalize<T>(payload);
         setItems((prev) => (resetFirst ? page.data : [...prev, ...page.data]));
         setCursor(page.nextCursor);

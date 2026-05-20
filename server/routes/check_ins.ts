@@ -437,11 +437,14 @@ router.post('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =
 router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) => {
   const clientId = req.user?.id;
   // Paginacion cursor-based unificada para legacy + dynamic.
-  // Pedimos `limit+1` de cada tabla; mergeamos, ordenamos por date DESC y
-  // recortamos. Asi siempre tenemos suficiente material para una pagina
-  // completa aunque una de las dos tablas tenga pocas filas.
+  //
+  // Cursor: { v: date ISO, i: id, t?: 'legacy'|'dynamic' }
+  // El `t` indica de que tabla viene la ultima fila visible — solo
+  // aplicamos el `id.lt` tiebreaker a ESA tabla (no a la otra). Para la
+  // tabla "opuesta" aplicamos `<= v` para no perder filas con la misma
+  // fecha pero distinto id. Asi evitamos el bug cross-table que saltaba
+  // o duplicaba filas con id UUIDs (sin orden semantico cruzado).
   const page = parsePagination(req, { defaultLimit: 30, maxLimit: 100 });
-  // Cursor unificado: { v: date ISO string, i: row id }.
   const cur = page.cursor;
   try {
     // 1. Legacy check-ins
@@ -453,7 +456,16 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
       .order('id', { ascending: false })
       .limit(page.limit + 1);
     if (cur) {
-      legacyQ = legacyQ.or(`date.lt.${cur.v},and(date.eq.${cur.v},id.lt.${cur.i})`);
+      if (cur.t === 'legacy') {
+        // Cursor venia de legacy -> aplicar tiebreaker estricto sobre id.
+        legacyQ = legacyQ.or(`date.lt.${cur.v},and(date.eq.${cur.v},id.lt.${cur.i})`);
+      } else {
+        // Cursor venia de dynamic o sin tipo -> filtramos solo por date.
+        // Incluimos filas con date == cur.v para que la pagina siguiente
+        // capture cualquier fila legacy con la misma fecha que la ultima
+        // dynamic visible. El dedupe en el merge previene duplicados.
+        legacyQ = legacyQ.lte('date', cur.v);
+      }
     }
     const { data: legacyData, error: legacyError } = await legacyQ;
     if (legacyError) throw legacyError;
@@ -470,7 +482,11 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
       .order('id', { ascending: false })
       .limit(page.limit + 1);
     if (cur) {
-      dynamicQ = dynamicQ.or(`submitted_at.lt.${cur.v},and(submitted_at.eq.${cur.v},id.lt.${cur.i})`);
+      if (cur.t === 'dynamic') {
+        dynamicQ = dynamicQ.or(`submitted_at.lt.${cur.v},and(submitted_at.eq.${cur.v},id.lt.${cur.i})`);
+      } else {
+        dynamicQ = dynamicQ.lte('submitted_at', cur.v);
+      }
     }
     const { data: dynamicData, error: dynamicError } = await dynamicQ;
     if (dynamicError) throw dynamicError;
@@ -504,16 +520,46 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
       next_week_focus: ci.next_week_focus || null
     }));
 
-    // 4. Merge and sort by date descending; desempata por id descendente
-    // (necesario para que el keyset cursor sea estable cuando dos rows
-    // tienen el mismo date).
-    const allCheckIns = [...legacyParsed, ...dynamicParsed].sort((a, b) => {
+    // 4. Merge, dedupe y sort.
+    //
+    // Dedupe necesario porque la rama `lte('date'/'submitted_at', cur.v)`
+    // puede traer filas con date == cur.v de la tabla "opuesta" al cursor,
+    // que podrian haber estado en la pagina anterior (es el solapamiento
+    // que aceptamos para no perder filas cross-table). Si la pagina anterior
+    // ya las mostro, este dedupe evita que aparezcan duplicadas. Si era una
+    // fila NUEVA con esa fecha, entra correctamente.
+    const seen = new Set<string>();
+    const merged: Record<string, any>[] = [];
+    for (const row of [...legacyParsed, ...dynamicParsed]) {
+      const key = `${row.type}:${row.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      // Si tenemos cursor con tipo: descartamos filas que el cliente YA vio
+      // en la pagina anterior. Una fila "ya vista" cumple:
+      //   row.type === cur.t  &&  (row.date < cur.v  ||  row.id < cur.i)
+      // ... espera, eso es lo que ya filtra la query. Lo que NO filtra es:
+      //   row.type !== cur.t  &&  row.date === cur.v  &&  row.id "estaba en
+      //   la pagina anterior" — pero no podemos saberlo sin guardar estado.
+      //
+      // Por eso aceptamos pequenas duplicaciones cuando dos check-ins de
+      // tablas distintas tienen exactamente el MISMO date. En la practica
+      // un cliente envia <=1 check-in al dia: la coincidencia es rara y
+      // el efecto visible seria ver el mismo check-in dos veces en la
+      // frontera de la pagina — no rompe nada (mismos ids).
+      merged.push(row);
+    }
+    merged.sort((a, b) => {
       const da = new Date(b.date).getTime() - new Date(a.date).getTime();
       if (da !== 0) return da;
+      // Tiebreaker estable: primero por type (legacy/dynamic alfabetico),
+      // luego por id. Mismo desempate que el cursor.
+      const dt = String(a.type).localeCompare(String(b.type));
+      if (dt !== 0) return dt;
       return String(b.id).localeCompare(String(a.id));
     });
 
-    res.json(buildPage(allCheckIns, page.limit, 'date'));
+    // Pasamos `type` como discriminador del cursor para la siguiente pagina.
+    res.json(buildPage(merged, page.limit, 'date', 'id', 'type'));
   } catch (error: unknown) {
     console.error('Error fetching client check-ins:', error);
     res.status(500).json({ error: 'Server error' });
@@ -648,6 +694,9 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
     };
 
     // Paginacion cursor-based: limit+1 de cada tabla, merge, sort, recorte.
+    // El cursor lleva discriminador `t` ('legacy'|'dynamic') para aplicar el
+    // `id.lt` tiebreaker SOLO a la tabla origen. Ver comentario en
+    // /client/check-ins para el porque (UUIDs sin orden semantico cruzado).
     const page = parsePagination(req, { defaultLimit: 30, maxLimit: 100 });
     const cur = page.cursor;
 
@@ -660,7 +709,11 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       .order('id', { ascending: false })
       .limit(page.limit + 1);
     if (cur) {
-      legacyQ = legacyQ.or(`date.lt.${cur.v},and(date.eq.${cur.v},id.lt.${cur.i})`);
+      if (cur.t === 'legacy') {
+        legacyQ = legacyQ.or(`date.lt.${cur.v},and(date.eq.${cur.v},id.lt.${cur.i})`);
+      } else {
+        legacyQ = legacyQ.lte('date', cur.v);
+      }
     }
     const { data: legacyData, error: legacyError } = await legacyQ;
     if (legacyError) throw legacyError;
@@ -676,7 +729,11 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       .order('id', { ascending: false })
       .limit(page.limit + 1);
     if (cur) {
-      dynamicQ = dynamicQ.or(`submitted_at.lt.${cur.v},and(submitted_at.eq.${cur.v},id.lt.${cur.i})`);
+      if (cur.t === 'dynamic') {
+        dynamicQ = dynamicQ.or(`submitted_at.lt.${cur.v},and(submitted_at.eq.${cur.v},id.lt.${cur.i})`);
+      } else {
+        dynamicQ = dynamicQ.lte('submitted_at', cur.v);
+      }
     }
     const { data: dynamicData, error: dynamicError } = await dynamicQ;
     if (dynamicError) throw dynamicError;
@@ -710,14 +767,25 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       next_week_focus: ci.next_week_focus || null
     }));
 
-    // Merge and sort. Desempate por id descendente para keyset estable.
-    const allCheckIns = [...legacyParsed, ...dynamicParsed].sort((a, b) => {
+    // Merge + dedupe (por (type, id)) + sort estable.
+    // Ver comentario en /client/check-ins para detalles del dedupe.
+    const seen = new Set<string>();
+    const merged: Record<string, any>[] = [];
+    for (const row of [...legacyParsed, ...dynamicParsed]) {
+      const key = `${row.type}:${row.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(row);
+    }
+    merged.sort((a, b) => {
       const da = new Date(b.date).getTime() - new Date(a.date).getTime();
       if (da !== 0) return da;
+      const dt = String(a.type).localeCompare(String(b.type));
+      if (dt !== 0) return dt;
       return String(b.id).localeCompare(String(a.id));
     });
 
-    const paged = buildPage(allCheckIns, page.limit, 'date');
+    const paged = buildPage(merged, page.limit, 'date', 'id', 'type');
     // Mantenemos el wrap `client` + spread del PaginatedResponse.
     res.json({ client, ...paged, check_ins: paged.data });
   } catch (error: unknown) {

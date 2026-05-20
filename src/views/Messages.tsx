@@ -144,16 +144,48 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   const [hasOlder, setHasOlder] = useState(false);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
 
+  // Flag: el usuario ha cargado al menos una pagina hacia atras manualmente.
+  // Mientras sea false, `loadMessages()` (polling/envio) puede sobreescribir
+  // libremente. En cuanto sea true, debe MERGEAR para no perder lo cargado.
+  const userLoadedOlderRef = useRef(false);
+
   const loadMessages = async () => {
     if (!activeRecipient) return;
     try {
       // Sin cursor = primera pagina (los mas recientes). Backend devuelve
-      // DESC para luego invertirlos en orden cronologico aqui.
+      // DESC; invertimos a orden cronologico para mostrar.
       const resp = await fetchWithAuth(`/messages/${activeRecipient.id}?limit=50`);
       const arr = Array.isArray(resp) ? resp : (resp?.data || []);
-      setMessages([...arr].reverse()); // viejo->nuevo para mostrar
-      setOlderCursor(resp?.nextCursor || null);
-      setHasOlder(Boolean(resp?.hasMore));
+      const recent = [...arr].reverse();
+
+      if (!userLoadedOlderRef.current) {
+        // Caso normal (primera carga o polling sin paginas hacia atras):
+        // sobreescritura completa con la pagina mas reciente.
+        setMessages(recent);
+        setOlderCursor(resp?.nextCursor || null);
+        setHasOlder(Boolean(resp?.hasMore));
+      } else {
+        // El usuario ha cargado paginas anteriores: NO podemos sobreescribir
+        // (perderiamos esos mensajes viejos). Mergeamos por id:
+        // - Mantenemos los mensajes del state que NO esten en `recent`
+        //   (son los viejos cargados por loadOlder).
+        // - Reemplazamos el bloque comun con la version fresca (para reflejar
+        //   cambios: is_read, deletes, mensajes recien enviados, etc.).
+        const recentIds = new Set(recent.map((m: any) => m.id));
+        setMessages((prev) => {
+          const olderTail = prev.filter((m: any) => !recentIds.has(m.id));
+          // Como prev esta ordenado viejo->nuevo, los mensajes NO contenidos
+          // en `recent` que vengan ANTES (created_at menor) son los viejos
+          // de loadOlder; los que vengan DESPUES son inconsistencias (no
+          // deberian existir). Filtramos por timestamp para ser seguros.
+          const firstRecentTs = (recent[0] as any)?.created_at;
+          const validTail = firstRecentTs
+            ? olderTail.filter((m: any) => m.created_at < firstRecentTs)
+            : olderTail;
+          return [...validTail, ...recent];
+        });
+        // NO tocamos olderCursor ni hasOlder aqui: los maneja loadOlder.
+      }
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -167,7 +199,15 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
         `/messages/${activeRecipient.id}?limit=50&cursor=${encodeURIComponent(olderCursor)}`
       );
       const arr = (resp?.data || []).reverse();
-      setMessages(prev => [...arr, ...prev]);
+      // Marca que el usuario ya cargo paginas hacia atras — a partir de
+      // ahora, el polling debe mergear en lugar de sobreescribir.
+      userLoadedOlderRef.current = true;
+      // Dedupe por id por si algun mensaje aparece en ambos rangos.
+      setMessages(prev => {
+        const prevIds = new Set(prev.map((m: any) => m.id));
+        const nuevosViejos = arr.filter((m: any) => !prevIds.has(m.id));
+        return [...nuevosViejos, ...prev];
+      });
       setOlderCursor(resp?.nextCursor || null);
       setHasOlder(Boolean(resp?.hasMore));
     } catch (err) {
@@ -209,9 +249,10 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   }, [user, selectedClientId]);
 
   useEffect(() => {
-    // Cambio de chat: reset del cursor de paginacion hacia atras.
+    // Cambio de chat: reset del cursor + flag de "user has loaded older".
     setOlderCursor(null);
     setHasOlder(false);
+    userLoadedOlderRef.current = false;
     loadMessages();
     // Polling agresivo (5s) solo cuando la pestana esta activa.
     // El polling solo refresca la primera pagina (mensajes nuevos al final);

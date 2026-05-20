@@ -30,20 +30,19 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
   const endpoint = isClient
     ? `/check-ins/client/check-ins`
     : `/check-ins/manager/clients/${clientId}/check-ins`;
-  const { items: checkIns, loadMore, hasMore, isLoading, pagesLoaded, reload } =
-    usePagination<any>(endpoint, { limit: 30 });
-  // El endpoint del manager devuelve tambien `client` en el wrap; lo
-  // capturamos en una sola peticion paralela (ligera) para no perder
-  // contexto de la cabecera del listado.
+  // El endpoint del manager devuelve `client` en el wrap del payload.
+  // Lo extraemos del payload de la primera pagina del hook (callback
+  // onFirstPagePayload) en vez de hacer una segunda peticion redundante.
   const [client, setClient] = useState<any>(null);
-  useEffect(() => {
-    if (isClient) return;
-    let cancelled = false;
-    fetchWithAuth(`/check-ins/manager/clients/${clientId}/check-ins?limit=1`)
-      .then((data) => { if (!cancelled && data?.client) setClient(data.client); })
-      .catch((err) => console.error('Error loading client header:', err));
-    return () => { cancelled = true; };
-  }, [clientId, isClient]);
+  const { items: checkIns, loadMore, hasMore, isLoading, pagesLoaded } =
+    usePagination<any>(endpoint, {
+      limit: 30,
+      onFirstPagePayload: (payload) => {
+        if (isClient) return;
+        const p = payload as { client?: any } | null;
+        if (p?.client) setClient(p.client);
+      },
+    });
   // Mutate optimistico tras eliminar — solo reusamos el setter del hook
   // recargando desde cero cuando hace falta. Mientras tanto, una variable
   // local refleja deletions sin volver a pegar al backend.

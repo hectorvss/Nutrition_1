@@ -32,8 +32,15 @@ export const DEFAULT_PAGE_LIMIT = 50;
 export const MAX_PAGE_LIMIT = 100;
 
 export interface PaginationParams {
-  /** Cursor decodificado (null si es la primera pagina). */
-  cursor: { v: string; i: string } | null;
+  /**
+   * Cursor decodificado (null si es la primera pagina).
+   * - v: sortValue de la ultima fila visible.
+   * - i: id de la ultima fila visible.
+   * - t: discriminador opcional (e.g. 'legacy'|'dynamic') para endpoints
+   *      que mezclan filas de varias tablas. Permite aplicar `id.lt`
+   *      SOLO a la tabla matching y evitar saltos cross-table.
+   */
+  cursor: { v: string; i: string; t?: string } | null;
   /** Tamano de pagina solicitado, ya recortado a [1, MAX_PAGE_LIMIT]. */
   limit: number;
 }
@@ -45,16 +52,18 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * Decodifica un cursor base64 a { v, i } o null si esta malformado.
+ * Decodifica un cursor base64 a { v, i, t? } o null si esta malformado.
  * NUNCA throws — un cursor invalido se trata como "primera pagina".
  */
-export function decodeCursor(s: string | undefined | null): { v: string; i: string } | null {
+export function decodeCursor(s: string | undefined | null): { v: string; i: string; t?: string } | null {
   if (!s || typeof s !== 'string') return null;
   try {
     const decoded = Buffer.from(s, 'base64').toString('utf8');
     const obj = JSON.parse(decoded);
     if (typeof obj?.v === 'string' && typeof obj?.i === 'string') {
-      return { v: obj.v, i: obj.i };
+      const out: { v: string; i: string; t?: string } = { v: obj.v, i: obj.i };
+      if (typeof obj.t === 'string') out.t = obj.t;
+      return out;
     }
   } catch {
     // cursor invalido -> primera pagina
@@ -62,9 +71,11 @@ export function decodeCursor(s: string | undefined | null): { v: string; i: stri
   return null;
 }
 
-/** Codifica { v, i } a cursor opaco base64. */
-export function encodeCursor(v: string, i: string): string {
-  return Buffer.from(JSON.stringify({ v, i }), 'utf8').toString('base64');
+/** Codifica { v, i, t? } a cursor opaco base64. */
+export function encodeCursor(v: string, i: string, t?: string): string {
+  const obj: Record<string, string> = { v, i };
+  if (t !== undefined) obj.t = t;
+  return Buffer.from(JSON.stringify(obj), 'utf8').toString('base64');
 }
 
 /**
@@ -98,6 +109,11 @@ export function buildPage<T extends Record<string, any>>(
   limit: number,
   sortKey: string,
   idKey = 'id',
+  /** Opcional: clave de la fila a serializar como discriminador `t` en el
+   *  cursor. Usar en endpoints que mezclan dos tablas (e.g. legacy vs
+   *  dynamic check-ins) para que el siguiente fetch sepa a que tabla
+   *  pertenece el `id.lt` tiebreaker. */
+  typeKey?: string,
 ): PaginatedResponse<T> {
   const hasMore = rows.length > limit;
   const data = hasMore ? rows.slice(0, limit) : rows;
@@ -108,7 +124,8 @@ export function buildPage<T extends Record<string, any>>(
     const sortVal = last[sortKey];
     const idVal = last[idKey];
     if (sortVal != null && idVal != null) {
-      nextCursor = encodeCursor(String(sortVal), String(idVal));
+      const t = typeKey ? (last[typeKey] != null ? String(last[typeKey]) : undefined) : undefined;
+      nextCursor = encodeCursor(String(sortVal), String(idVal), t);
     }
   }
   return { data, nextCursor, hasMore };

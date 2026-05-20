@@ -63,6 +63,41 @@ t('hasMore=false cuando rows<=limit', r2.hasMore === false && r2.nextCursor === 
 const r3 = buildPage([], 2, 'date');
 t('lista vacia -> no hasMore, no cursor', r3.data.length === 0 && !r3.hasMore && r3.nextCursor === null);
 
+// --- Cursor con discriminador `t` (cross-table) ---
+const cursorT = encodeCursor('2026-05-20', 'uuid-abc', 'dynamic');
+const decT = decodeCursor(cursorT);
+t('encode/decode preserva discriminador t', decT?.t === 'dynamic');
+
+const cursorNoT = encodeCursor('2026-05-20', 'uuid-abc');
+const decNoT = decodeCursor(cursorNoT);
+t('cursor sin t -> decode sin t', decNoT?.t === undefined);
+
+// buildPage con typeKey
+const rowsT = [
+  { id: 'a', date: '2026-05-20', type: 'legacy'  },
+  { id: 'b', date: '2026-05-19', type: 'dynamic' },
+  { id: 'c', date: '2026-05-18', type: 'legacy'  },
+];
+const rT = buildPage(rowsT, 2, 'date', 'id', 'type');
+const decRT = rT.nextCursor ? decodeCursor(rT.nextCursor) : null;
+t('buildPage con typeKey emite cursor con t', decRT?.t === 'dynamic');
+t('cursor incluye id y date correctos', decRT?.i === 'b' && decRT?.v === '2026-05-19');
+
+// buildPage sin typeKey no debe incluir t
+const rNoT = buildPage(rowsT, 2, 'date', 'id');
+const decRNoT = rNoT.nextCursor ? decodeCursor(rNoT.nextCursor) : null;
+t('buildPage sin typeKey -> cursor sin t', decRNoT?.t === undefined);
+
+// Discriminador con valor falsy (null/undefined) en la fila: no se serializa
+const rowsNullType = [
+  { id: 'a', date: '2026-05-20', type: null as any },
+  { id: 'b', date: '2026-05-19', type: null as any },
+  { id: 'c', date: '2026-05-18', type: null as any },
+];
+const rNull = buildPage(rowsNullType, 2, 'date', 'id', 'type');
+const decNull = rNull.nextCursor ? decodeCursor(rNull.nextCursor) : null;
+t('typeKey con valor null en la fila -> cursor sin t', decNull?.t === undefined);
+
 const total = pass + fail;
 console.log('\n' + pass + '/' + total + ' pagination unit tests passed');
 process.exit(fail === 0 ? 0 : 1);
