@@ -87,6 +87,14 @@ interface TrajectoryGoals {
   totalWeeks: number;       // managed here, overrides roadmap.totalWeeks for trajectory purposes
 }
 
+interface RoadmapConfig {
+  primaryGoal?: string;
+  nutritionApproach?: string;
+  trainingFreq?: string;
+  intensityLevel?: string;
+  duration?: number;
+}
+
 interface RoadmapData {
   status: string;
   currentWeek: number;
@@ -101,6 +109,7 @@ interface RoadmapData {
     constraints: string;
   };
   trajectoryGoals?: TrajectoryGoals;
+  config?: RoadmapConfig;
 }
 
 // --- EMPTY SCAFFOLD FACTORY ---
@@ -651,6 +660,25 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-sm text-slate-500">{client?.gender}, {t('years_old_short', { age: client?.age })}</span>
                   </div>
+                  {roadmap.config && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {roadmap.config.primaryGoal && (
+                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          {t(roadmap.config.primaryGoal as any, { defaultValue: roadmap.config.primaryGoal.replace(/_/g, ' ') })}
+                        </span>
+                      )}
+                      {roadmap.config.trainingFreq && (
+                        <span className="text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          {roadmap.config.trainingFreq}d/sem
+                        </span>
+                      )}
+                      {roadmap.config.nutritionApproach && (
+                        <span className="text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          {roadmap.config.nutritionApproach}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -676,7 +704,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
                     className={`flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 min-w-[120px] disabled:opacity-60 ${
                       saveStatus === 'saved' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
                       saveStatus === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
-                      'bg-slate-800 hover:bg-slate-900 text-white'
+                      'border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                     }`}
                   >
                     {saveStatus === 'saving' && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}

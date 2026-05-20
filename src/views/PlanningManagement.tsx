@@ -163,7 +163,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                         className={`px-6 py-2.5 rounded-xl transition-all text-sm font-bold flex items-center gap-2 whitespace-nowrap border ${
                           client.status === 'ACTIVE'
                             ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100'
-                            : 'bg-slate-900 text-white border-slate-900 hover:bg-black'
+                            : 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600'
                         }`}
                       >
                         <span className="material-symbols-outlined text-[18px]">

@@ -122,15 +122,24 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
                     <div key={tpl.id || tpl.key} onClick={edit}
                       className="group flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-colors">
                       <div className="flex items-center gap-1.5 text-orange-500 font-bold w-24 shrink-0">
-                        <Flame className="w-4 h-4" />{(tpl.target_calories || 0).toLocaleString()}
+                        <Flame className="w-4 h-4" /><span>{(tpl.target_calories || 0).toLocaleString()}</span>
+                        <span className="text-[9px] text-slate-400 uppercase font-bold">kcal</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-slate-900 truncate">{tpl.name}</h3>
-                        <p className="text-xs text-slate-500 truncate">{tpl.description || '—'}</p>
+                        {macros && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 max-w-[120px] bg-slate-100 rounded-full h-1.5 overflow-hidden flex">
+                              <div className="bg-blue-500 h-full" style={{ width: `${macros.p}%` }} />
+                              <div className="bg-emerald-500 h-full" style={{ width: `${macros.c}%` }} />
+                              <div className="bg-amber-500 h-full" style={{ width: `${macros.f}%` }} />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400">{macros.p}P · {macros.c}C · {macros.f}F</span>
+                          </div>
+                        )}
                       </div>
-                      {macros && <span className="text-[11px] font-bold text-slate-400 hidden sm:block">{macros.p}P · {macros.c}C · {macros.f}F</span>}
-                      {mealCount != null && <span className="text-[11px] font-bold text-slate-400 hidden md:flex items-center gap-1"><Utensils className="w-3.5 h-3.5" />{mealCount}</span>}
-                      <div className="flex gap-1">
+                      {mealCount != null && <span className="text-[11px] font-bold text-slate-400 hidden md:flex items-center gap-1 shrink-0"><Utensils className="w-3.5 h-3.5" />{mealCount}</span>}
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); edit(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); remove(tpl); }} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>

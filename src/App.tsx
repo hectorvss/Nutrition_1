@@ -182,6 +182,13 @@ export default function App() {
                   steps: '',
                   sleep: '',
                   constraints: ''
+                },
+                config: {
+                  primaryGoal: settings.primaryGoal,
+                  nutritionApproach: settings.nutritionApproach,
+                  trainingFreq: settings.trainingFreq,
+                  intensityLevel: settings.intensityLevel,
+                  duration: settings.duration
                 }
               };
               setDraftPlanning(generatedDraft);
