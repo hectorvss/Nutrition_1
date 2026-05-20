@@ -3,7 +3,7 @@ import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import { BlockStrategicDetails, RoadmapBlock, Milestone, Goal, TrajectoryGoals, RoadmapData } from '../types/planning';
-import { getInitialData, computeTrajectory } from './planning/helpers';
+import { getInitialData } from './planning/helpers';
 import PlanningHeader from './planning/PlanningHeader';
 import RoadmapTimeline from './planning/RoadmapTimeline';
 import BlockStrategyEditor from './planning/BlockStrategyEditor';
@@ -11,9 +11,6 @@ import TrajectoryChart from './planning/TrajectoryChart';
 import GoalsCard from './planning/GoalsCard';
 import MilestonesSection from './planning/MilestonesSection';
 import BlockEditModal from './planning/BlockEditModal';
-
-// Suppress unused import warnings — these are re-exported for consumers
-void computeTrajectory;
 
 export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
   const { t, language } = useLanguage();
