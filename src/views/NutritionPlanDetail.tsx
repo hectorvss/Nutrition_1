@@ -1,17 +1,17 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Printer, 
-  Share2, 
-  Edit3, 
-  Plus, 
-  MoreVertical, 
-  Flame, 
-  Clock, 
-  Sunrise, 
-  Sun, 
-  Moon, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  Printer,
+  Share2,
+  Edit3,
+  Plus,
+  MoreVertical,
+  Flame,
+  Clock,
+  Sunrise,
+  Sun,
+  Moon,
   Cookie,
   Trash2,
   PieChart,
@@ -24,7 +24,8 @@ import {
   Grid,
   X,
   GripVertical,
-  Check
+  Check,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useFoodContext, FoodItem } from '../context/FoodContext';
 import { fetchWithAuth } from '../api';
@@ -122,6 +123,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   // "General mode" was removed — the editor always works with specific foods.
   const [mode] = useState<'general' | 'example'>('example');
 
+  // ─── Plan config (TK-44) ─────────────────────────────────────────────────
+  const [targetCalories, setTargetCalories] = useState(2000);
+  const [targetMacros, setTargetMacros] = useState({ p: 30, c: 45, f: 25 });
+  const [showPlanConfig, setShowPlanConfig] = useState(false);
+
   // Supplements attached to this plan + the searchable supplement database.
   const [supplements, setSupplements] = useState<any[]>([]);
   const [supplementCatalog, setSupplementCatalog] = useState<any[]>([]);
@@ -143,6 +149,8 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           const json = tpl?.data_json || {};
           setFullPlanData(json);
           setSupplements(json.supplements || []);
+          setTargetCalories(tpl.target_calories || json.config?.targetCalories || 2000);
+          setTargetMacros(json.config?.macros || json.macros || { p: 30, c: 45, f: 25 });
           setMeals((json.meals || []).map((m: any) => ({
             ...m,
             items: (m.items || []).map((i: any) => ({ ...i, quantity: i.multiplier || i.quantity || 1 })),
@@ -162,6 +170,8 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         const json = initialPlanData.data_json;
         setFullPlanData(json);
         setSupplements(json.supplements || []);
+        setTargetCalories(json.config?.targetCalories || 2000);
+        setTargetMacros(json.config?.macros || json.macros || { p: 30, c: 45, f: 25 });
 
         let targetMeals = [];
         // Support weekly structure with day-specific selection
@@ -195,6 +205,8 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           const json = data.data_json;
           setFullPlanData(json);
           setSupplements(json.supplements || []);
+          setTargetCalories(json.config?.targetCalories || 2000);
+          setTargetMacros(json.config?.macros || json.macros || { p: 30, c: 45, f: 25 });
 
           let targetMeals = [];
           if (json.days) {
@@ -286,10 +298,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           const { icon, ...rest } = m as any;
           return { ...rest, iconName: (m as any).iconName || 'Cookie' };
         });
-        const finalDataJson = { ...(fullPlanData || {}), type: 'template', meals: mealsToSave, supplements };
+        const finalDataJson = { ...(fullPlanData || {}), type: 'template', meals: mealsToSave, supplements, config: { ...(fullPlanData?.config || {}), targetCalories, macros: targetMacros } };
         await fetchWithAuth(`/manager/nutrition-templates/${templateId}`, {
           method: 'PUT',
-          body: JSON.stringify({ data_json: finalDataJson }),
+          body: JSON.stringify({ data_json: finalDataJson, target_calories: targetCalories }),
         });
         setFullPlanData(finalDataJson);
         alert(t('plan_saved_success'));
@@ -320,7 +332,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         };
       });
 
-      let finalDataJson: any = { ...(fullPlanData || {}), mode };
+      let finalDataJson: any = { ...(fullPlanData || {}), mode, config: { ...(fullPlanData?.config || {}), targetCalories, macros: targetMacros } };
 
       // A plan is "weekly" if a day is selected OR the existing plan already
       // has a weekly structure. In that case never write a root-level `meals`
@@ -1089,6 +1101,81 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
         {/* Right Column: Stats & Library */}
         <div className="w-full lg:w-[380px] flex flex-col gap-6 sticky top-6">
+
+          {/* Plan Config Card (TK-44) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <button
+              onClick={() => setShowPlanConfig(p => !p)}
+              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <SlidersHorizontal className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="text-sm font-bold text-slate-700">{t('plan_config_label', { defaultValue: 'Objetivo del plan' })}</span>
+                {targetCalories > 0 && (
+                  <span className="text-[10px] font-bold text-slate-400 truncate ml-1">
+                    {targetCalories} kcal · {targetMacros.p}P/{targetMacros.c}C/{targetMacros.f}F
+                  </span>
+                )}
+              </div>
+              <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ml-2 ${showPlanConfig ? 'rotate-90' : ''}`} />
+            </button>
+            {showPlanConfig && (
+              <div className="px-4 pb-4 border-t border-slate-100 space-y-4 pt-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                    {t('target_calories_label', { defaultValue: 'Calorías objetivo' })}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={9999}
+                      value={targetCalories || ''}
+                      onChange={e => setTargetCalories(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                    />
+                    <span className="text-xs font-bold text-slate-400">kcal</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                    {t('macro_split_label', { defaultValue: 'Distribución de macros (%)' })}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { key: 'p', label: t('protein_short'), ring: 'focus:ring-blue-500', dot: 'bg-blue-500' },
+                      { key: 'c', label: t('carbs_short'), ring: 'focus:ring-emerald-500', dot: 'bg-emerald-500' },
+                      { key: 'f', label: t('fat_short'), ring: 'focus:ring-amber-500', dot: 'bg-amber-500' },
+                    ] as const).map(({ key, label, ring, dot }) => (
+                      <div key={key} className="flex flex-col items-center gap-1">
+                        <div className={`w-2 h-2 rounded-full ${dot}`}></div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">{label}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={targetMacros[key]}
+                          onChange={e => {
+                            const v = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                            setTargetMacros(prev => ({ ...prev, [key]: v }));
+                          }}
+                          className={`w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-center text-slate-900 focus:outline-none focus:ring-2 ${ring}`}
+                        />
+                        <span className="text-[10px] text-slate-400">%</span>
+                      </div>
+                    ))}
+                  </div>
+                  {(targetMacros.p + targetMacros.c + targetMacros.f) !== 100 && (
+                    <p className="text-[10px] text-amber-600 font-bold mt-2 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 shrink-0" />
+                      {t('macros_must_sum_100', { defaultValue: `Total: ${targetMacros.p + targetMacros.c + targetMacros.f}% — debe ser 100%` })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Live Macro Totals Card */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex-shrink-0">
             <div className="flex items-center justify-between mb-6">
@@ -1131,9 +1218,15 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 <span className={`text-3xl font-bold ${totalItems === 0 ? 'text-slate-300' : 'text-slate-900'}`}>
                   {Math.round(totalCalories)}
                 </span>
-                <span className={`text-[10px] uppercase font-bold tracking-widest mt-1 ${totalItems === 0 ? 'text-slate-300' : 'text-slate-400'}`}>
-                  kcal
-                </span>
+                {targetCalories > 0 ? (
+                  <span className={`text-[9px] font-bold mt-0.5 ${totalCalories > targetCalories ? 'text-red-500' : 'text-slate-400'}`}>
+                    /{targetCalories} kcal
+                  </span>
+                ) : (
+                  <span className={`text-[10px] uppercase font-bold tracking-widest mt-1 ${totalItems === 0 ? 'text-slate-300' : 'text-slate-400'}`}>
+                    kcal
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1160,6 +1253,29 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 </div>
               ))}
             </div>
+
+            {/* Calorie progress vs target (TK-44) */}
+            {targetCalories > 0 && (
+              <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide">
+                  <span>{t('calories_progress_label', { defaultValue: 'Progreso de calorías' })}</span>
+                  <span className={totalCalories > targetCalories ? 'text-red-500' : 'text-emerald-600'}>
+                    {Math.round(totalCalories)}/{targetCalories}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${totalCalories > targetCalories ? 'bg-red-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(100, targetCalories > 0 ? (totalCalories / targetCalories) * 100 : 0)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {totalCalories > targetCalories
+                    ? `+${Math.round(totalCalories - targetCalories)} kcal ${t('over_target', { defaultValue: 'sobre el objetivo' })}`
+                    : `${Math.round(targetCalories - totalCalories)} kcal ${t('remaining', { defaultValue: 'restantes' })}`}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Library Card – mode-conditional */}
