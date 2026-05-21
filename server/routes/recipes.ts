@@ -105,22 +105,49 @@ router.post('/', verifyManager, async (req: any, res) => {
   }
 });
 
-// PATCH /:id — actualiza una receta del manager (no se pueden editar globales)
+// PATCH /:id — actualiza la receta del manager; si la receta es un preset
+// global, se clona en una copia propia del manager con los cambios aplicados
+// (copy-on-write), dejando el preset intacto para el resto de coaches.
 router.patch('/:id', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   try {
     const payload = pickRecipeFields(req.body);
-    const { data, error } = await supabaseAdmin
+
+    // 1. Intentar actualizar una receta propia del manager.
+    const { data: own, error: ownErr } = await supabaseAdmin
       .from('recipes')
       .update({ ...payload, updated_at: new Date().toISOString() })
       .eq('id', req.params.id)
       .eq('manager_id', managerId)
-      .select()
-      .maybeSingle();
+      .select();
+    if (ownErr) throw ownErr;
+    if (own && own.length) return res.json(own[0]);
 
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Recipe not found' });
-    res.json(data);
+    // 2. No es suya — copy-on-write desde el preset global.
+    const { data: src, error: srcErr } = await supabaseAdmin
+      .from('recipes')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('is_global', true)
+      .maybeSingle();
+    if (srcErr) throw srcErr;
+    if (!src) return res.status(404).json({ error: 'Recipe not found' });
+
+    const language = await getManagerLanguage(managerId);
+    const clone: any = {};
+    for (const f of RECIPE_FIELDS) clone[f] = src[f];
+    Object.assign(clone, payload);
+    clone.manager_id = managerId;
+    clone.is_global = false;
+    clone.language = language;
+
+    const { data: created, error: insErr } = await supabaseAdmin
+      .from('recipes')
+      .insert(clone)
+      .select()
+      .single();
+    if (insErr) throw insErr;
+    res.json(created);
   } catch (error: any) {
     console.error('Error updating recipe:', error);
     res.status(500).json({ error: safeErr(error) });
