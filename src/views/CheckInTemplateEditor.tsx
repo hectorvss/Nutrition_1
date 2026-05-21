@@ -17,6 +17,7 @@ import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { localizeSchema } from '../constants/templateI18n';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 import { Lock } from 'lucide-react';
@@ -29,7 +30,7 @@ interface CheckInTemplateEditorProps {
 
 export default function CheckInTemplateEditor({ templateId, onClose, onSave }: CheckInTemplateEditorProps) {
   const { settings } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [template, setTemplate] = useState<CheckInTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,9 +53,15 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
           // Prepend the system fixed steps (marked `locked`) that the custom
           // template doesn't already define, so they show inline in the editor.
           const customStepIds = new Set(customSchema.map((s: any) => s.id));
-          const fixedSteps = (Array.isArray(fixed) ? fixed : [])
-            .filter((s: any) => !customStepIds.has(s.id))
-            .map((s: any) => ({ ...s, locked: true }));
+          // Fixed steps are localized to the manager's language for display.
+          // They are `locked` and stripped from `template_schema` on save, so
+          // localizing them never persists translated copies.
+          const fixedSteps = localizeSchema(
+            (Array.isArray(fixed) ? fixed : [])
+              .filter((s: any) => !customStepIds.has(s.id))
+              .map((s: any) => ({ ...s, locked: true })),
+            language
+          );
           setTemplate({
             ...found,
             templateSchema: [...fixedSteps, ...customSchema]
@@ -69,7 +76,7 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
       }
     }
     loadTemplate();
-  }, [templateId, t]);
+  }, [templateId, t, language]);
 
   const handleSave = async () => {
     if (!template) return;
@@ -221,10 +228,6 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
               onChange={(e) => setTemplate({ ...template, name: e.target.value })}
               className="bg-transparent border-none text-xl font-bold text-slate-900 dark:text-white p-0 focus:ring-0 outline-none focus:outline-none focus:border-none min-w-[200px]"
             />
-            <div className="flex items-center gap-2 mt-0.5">
-               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: settings.theme_color }} />
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('protocol_builder')}</p>
-            </div>
           </div>
         </div>
         <div className="flex items-center gap-4">

@@ -16,6 +16,7 @@ import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { localizeSchema } from '../constants/templateI18n';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
 import { Reorder, AnimatePresence } from 'framer-motion';
 import { Lock } from 'lucide-react';
@@ -27,7 +28,7 @@ interface OnboardingFlowEditorProps {
 
 export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowEditorProps) {
   const { settings } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [template, setTemplate] = useState<CheckInTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,9 +53,14 @@ export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowE
         if (found) {
           const customSchema: any[] = found.template_schema || found.templateSchema || [];
           const customStepIds = new Set(customSchema.map((s: any) => s.id));
-          const fixedSteps = (Array.isArray(fixed) ? fixed : [])
-            .filter((s: any) => !customStepIds.has(s.id))
-            .map((s: any) => ({ ...s, locked: true }));
+          // Fixed steps localized for display; they are `locked` and stripped
+          // on save, so localizing never persists translated copies.
+          const fixedSteps = localizeSchema(
+            (Array.isArray(fixed) ? fixed : [])
+              .filter((s: any) => !customStepIds.has(s.id))
+              .map((s: any) => ({ ...s, locked: true })),
+            language
+          );
           setTemplate({
             ...found,
             templateSchema: [...fixedSteps, ...customSchema]
@@ -69,7 +75,7 @@ export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowE
       }
     }
     loadTemplate();
-  }, [flowId, t]);
+  }, [flowId, t, language]);
 
   const handleSave = async () => {
     if (!template || !flowId) return;

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Camera } from 'lucide-react';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../../types/checkIn';
 import { useLanguage } from '../../context/LanguageContext';
+import { localizeSchema } from '../../constants/templateI18n';
 
 interface CheckInReviewRendererProps {
   template: CheckInTemplate;
@@ -10,8 +11,11 @@ interface CheckInReviewRendererProps {
 }
 
 export default function CheckInReviewRenderer({ template, answers, isClient = false }: CheckInReviewRendererProps) {
-  const { t } = useLanguage();
-  const steps = template.templateSchema || [];
+  const { t, language } = useLanguage();
+  const steps = useMemo(
+    () => localizeSchema(template.templateSchema || [], language),
+    [template, language]
+  );
 
   const SectionWrapper = ({ title, subtitle, icon, children }: any) => (
     <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 mb-6">

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { fetchWithAuth } from '../../api';
 import { CheckInTemplate } from '../../types/checkIn';
 import { DEFAULT_CHECKIN_TEMPLATE } from '../../constants/defaultCheckInTemplate';
 import CheckInStepRenderer from '../../components/checkin/CheckInStepRenderer';
 import { useLanguage } from '../../context/LanguageContext';
+import { localizeSchema } from '../../constants/templateI18n';
 
 interface WeeklyCheckinFlowProps {
   onComplete: () => void;
@@ -45,7 +46,7 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<s
 };
 
 export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyCheckinFlowProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [template, setTemplate] = useState<CheckInTemplate | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(1); // Start directly at step 1
@@ -87,7 +88,12 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
     );
   }
 
-  const steps = template?.templateSchema || [];
+  // Localize the schema live: toggling the app language re-localizes the
+  // whole template (titles, options, conditional values) with no re-fetch.
+  const steps = useMemo(
+    () => localizeSchema(template?.templateSchema || [], language),
+    [template, language]
+  );
   const totalSteps = steps.length;
   const hasSteps = totalSteps > 0;
 

@@ -11,6 +11,7 @@ import { fetchWithAuth } from '../api';
 import CheckInStepRenderer from './checkin/CheckInStepRenderer';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { localizeSchema } from '../constants/templateI18n';
 
 interface OnboardingPopupProps {
   onComplete: () => void;
@@ -52,7 +53,7 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<s
 
 export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   const { settings } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [activeAssignment, setActiveAssignment] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -118,7 +119,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   };
 
   const handleNext = () => {
-    const templateSchema = activeAssignment?.template?.templateSchema || [];
+    const templateSchema = localizeSchema(activeAssignment?.template?.templateSchema || [], language);
     const stepData = templateSchema[currentStepIndex];
 
     // Validate required fields in the current step. Conditional questions that
@@ -182,7 +183,7 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
   if (loading) return null;
   if (!activeAssignment) return null;
 
-  const templateSchema = activeAssignment?.template?.templateSchema || [];
+  const templateSchema = localizeSchema(activeAssignment?.template?.templateSchema || [], language);
   const currentStep = templateSchema[currentStepIndex];
 
   if (isSubmitted) {

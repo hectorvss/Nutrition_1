@@ -20,6 +20,7 @@ import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { DEFAULT_CHECKIN_TEMPLATE } from '../constants/defaultCheckInTemplate';
+import { localizeSchema } from '../constants/templateI18n';
 import { useLanguage } from '../context/LanguageContext';
 
 interface CheckInTemplatesProps {
@@ -59,10 +60,13 @@ export default function CheckInTemplates({ onEdit }: CheckInTemplatesProps) {
 
   const handleCreateFromDefault = async () => {
     try {
+      // The new template is born in the manager's current language: both the
+      // name and the whole question schema are localized at creation time so
+      // a Spanish coach never gets an English template.
       const newTemplate = {
-        name: 'Standard Check-in',
+        name: language === 'es' ? 'Check-in estándar' : 'Standard Check-in',
         description: t('new_template_based_on_standard_flow'),
-        template_schema: DEFAULT_CHECKIN_TEMPLATE.templateSchema,
+        template_schema: localizeSchema(DEFAULT_CHECKIN_TEMPLATE.templateSchema, language),
         is_default: templates.length === 0
       };
       await fetchWithAuth('/check-ins/manager/checkin-templates', {
