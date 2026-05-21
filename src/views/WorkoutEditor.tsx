@@ -499,6 +499,50 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
     0
   );
 
+  // Workout summary card — rendered below the exercise library so the library
+  // stays within easy drag-and-drop reach of the workout blocks.
+  const WORKOUT_SUMMARY = (
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm p-8 shrink-0">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold text-slate-900">{t('workout_summary')}</h3>
+              </div>
+              <div className="flex flex-col items-center">
+                <div className={`relative w-44 h-44 ${totalExercises === 0 ? 'opacity-40 grayscale' : ''}`}>
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <circle className="text-slate-100" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" />
+                    {totalExercises > 0 && (
+                      <circle className="text-emerald-500" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" strokeDasharray="100 100" strokeLinecap="round" />
+                    )}
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center flex-col">
+                    <span className={`text-3xl font-black leading-none ${totalExercises === 0 ? 'text-slate-400' : 'text-slate-900'}`}>{totalExercises}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
+                  </div>
+                </div>
+                <div className="mt-8 w-full text-center">
+                  {totalExercises === 0 ? (
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t('add_exercises_for_breakdown')}</p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-3 w-full">
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-2xl font-black text-slate-900 leading-none">{blocks.length}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('blocks_label', { defaultValue: 'Bloques' })}</span>
+                      </div>
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-2xl font-black text-slate-900 leading-none">{totalExercises}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
+                      </div>
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-2xl font-black text-slate-900 leading-none">{totalSets}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('sets_label', { defaultValue: 'Series' })}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+  );
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
       {/* Header */}
@@ -694,47 +738,6 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
 
           {/* Right Column: Summary & Library */}
           <div className="w-full lg:w-[400px] flex flex-col gap-8">
-            {/* Workout Summary */}
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm p-8 shrink-0">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-slate-900">{t('workout_summary')}</h3>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className={`relative w-44 h-44 ${totalExercises === 0 ? 'opacity-40 grayscale' : ''}`}>
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                    <circle className="text-slate-100" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" />
-                    {totalExercises > 0 && (
-                      <circle className="text-emerald-500" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" strokeDasharray="100 100" strokeLinecap="round" />
-                    )}
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className={`text-3xl font-black leading-none ${totalExercises === 0 ? 'text-slate-400' : 'text-slate-900'}`}>{totalExercises}</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
-                  </div>
-                </div>
-                <div className="mt-8 w-full text-center">
-                  {totalExercises === 0 ? (
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t('add_exercises_for_breakdown')}</p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-3 w-full">
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-2xl font-black text-slate-900 leading-none">{blocks.length}</span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('blocks_label', { defaultValue: 'Bloques' })}</span>
-                      </div>
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-2xl font-black text-slate-900 leading-none">{totalExercises}</span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
-                      </div>
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-2xl font-black text-slate-900 leading-none">{totalSets}</span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('sets_label', { defaultValue: 'Series' })}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Exercise Library */}
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col relative sticky top-6">
               <div className="px-6 py-6 border-b border-slate-100 flex flex-col gap-4 shrink-0">
@@ -786,6 +789,9 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                 </div>
               </div>
             </div>
+
+            {/* Workout Summary — below the library for easy drag-and-drop. */}
+            {WORKOUT_SUMMARY}
           </div>
         </div>
       </div>
