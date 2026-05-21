@@ -394,7 +394,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
           {/* Scrollable area — preview + blueprint scroll independently so the
               config card + button below stay pinned and always visible. */}
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-hide flex flex-col gap-6">
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 text-center shadow-sm relative overflow-hidden group">
+          <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 text-center shadow-sm relative overflow-hidden group shrink-0">
             <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/20 group-hover:bg-emerald-500 transition-colors"></div>
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-inner group-hover:scale-110 transition-transform">
               <Eye className="w-8 h-8 text-slate-300" />
@@ -413,7 +413,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               week-by-week, KPI targets, goals) so the coach sees exactly what
               the plan contains before creating the draft. */}
           {selectedTemplate?.data?.blocks?.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4 text-left">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4 text-left shrink-0">
               <h3 className="font-bold text-slate-900 uppercase tracking-tight text-sm flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-500" />
                 {t('plan_blueprint', { defaultValue: 'Estructura del plan' })}
