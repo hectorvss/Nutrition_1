@@ -567,8 +567,10 @@ export const TEMPLATE_ES: Record<string, string> = {
   'Standard Onboarding': 'Onboarding estándar',
   'Comprehensive weekly check-in template. Tracks adherence, body progress, recovery, training, and more.':
     'Plantilla completa de check-in semanal. Registra adherencia, progreso corporal, recuperación, entrenamiento y más.',
+  // NOTE: the ES value must match the i18n string verbatim (no accent on
+  // "estandar") so the reverse ES→EN lookup finds stored descriptions.
   'New template based on the standard flow':
-    'Nueva plantilla basada en el flujo estándar',
+    'Nueva plantilla basada en el flujo estandar',
   'Comprehensive check-in':
     'Check-in completo',
 
@@ -585,27 +587,40 @@ export const TEMPLATE_ES: Record<string, string> = {
 
 const OPTION_KEY_TYPES = new Set(['measurement_group', 'photo_group']);
 
+// Reverse dictionary (ES → EN). Lets us translate content that was STORED in
+// Spanish (e.g. a template created while the app was in Spanish) back to
+// English. First-write wins on the rare ambiguous scale word.
+const TEMPLATE_EN: Record<string, string> = (() => {
+  const rev: Record<string, string> = {};
+  for (const [en, es] of Object.entries(TEMPLATE_ES)) {
+    if (!(es in rev)) rev[es] = en;
+  }
+  return rev;
+})();
+
 /**
- * Translates a single string (template name, description, …) via the
- * dictionary. Returns the original for `lang !== 'es'` or unknown strings.
+ * Translates a single string (template name, description, …) in BOTH
+ * directions: to Spanish via the dictionary, to English via the reverse
+ * dictionary. Unknown strings (manager-authored text) pass through.
  */
 export function localizeText(s: unknown, lang: string): string {
   if (typeof s !== 'string') return (s as any) ?? '';
-  if (lang !== 'es') return s;
-  return TEMPLATE_ES[s] ?? s;
+  return (lang === 'es' ? TEMPLATE_ES[s] : TEMPLATE_EN[s]) ?? s;
 }
 
 const tr = (s: unknown, lang: string): unknown => {
-  if (lang !== 'es' || typeof s !== 'string') return s;
-  return TEMPLATE_ES[s] ?? s;
+  if (typeof s !== 'string') return s;
+  // Bidirectional: to Spanish via the dictionary, to English via its reverse.
+  return (lang === 'es' ? TEMPLATE_ES[s] : TEMPLATE_EN[s]) ?? s;
 };
 
 /**
- * Deep-localizes a check-in / onboarding template schema. Returns a NEW array
- * (never mutates the input). For `lang !== 'es'` the schema is returned as-is.
+ * Deep-localizes a check-in / onboarding template schema in BOTH directions
+ * (EN→ES and ES→EN). Returns a NEW array, never mutates the input. Content
+ * authored by the manager (not in the dictionary) passes through untouched.
  */
 export function localizeSchema<T = any>(schema: T, lang: string): T {
-  if (lang !== 'es' || !Array.isArray(schema)) return schema;
+  if (!Array.isArray(schema)) return schema;
   return (schema as any[]).map((step) => {
     if (!step || typeof step !== 'object') return step;
     const localized: any = {
@@ -645,7 +660,7 @@ export function localizeSchema<T = any>(schema: T, lang: string): T {
  * `template_schema` shapes used across the codebase.
  */
 export function localizeTemplate<T extends Record<string, any>>(template: T | null | undefined, lang: string): T | null | undefined {
-  if (!template || lang !== 'es') return template;
+  if (!template) return template;
   const out: any = { ...template };
   if (Array.isArray(template.templateSchema)) out.templateSchema = localizeSchema(template.templateSchema, lang);
   if (Array.isArray(template.template_schema)) out.template_schema = localizeSchema(template.template_schema, lang);
