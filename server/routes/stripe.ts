@@ -94,6 +94,61 @@ router.post('/create-checkout-session', verifyManager, async (req: AuthedRequest
   }
 });
 
+// 1b. Sync a completed Checkout Session ON RETURN — does NOT depend on the
+// webhook. When the user comes back from Stripe with ?session_id=, the frontend
+// calls this: we retrieve the session + subscription straight from Stripe and
+// upsert manager_subscriptions. This guarantees the plan upgrade is applied
+// immediately even if the Stripe webhook is not configured / has not fired yet.
+// (The webhook is still the source of truth for later async events: renewals,
+// cancellations, payment failures.)
+router.post('/sync-session', verifyManager, async (req: AuthedRequest, res) => {
+  const { sessionId } = req.body;
+  if (!sessionId || typeof sessionId !== 'string') {
+    return res.status(400).json({ error: 'Missing sessionId' });
+  }
+  try {
+    const session = await stripe!.checkout.sessions.retrieve(sessionId);
+
+    // Security: a manager can only sync a session that belongs to them.
+    if (session.metadata?.userId && session.metadata.userId !== req.user?.id) {
+      return res.status(403).json({ error: 'Session does not belong to this user' });
+    }
+
+    // Not paid yet (user closed the tab early, async payment pending, etc.).
+    if (session.payment_status !== 'paid' && session.status !== 'complete') {
+      return res.json({ synced: false, pending: true });
+    }
+
+    const subscriptionId = session.subscription as string | null;
+    if (!subscriptionId) {
+      return res.json({ synced: false, pending: true });
+    }
+
+    const subscription = await stripe!.subscriptions.retrieve(subscriptionId);
+    const priceId = subscription.items?.data?.[0]?.price?.id;
+    const tier = tierFromPriceId(priceId);
+
+    const { error: upsertErr } = await supabaseAdmin.from('manager_subscriptions').upsert({
+      user_id: req.user!.id,
+      stripe_customer_id: session.customer as string,
+      stripe_subscription_id: subscriptionId,
+      plan_tier: tier,
+      trial_ends_at: null,
+      status: subscription.status,
+      current_period_end: subscriptionPeriodEnd(subscription),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+    if (upsertErr) throw upsertErr;
+
+    logger.info('stripe.sync_session.ok', { userId: req.user?.id, tier, status: subscription.status });
+    res.json({ synced: true, tier, status: subscription.status });
+  } catch (error: unknown) {
+    logger.error('stripe.sync_session.failed', { err: errMessage(error) });
+    res.status(500).json({ error: errMessage(error) });
+  }
+});
+
 // 2. Webhook Handler
 // Note: This requires the raw body to be passed from the main index.ts
 router.post('/webhook', async (req, res) => {

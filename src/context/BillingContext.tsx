@@ -93,14 +93,16 @@ export const BillingProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('billing:limit', onLimit as EventListener);
   }, [refresh]);
 
-  // Returning from Stripe Checkout (?session_id=...): the subscription webhook
-  // lands asynchronously a couple of seconds later. Poll the status until the
-  // plan is no longer 'trial' (or attempts run out), then strip the query param
-  // so a reload doesn't re-trigger polling.
+  // Returning from Stripe Checkout (?session_id=...): we DON'T rely on the
+  // webhook. We call /stripe/sync-session, which retrieves the session +
+  // subscription straight from Stripe and applies the plan upgrade server-side.
+  // Then we refresh the status. A short poll covers the edge case of an
+  // async/pending payment that finalises a few seconds later.
   useEffect(() => {
     if (!user || user.role !== 'MANAGER') return;
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('session_id')) return;
+    const sessionId = params.get('session_id');
+    if (!sessionId) return;
 
     let cancelled = false;
     let attempts = 0;
@@ -110,18 +112,29 @@ export const BillingProvider = ({ children }: { children: ReactNode }) => {
       const qs = p.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     };
-    const poll = async () => {
+    const syncAndRefresh = async () => {
       attempts++;
+      let synced = false;
+      try {
+        const result = await fetchWithAuth('/stripe/sync-session', {
+          method: 'POST',
+          body: JSON.stringify({ sessionId }),
+        });
+        synced = !!result?.synced;
+      } catch (e) {
+        // sync-session failed (e.g. payment still pending) — fall back to a
+        // plain status refresh and retry.
+      }
       const fresh = await refresh();
       if (cancelled) return;
-      // Stop once the webhook has upgraded the plan, or after ~25s.
-      if ((fresh && fresh.tier !== 'trial' && fresh.hasStripeSubscription) || attempts >= 10) {
+      const upgraded = !!(fresh && fresh.tier !== 'trial' && fresh.hasStripeSubscription);
+      if (synced || upgraded || attempts >= 8) {
         clearParam();
         return;
       }
-      setTimeout(poll, 2500);
+      setTimeout(syncAndRefresh, 2500);
     };
-    poll();
+    syncAndRefresh();
     return () => { cancelled = true; };
   }, [user, refresh]);
 
