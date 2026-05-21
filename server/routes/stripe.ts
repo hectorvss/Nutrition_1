@@ -45,9 +45,22 @@ router.post('/create-checkout-session', verifyManager, async (req: AuthedRequest
     // Check if customer already exists
     const { data: subData } = await supabaseAdmin
       .from('manager_subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, stripe_subscription_id, status')
       .eq('user_id', userId)
       .maybeSingle();
+
+    // Guard: a manager with a live subscription must NOT start a new Checkout —
+    // mode:'subscription' would create a SECOND subscription and double-bill.
+    // Plan changes have to go through the Billing Portal (Stripe swaps in place).
+    if (
+      subData?.stripe_subscription_id &&
+      ['active', 'trialing', 'past_due'].includes(String(subData.status))
+    ) {
+      return res.status(409).json({
+        error: 'already_subscribed',
+        message: 'You already have an active subscription. Use "Manage billing" to change your plan.',
+      });
+    }
 
     let customerId = subData?.stripe_customer_id;
 
@@ -57,6 +70,12 @@ router.post('/create-checkout-session', verifyManager, async (req: AuthedRequest
         metadata: { userId },
       });
       customerId = customer.id;
+      // Persist immediately so an abandoned checkout doesn't leak a fresh
+      // duplicate Stripe customer on every retry.
+      await supabaseAdmin
+        .from('manager_subscriptions')
+        .update({ stripe_customer_id: customerId, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
     }
 
     const session = await stripe!.checkout.sessions.create({

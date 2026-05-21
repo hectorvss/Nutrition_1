@@ -175,7 +175,10 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
         {/* Grid de planes + comparativa de features (reusa el componente
             publico Pricing — misma UI que la landing). currentTier marca
             la card del plan que ya tiene el manager. */}
-        <Pricing currentTier={tier} />
+        <Pricing
+          currentTier={tier}
+          onManageBilling={status?.hasStripeSubscription ? openPortal : undefined}
+        />
       </div>
     </div>
   );

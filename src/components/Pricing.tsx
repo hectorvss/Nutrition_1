@@ -14,6 +14,13 @@ interface PricingProps {
    * "pre-plan").
    */
   currentTier?: 'trial' | 'professional' | 'scale' | 'unlimited' | null;
+  /**
+   * Cuando el manager YA tiene una suscripcion de pago activa, cambiar de
+   * plan debe pasar por el Billing Portal de Stripe — un Checkout nuevo
+   * crearia una SEGUNDA suscripcion (doble cobro). Si se pasa, las cards que
+   * no son la actual disparan este callback en vez de create-checkout-session.
+   */
+  onManageBilling?: () => void;
 }
 
 // Stable plan tiers — never derived from translated labels.
@@ -25,7 +32,7 @@ const PRICE_MAP: Record<PlanTier, { monthly: string; annual: string }> = {
   unlimited: { monthly: "price_1TCNAcCR4WvolxlptLzNYdsz", annual: "price_1TCf5cCR4WvolxlpWGhpOgnI" },
 };
 
-export default function Pricing({ onGetStarted, currentTier }: PricingProps) {
+export default function Pricing({ onGetStarted, currentTier, onManageBilling }: PricingProps) {
   const { language } = useLanguage();
   const { user } = useAuth();
   const [isAnnual, setIsAnnual] = useState(false);
@@ -217,6 +224,18 @@ export default function Pricing({ onGetStarted, currentTier }: PricingProps) {
                   <CheckCircle2 className="w-5 h-5" />
                   {isEs ? 'Plan actual' : 'Current plan'}
                 </div>
+              ) : onManageBilling ? (
+                <button
+                  onClick={onManageBilling}
+                  className={`w-full py-4 rounded-full font-bold transition-all duration-300 cursor-pointer border flex items-center justify-center gap-2 ${
+                    idx === 1
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-transparent text-primary border-primary hover:bg-primary hover:text-on-primary'
+                  }`}
+                >
+                  <CreditCard className="w-5 h-5" />
+                  {isEs ? 'Cambiar de plan' : 'Change plan'}
+                </button>
               ) : (
                 <button
                   onClick={() => handleSubscribe(plan.tier)}

@@ -357,7 +357,7 @@ export default function App() {
       />
       
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <TrialBanner onUpgrade={() => setCurrentView('settings')} />
+        <TrialBanner onUpgrade={() => setCurrentView('subscriptions')} />
         {/* Mobile Header Toggle */}
         <div className="lg:hidden p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
