@@ -20,7 +20,7 @@ import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { DEFAULT_CHECKIN_TEMPLATE } from '../constants/defaultCheckInTemplate';
-import { localizeSchema } from '../constants/templateI18n';
+import { localizeSchema, localizeText } from '../constants/templateI18n';
 import { useLanguage } from '../context/LanguageContext';
 
 interface CheckInTemplatesProps {
@@ -263,7 +263,7 @@ ${t('template_will_be_archived_if_has_submissions')}`;
                 </div>
               ) : (
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{template.name}</h3>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{localizeText(template.name, language)}</h3>
                   <button 
                     onClick={() => { 
                       if (template.is_permanent) return;
@@ -278,16 +278,25 @@ ${t('template_will_be_archived_if_has_submissions')}`;
               )}
               
               <p className="text-sm text-slate-500 line-clamp-2 mb-6 font-medium leading-relaxed min-h-[40px]">
-                {template.description || t('no_description_for_template')}
+                {localizeText(template.description, language) || t('no_description_for_template')}
               </p>
 
               <div className="mt-auto space-y-4">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4">
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-3 h-3" />
-                    {new Date(template.updatedAt || template.createdAt || '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                    {(() => {
+                      // The API returns snake_case (updated_at / created_at);
+                      // the camelCase fallbacks were always undefined → "Invalid Date".
+                      const raw = (template as any).updated_at || (template as any).created_at
+                        || (template as any).updatedAt || (template as any).createdAt;
+                      const d = raw ? new Date(raw) : null;
+                      return d && !isNaN(d.getTime())
+                        ? d.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')
+                        : '—';
+                    })()}
                   </span>
-                  <span>{template.templateSchema?.length || 0} {t('steps')}</span>
+                  <span>{template.templateSchema?.length || 0} {t('steps', { defaultValue: language === 'es' ? 'pasos' : 'steps' })}</span>
                 </div>
 
                 <div className="flex items-center gap-2 w-full pt-2">

@@ -22,6 +22,7 @@ import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { localizeText } from '../constants/templateI18n';
 
 interface OnboardingTemplatesProps {
   onEdit?: (templateId: string) => void;
@@ -65,7 +66,7 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
   const handleCreate = async () => {
     try {
       const newTemplate = {
-        name: 'New Onboarding Flow',
+        name: language === 'es' ? 'Nuevo flujo de onboarding' : 'New Onboarding Flow',
         description: t('new_onboarding_flow_description'),
         template_schema: [],
         is_default: templates.length === 0
@@ -267,21 +268,27 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
                 </div>
               ) : (
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{template.name}</h3>
+                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{localizeText(template.name, language)}</h3>
                 </div>
               )}
-              
+
               <p className="text-sm text-slate-500 line-clamp-2 mb-6 font-medium leading-relaxed min-h-[40px]">
-                {template.description || t('no_description_provided')}
+                {localizeText(template.description, language) || t('no_description_provided')}
               </p>
 
               <div className="mt-auto space-y-4">
                 <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4">
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-3 h-3" />
-                    {new Date(template.updated_at || template.created_at || '').toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')}
+                    {(() => {
+                      const raw = template.updated_at || template.created_at;
+                      const d = raw ? new Date(raw) : null;
+                      return d && !isNaN(d.getTime())
+                        ? d.toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US')
+                        : '—';
+                    })()}
                   </span>
-                  <span>{template.templateSchema?.length || 0} {t('steps')}</span>
+                  <span>{template.templateSchema?.length || 0} {t('steps', { defaultValue: language === 'es' ? 'pasos' : 'steps' })}</span>
                 </div>
 
                 <div className="flex items-center gap-2 w-full pt-2">

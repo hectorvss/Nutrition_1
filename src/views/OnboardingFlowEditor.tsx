@@ -16,7 +16,7 @@ import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { localizeSchema } from '../constants/templateI18n';
+import { localizeSchema, localizeText } from '../constants/templateI18n';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
 import { Reorder, AnimatePresence } from 'framer-motion';
 import { Lock } from 'lucide-react';
@@ -53,17 +53,15 @@ export default function OnboardingFlowEditor({ flowId, onBack }: OnboardingFlowE
         if (found) {
           const customSchema: any[] = found.template_schema || found.templateSchema || [];
           const customStepIds = new Set(customSchema.map((s: any) => s.id));
-          // Fixed steps localized for display; they are `locked` and stripped
-          // on save, so localizing never persists translated copies.
-          const fixedSteps = localizeSchema(
-            (Array.isArray(fixed) ? fixed : [])
-              .filter((s: any) => !customStepIds.has(s.id))
-              .map((s: any) => ({ ...s, locked: true })),
-            language
-          );
+          const fixedSteps = (Array.isArray(fixed) ? fixed : [])
+            .filter((s: any) => !customStepIds.has(s.id))
+            .map((s: any) => ({ ...s, locked: true }));
+          // Localize the WHOLE schema (fixed + custom) to the manager's
+          // language — the EN→ES dictionary leaves custom text untouched.
           setTemplate({
             ...found,
-            templateSchema: [...fixedSteps, ...customSchema]
+            name: localizeText(found.name, language),
+            templateSchema: localizeSchema([...fixedSteps, ...customSchema], language)
           });
         } else {
           setError(t('flow_not_found'));

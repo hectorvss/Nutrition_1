@@ -88,6 +88,10 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     { id: 'Completed', label: t('filter_completed'), count: clients.filter(c => !c.isUnreviewed && c.lastCheckInDate).length },
   ];
 
+  // Drives the amber dot on the "Unreviewed" tab — only shown when real
+  // unreviewed check-ins exist.
+  const hasUnreviewed = clients.some(c => c.isUnreviewed);
+
   const enrichedClients = clients.map((c) => {
     return {
       id: c.id,
@@ -143,20 +147,29 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
           />
         </div>
         <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
-          {(['All', 'Unreviewed', 'Completed'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                filter === f
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {f === 'Unreviewed' && <div className="w-2 h-2 rounded-full bg-amber-500" />}
-              {f}
-            </button>
-          ))}
+          {(['All', 'Unreviewed', 'Completed'] as const).map((f) => {
+            // Same wording as the Onboarding screen: Todos / Pendiente / Completado.
+            const label =
+              f === 'All' ? t('all')
+              : f === 'Unreviewed' ? t('pending')
+              : t('completed');
+            // Amber dot only when there are actually unreviewed check-ins.
+            const showDot = f === 'Unreviewed' && hasUnreviewed;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                  filter === f
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {showDot && <div className="w-2 h-2 rounded-full bg-amber-500" />}
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

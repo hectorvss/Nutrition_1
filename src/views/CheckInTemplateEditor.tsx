@@ -17,7 +17,7 @@ import { unwrapList } from '../api/unwrap';
 import { CheckInTemplate, CheckInStep, CheckInQuestion } from '../types/checkIn';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
-import { localizeSchema } from '../constants/templateI18n';
+import { localizeSchema, localizeText } from '../constants/templateI18n';
 import CheckInQuestionEditorCard from '../components/checkin/CheckInQuestionEditorCard';
 import { Reorder, AnimatePresence, motion } from 'framer-motion';
 import { Lock } from 'lucide-react';
@@ -53,18 +53,16 @@ export default function CheckInTemplateEditor({ templateId, onClose, onSave }: C
           // Prepend the system fixed steps (marked `locked`) that the custom
           // template doesn't already define, so they show inline in the editor.
           const customStepIds = new Set(customSchema.map((s: any) => s.id));
-          // Fixed steps are localized to the manager's language for display.
-          // They are `locked` and stripped from `template_schema` on save, so
-          // localizing them never persists translated copies.
-          const fixedSteps = localizeSchema(
-            (Array.isArray(fixed) ? fixed : [])
-              .filter((s: any) => !customStepIds.has(s.id))
-              .map((s: any) => ({ ...s, locked: true })),
-            language
-          );
+          const fixedSteps = (Array.isArray(fixed) ? fixed : [])
+            .filter((s: any) => !customStepIds.has(s.id))
+            .map((s: any) => ({ ...s, locked: true }));
+          // Localize the WHOLE schema (fixed + custom) to the manager's
+          // language. The dictionary is EN→ES only, so manager-authored
+          // custom text (not in the dictionary) passes through untouched.
           setTemplate({
             ...found,
-            templateSchema: [...fixedSteps, ...customSchema]
+            name: localizeText(found.name, language),
+            templateSchema: localizeSchema([...fixedSteps, ...customSchema], language)
           });
         } else {
           setError(t('template_not_found'));

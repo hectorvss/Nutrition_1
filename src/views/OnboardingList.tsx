@@ -123,6 +123,10 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
     return matchesSearch;
   });
 
+  // Drives the amber dot on the "Pendiente" tab — only shown when real
+  // pending onboardings exist (assigned but not yet submitted).
+  const hasPending = enrichedClients.some(c => c.hasOnboarding && !c.hasCompleted);
+
   return (
     <div className="p-6 md:p-8 lg:p-10 w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -153,19 +157,24 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
           />
         </div>
         <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
-          {(['All', 'Pending', 'Completed'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
-                filter === f
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {f === 'All' ? t('all') : f === 'Pending' ? t('pending') : t('completed')}
-            </button>
-          ))}
+          {(['All', 'Pending', 'Completed'] as const).map((f) => {
+            // Amber dot only when there are actually pending onboardings.
+            const showDot = f === 'Pending' && hasPending;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                  filter === f
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {showDot && <div className="w-2 h-2 rounded-full bg-amber-500" />}
+                {f === 'All' ? t('all') : f === 'Pending' ? t('pending') : t('completed')}
+              </button>
+            );
+          })}
         </div>
       </div>
 

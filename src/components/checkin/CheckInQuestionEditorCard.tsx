@@ -49,7 +49,7 @@ export default function CheckInQuestionEditorCard({
   onDuplicate 
 }: CheckInQuestionEditorCardProps) {
   const { settings } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [showTypeSelector, setShowTypeSelector] = React.useState(false);
   const [editingOptionIdx, setEditingOptionIdx] = React.useState<number | null>(null);
   const getTypeLabel = (id: CheckInStepType, fallback: string) => t(`question_type_${id}`, { defaultValue: fallback });
@@ -110,7 +110,7 @@ export default function CheckInQuestionEditorCard({
               readOnly={question.is_fixed}
               value={question.subtitle || ''}
               onChange={(e) => onUpdate({ subtitle: e.target.value })}
-              placeholder="Add an optional instruction or description..."
+              placeholder={t('optional_instruction_placeholder', { defaultValue: language === 'es' ? 'Añade una instrucción o descripción opcional...' : 'Add an optional instruction or description...' })}
               className={`w-full bg-transparent border-none p-0 text-sm font-medium text-slate-400 focus:ring-0 outline-none focus:outline-none focus:border-none placeholder:text-slate-200 ${question.is_fixed ? 'cursor-default' : ''}`}
             />
           </div>

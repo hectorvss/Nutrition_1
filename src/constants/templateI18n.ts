@@ -559,6 +559,19 @@ export const TEMPLATE_ES: Record<string, string> = {
   'All': 'Todos',
   'Some': 'Algunos',
 
+  // ── Template names & descriptions ────────────────────────────────────────
+  'Standard Check-in': 'Check-in estándar',
+  'General Check-in': 'Check-in general',
+  'Standard Weekly Check-in': 'Check-in semanal estándar',
+  'New Onboarding Flow': 'Nuevo flujo de onboarding',
+  'Standard Onboarding': 'Onboarding estándar',
+  'Comprehensive weekly check-in template. Tracks adherence, body progress, recovery, training, and more.':
+    'Plantilla completa de check-in semanal. Registra adherencia, progreso corporal, recuperación, entrenamiento y más.',
+  'New template based on the standard flow':
+    'Nueva plantilla basada en el flujo estándar',
+  'Comprehensive check-in':
+    'Check-in completo',
+
   // ── Options — onboarding ─────────────────────────────────────────────────
   'Male': 'Hombre',
   'Female': 'Mujer',
@@ -571,6 +584,16 @@ export const TEMPLATE_ES: Record<string, string> = {
 };
 
 const OPTION_KEY_TYPES = new Set(['measurement_group', 'photo_group']);
+
+/**
+ * Translates a single string (template name, description, …) via the
+ * dictionary. Returns the original for `lang !== 'es'` or unknown strings.
+ */
+export function localizeText(s: unknown, lang: string): string {
+  if (typeof s !== 'string') return (s as any) ?? '';
+  if (lang !== 'es') return s;
+  return TEMPLATE_ES[s] ?? s;
+}
 
 const tr = (s: unknown, lang: string): unknown => {
   if (lang !== 'es' || typeof s !== 'string') return s;
