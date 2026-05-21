@@ -125,6 +125,37 @@ export const BillingProvider = ({ children }: { children: ReactNode }) => {
     return () => { cancelled = true; };
   }, [user, refresh]);
 
+  // Returning from the Stripe Billing Portal (?billing_updated=1): the plan
+  // change may already be applied or land via webhook shortly after. Refresh
+  // a few times spaced ~2s so the UI reflects the new plan, then strip the
+  // param so a reload doesn't re-trigger it.
+  useEffect(() => {
+    if (!user || user.role !== 'MANAGER') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('billing_updated')) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const clearParam = () => {
+      const p = new URLSearchParams(window.location.search);
+      p.delete('billing_updated');
+      const qs = p.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    };
+    const poll = async () => {
+      attempts++;
+      await refresh();
+      if (cancelled) return;
+      if (attempts >= 3) {
+        clearParam();
+        return;
+      }
+      setTimeout(poll, 2000);
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [user, refresh]);
+
   return (
     <BillingContext.Provider value={{ status, isLoading, error, refresh }}>
       {children}

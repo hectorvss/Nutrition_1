@@ -34,7 +34,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   trial: {
     activeClients: 20,
     monthlyMessages: 2_000,
-    storageGB: 10,
+    storageGB: 2,
     activeAutomations: 10,
     activeAlerts: 25,
     activeWorkflows: 3,
@@ -44,7 +44,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   professional: {
     activeClients: 20,
     monthlyMessages: 2_000,
-    storageGB: 10,
+    storageGB: 2,
     activeAutomations: 10,
     activeAlerts: 25,
     activeWorkflows: 3,
@@ -54,7 +54,7 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   scale: {
     activeClients: 60,
     monthlyMessages: 10_000,
-    storageGB: 50,
+    storageGB: 10,
     activeAutomations: 30,
     activeAlerts: 100,
     activeWorkflows: 10,

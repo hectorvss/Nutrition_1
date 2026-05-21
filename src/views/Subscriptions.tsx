@@ -16,11 +16,22 @@ interface SubscriptionsProps {
   onBack?: () => void;
 }
 
-const TIER_LABEL: Record<string, string> = {
-  trial: 'Prueba gratuita',
-  professional: 'Profesional',
-  scale: 'Scale',
-  unlimited: 'Ilimitado',
+// Etiquetas bilingues por tier. Par [es, en].
+const TIER_LABEL: Record<string, [string, string]> = {
+  trial: ['Prueba gratuita', 'Free trial'],
+  professional: ['Profesional', 'Professional'],
+  scale: ['Scale', 'Scale'],
+  unlimited: ['Ilimitado', 'Unlimited'],
+};
+
+// Mapeo del status crudo de Stripe a etiquetas traducidas. Par [es, en].
+const STATUS_LABEL: Record<string, [string, string]> = {
+  active: ['Activa', 'Active'],
+  trialing: ['En prueba', 'Trial'],
+  past_due: ['Pago pendiente', 'Past due'],
+  canceled: ['Cancelada', 'Canceled'],
+  unpaid: ['Impago', 'Unpaid'],
+  incomplete: ['Incompleta', 'Incomplete'],
 };
 
 export default function Subscriptions({ onBack }: SubscriptionsProps) {
@@ -50,7 +61,10 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
 
   const tier = status?.tier || 'trial';
   const isTrial = tier === 'trial';
-  const tierLabel = TIER_LABEL[tier] || tier;
+  const tierLabel = TIER_LABEL[tier]?.[isEs ? 0 : 1] || tier;
+  const statusLabel = status?.status
+    ? (STATUS_LABEL[status.status]?.[isEs ? 0 : 1] || status.status)
+    : null;
   const fmtDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString(isEs ? 'es-ES' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
 
@@ -97,13 +111,13 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
                     <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                       {isEs ? 'Plan actual' : 'Current plan'}: {tierLabel}
                     </h2>
-                    {status?.status && (
+                    {statusLabel && (
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        status.accessBlocked
+                        status?.accessBlocked
                           ? 'bg-red-100 text-red-600'
                           : 'bg-emerald-100 text-emerald-600'
                       }`}>
-                        {status.status}
+                        {statusLabel}
                       </span>
                     )}
                   </div>
@@ -176,6 +190,7 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
             publico Pricing — misma UI que la landing). currentTier marca
             la card del plan que ya tiene el manager. */}
         <Pricing
+          embedded
           currentTier={tier}
           onManageBilling={status?.hasStripeSubscription ? openPortal : undefined}
         />

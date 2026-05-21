@@ -21,6 +21,13 @@ interface PricingProps {
    * no son la actual disparan este callback en vez de create-checkout-session.
    */
   onManageBilling?: () => void;
+  /**
+   * Modo embebido: cuando el grid de planes se renderiza DENTRO de la pantalla
+   * de Suscripciones (no en la landing publica). Oculta la mega-cabecera de
+   * landing, quita `min-h-screen`, reduce el padding vertical y compacta el
+   * toggle Mensual/Anual para integrarse de forma sobria.
+   */
+  embedded?: boolean;
 }
 
 // Stable plan tiers — never derived from translated labels.
@@ -32,7 +39,7 @@ const PRICE_MAP: Record<PlanTier, { monthly: string; annual: string }> = {
   unlimited: { monthly: "price_1TCNAcCR4WvolxlptLzNYdsz", annual: "price_1TCf5cCR4WvolxlpWGhpOgnI" },
 };
 
-export default function Pricing({ onGetStarted, currentTier, onManageBilling }: PricingProps) {
+export default function Pricing({ onGetStarted, currentTier, onManageBilling, embedded = false }: PricingProps) {
   const { language } = useLanguage();
   const { user } = useAuth();
   const [isAnnual, setIsAnnual] = useState(false);
@@ -72,65 +79,103 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling }: 
       }
     } catch (error) {
       console.error('Subscription error:', error);
-      alert(isEs ? 'Error al iniciar el checkout. Inténtalo de nuevo.' : 'Error initiating checkout. Please try again.');
+      // 409 / already_subscribed: el manager ya tiene una suscripcion activa.
+      // En vez del alert generico, mensaje claro y, si esta disponible, abrir
+      // el Billing Portal para que cambie de plan sin doble cobro.
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('already_subscribed')) {
+        alert(isEs
+          ? "Ya tienes una suscripción activa. Usa 'Gestionar facturación' para cambiar de plan."
+          : "You already have an active subscription. Use 'Manage billing' to change your plan.");
+        onManageBilling?.();
+      } else {
+        alert(isEs ? 'Error al iniciar el checkout. Inténtalo de nuevo.' : 'Error initiating checkout. Please try again.');
+      }
     } finally {
       setLoading(null);
     }
   };
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen">
-      <main className="max-w-7xl mx-auto px-8 py-24">
-        {/* Header Section */}
-        <header className="max-w-3xl mx-auto text-center mb-12">
-          <h1 className="text-5xl md:text-7xl tracking-tight text-primary mb-8 leading-[1.1] font-medium font-sans">
-            {isEs ? 'Precios simples que crecen con tu negocio de coaching' : 'Simple pricing that grows with your coaching business'}
-          </h1>
-          <p className="text-on-surface-variant text-lg leading-relaxed font-medium">
-            {isEs ? 'Obtén acceso completo a la plataforma desde el primer día y elige el plan que encaje con tus clientes activos.' : 'Get full access to the platform from day one, and choose the plan that matches the number of active clients you manage.'}
-          </p>
-          {!user && (
-            <div className="mt-8 inline-flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 rounded-full">
-              <Verified className="w-5 h-5 text-emerald-600" />
-              <span className="font-semibold text-sm">
-                {isEs ? 'Comienza tus 14 días de prueba gratis — sin tarjeta.' : 'Start your 14-day free trial — no card required.'}
-              </span>
-              <button
-                onClick={() => onGetStarted?.()}
-                className="ml-2 px-4 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
-              >
-                {isEs ? 'Empezar gratis' : 'Start free'}
-              </button>
-            </div>
-          )}
-        </header>
+    <div className={`bg-surface font-body text-on-surface ${embedded ? '' : 'min-h-screen'}`}>
+      <main className={`max-w-7xl mx-auto px-8 ${embedded ? 'py-6' : 'py-24'}`}>
+        {/* Header Section — solo en modo landing (no embebido). En la pantalla
+            de Suscripciones ya hay una cabecera propia, asi que se omite. */}
+        {!embedded && (
+          <header className="max-w-3xl mx-auto text-center mb-12">
+            <h1 className="text-5xl md:text-7xl tracking-tight text-primary mb-8 leading-[1.1] font-medium font-sans">
+              {isEs ? 'Precios simples que crecen con tu negocio de coaching' : 'Simple pricing that grows with your coaching business'}
+            </h1>
+            <p className="text-on-surface-variant text-lg leading-relaxed font-medium">
+              {isEs ? 'Obtén acceso completo a la plataforma desde el primer día y elige el plan que encaje con tus clientes activos.' : 'Get full access to the platform from day one, and choose the plan that matches the number of active clients you manage.'}
+            </p>
+            {!user && (
+              <div className="mt-8 inline-flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 rounded-full">
+                <Verified className="w-5 h-5 text-emerald-600" />
+                <span className="font-semibold text-sm">
+                  {isEs ? 'Comienza tus 14 días de prueba gratis — sin tarjeta.' : 'Start your 14-day free trial — no card required.'}
+                </span>
+                <button
+                  onClick={() => onGetStarted?.()}
+                  className="ml-2 px-4 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
+                >
+                  {isEs ? 'Empezar gratis' : 'Start free'}
+                </button>
+              </div>
+            )}
+          </header>
+        )}
 
         {/* Pricing Toggle */}
-        <div className="flex flex-col items-center mb-16">
-          <div className="inline-flex items-center bg-surface-container-high p-1 rounded-full relative">
-            <button 
-              onClick={() => setIsAnnual(false)}
-              className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${!isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
-            >
-              {isEs ? 'Mensual' : 'Monthly'}
-            </button>
-            <button 
-              onClick={() => setIsAnnual(true)}
-              className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
-            >
-              {isEs ? 'Anual' : 'Annual'}
-            </button>
+        {embedded ? (
+          // Modo embebido: toggle compacto y sobrio, sin pildora gigante
+          // centrada. El descuento es un badge pequeno junto a "Anual".
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex items-center bg-surface-container-high p-1 rounded-full">
+              <button
+                onClick={() => setIsAnnual(false)}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer border-none ${!isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+              >
+                {isEs ? 'Mensual' : 'Monthly'}
+              </button>
+              <button
+                onClick={() => setIsAnnual(true)}
+                className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer border-none ${isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+              >
+                {isEs ? 'Anual' : 'Annual'}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isAnnual ? 'bg-on-primary/20 text-on-primary' : 'bg-secondary/15 text-secondary'}`}>
+                  {isEs ? '-20%' : '-20%'}
+                </span>
+              </button>
+            </div>
           </div>
-          {isAnnual && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 text-secondary font-bold text-sm"
-            >
-              {isEs ? 'Ahorra un 20% con facturación anual' : 'Save 20% with annual billing'}
-            </motion.div>
-          )}
-        </div>
+        ) : (
+          <div className="flex flex-col items-center mb-16">
+            <div className="inline-flex items-center bg-surface-container-high p-1 rounded-full relative">
+              <button
+                onClick={() => setIsAnnual(false)}
+                className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${!isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+              >
+                {isEs ? 'Mensual' : 'Monthly'}
+              </button>
+              <button
+                onClick={() => setIsAnnual(true)}
+                className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+              >
+                {isEs ? 'Anual' : 'Annual'}
+              </button>
+            </div>
+            {isAnnual && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 text-secondary font-bold text-sm"
+              >
+                {isEs ? 'Ahorra un 20% con facturación anual' : 'Save 20% with annual billing'}
+              </motion.div>
+            )}
+          </div>
+        )}
 
         {/* Pricing Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch mb-24">
@@ -144,7 +189,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling }: 
                 isEs ? "Acceso completo a la plataforma" : "Full platform access",
                 isEs ? "Hasta 20 clientes activos" : "Up to 20 active clients",
                 isEs ? "Hasta 2.000 mensajes mensuales" : "Up to 2,000 monthly messages",
-                isEs ? "Hasta 10 GB de almacenamiento" : "Up to 10 GB file storage",
+                isEs ? "Hasta 2 GB de almacenamiento" : "Up to 2 GB file storage",
                 isEs ? "Hasta 10 automatizaciones activas" : "Up to 10 active automations",
                 isEs ? "Hasta 25 alertas activas" : "Up to 25 active alerts"
               ],
@@ -160,7 +205,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling }: 
                 isEs ? "Todo lo de Profesional" : "Everything in Professional",
                 isEs ? "Hasta 60 clientes activos" : "Up to 60 active clients",
                 isEs ? "Hasta 10.000 mensajes mensuales" : "Up to 10,000 monthly messages",
-                isEs ? "Hasta 50 GB de almacenamiento" : "Up to 50 GB file storage",
+                isEs ? "Hasta 10 GB de almacenamiento" : "Up to 10 GB file storage",
                 isEs ? "Hasta 30 automatizaciones activas" : "Up to 30 active automations",
                 isEs ? "Hasta 100 alertas activas" : "Up to 100 active alerts"
               ],
@@ -286,7 +331,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling }: 
                   { name: isEs ? "App móvil para clientes" : "Mobile Client App", prof: true, scale: true, unlim: true },
                   { name: isEs ? "Límite de clientes activos" : "Active Client Limit", prof: isEs ? "20 clientes" : "20 clients", scale: isEs ? "60 clientes" : "60 clients", unlim: isEs ? "Ilimitado" : "Unlimited" },
                   { name: isEs ? "Mensajes mensuales" : "Monthly Messages", prof: "2,000", scale: "10,000", unlim: isEs ? "Ilimitado" : "Unlimited" },
-                  { name: isEs ? "Espacio de almacenamiento" : "Storage Space", prof: "10GB", scale: "50GB", unlim: isEs ? "Ilimitado" : "Unlimited" },
+                  { name: isEs ? "Espacio de almacenamiento" : "Storage Space", prof: "2GB", scale: "10GB", unlim: isEs ? "Ilimitado" : "Unlimited" },
                   { name: isEs ? "Automatizaciones de flujo" : "Workflow Automations", prof: "10", scale: "30", unlim: isEs ? "Ilimitado" : "Unlimited" },
                   { name: isEs ? "Alertas inteligentes" : "Intelligent Alerts", prof: isEs ? "25 / mes" : "25 / mo", scale: isEs ? "100 / mes" : "100 / mo", unlim: isEs ? "Ilimitado" : "Unlimited" },
                 ].map((row, i) => (

@@ -85,6 +85,24 @@ export default function App() {
     }
   }, [user, currentView]);
 
+  // Vuelta de Stripe: tras un Checkout (?session_id=) o el Billing Portal
+  // (?billing_updated=1), la SPA arranca en 'landing'. Si el usuario esta
+  // autenticado, llevarlo a su pantalla de Suscripciones para que aterrice
+  // donde corresponde y no en la landing. Tras consumir los params, se
+  // limpian de la URL para que no se repitan en recargas.
+  React.useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('session_id') || params.has('billing_updated')) {
+      setCurrentView('subscriptions');
+      params.delete('billing_updated');
+      params.delete('checkout');
+      // session_id lo conserva BillingContext para su polling; lo limpia el.
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    }
+  }, [user]);
+
   // Navegacion via CustomEvent — usado por componentes anidados (e.g.
   // BillingSettings dentro de Settings) que no reciben setCurrentView por
   // props. `detail` debe ser un id de vista valido.
