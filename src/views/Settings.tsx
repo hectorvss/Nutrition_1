@@ -1051,7 +1051,8 @@ const BILLING_PLANS = [
 ];
 
 function BillingSettings() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === 'es';
   const { user } = useAuth();
   const { status: billingStatus, refresh: refreshBilling } = useBilling();
   const [billing, setBilling] = useState<any>(null);
@@ -1127,6 +1128,12 @@ function BillingSettings() {
   const statusActive = sub?.status === 'active' || sub?.status === 'trialing';
   const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString() : '—';
 
+  // Only accounts with a real Stripe subscription can use the Stripe Billing
+  // Portal. Trial / never-paid accounts (no stripe_customer_id) must instead
+  // pick a plan via in-app Checkout — sending them to the portal 404s.
+  const hasStripeSub = Boolean(billingStatus?.hasStripeSubscription);
+  const currentTier: string = billingStatus?.tier || sub?.plan_tier || 'trial';
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {error && (
@@ -1166,43 +1173,53 @@ function BillingSettings() {
             </div>
           )}
         </div>
-        {sub ? (
+        {hasStripeSub ? (
           <div className="flex flex-col md:flex-row md:items-center justify-between bg-slate-50 rounded-xl p-6 border border-slate-100">
             <div className="mb-4 md:mb-0">
-              <h3 className="text-lg font-bold text-slate-900 capitalize">{sub.plan_tier || t('professional_plan')}</h3>
-              <p className="text-xs text-slate-400 mt-2">{t('renews_on', { date: fmtDate(sub.current_period_end) })}</p>
+              <h3 className="text-lg font-bold text-slate-900 capitalize">{t(`plan_${currentTier}`, { defaultValue: currentTier })}</h3>
+              <p className="text-xs text-slate-400 mt-2">{t('renews_on', { date: fmtDate(billingStatus?.currentPeriodEnd || sub?.current_period_end) })}</p>
             </div>
             <button
               onClick={openPortal}
               disabled={portalLoading}
-              className="px-5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 font-medium text-sm hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium text-sm hover:bg-slate-800 active:scale-[0.99] transition-all disabled:opacity-50"
             >
-              {portalLoading ? t('saving') : t('change_plan')}
+              {portalLoading && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+              {portalLoading ? t('saving') : (isEs ? 'Gestionar suscripción' : 'Manage subscription')}
             </button>
           </div>
         ) : (
-          <div className="space-y-5">
-            <p className="text-sm font-medium text-slate-600">{t('no_active_subscription', { defaultValue: 'No tienes una suscripción activa.' })} {t('choose_plan_below', { defaultValue: 'Elige un plan para empezar:' })}</p>
+          <div className="space-y-6">
+            <p className="text-sm font-medium text-slate-600">
+              {currentTier === 'trial'
+                ? (isEs
+                    ? 'Estás en el periodo de prueba. Elige un plan para continuar sin interrupciones:'
+                    : "You're on the free trial. Pick a plan to keep going without interruptions:")
+                : `${t('no_active_subscription', { defaultValue: 'No tienes una suscripción activa.' })} ${t('choose_plan_below', { defaultValue: 'Elige un plan para empezar:' })}`}
+            </p>
             <div className="flex items-center justify-center gap-3">
               <span className={`text-sm font-medium ${!isAnnual ? 'text-slate-900' : 'text-slate-400'}`}>{t('billing_monthly', { defaultValue: 'Mensual' })}</span>
               <button
                 type="button"
                 onClick={() => setIsAnnual(v => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${isAnnual ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                className={`relative w-11 h-6 rounded-full transition-colors ${isAnnual ? 'bg-slate-900' : 'bg-slate-200'}`}
               >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${isAnnual ? 'translate-x-5' : ''}`} />
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isAnnual ? 'translate-x-5' : ''}`} />
               </button>
               <span className={`text-sm font-medium ${isAnnual ? 'text-slate-900' : 'text-slate-400'}`}>
-                {t('billing_annual', { defaultValue: 'Anual' })} <span className="text-emerald-600 font-bold">−20%</span>
+                {t('billing_annual', { defaultValue: 'Anual' })} <span className="text-emerald-600 font-semibold">−20%</span>
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {BILLING_PLANS.map(plan => {
                 const price = isAnnual ? Math.round(plan.monthlyPrice * 0.8) : plan.monthlyPrice;
                 return (
-                  <div key={plan.tier} className={`rounded-xl border p-5 flex flex-col ${plan.popular ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-slate-200'}`}>
+                  <div
+                    key={plan.tier}
+                    className={`relative rounded-xl border p-5 flex flex-col transition-shadow hover:shadow-sm ${plan.popular ? 'border-slate-300' : 'border-slate-200'}`}
+                  >
                     {plan.popular && (
-                      <span className="self-start text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mb-2">
+                      <span className="self-start text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full mb-2">
                         {t('billing_popular', { defaultValue: 'Popular' })}
                       </span>
                     )}
@@ -1215,7 +1232,7 @@ function BillingSettings() {
                     <button
                       onClick={() => handleSubscribe(plan.tier)}
                       disabled={!!subscribing}
-                      className={`mt-auto w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${plan.popular ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'border border-slate-200 text-slate-900 hover:bg-slate-50'}`}
+                      className={`mt-auto w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium text-sm transition-all active:scale-[0.99] disabled:opacity-50 ${plan.popular ? 'bg-slate-900 text-white hover:bg-slate-800' : 'border border-slate-200 text-slate-900 hover:border-slate-300 hover:bg-slate-50'}`}
                     >
                       {subscribing === plan.tier && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                       {t('billing_subscribe', { defaultValue: 'Suscribirme' })}
