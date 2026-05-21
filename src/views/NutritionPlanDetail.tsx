@@ -42,6 +42,8 @@ interface NutritionPlanDetailProps {
   initialPlanData?: any;
   onBack: () => void;
   selectedDay?: string | null;
+  /** Month-week being edited (1 = base; 2-4 edit data_json.weekOverrides). */
+  weekIndex?: number;
   /** When set, the editor edits a nutrition TEMPLATE instead of a client plan. */
   templateId?: string | null;
 }
@@ -90,7 +92,7 @@ interface GeneralItem {
 
 
 
-export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData, onBack, selectedDay, templateId }: NutritionPlanDetailProps) {
+export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData, onBack, selectedDay, weekIndex, templateId }: NutritionPlanDetailProps) {
   const { t } = useLanguage();
   
   const defaultCategories = useCallback((): MacroCategory[] => [
@@ -214,7 +216,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           let targetMeals = [];
           if (json.days) {
             const dayToLoad = selectedDay || 'monday';
-            targetMeals = json.days[dayToLoad]?.meals || [];
+            // For weeks 2-4 read the override (falling back to the base week).
+            const weekDays = (weekIndex && weekIndex > 1)
+              ? (json.weekOverrides?.[weekIndex] || json.days)
+              : json.days;
+            targetMeals = weekDays[dayToLoad]?.meals || [];
           } else {
             targetMeals = json.meals || [];
           }
@@ -347,7 +353,17 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         finalDataJson.type = 'weekly';
         // Only overwrite the day currently being edited.
         const dayToSave = selectedDay || 'monday';
-        finalDataJson.days[dayToSave] = { meals: mealsToSave };
+        if (weekIndex && weekIndex > 1) {
+          // Editing weeks 2-4 → write into weekOverrides, seeding the override
+          // from the base week the first time it is customised.
+          if (!finalDataJson.weekOverrides) finalDataJson.weekOverrides = {};
+          const wo = finalDataJson.weekOverrides[weekIndex]
+            || JSON.parse(JSON.stringify(finalDataJson.days || {}));
+          wo[dayToSave] = { meals: mealsToSave };
+          finalDataJson.weekOverrides[weekIndex] = wo;
+        } else {
+          finalDataJson.days[dayToSave] = { meals: mealsToSave };
+        }
         delete finalDataJson.meals;
       } else {
         // Single-day / new plan

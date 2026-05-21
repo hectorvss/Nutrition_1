@@ -16,6 +16,7 @@ export default function Nutrition() {
   const [selectedPreset, setSelectedPreset] = useState<any>(null);
   const [initialPlanData, setInitialPlanData] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [editingTemplate, setEditingTemplate] = useState<{ id: string; name: string } | null>(null);
 
   const handleNavigate = (view: 'plan-templates' | 'plan-detail' | 'food-library' | 'weekly-view', client?: any) => {
@@ -63,9 +64,10 @@ export default function Nutrition() {
             initialPlanData={initialPlanData}
             onBack={() => setCurrentView('client-list')}
             onReassign={() => setCurrentView('no-plan')}
-            onSelectDay={(dayId) => {
+            onSelectDay={(dayId, week) => {
               setEditingTemplate(null);
               setSelectedDay(dayId);
+              setSelectedWeek(week || 1);
               setCurrentView('plan-detail');
             }}
           />
@@ -77,6 +79,7 @@ export default function Nutrition() {
             onEditTemplate={(id, name) => {
               setEditingTemplate({ id, name });
               setSelectedDay(null);
+              setSelectedWeek(1);
               setInitialPlanData(null);
               setCurrentView('plan-detail');
             }}
@@ -90,6 +93,7 @@ export default function Nutrition() {
             isNewPlan={isNewPlan}
             initialPlanData={initialPlanData}
             selectedDay={selectedDay}
+            weekIndex={selectedWeek}
             onBack={() => {
               setInitialPlanData(null);
               if (editingTemplate) {

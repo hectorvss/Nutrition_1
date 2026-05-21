@@ -21,7 +21,7 @@ interface DayPlan {
 interface NutritionWeeklyViewProps {
   client: any;
   onBack: () => void;
-  onSelectDay: (dayId: string) => void;
+  onSelectDay: (dayId: string, week?: number) => void;
   onReassign: () => void;
   initialPlanData?: any;
 }
@@ -280,9 +280,9 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
 
   // One day card. Used by both the weekly list and the monthly (4-week) view —
   // identical UI; drag-reorder is only enabled in the weekly view.
-  const renderDayCard = (day: DayPlan, keyPrefix: string, drag: boolean) => (
+  const renderDayCard = (day: DayPlan, week: number, drag: boolean) => (
     <div
-      key={`${keyPrefix}${day.id}`}
+      key={`w${week}-${day.id}`}
       className={`relative transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.01] -translate-y-1' : ''} ${selectedForSwap === day.id ? 'ring-2 ring-emerald-500 rounded-3xl' : ''}`}
       draggable={drag}
       onDragStart={drag ? (e) => handleDragStart(e, day.id) : undefined}
@@ -297,7 +297,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       aria-pressed={drag ? selectedForSwap === day.id : undefined}
     >
       <button
-        onClick={() => onSelectDay(day.id)}
+        onClick={() => onSelectDay(day.id, week)}
         className={`group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
           dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' :
           'border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50'
@@ -528,14 +528,14 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
                       </div>
                     </div>
                     <div className="p-4 flex flex-col gap-3">
-                      {computeDays(getWeekDays(week)).map((day) => renderDayCard(day, `w${week}-`, false))}
+                      {computeDays(getWeekDays(week)).map((day) => renderDayCard(day, week, false))}
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            processedDays.map((day) => renderDayCard(day, '', true))
+            processedDays.map((day) => renderDayCard(day, 1, true))
           )}
         </div>
       </div>

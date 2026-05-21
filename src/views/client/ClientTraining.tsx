@@ -329,12 +329,16 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
 
   const dataJson = trainingProgram.data_json || {};
   const isWeekly = !!dataJson.weeklySchedule;
-  
+  // Monthly plans: weeks 2-4 may override the base week. Pick the schedule for
+  // the week of the month matching today's date.
+  const weekOfMonth = Math.min(4, Math.max(1, Math.ceil(new Date().getDate() / 7)));
+  const activeSchedule = (dataJson.weekOverrides && dataJson.weekOverrides[weekOfMonth]) || dataJson.weeklySchedule || {};
+
   let blocks: any[] = [];
   let currentWorkoutName = '';
-  
+
   if (isWeekly) {
-    const workoutId = dataJson.weeklySchedule[selectedDay];
+    const workoutId = activeSchedule[selectedDay];
     const workouts = dataJson.workouts || [];
     const workout = workouts.find((w: any) => w.id === workoutId);
     blocks = workout?.blocks || [];
@@ -351,7 +355,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     return (
       <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 pb-2">
         {days.map(d => {
-          const wId = dataJson.weeklySchedule[d];
+          const wId = activeSchedule[d];
           const hasWorkout = !!wId;
           const isSelected = selectedDay === d;
           return (

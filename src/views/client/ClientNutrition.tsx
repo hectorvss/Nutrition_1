@@ -75,7 +75,11 @@ export default function ClientNutrition() {
   }
 
   const isWeekly = nutritionPlan.data_json?.type === 'weekly';
-  const planDays = nutritionPlan.data_json?.days || {};
+  // Monthly plans: weeks 2-4 may override the base week. Show the week of the
+  // month that matches today's date.
+  const weekOfMonth = Math.min(4, Math.max(1, Math.ceil(new Date().getDate() / 7)));
+  const planWeekOverrides = nutritionPlan.data_json?.weekOverrides || {};
+  const planDays = planWeekOverrides[weekOfMonth] || nutritionPlan.data_json?.days || {};
   
   const meals = isWeekly
     ? (planDays[selectedDay]?.meals || [])
