@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 
 interface TrainingPlanTemplatesProps {
   onBack: () => void;
@@ -27,7 +28,7 @@ export default function TrainingPlanTemplates({ onBack, onEditTemplate }: Traini
   const load = () => {
     setIsLoading(true);
     fetchWithAuth('/manager/training-templates')
-      .then((d) => setTemplates(Array.isArray(d) ? d : []))
+      .then((d) => setTemplates(unwrapList(d)))
       .catch(() => {})
       .finally(() => setIsLoading(false));
   };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useClient } from '../context/ClientContext';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { PROGRAM_TEMPLATES } from '../constants/training_presets';
 import { trainingPrograms } from '../constants/training';
 import { useLanguage } from '../context/LanguageContext';
@@ -200,7 +201,10 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
       try {
         setIsLoadingTemplates(true);
         const data = await fetchWithAuth('/manager/training-templates');
-        setTemplates(Array.isArray(data) ? data : []);
+        // The endpoint returns a paginated object ({ data, nextCursor }), not a
+        // raw array — unwrapList handles both so the DB templates actually load
+        // instead of silently falling back to the sparse hardcoded presets.
+        setTemplates(unwrapList(data));
       } catch (err) {
         console.error('Error fetching templates in NoPlan:', err);
         setTemplates([]);
