@@ -1607,6 +1607,28 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
             delta,
             direction: delta == null ? 'unknown' : delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'flat',
           }).catch(err => console.error('Workflow trigger error (weight_change):', err));
+
+          // goal_reached: fire when this check-in's weight reaches the client's
+          // goal weight. "Reached" = touched it, or crossed it since the
+          // previous check-in. Deduped per submission via checkinId.
+          try {
+            const { data: prof } = await supabaseAdmin
+              .from('clients_profiles').select('goal_weight')
+              .eq('user_id', clientId).maybeSingle();
+            const goal = Number(prof?.goal_weight);
+            if (Number.isFinite(goal) && goal > 0) {
+              const touched = Math.abs(newWeight - goal) <= 0.3;
+              const crossed = Number.isFinite(prevWeight)
+                && Math.sign(prevWeight - goal) !== Math.sign(newWeight - goal);
+              if (touched || crossed) {
+                runWorkflowsForEvent(clientData.manager_id, 'trigger.goal_reached', {
+                  clientId, weight: newWeight, goalWeight: goal, checkinId: data.id,
+                }).catch(err => console.error('Workflow trigger error (goal_reached):', err));
+              }
+            }
+          } catch (gErr) {
+            console.error('goal_reached trigger derivation failed:', gErr);
+          }
         }
       } catch (wErr) {
         console.error('weight_change trigger derivation failed:', wErr);

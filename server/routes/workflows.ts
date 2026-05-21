@@ -116,6 +116,12 @@ export const WORKFLOW_CATALOG = [
     icon: 'FileCheck', description: 'Fires when a nutrition or training plan is assigned to a client.', configFields: [] },
   { type: 'trigger', key: 'trigger.onboarding_completed', label: 'Onboarding completed', category: 'Triggers',
     icon: 'BadgeCheck', description: 'Fires when a client finishes their onboarding form.', configFields: [] },
+  { type: 'trigger', key: 'trigger.checkin_overdue', label: 'Check-in overdue', category: 'Triggers',
+    icon: 'AlarmClockOff', description: 'Daily cron — fires when a client misses their scheduled check-in day.',
+    configFields: [{ name: 'graceDays', label: 'Grace period (days)', type: 'number' }] },
+  { type: 'trigger', key: 'trigger.goal_reached', label: 'Goal weight reached', category: 'Triggers',
+    icon: 'BadgeCheck', description: 'Fires when a check-in records the client reaching their goal weight.',
+    configFields: [] },
   { type: 'trigger', key: 'trigger.workout_logged', label: 'Workout logged', category: 'Triggers',
     icon: 'Dumbbell', description: 'Fires when a client logs a workout session.', configFields: [] },
   { type: 'trigger', key: 'trigger.client_inactive', label: 'Client inactive', category: 'Triggers',
@@ -147,6 +153,10 @@ export const WORKFLOW_CATALOG = [
       { name: 'operator', label: 'Operator', type: 'select', options: ['>', '<', '>=', '<=', '=='] },
       { name: 'days', label: 'Days', type: 'number' },
     ] },
+  { type: 'condition', key: 'flow.has_tag', label: 'Has tag', category: 'Logic',
+    icon: 'Tag', description: 'Branch on whether the client carries a given tag (set by "Tag client").',
+    branches: ['true', 'false'],
+    configFields: [{ name: 'tag', label: 'Tag', type: 'text' }] },
 
   // ── New data nodes ───────────────────────────────────────────
   { type: 'data', key: 'data.get_latest_checkin', label: 'Get latest check-in', category: 'Data',
@@ -187,6 +197,11 @@ export const WORKFLOW_CATALOG = [
     configFields: [
       { name: 'field', label: 'Field', type: 'select', options: ['notes', 'goal', 'weight', 'height'] },
       { name: 'value', label: 'Value', type: 'text' },
+    ] },
+  { type: 'action', key: 'action.set_client_status', label: 'Set client status', category: 'Actions',
+    icon: 'UserCog', description: 'Change the client lifecycle status (active / paused / archived).',
+    configFields: [
+      { name: 'status', label: 'Status', type: 'select', options: ['Active', 'Paused', 'Archived'] },
     ] },
   { type: 'action', key: 'action.notify_coach', label: 'Notify coach', category: 'Actions',
     icon: 'BellRing', description: 'Create an internal task for the manager (no client attached).',
@@ -423,6 +438,8 @@ async function runLoop(p: {
         case 'trigger.client_inactive':
         case 'trigger.day_of_week':
         case 'trigger.birthday':
+        case 'trigger.checkin_overdue':
+        case 'trigger.goal_reached':
           await logStep(node, 'completed', { trigger: node.key });
           break;
 
@@ -487,7 +504,8 @@ async function runLoop(p: {
               manager_id: managerId, client_id: ctx.client?.id || null,
               title: renderTemplate(cfg.title || 'Workflow task', ctx),
               type: cfg.type || 'workflow', date: new Date().toISOString().split('T')[0],
-              time: '09:00', status: 'pending' });
+              time: '09:00', status: 'pending',
+              priority: ['low', 'medium', 'high'].includes(cfg.priority) ? cfg.priority : 'medium' });
             await logStep(node, error ? 'failed' : 'completed', { title: cfg.title }, error?.message);
             if (error) { status = 'failed'; return { status, steps, ctx }; }
           }
@@ -565,6 +583,25 @@ async function runLoop(p: {
           const result = compare(days, cfg.operator || '>', Number(cfg.days) || 0);
           followHandle = result ? 'true' : 'false';
           await logStep(node, 'completed', { event: cfg.event, days, operator: cfg.operator, threshold: cfg.days, result });
+          break;
+        }
+        case 'flow.has_tag': {
+          if (!ctx.client?.id) {
+            followHandle = 'false';
+            await logStep(node, 'completed', { reason: 'no client', branch: 'false' });
+            break;
+          }
+          const wanted = String(cfg.tag || '').trim().toLowerCase();
+          // Tags live in clients_profiles.metadata.tags (set by "Tag client").
+          const { data: cp } = await supabaseAdmin
+            .from('clients_profiles').select('metadata')
+            .eq('user_id', ctx.client.id).maybeSingle();
+          const tags: string[] = Array.isArray((cp?.metadata as any)?.tags)
+            ? (cp!.metadata as any).tags.map((x: any) => String(x).toLowerCase())
+            : [];
+          const has = wanted ? tags.includes(wanted) : false;
+          followHandle = has ? 'true' : 'false';
+          await logStep(node, 'completed', { tag: wanted, hasTag: has });
           break;
         }
 
@@ -745,6 +782,27 @@ async function runLoop(p: {
           if (error) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
+        case 'action.set_client_status': {
+          if (!ctx.client?.id) {
+            await logStep(node, 'skipped', { reason: 'no client in context' });
+            break;
+          }
+          const ALLOWED = ['Active', 'Paused', 'Archived'];
+          const newStatus = String(cfg.status || '').trim();
+          if (!ALLOWED.includes(newStatus)) {
+            await logStep(node, 'skipped', { reason: `status "${newStatus}" not allowed` });
+            break;
+          }
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, status: newStatus });
+            break;
+          }
+          const { error } = await supabaseAdmin
+            .from('users').update({ status: newStatus }).eq('id', ctx.client.id);
+          await logStep(node, error ? 'failed' : 'completed', { status: newStatus }, error?.message);
+          if (error) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
         case 'action.notify_coach': {
           const title = renderTemplate(cfg.title || 'Workflow notification', ctx);
           const description = renderTemplate(cfg.description || '', ctx);
@@ -771,14 +829,22 @@ async function runLoop(p: {
           }
           const field = String(cfg.field || '').trim();
           const storeAs = String(cfg.as || field).trim() || field;
-          // Try ctx.client first; for metadata fields (tags, etc.) re-query.
-          let value: any = ctx.client[field];
-          if (value === undefined) {
+          // Read the real clients_profiles column. `tags` lives in metadata
+          // (that's where the Tag client action writes), the rest are columns.
+          let value: any = null;
+          if (field === 'tags') {
             const { data: cp } = await supabaseAdmin
               .from('clients_profiles').select('metadata')
               .eq('user_id', ctx.client.id).maybeSingle();
-            const meta: any = cp?.metadata || {};
-            value = meta[field] ?? null;
+            value = Array.isArray((cp?.metadata as any)?.tags) ? (cp!.metadata as any).tags : [];
+          } else if (['weight', 'goal_weight', 'height', 'goal', 'notes'].includes(field)) {
+            const { data: cp } = await supabaseAdmin
+              .from('clients_profiles').select(field)
+              .eq('user_id', ctx.client.id).maybeSingle();
+            value = cp ? ((cp as any)[field] ?? null) : null;
+          } else {
+            // Fallback for any other path already hydrated on ctx.client.
+            value = (ctx.client as any)[field] ?? null;
           }
           if (storeAs) ctx.data[storeAs] = value;
           await logStep(node, 'completed', { field, storeAs, value });
@@ -1018,7 +1084,7 @@ export async function fireScheduledWorkflows(): Promise<number> {
       if (!trig) continue;
 
       // Only the cron-style triggers fire from this loop.
-      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive', 'trigger.birthday']);
+      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive', 'trigger.birthday', 'trigger.checkin_overdue']);
       if (!cronTriggers.has(trig.key)) continue;
 
       // trigger.day_of_week: skip workflows whose configured weekday isn't today.
@@ -1048,6 +1114,44 @@ export async function fireScheduledWorkflows(): Promise<number> {
             managerId: def.manager_id, versionId: version.id, nodes, edges: version.edges || [],
             triggerType: 'trigger.birthday', payload: { clientId: client.id },
             dedupeKey: `${version.id}:trigger.birthday:${client.id}:${today}`,
+          });
+          if (res.status !== 'skipped') fired++;
+        }
+        continue;
+      }
+
+      // trigger.checkin_overdue: a client whose scheduled check-in day passed
+      // (plus a grace period) without a submission since. Deduped per missed
+      // week so a workflow only fires once per overdue check-in.
+      if (trig.key === 'trigger.checkin_overdue') {
+        const graceDays = Math.max(0, Number(trig.config?.graceDays) || 1);
+        const WD = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        const { data: ovClients } = await supabaseAdmin
+          .from('users')
+          .select('id, clients_profiles(check_in_day)')
+          .eq('manager_id', def.manager_id).eq('role', 'CLIENT');
+        for (const client of ovClients || []) {
+          const cp: any = Array.isArray((client as any).clients_profiles)
+            ? (client as any).clients_profiles[0] : (client as any).clients_profiles;
+          const dayName = String(cp?.check_in_day || '').toLowerCase();
+          const dayIdx = WD.indexOf(dayName);
+          if (dayIdx < 0) continue; // no check-in day configured
+          // Date of the most recent past occurrence of the check-in weekday.
+          const diff = (nowDate.getDay() - dayIdx + 7) % 7;
+          const scheduled = new Date(nowDate);
+          scheduled.setDate(scheduled.getDate() - diff);
+          scheduled.setHours(0, 0, 0, 0);
+          const daysSince = Math.floor((nowDate.getTime() - scheduled.getTime()) / 86400000);
+          if (daysSince < graceDays) continue; // still within grace
+          // Overdue only if no submission since the scheduled day.
+          const { count } = await supabaseAdmin
+            .from('client_checkin_submissions').select('id', { count: 'exact', head: true })
+            .eq('client_id', client.id).gte('submitted_at', scheduled.toISOString());
+          if ((count || 0) > 0) continue; // they submitted — not overdue
+          const res = await executeWorkflowVersion({
+            managerId: def.manager_id, versionId: version.id, nodes, edges: version.edges || [],
+            triggerType: 'trigger.checkin_overdue', payload: { clientId: client.id },
+            dedupeKey: `${version.id}:trigger.checkin_overdue:${client.id}:${scheduled.toISOString().slice(0,10)}`,
           });
           if (res.status !== 'skipped') fired++;
         }
