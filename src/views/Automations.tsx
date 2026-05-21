@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import AutomationsList from './AutomationsList';
 import AutomationCreateTrigger from './AutomationCreateTrigger';
-import AutomationCreateMessage from './AutomationCreateMessage';
+import AutomationFlowBuilder from './AutomationFlowBuilder';
 import AutomationCreateReview from './AutomationCreateReview';
 import WorkflowsList from './WorkflowsList';
 import WorkflowBuilder from './WorkflowBuilder';
 import { Automation, AutomationDeliveryRules } from '../context/AutomationContext';
+import { fetchWithAuth } from '../api';
 
 type AutomationsView =
   | 'list' | 'step-trigger' | 'step-message' | 'step-review'
@@ -110,26 +111,48 @@ export default function Automations() {
         );
       case 'step-trigger':
         return (
-          <AutomationCreateTrigger 
-            onBack={() => setCurrentView('list')} 
-            onNext={(triggerId, triggerName, iconName, iconBg, iconColor) => {
+          <AutomationCreateTrigger
+            onBack={() => setCurrentView('list')}
+            onNext={async (triggerId, triggerName, iconName, iconBg, iconColor) => {
               updateWizard({ triggerId, triggerName, automationName: triggerName, iconName, iconBg, iconColor });
+              // Pre-fill the builder from the trigger's ready-made template so
+              // the coach lands on a working flow, not a blank form.
+              try {
+                const cat = await fetchWithAuth('/automations/catalog');
+                const tpl = cat?.templates?.[triggerId];
+                if (tpl) {
+                  const firstMsg = (tpl.steps?.find((s: any) => s.kind === 'message')?.message) || '';
+                  updateWizard({
+                    message: firstMsg,
+                    deliveryRules: {
+                      ...defaultWizard.deliveryRules,
+                      ...tpl.deliveryRules,
+                      steps: tpl.steps || [],
+                      stop_conditions: (tpl.stopConditions || []).map((c: any) => ({ ...c, enabled: true })),
+                      activation_conditions: [],
+                    },
+                  });
+                }
+              } catch (e) {
+                console.error('template prefill failed', e);
+              }
               setCurrentView('step-message');
-            }} 
+            }}
           />
         );
       case 'step-message':
         return (
-          <AutomationCreateMessage 
+          <AutomationFlowBuilder
+            triggerId={wizard.triggerId}
             triggerName={wizard.triggerName}
             initialMessage={wizard.message}
             initialRules={wizard.deliveryRules}
             isEditing={!!wizard.editingId}
-            onBack={() => setCurrentView(wizard.editingId ? 'list' : 'step-trigger')} 
+            onBack={() => setCurrentView(wizard.editingId ? 'list' : 'step-trigger')}
             onNext={(message, deliveryRules) => {
               updateWizard({ message, deliveryRules });
               setCurrentView('step-review');
-            }} 
+            }}
           />
         );
       case 'step-review':

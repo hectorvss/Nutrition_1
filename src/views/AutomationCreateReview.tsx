@@ -91,16 +91,36 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
     onActivate();
   };
 
-  const { 
-    frequency = 'Once', 
-    frequencyValue = 1, 
-    frequencyUnit = 'Days', 
-    deliveryTime = 'Morning', 
+  const {
+    frequency = 'Once',
+    frequencyValue = 1,
+    frequencyUnit = 'Days',
+    deliveryTime = 'Morning',
     audience = 'All Clients',
     selected_client_ids = [],
     activation_conditions = [],
     stop_conditions = []
   } = wizardData.deliveryRules || {};
+
+  // Full action flow — falls back to a single message step for legacy data.
+  const flowSteps: any[] = Array.isArray((wizardData.deliveryRules as any)?.steps) && (wizardData.deliveryRules as any).steps.length > 0
+    ? (wizardData.deliveryRules as any).steps
+    : [{ kind: 'message', message: wizardData.message }];
+  const messageSteps = flowSteps.filter(s => s.kind === 'message' && s.message?.trim());
+  const STEP_LABEL: Record<string, string> = {
+    message: 'Enviar mensaje', wait: 'Esperar / pausa', create_task: 'Escalada al coach',
+    set_field: 'Etiquetar cliente', stop_if: 'Parar si…',
+  };
+  const describeStep = (s: any): string => {
+    switch (s.kind) {
+      case 'message':     return s.message || '(mensaje vacío)';
+      case 'wait':        return `Esperar ${s.amount} ${s.unit === 'hours' ? 'horas' : 'días'}${s.cancelIfReplied ? ' (cancela si responde)' : ''}`;
+      case 'create_task': return `Tarea: ${s.title || '(sin título)'} · prioridad ${s.priority || 'media'}`;
+      case 'set_field':   return `${s.field} = ${s.value}`;
+      case 'stop_if':     return `Parar si ${s.conditionType} ${s.operator} ${s.value}`;
+      default:            return '';
+    }
+  };
   
   const frequencyLabel = frequency === 'Once' ? t('one_time_message') : `${t('every')} ${frequencyValue} ${t(frequencyUnit.toLowerCase())}`;
 
@@ -284,16 +304,29 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                     </div>
                   </div>
 
-                  {/* Message preview */}
+                  {/* Full action flow */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xs font-bold">3</div>
-                        {t('message_label')}
+                        {t('automation_flow', { defaultValue: 'Flujo de acciones' })}
                       </h4>
+                      <button onClick={onBack} className="text-xs font-medium text-emerald-500 hover:text-emerald-600">{t('edit')}</button>
                     </div>
-                    <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                      {getPreviewText(wizardData.message)}
+                    <div className="flex flex-col gap-2">
+                      {flowSteps.map((s, i) => (
+                        <div key={i} className="bg-slate-50 dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">
+                            {i + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{STEP_LABEL[s.kind] || s.kind}</p>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap break-words">
+                              {s.kind === 'message' ? getPreviewText(s.message || '') : describeStep(s)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -314,9 +347,15 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
                   <div className="w-full flex-1 bg-[#F4F6FA] dark:bg-slate-900 pt-4 flex flex-col overflow-hidden">
                     <div className="text-[10px] text-center text-slate-400 font-medium mb-4">{t('today')} {currentTime}</div>
                     <div className="px-4 flex flex-col gap-3 flex-1 overflow-y-auto scrollbar-hide">
-                      <div className="self-start max-w-[90%] bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none p-4 shadow-sm text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium whitespace-pre-wrap">
-                        {getPreviewText(wizardData.message)}
-                      </div>
+                      {messageSteps.length > 0 ? messageSteps.map((s, i) => (
+                        <div key={i} className="self-start max-w-[90%] bg-white dark:bg-slate-800 rounded-2xl rounded-tl-none p-4 shadow-sm text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium whitespace-pre-wrap">
+                          {getPreviewText(s.message)}
+                        </div>
+                      )) : (
+                        <div className="self-center text-xs text-slate-400 italic mt-8">
+                          {t('message_preview_placeholder', { defaultValue: 'El mensaje aparecerá aquí' })}
+                        </div>
+                      )}
                     </div>
                     <div className="p-4 mt-auto">
                       <div className="bg-white dark:bg-slate-800 h-12 rounded-full shadow-sm flex items-center px-4 justify-between border border-slate-200 dark:border-slate-700">

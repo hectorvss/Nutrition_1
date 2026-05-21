@@ -9,6 +9,7 @@ import { logger } from '../lib/logger.js';
 import { makeEnforceLimit, limitsForTier, type PlanTier } from '../lib/plans.js';
 import { TRIGGERS, TRIGGER_BY_ID, filterTriggersByTier } from '../lib/automation-triggers.js';
 import { ACTIVATION_CONDITIONS, STOP_CONDITIONS, filterConditionsByTier } from '../lib/automation-conditions.js';
+import { FLOW_TEMPLATES } from '../lib/automation-templates.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
 // Block automation creation once the manager hits their tier's active-automation cap.
@@ -30,12 +31,8 @@ const router = Router();
 // `wait` persistimos el progreso en `automation_pending_steps` y el cron
 // diario reanuda la cadena cuando vence el delay.
 
-export type AutomationStep =
-  | { kind: 'message'; message: string }
-  | { kind: 'wait'; amount: number; unit: 'hours' | 'days'; cancelIfReplied?: boolean }
-  | { kind: 'create_task'; title: string; type?: string; priority?: 'low'|'medium'|'high'; date?: string }
-  | { kind: 'set_field'; field: 'status' | 'goal' | 'notes'; value: string }
-  | { kind: 'stop_if'; conditionType: string; operator: string; value: string };
+export type { AutomationStep } from '../lib/automation-types.js';
+import type { AutomationStep } from '../lib/automation-types.js';
 
 interface ExecutionContext {
   managerId: string;
@@ -568,6 +565,10 @@ router.get('/catalog', verifyManager, async (req: any, res) => {
       triggers: filterTriggersByTier(triggerCatalogTier),
       activationConditions: filterConditionsByTier(ACTIVATION_CONDITIONS, triggerCatalogTier),
       stopConditions: filterConditionsByTier(STOP_CONDITIONS, triggerCatalogTier),
+      // Ready-made flow per trigger. The builder pre-fills message + steps +
+      // stop conditions + delivery from here so picking a trigger gives a
+      // working automation, not a blank form.
+      templates: FLOW_TEMPLATES,
     });
   } catch (error: any) {
     logger.error('automations.catalog.failed', { err: error?.message });
