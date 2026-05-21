@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { fetchWithAuth } from '../api';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -113,6 +113,18 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
 
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  // Unsaved-changes tracking — gates the "Save changes" button. The first
+  // non-null roadmap (the freshly loaded one) becomes the baseline; any later
+  // change marks the plan dirty. A save re-baselines on the next render.
+  const [hasChanges, setHasChanges] = useState(false);
+  const baselineRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!roadmap) return;
+    const snap = JSON.stringify(roadmap);
+    if (baselineRef.current === null) { baselineRef.current = snap; return; }
+    if (snap !== baselineRef.current) setHasChanges(true);
+  }, [roadmap]);
+
   const handleSave = async (nextStatus?: 'Draft' | 'Active') => {
     if (saveStatus === 'saving') return;
 
@@ -145,6 +157,10 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
         throw new Error(response?.error || "Server failed to save roadmap");
       }
 
+      // Re-baseline: clearing the ref makes the next roadmap render the new
+      // saved baseline, so the plan is no longer flagged as dirty.
+      baselineRef.current = null;
+      setHasChanges(false);
       setRoadmap(prev => prev ? { ...prev, status: resolvedStatus } : prev);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -380,8 +396,10 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             client={client}
             saveStatus={saveStatus}
             currentWeek={currentWeek}
+            hasChanges={hasChanges}
             onNavigate={onNavigate}
             onSave={handleSave}
+            onReassign={() => onNavigate('planning-template-selector')}
             t={t}
           />
 

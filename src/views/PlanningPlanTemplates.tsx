@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, Grid, Plus, Pencil, Trash2, ClipboardList,
-  LayoutGrid, Rows3, Calendar, Layers, Zap, X,
+  LayoutGrid, Rows3, Calendar, Layers, Zap, X, Eye,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
@@ -43,6 +43,8 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
   const [layout, setLayout] = useState<'grid' | 'rows'>('grid');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Template | null>(null);
+  // Read-only blueprint view — see a template's real structure without a client.
+  const [viewing, setViewing] = useState<Template | null>(null);
 
   const load = () => {
     setIsLoading(true);
@@ -147,9 +149,10 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
             <div className={layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' : 'flex flex-col gap-2'}>
               {templates.map((tpl) => {
                 const open = () => setEditing({ ...tpl, data_json: tpl.data_json || {} });
+                const view = () => setViewing({ ...tpl, data_json: tpl.data_json || {} });
                 if (layout === 'rows') {
                   return (
-                    <div key={tpl.id || tpl.key} onClick={open}
+                    <div key={tpl.id || tpl.key} onClick={view}
                       className="group flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-colors">
                       <div className="flex items-center gap-1.5 text-emerald-600 font-bold w-24 shrink-0">
                         <Calendar className="w-4 h-4" /><span>{tpl.duration_weeks || 0}</span>
@@ -161,6 +164,7 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                       </div>
                       {tpl.phases != null && <span className="text-[11px] font-bold text-slate-400 hidden md:flex items-center gap-1 shrink-0"><Layers className="w-3.5 h-3.5" />{tpl.phases}</span>}
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); view(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Eye className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); open(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); remove(tpl); }} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
@@ -168,7 +172,7 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                   );
                 }
                 return (
-                  <div key={tpl.id || tpl.key} onClick={open}
+                  <div key={tpl.id || tpl.key} onClick={view}
                     className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -181,6 +185,7 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                         <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{tpl.description || '—'}</p>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); view(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Eye className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); open(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
                         <button onClick={(e) => { e.stopPropagation(); remove(tpl); }} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>
@@ -334,6 +339,104 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                 className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-50">
                 {t('save', { defaultValue: 'Guardar' })}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Read-only blueprint view — the template in its own UI, no client. */}
+      {viewing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4" onClick={() => setViewing(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[88vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-5 border-b border-slate-100 shrink-0">
+              <div className="min-w-0">
+                <h3 className="font-bold text-lg text-slate-900 truncate">{viewing.name}</h3>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                  <span className="flex items-center gap-1 text-emerald-600"><Calendar className="w-3.5 h-3.5" />{viewing.duration_weeks || 0} {t('weeks_label', { defaultValue: 'semanas' })}</span>
+                  {viewing.phases != null && <span className="flex items-center gap-1"><Layers className="w-3.5 h-3.5" />{viewing.phases} {t('phases_label', { defaultValue: 'fases' })}</span>}
+                  {viewing.intensity && <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-amber-500" />{t(`planning_intensity_${viewing.intensity}`, { defaultValue: viewing.intensity })}</span>}
+                </div>
+              </div>
+              <button onClick={() => setViewing(null)} className="text-slate-400 hover:text-slate-600 shrink-0"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-4">
+              {(viewing.data_json?.summary || viewing.description) && (
+                <p className="text-sm text-slate-600 leading-relaxed">{viewing.data_json?.summary || viewing.description}</p>
+              )}
+
+              {/* KPI targets */}
+              {viewing.data_json?.kpiTargets && (
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(viewing.data_json.kpiTargets).map(([k, v]) => (
+                    <span key={k} className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-100">
+                      {k}: <span className="font-medium text-emerald-600">{String(v)}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Rich block-by-block structure */}
+              {Array.isArray(viewing.data_json?.blocks) && viewing.data_json.blocks.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {viewing.data_json.blocks.map((b: any, i: number) => (
+                    <div key={i} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="font-bold text-slate-800 text-sm">{b.name}</span>
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider shrink-0">{t('weeks_label', { defaultValue: 'sem' })} {b.weeks}</span>
+                      </div>
+                      {b.goal && <p className="text-xs text-slate-500 mb-2 leading-snug">{b.goal}</p>}
+                      {Array.isArray(b.weeklyFocus) && (
+                        <ul className="space-y-0.5 mb-2">
+                          {b.weeklyFocus.map((w: string, wi: number) => (
+                            <li key={wi} className="text-[11px] text-slate-600 flex gap-1.5"><span className="text-emerald-400">•</span>{w}</li>
+                          ))}
+                        </ul>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 text-[10px]">
+                        {b.training && (
+                          <div className="bg-white rounded-lg border border-slate-100 p-2">
+                            <div className="font-bold text-amber-600 uppercase tracking-wider mb-0.5">{t('training_label', { defaultValue: 'Entreno' })}</div>
+                            <div className="text-slate-500">{b.training.frequency}x · {b.training.split}</div>
+                            <div className="text-slate-400">{b.training.intensity}</div>
+                          </div>
+                        )}
+                        {b.nutrition && (
+                          <div className="bg-white rounded-lg border border-slate-100 p-2">
+                            <div className="font-bold text-blue-600 uppercase tracking-wider mb-0.5">{t('nutrition_label', { defaultValue: 'Nutrición' })}</div>
+                            <div className="text-slate-500">{b.nutrition.approach}</div>
+                            <div className="text-slate-400">{b.nutrition.protein} prot.</div>
+                          </div>
+                        )}
+                      </div>
+                      {Array.isArray(b.kpis) && b.kpis.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {b.kpis.map((kp: any, ki: number) => (
+                            <span key={ki} className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{kp.metric}: {kp.target}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : Array.isArray(viewing.data_json?.phases) && viewing.data_json.phases.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {viewing.data_json.phases.map((ph: any, i: number) => (
+                    <div key={i} className="flex gap-2 items-start rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                      <span className="w-6 h-6 shrink-0 rounded-lg bg-emerald-100 text-emerald-600 text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-800 text-sm">{ph.name}</p>
+                        {ph.focus && <p className="text-xs text-slate-500">{ph.focus}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 italic">{t('no_blueprint_detail', { defaultValue: 'Esta plantilla no tiene estructura detallada.' })}</p>
+              )}
+
+              {viewing.data_json?.coachNotes && (
+                <p className="text-[11px] text-slate-400 italic leading-snug border-t border-slate-100 pt-3">{viewing.data_json.coachNotes}</p>
+              )}
             </div>
           </div>
         </div>

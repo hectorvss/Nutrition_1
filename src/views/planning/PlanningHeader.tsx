@@ -7,12 +7,16 @@ interface Props {
   client: any;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   currentWeek: number;
+  /** True when the roadmap has unsaved edits — gates the "Save changes" button. */
+  hasChanges: boolean;
   onNavigate: (view: string) => void;
   onSave: (status?: 'Draft' | 'Active') => void;
+  /** Opens the template selector to assign a different plan to this client. */
+  onReassign: () => void;
   t: (key: string, vars?: any) => string;
 }
 
-export default function PlanningHeader({ roadmap, client, saveStatus, currentWeek: _currentWeek, onNavigate, onSave, t }: Props) {
+export default function PlanningHeader({ roadmap, client, saveStatus, currentWeek: _currentWeek, hasChanges, onNavigate, onSave, onReassign, t }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 dark:text-slate-400">
@@ -78,49 +82,37 @@ export default function PlanningHeader({ roadmap, client, saveStatus, currentWee
           </div>
         </div>
 
+        {/* Exactly two actions: "Save changes" (only when there are unsaved
+            edits) and "Reassign plan" (opens the template selector). */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 relative z-10">
-          <div className="bg-emerald-500 text-white rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
-            <Icon name="play_circle" className="fill-1" />
-            <span className="font-bold text-sm">{t('planning_program_status', { status: roadmap.status })}</span>
-          </div>
           <div className="flex gap-2 w-full sm:w-auto">
+            {(hasChanges || saveStatus !== 'idle') && (
+              <button
+                onClick={() => onSave('Draft')}
+                disabled={saveStatus === 'saving'}
+                className={`flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 min-w-[140px] disabled:opacity-60 ${
+                  saveStatus === 'saved' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
+                  saveStatus === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
+                  'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
+                }`}
+              >
+                {saveStatus === 'saving' && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {saveStatus === 'saved' && <Icon name="check_circle" className="text-white" />}
+                {saveStatus === 'error' && <Icon name="error" className="text-white" />}
+                <span>
+                  {saveStatus === 'saving' ? t('saving') :
+                   saveStatus === 'saved' ? t('saved') :
+                   saveStatus === 'error' ? t('error') :
+                   t('planning_save_changes', { defaultValue: 'Guardar cambios' })}
+                </span>
+              </button>
+            )}
             <button
-              onClick={() => {
-                if (window.confirm(t('planning_discard_confirm', { defaultValue: 'Discard unsaved changes and leave?' }))) {
-                  onNavigate('planning');
-                }
-              }}
-              className="flex-1 sm:flex-none py-2 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-sm transition-colors border border-slate-200 dark:border-slate-700"
+              onClick={onReassign}
+              className="flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
             >
-              {t('discard')}
-            </button>
-            <button
-              onClick={() => onSave('Draft')}
-              disabled={saveStatus === 'saving'}
-              className={`flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 min-w-[120px] disabled:opacity-60 ${
-                saveStatus === 'saved' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
-                saveStatus === 'error' ? 'bg-rose-500 text-white shadow-rose-500/20' :
-                'border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
-              }`}
-            >
-              {saveStatus === 'saving' && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              {saveStatus === 'saved' && <Icon name="check_circle" className="text-white" />}
-              {saveStatus === 'error' && <Icon name="error" className="text-white" />}
-
-              <span>
-                {saveStatus === 'saving' ? t('saving') :
-                 saveStatus === 'saved' ? t('saved') :
-                 saveStatus === 'error' ? t('error') :
-                 t('planning_save_draft')}
-              </span>
-            </button>
-            <button
-              onClick={() => onSave('Active')}
-              disabled={saveStatus === 'saving'}
-              className="flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-60"
-            >
-              <Icon name="rocket_launch" className="text-[18px]" />
-              <span>{t('planning_publish', { defaultValue: 'Publish' })}</span>
+              <Icon name="swap_horiz" className="text-[18px]" />
+              <span>{t('planning_reassign_plan', { defaultValue: 'Reasignar plan' })}</span>
             </button>
           </div>
         </div>
