@@ -28,6 +28,8 @@ interface PlanningTemplate {
   intensity: 'low' | 'moderate' | 'high';
   roadmapPreview: string; // Text summary or simplified visual
   badge?: string;
+  /** Full data_json blueprint (blocks, KPIs, goals…) when available. */
+  data?: any;
 }
 
 interface PlanningTemplateSelectorProps {
@@ -40,6 +42,55 @@ interface PlanningTemplateSelectorProps {
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
   <span className={`material-symbols-outlined ${className}`} style={{ fontSize: 'inherit' }}>{name}</span>
 );
+
+// Deterministic roadmap-phase generator. Given a template's phase count and the
+// editor's duration/intensity selection, it produces real nutrition + training
+// blocks (and milestones) spread across the plan weeks — so the planning editor
+// actually materialises a structured roadmap instead of an empty scaffold.
+function buildRoadmapPhases(
+  phasesCount: number,
+  totalWeeks: number,
+  intensity: string,
+  goalType: string,
+) {
+  const n = Math.max(1, Math.min(phasesCount || 3, 8));
+  const weeks = Math.max(n, totalWeeks || 12);
+  const per = Math.floor(weeks / n);
+  const nutrition: any[] = [];
+  const training: any[] = [];
+  const milestones: any[] = [];
+  let acc = 0;
+  for (let i = 0; i < n; i++) {
+    const startWeek = acc + 1;
+    const span = i === n - 1 ? weeks - acc : per;
+    const endWeek = acc + span;
+    acc = endWeek;
+    const label = `Fase ${i + 1}`;
+    const strat = (track: 'nutrition' | 'training') => ({
+      summary: '',
+      primaryObjective: goalType ? goalType.replace(/_/g, ' ') : label,
+      secondaryObjectives: [],
+      trainingIntensity: intensity,
+      kpis: [],
+      successCriteria: [],
+      coachNotes: '',
+      risksAndConstraints: [],
+    });
+    nutrition.push({
+      id: `nut-${i}-${Date.now()}`, type: 'nutrition', title: label,
+      startWeek, endWeek, duration: span, order: i, stratData: strat('nutrition'),
+    });
+    training.push({
+      id: `tra-${i}-${Date.now()}`, type: 'training', title: label,
+      startWeek, endWeek, duration: span, order: i, stratData: strat('training'),
+    });
+    milestones.push({
+      id: `ms-${i}-${Date.now()}`, label, week: `${startWeek}`,
+      status: i === 0 ? 'next' : 'future',
+    });
+  }
+  return { nutrition, training, milestones };
+}
 
 export default function PlanningTemplateSelector({ client, onBack, onSelect }: PlanningTemplateSelectorProps) {
   const { t } = useLanguage();
@@ -118,6 +169,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             : r.intensity === 'low' ? 'low' : 'moderate') as PlanningTemplate['intensity'],
           roadmapPreview: r.data_json?.preview || '',
           badge: r.goal_type ? t(`analytics_${r.goal_type}`, { defaultValue: r.goal_type }) : undefined,
+          data: r.data_json || null,
         })));
       })
       .catch(() => {});
@@ -161,8 +213,15 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
   };
 
   const handleCreateDraft = () => {
-    if (!selectedTemplateId) return;
-    onSelect(selectedTemplateId, settings);
+    if (!selectedTemplateId || !selectedTemplate) return;
+    // Materialise the roadmap phases from the chosen template + editor settings.
+    const roadmapBlocks = buildRoadmapPhases(
+      selectedTemplate.phases,
+      settings.duration,
+      settings.intensityLevel,
+      settings.primaryGoal,
+    );
+    onSelect(selectedTemplateId, { ...settings, roadmapBlocks });
   };
 
   // "Custom Strategy" = start from a blank roadmap (no template applied).
@@ -332,12 +391,91 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             </div>
             <h3 className="font-bold text-slate-900 mb-2 uppercase tracking-tight">{t('template_preview')}</h3>
             <p className="text-sm text-slate-500 font-medium leading-relaxed">
-              {selectedTemplate 
-                ? t('planning_selected_template_summary', { name: getTemplateText(selectedTemplate).name, preview: getTemplateText(selectedTemplate).preview })
+              {selectedTemplate
+                ? (selectedTemplate.data?.summary
+                    || t('planning_selected_template_summary', { name: getTemplateText(selectedTemplate).name, preview: getTemplateText(selectedTemplate).preview }))
                 : t('select_template_preview')
               }
             </p>
           </div>
+
+          {/* Detailed blueprint — surfaces the template's data_json (blocks
+              week-by-week, KPI targets, goals) so the coach sees exactly what
+              the plan contains before creating the draft. */}
+          {selectedTemplate?.data?.blocks?.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4 text-left">
+              <h3 className="font-bold text-slate-900 uppercase tracking-tight text-sm flex items-center gap-2">
+                <Layers className="w-4 h-4 text-emerald-500" />
+                {t('plan_blueprint', { defaultValue: 'Estructura del plan' })}
+              </h3>
+
+              {/* KPI targets */}
+              {selectedTemplate.data.kpiTargets && (
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(selectedTemplate.data.kpiTargets).map(([k, v]) => (
+                    <span key={k} className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-100">
+                      {k}: <span className="font-medium text-emerald-600">{String(v)}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Block-by-block */}
+              <div className="flex flex-col gap-3">
+                {selectedTemplate.data.blocks.map((b: any, i: number) => (
+                  <div key={i} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-bold text-slate-800 text-sm">{b.name}</span>
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider shrink-0">
+                        {t('weeks_label')} {b.weeks}
+                      </span>
+                    </div>
+                    {b.goal && <p className="text-xs text-slate-500 mb-2 leading-snug">{b.goal}</p>}
+                    {Array.isArray(b.weeklyFocus) && (
+                      <ul className="space-y-0.5 mb-2">
+                        {b.weeklyFocus.map((w: string, wi: number) => (
+                          <li key={wi} className="text-[11px] text-slate-600 flex gap-1.5">
+                            <span className="text-emerald-400">•</span>{w}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      {b.training && (
+                        <div className="bg-white rounded-lg border border-slate-100 p-2">
+                          <div className="font-bold text-amber-600 uppercase tracking-wider mb-0.5">{t('training_label', { defaultValue: 'Entreno' })}</div>
+                          <div className="text-slate-500">{b.training.frequency}x · {b.training.split}</div>
+                          <div className="text-slate-400">{b.training.intensity}</div>
+                        </div>
+                      )}
+                      {b.nutrition && (
+                        <div className="bg-white rounded-lg border border-slate-100 p-2">
+                          <div className="font-bold text-blue-600 uppercase tracking-wider mb-0.5">{t('nutrition_label', { defaultValue: 'Nutrición' })}</div>
+                          <div className="text-slate-500">{b.nutrition.approach}</div>
+                          <div className="text-slate-400">{b.nutrition.protein} prot.</div>
+                        </div>
+                      )}
+                    </div>
+                    {Array.isArray(b.kpis) && b.kpis.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {b.kpis.map((kp: any, ki: number) => (
+                          <span key={ki} className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                            {kp.metric}: {kp.target}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {selectedTemplate.data.coachNotes && (
+                <p className="text-[11px] text-slate-400 italic leading-snug border-t border-slate-100 pt-3">
+                  {selectedTemplate.data.coachNotes}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col gap-6 shadow-sm flex-1">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
