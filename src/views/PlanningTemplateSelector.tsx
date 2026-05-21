@@ -99,7 +99,7 @@ function buildRoadmapPhases(
 }
 
 export default function PlanningTemplateSelector({ client, onBack, onSelect }: PlanningTemplateSelectorProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const builtInTemplates: PlanningTemplate[] = [
     {
       id: 'pt1',
@@ -292,9 +292,9 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 pt-2 overflow-hidden">
-        {/* Left Column: Templates */}
-        <div className="flex-1 lg:basis-[70%] flex flex-col gap-4 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 p-4 md:p-6 pt-2 lg:items-start">
+        {/* Left Column: Templates — scrolls with the page */}
+        <div className="flex-1 lg:basis-[70%] flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
               <Grid className="w-5 h-5 text-emerald-500" />
@@ -302,7 +302,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             </h2>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4">
+          <div className="space-y-4">
             {/* Create New Roadmap Card (Mirroring Nutrition's "Create New Plan") */}
             <button
               onClick={handleCreateCustom}
@@ -387,11 +387,12 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
           </div>
         </div>
 
-        {/* Right Column: Settings */}
-        <div className="flex-1 lg:basis-[30%] flex flex-col gap-4 min-h-0">
+        {/* Right Column — FLOATING: sticks in the viewport while the left
+            template list scrolls. Bounded to the viewport height so the
+            config card + button below always stay visible. */}
+        <div className="w-full lg:basis-[30%] lg:shrink-0 flex flex-col gap-4 lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)] min-h-0">
           {/* Scrollable area — preview + blueprint scroll independently so the
-              config card + "create draft" button below stay pinned and always
-              visible without scrolling to the bottom. */}
+              config card + button below stay pinned and always visible. */}
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-hide flex flex-col gap-6">
           <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 text-center shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/20 group-hover:bg-emerald-500 transition-colors"></div>
@@ -585,7 +586,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed border border-transparent active:scale-95 text-sm"
               >
                 <CheckCircle2 className="w-5 h-5 group-hover:animate-pulse" />
-                {t('create_draft_planning')}
+                {t('create_planning_action', { defaultValue: language === 'es' ? 'Crear planificación' : 'Create planning' })}
               </button>
             </div>
           </div>
