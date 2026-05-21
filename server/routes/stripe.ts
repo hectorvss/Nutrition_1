@@ -207,41 +207,7 @@ router.post('/webhook', async (req, res) => {
             logger.error('stripe.webhook.subscription_update_failed', { eventId: event.id, err: updErr.message });
             throw updErr;
           }
-
-          // Fire subscription_renewed when the billing period advances (renewal).
-          const prevAttribs = (event.data as any).previous_attributes || {};
-          const isRenewal = event.type === 'customer.subscription.updated'
-            && subscription.status === 'active'
-            && prevAttribs.current_period_start !== undefined;
-          if (isRenewal) {
-            const { runWorkflowsForEvent } = await import('./workflows.js');
-            runWorkflowsForEvent(subData.user_id, 'trigger.subscription_renewed', {
-              subscriptionId: subscription.id,
-              planName: subscription.items?.data?.[0]?.price?.nickname || null,
-            }).catch(err => console.error('Workflow trigger error (subscription_renewed):', err));
-          }
         }
-        break;
-      }
-
-      case 'invoice.payment_succeeded':
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as any;
-        const customerId = (invoice.customer as string) || null;
-        if (!customerId) break;
-        const { data: subRow } = await supabaseAdmin
-          .from('manager_subscriptions').select('user_id')
-          .eq('stripe_customer_id', customerId).maybeSingle();
-        if (!subRow?.user_id) break;
-        const trigger = event.type === 'invoice.payment_succeeded'
-          ? 'trigger.payment_succeeded' : 'trigger.payment_failed';
-        const { runWorkflowsForEvent } = await import('./workflows.js');
-        runWorkflowsForEvent(subRow.user_id, trigger, {
-          amount: invoice.amount_paid ?? invoice.amount_due ?? null,
-          currency: invoice.currency || null,
-          invoiceId: invoice.id || null,
-          attemptCount: invoice.attempt_count ?? null,
-        }).catch(err => console.error(`Workflow trigger error (${trigger}):`, err));
         break;
       }
     }

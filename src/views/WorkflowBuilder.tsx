@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ReactFlow, ReactFlowProvider, Background, Controls, MiniMap,
   useNodesState, useEdgesState, addEdge, Handle, Position, useReactFlow,
+  MarkerType, ConnectionLineType,
   type Node, type Edge, type Connection, type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -9,9 +10,10 @@ import {
   ArrowLeft, Save, Rocket, Play, Trash2, X, Search,
   Zap, GitBranch, Send, Clock, Square, Pencil, ListTodo, Shuffle,
   UserPlus, ClipboardCheck, MessageCircle, GripVertical,
-  Scale, FileCheck, CircleDollarSign, TriangleAlert, Dumbbell,
+  Scale, FileCheck, Dumbbell,
   AlarmClockOff, CalendarDays, BadgeCheck, ClipboardList, CalendarClock,
   Database, Calculator, CalendarPlus, ClipboardPlus, UserCog, PenSquare, BellRing,
+  Cake, UserSearch, FileSearch, Bell, Tag,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
@@ -30,17 +32,14 @@ interface WorkflowBuilderProps {
 }
 
 const ICONS: Record<string, React.ElementType> = {
-  // Existing
   Play, UserPlus, ClipboardCheck, MessageCircle, Clock,
   GitBranch, Shuffle, Timer: Clock, Square, Pencil, Send, ListTodo,
-  // New triggers
-  Scale, FileCheck, CircleDollarSign, TriangleAlert, Dumbbell,
+  Scale, FileCheck, Dumbbell,
   AlarmClockOff, CalendarDays,
-  // New conditions
   BadgeCheck, ClipboardList, CalendarClock,
-  // New data + actions
   Database, Calculator,
   CalendarPlus, ClipboardPlus, UserCog, PenSquare, BellRing,
+  Cake, UserSearch, FileSearch, Bell, Tag,
 };
 
 // Minimalist palette: one colour accent per node type rendered as a thin left
@@ -78,7 +77,7 @@ function WorkflowNodeCard({ data, selected }: NodeProps) {
 
       {nd.nodeType !== 'trigger' && (
         <Handle type="target" position={Position.Top}
-          className="!w-2 !h-2 !bg-slate-300 !border-2 !border-white" />
+          className="!w-3 !h-3 !bg-slate-400 !border-2 !border-white hover:!bg-slate-600 transition-colors" />
       )}
 
       <div className="pl-3 pr-3 py-2.5 flex items-center gap-2.5">
@@ -101,14 +100,14 @@ function WorkflowNodeCard({ data, selected }: NodeProps) {
             <div key={b} className="relative flex-1 px-2 py-1.5 text-center first:border-r first:border-slate-100 dark:first:border-slate-800">
               <span className="text-[9px] uppercase tracking-wide font-semibold text-slate-500">{b}</span>
               <Handle type="source" position={Position.Bottom} id={b}
-                className="!w-2 !h-2 !bg-slate-300 !border-2 !border-white"
+                className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white hover:!bg-emerald-600 transition-colors"
                 style={{ left: `${((i + 0.5) / branches.length) * 100}%` }} />
             </div>
           ))}
         </div>
       ) : !isStop ? (
         <Handle type="source" position={Position.Bottom}
-          className="!w-2 !h-2 !bg-slate-300 !border-2 !border-white" />
+          className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white hover:!bg-emerald-600 transition-colors" />
       ) : null}
     </div>
   );
@@ -161,8 +160,16 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
   }
 
   const catByKey = useCallback((k: string) => catalog.find(c => c.key === k), [catalog]);
+  // New edges inherit the same smoothstep + arrowhead styling as defaultEdgeOptions
+  // so a freshly drawn connection looks identical to a loaded one.
   const onConnect = useCallback((c: Connection) =>
-    setEdges(eds => addEdge({ ...c, id: `e${Date.now()}_${nodeSeq++}` }, eds)), [setEdges]);
+    setEdges(eds => addEdge({
+      ...c,
+      id: `e${Date.now()}_${nodeSeq++}`,
+      type: 'smoothstep',
+      markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#10b981' },
+      style: { strokeWidth: 2, stroke: '#10b981' },
+    }, eds)), [setEdges]);
 
   const placeNode = (cat: CatalogNode, position: { x: number; y: number }) => {
     if (cat.type === 'trigger' && nodes.some(n => (n.data as any).nodeType === 'trigger')) {
@@ -366,6 +373,15 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
             onNodeClick={(_, n) => setSelectedId(n.id)}
             onPaneClick={() => setSelectedId(null)}
             deleteKeyCode={['Backspace', 'Delete']}
+            // Consistent edge styling: smoothstep curves with an arrowhead so
+            // the direction of every connection is unambiguous.
+            defaultEdgeOptions={{
+              type: 'smoothstep',
+              markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: '#94a3b8' },
+              style: { strokeWidth: 2, stroke: '#94a3b8' },
+            }}
+            connectionLineType={ConnectionLineType.SmoothStep}
+            connectionLineStyle={{ strokeWidth: 2, stroke: '#10b981' }}
             fitView
           >
             <Background />

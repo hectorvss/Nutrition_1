@@ -111,10 +111,8 @@ export const WORKFLOW_CATALOG = [
     ] },
   { type: 'trigger', key: 'trigger.plan_assigned', label: 'Plan assigned', category: 'Triggers',
     icon: 'FileCheck', description: 'Fires when a nutrition or training plan is assigned to a client.', configFields: [] },
-  { type: 'trigger', key: 'trigger.payment_succeeded', label: 'Payment succeeded', category: 'Triggers',
-    icon: 'CircleDollarSign', description: 'Fires when Stripe confirms a successful invoice payment.', configFields: [] },
-  { type: 'trigger', key: 'trigger.payment_failed', label: 'Payment failed', category: 'Triggers',
-    icon: 'TriangleAlert', description: 'Fires when Stripe reports a failed invoice payment.', configFields: [] },
+  { type: 'trigger', key: 'trigger.onboarding_completed', label: 'Onboarding completed', category: 'Triggers',
+    icon: 'BadgeCheck', description: 'Fires when a client finishes their onboarding form.', configFields: [] },
   { type: 'trigger', key: 'trigger.workout_logged', label: 'Workout logged', category: 'Triggers',
     icon: 'Dumbbell', description: 'Fires when a client logs a workout session.', configFields: [] },
   { type: 'trigger', key: 'trigger.client_inactive', label: 'Client inactive', category: 'Triggers',
@@ -192,8 +190,6 @@ export const WORKFLOW_CATALOG = [
     ] },
 
   // ── TK-28: additional triggers ────────────────────────────────
-  { type: 'trigger', key: 'trigger.subscription_renewed', label: 'Subscription renewed', category: 'Triggers',
-    icon: 'RefreshCcw', description: 'Fires when the manager\'s platform subscription is successfully renewed.', configFields: [] },
   { type: 'trigger', key: 'trigger.birthday', label: 'Client birthday', category: 'Triggers',
     icon: 'Cake', description: 'Daily cron — fires each year on the client\'s birthday.', configFields: [] },
 
@@ -227,12 +223,13 @@ export const WORKFLOW_CATALOG = [
       { name: 'tag', label: 'Tag', type: 'text' },
       { name: 'action', label: 'Action', type: 'select', options: ['add', 'remove'] },
     ] },
-  { type: 'action', key: 'action.charge_fee', label: 'Charge fee', category: 'Actions',
-    icon: 'BadgeDollarSign', description: 'Create a billing task for the manager to charge the client a manual fee.',
+
+  // ── A/B split — pure-logic branch, no backend dependency ──────
+  { type: 'condition', key: 'flow.random_split', label: 'A/B split', category: 'Logic',
+    icon: 'Shuffle', description: 'Randomly route each run down branch A or B (for A/B testing).',
+    branches: ['A', 'B'],
     configFields: [
-      { name: 'amount', label: 'Amount', type: 'number' },
-      { name: 'currency', label: 'Currency (e.g. EUR)', type: 'text' },
-      { name: 'description', label: 'Description', type: 'text' },
+      { name: 'weightA', label: 'Weight A (%)', type: 'number' },
     ] },
 ] as const;
 
@@ -392,15 +389,21 @@ async function runLoop(p: {
         case 'trigger.schedule':
         case 'trigger.weight_change':
         case 'trigger.plan_assigned':
-        case 'trigger.payment_succeeded':
-        case 'trigger.payment_failed':
+        case 'trigger.onboarding_completed':
         case 'trigger.workout_logged':
         case 'trigger.client_inactive':
         case 'trigger.day_of_week':
-        case 'trigger.subscription_renewed':
         case 'trigger.birthday':
           await logStep(node, 'completed', { trigger: node.key });
           break;
+
+        case 'flow.random_split': {
+          // Deterministic per-run randomness via Math.random — A/B testing.
+          const wA = Math.min(100, Math.max(0, Number(cfg.weightA) || 50));
+          followHandle = (Math.random() * 100 < wA) ? 'A' : 'B';
+          await logStep(node, 'completed', { weightA: wA, branch: followHandle });
+          break;
+        }
 
         case 'flow.if': {
           const left = getByPath(ctx, cfg.field);
@@ -821,34 +824,6 @@ async function runLoop(p: {
           if (tagErr) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
-        case 'action.charge_fee': {
-          if (!ctx.client?.id) {
-            await logStep(node, 'skipped', { reason: 'no client in context' });
-            break;
-          }
-          const amount = Number(cfg.amount) || 0;
-          const currency = String(cfg.currency || 'EUR').toUpperCase();
-          const description = renderTemplate(String(cfg.description || 'Fee'), ctx);
-          if (amount <= 0) {
-            await logStep(node, 'skipped', { reason: 'amount must be > 0' });
-            break;
-          }
-          if (dryRun) {
-            await logStep(node, 'completed', { dryRun: true, amount, currency, description });
-            break;
-          }
-          // Creates a billing task for the manager to process manually.
-          const { error: feeErr } = await insertWithRetry('tasks', {
-            manager_id: managerId, client_id: ctx.client.id,
-            title: `Charge ${amount} ${currency} — ${description}`,
-            type: 'billing', date: new Date().toISOString().split('T')[0],
-            time: '09:00', status: 'pending',
-          });
-          await logStep(node, feeErr ? 'failed' : 'completed', { amount, currency, description }, feeErr?.message);
-          if (feeErr) { status = 'failed'; return { status, steps, ctx }; }
-          break;
-        }
-
         default:
           await logStep(node, 'skipped', { reason: `unknown node ${node.key}` });
       }

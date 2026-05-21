@@ -561,6 +561,20 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
       .update({ is_active: false })
       .eq('id', assignment.id)
       .eq('client_id', clientId);
+
+    // Fire the advanced-workflow trigger for "onboarding completed".
+    try {
+      const { data: clientRow } = await supabaseAdmin
+        .from('users').select('manager_id').eq('id', clientId).maybeSingle();
+      if (clientRow?.manager_id) {
+        const { runWorkflowsForEvent } = await import('./workflows.js');
+        runWorkflowsForEvent(clientRow.manager_id, 'trigger.onboarding_completed', { clientId })
+          .catch(err => console.error('Workflow trigger error (onboarding_completed):', err));
+      }
+    } catch (wfErr) {
+      console.error('onboarding_completed workflow dispatch failed:', wfErr);
+    }
+
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: 'Server error' });
