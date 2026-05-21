@@ -388,7 +388,11 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
         </div>
 
         {/* Right Column: Settings */}
-        <div className="flex-1 lg:basis-[30%] flex flex-col gap-6 overflow-y-auto pr-1 scrollbar-hide">
+        <div className="flex-1 lg:basis-[30%] flex flex-col gap-4 min-h-0">
+          {/* Scrollable area — preview + blueprint scroll independently so the
+              config card + "create draft" button below stay pinned and always
+              visible without scrolling to the bottom. */}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-hide flex flex-col gap-6">
           <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 text-center shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/20 group-hover:bg-emerald-500 transition-colors"></div>
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-inner group-hover:scale-110 transition-transform">
@@ -481,8 +485,11 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               )}
             </div>
           )}
+          </div>{/* end scrollable preview area */}
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col gap-6 shadow-sm flex-1">
+          {/* Always-visible config card — pinned, no scroll needed to reach
+              the "create draft" button. */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col gap-6 shadow-sm flex-shrink-0">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
                 <Settings2 className="w-5 h-5" />
