@@ -324,7 +324,7 @@ router.get('/manager/assignments', verifyManager, async (req: any, res) => {
 
     const clientIds = (myClients || []).map(c => c.id);
     if (clientIds.length === 0) {
-      return res.json(buildPage<any>([], page.limit, 'created_at'));
+      return res.json(buildPage<any>([], page.limit, 'assigned_at'));
     }
 
     let q = supabaseAdmin
@@ -332,14 +332,14 @@ router.get('/manager/assignments', verifyManager, async (req: any, res) => {
       .select('*, template:onboarding_templates(name)')
       .in('client_id', clientIds)
       .eq('is_active', true)
-      .order('created_at', { ascending: false })
+      .order('assigned_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(page.limit + 1);
-    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    q = applyCursor(q, page.cursor, 'assigned_at', 'desc');
     const { data: assignments, error: assignErr } = await q;
 
     if (assignErr) throw assignErr;
-    res.json(buildPage(assignments || [], page.limit, 'created_at'));
+    res.json(buildPage(assignments || [], page.limit, 'assigned_at'));
   } catch (error: any) {
     res.status(500).json({ error: safeErr(error) });
   }

@@ -1991,7 +1991,7 @@ router.post('/billing/portal', async (req: any, res) => {
     const stripe = newStripeClient(platformKey);
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
-      return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/settings`
+      return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/?billing_updated=1`
     });
     res.json({ url: session.url });
   } catch (error: any) {
@@ -4425,16 +4425,16 @@ router.get('/planning-templates', async (req: any, res: any) => {
 
     let q = supabaseAdmin
       .from('planning_templates')
-      .select('id, key, name, description, goal_type, intensity, duration, phases, data_json')
+      .select('id, key, name, description, goal_type, intensity, duration_weeks, phases, data_json')
       .eq('language', language)
       .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
-      .order('duration', { ascending: true })
+      .order('duration_weeks', { ascending: true })
       .order('id', { ascending: true })
       .limit(page.limit + 1);
-    q = applyCursor(q, page.cursor, 'duration', 'asc');
+    q = applyCursor(q, page.cursor, 'duration_weeks', 'asc');
     const { data, error } = await q;
     if (error) throw error;
-    res.json(buildPage(data || [], page.limit, 'duration'));
+    res.json(buildPage(data || [], page.limit, 'duration_weeks'));
   } catch (error: any) {
     console.error('Error fetching planning templates:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -4444,7 +4444,7 @@ router.get('/planning-templates', async (req: any, res: any) => {
 // Create a new planning template
 router.post('/planning-templates', async (req: any, res: any) => {
   try {
-    const { name, description, goal_type, intensity, duration, phases, data_json } = req.body || {};
+    const { name, description, goal_type, intensity, duration_weeks, phases, data_json } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
@@ -4461,7 +4461,7 @@ router.post('/planning-templates', async (req: any, res: any) => {
         description: description || null,
         goal_type: goal_type || null,
         intensity: intensity || null,
-        duration: Number(duration) || null,
+        duration_weeks: Number(duration_weeks) || null,
         phases: Number(phases) || null,
         data_json: data_json || {},
         language,
@@ -4486,7 +4486,7 @@ router.put('/planning-templates/:id', async (req: any, res: any) => {
     if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
 
     const patch: Record<string, any> = { updated_at: new Date().toISOString() };
-    for (const f of ['name', 'description', 'goal_type', 'intensity', 'duration', 'phases', 'data_json']) {
+    for (const f of ['name', 'description', 'goal_type', 'intensity', 'duration_weeks', 'phases', 'data_json']) {
       if (req.body?.[f] !== undefined) patch[f] = req.body[f];
     }
     const q = supabaseAdmin.from('planning_templates').update(patch).eq('manager_id', req.user.id);

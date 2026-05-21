@@ -13,7 +13,7 @@ interface PlanningPlanTemplatesProps {
 
 interface Template {
   id: string; key?: string; name: string; description?: string;
-  goal_type?: string; intensity?: string; duration?: number; phases?: number;
+  goal_type?: string; intensity?: string; duration_weeks?: number; phases?: number;
   data_json?: any;
 }
 
@@ -22,7 +22,7 @@ const INTENSITY_OPTIONS = ['low', 'moderate', 'aggressive', 'elite'];
 
 const emptyDraft = (): Template => ({
   id: '', name: '', description: '',
-  goal_type: 'fat_loss', intensity: 'moderate', duration: 12, phases: 3,
+  goal_type: 'fat_loss', intensity: 'moderate', duration_weeks: 12, phases: 3,
   data_json: { type: 'template', preview: '' },
 });
 
@@ -53,7 +53,7 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
         description: editing.description || '',
         goal_type: editing.goal_type,
         intensity: editing.intensity,
-        duration: editing.duration,
+        duration_weeks: editing.duration_weeks,
         phases: editing.phases,
         data_json: editing.data_json || { type: 'template' },
       };
@@ -140,7 +140,7 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                     <div key={tpl.id || tpl.key} onClick={open}
                       className="group flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-colors">
                       <div className="flex items-center gap-1.5 text-emerald-600 font-bold w-24 shrink-0">
-                        <Calendar className="w-4 h-4" /><span>{tpl.duration || 0}</span>
+                        <Calendar className="w-4 h-4" /><span>{tpl.duration_weeks || 0}</span>
                         <span className="text-[9px] text-slate-400 uppercase font-bold">{t('weeks_label', { defaultValue: 'sem' })}</span>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -162,7 +162,7 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-lg">
                           <Calendar className="w-5 h-5" />
-                          {tpl.duration || 0}
+                          {tpl.duration_weeks || 0}
                           <span className="text-[10px] text-slate-400 uppercase font-bold mt-1">{t('weeks_label', { defaultValue: 'semanas' })}</span>
                         </div>
                         <h3 className="font-bold text-lg text-slate-900 leading-tight mt-1 truncate">{tpl.name}</h3>
@@ -219,8 +219,8 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('total_duration', { defaultValue: 'Duración (sem)' })}</label>
                   <input type="number" min={1} max={52}
-                    value={editing.duration ?? ''}
-                    onChange={(e) => setEditing({ ...editing, duration: Number(e.target.value) })}
+                    value={editing.duration_weeks ?? ''}
+                    onChange={(e) => setEditing({ ...editing, duration_weeks: Number(e.target.value) })}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium"
                   />
                 </div>

@@ -1272,7 +1272,7 @@ router.get('/manager/checkin-assignments', verifyManager, async (req: AuthedRequ
       .eq('role', 'CLIENT');
     const clientIds = (myClients || []).map(c => c.id);
     if (clientIds.length === 0) {
-      return res.json(buildPage<any>([], page.limit, 'created_at'));
+      return res.json(buildPage<any>([], page.limit, 'assigned_at'));
     }
 
     let q = supabaseAdmin
@@ -1284,14 +1284,14 @@ router.get('/manager/checkin-assignments', verifyManager, async (req: AuthedRequ
       `)
       .eq('is_active', true)
       .in('client_id', clientIds)
-      .order('created_at', { ascending: false })
+      .order('assigned_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(page.limit + 1);
-    q = applyCursor(q, page.cursor, 'created_at', 'desc');
+    q = applyCursor(q, page.cursor, 'assigned_at', 'desc');
     const { data, error } = await q;
 
     if (error) throw error;
-    res.json(buildPage(data || [], page.limit, 'created_at'));
+    res.json(buildPage(data || [], page.limit, 'assigned_at'));
   } catch (err: unknown) {
     res.status(500).json({ error: errMessage(err) });
   }

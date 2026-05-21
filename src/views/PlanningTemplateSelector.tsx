@@ -111,7 +111,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
           id: r.key || r.id,
           name: r.name,
           description: r.description || '',
-          duration: r.duration || 12,
+          duration: r.duration_weeks || 12,
           phases: r.phases || 3,
           goalType: r.goal_type || 'custom',
           intensity: (r.intensity === 'aggressive' || r.intensity === 'elite' ? 'high'
