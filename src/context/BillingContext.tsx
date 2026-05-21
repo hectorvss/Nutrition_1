@@ -37,7 +37,7 @@ interface BillingContextType {
   status: BillingStatus | null;
   isLoading: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<BillingStatus | null>;
 }
 
 const BillingContext = createContext<BillingContextType | undefined>(undefined);
@@ -48,10 +48,10 @@ export const BillingProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<BillingStatus | null> => {
     if (!user || user.role !== 'MANAGER') {
       setStatus(null);
-      return;
+      return null;
     }
     setIsLoading(true);
     setError(null);
@@ -59,11 +59,13 @@ export const BillingProvider = ({ children }: { children: ReactNode }) => {
       const data = await fetchWithAuth('/manager/billing/status');
       if (data && typeof data === 'object' && !data.error) {
         setStatus(data as BillingStatus);
-      } else {
-        setError(data?.error || 'Failed to load billing status');
+        return data as BillingStatus;
       }
+      setError(data?.error || 'Failed to load billing status');
+      return null;
     } catch (e: any) {
       setError(e?.message || 'Failed to load billing status');
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -90,6 +92,38 @@ export const BillingProvider = ({ children }: { children: ReactNode }) => {
     window.addEventListener('billing:limit', onLimit as EventListener);
     return () => window.removeEventListener('billing:limit', onLimit as EventListener);
   }, [refresh]);
+
+  // Returning from Stripe Checkout (?session_id=...): the subscription webhook
+  // lands asynchronously a couple of seconds later. Poll the status until the
+  // plan is no longer 'trial' (or attempts run out), then strip the query param
+  // so a reload doesn't re-trigger polling.
+  useEffect(() => {
+    if (!user || user.role !== 'MANAGER') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('session_id')) return;
+
+    let cancelled = false;
+    let attempts = 0;
+    const clearParam = () => {
+      const p = new URLSearchParams(window.location.search);
+      p.delete('session_id');
+      const qs = p.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    };
+    const poll = async () => {
+      attempts++;
+      const fresh = await refresh();
+      if (cancelled) return;
+      // Stop once the webhook has upgraded the plan, or after ~25s.
+      if ((fresh && fresh.tier !== 'trial' && fresh.hasStripeSubscription) || attempts >= 10) {
+        clearParam();
+        return;
+      }
+      setTimeout(poll, 2500);
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [user, refresh]);
 
   return (
     <BillingContext.Provider value={{ status, isLoading, error, refresh }}>

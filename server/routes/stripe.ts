@@ -119,7 +119,8 @@ router.post('/webhook', async (req, res) => {
           const subscription = await stripe!.subscriptions.retrieve(subscriptionId);
           const priceId = subscription.items?.data?.[0]?.price?.id;
 
-          await supabaseAdmin.from('manager_subscriptions').upsert({
+          // PK is user_id, so upsert updates the existing (trial) row in place.
+          const { error: upsertErr } = await supabaseAdmin.from('manager_subscriptions').upsert({
             user_id: userId,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
@@ -128,26 +129,65 @@ router.post('/webhook', async (req, res) => {
             status: subscription.status,
             current_period_end: subscriptionPeriodEnd(subscription),
             updated_at: new Date().toISOString(),
-          });
+          }, { onConflict: 'user_id' });
+          if (upsertErr) {
+            // Surface the failure so Stripe retries instead of marking it done.
+            logger.error('stripe.webhook.subscription_upsert_failed', { eventId: event.id, err: upsertErr.message });
+            throw upsertErr;
+          }
         }
         break;
       }
 
+      // A subscription was created OR changed (plan up/downgrade, renewal,
+      // cancellation). We re-sync tier + status + period end from Stripe truth.
+      case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        const { data: subData } = await supabaseAdmin
+        const customerId = subscription.customer as string;
+        const priceId = subscription.items?.data?.[0]?.price?.id;
+
+        // Resolve our user: prefer the existing subscription row, fall back to
+        // the customer id (covers subscriptions created outside checkout).
+        let { data: subData } = await supabaseAdmin
           .from('manager_subscriptions')
           .select('user_id')
           .eq('stripe_subscription_id', subscription.id)
           .maybeSingle();
+        if (!subData?.user_id && customerId) {
+          const byCustomer = await supabaseAdmin
+            .from('manager_subscriptions')
+            .select('user_id')
+            .eq('stripe_customer_id', customerId)
+            .maybeSingle();
+          subData = byCustomer.data;
+        }
 
         if (subData?.user_id) {
-          await supabaseAdmin.from('manager_subscriptions').update({
+          // On a hard cancellation Stripe stops billing — keep the row but the
+          // tier is moot; isAccessBlocked() gates on `status`.
+          const updatePayload: Record<string, any> = {
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: customerId,
             status: subscription.status,
             current_period_end: subscriptionPeriodEnd(subscription),
             updated_at: new Date().toISOString(),
-          }).eq('stripe_subscription_id', subscription.id);
+          };
+          // Keep plan_tier in sync with the live Stripe price on every change —
+          // this is what makes "change plan" actually take effect in our app.
+          if (event.type !== 'customer.subscription.deleted' && priceId) {
+            updatePayload.plan_tier = tierFromPriceId(priceId);
+            updatePayload.trial_ends_at = null;
+          }
+          const { error: updErr } = await supabaseAdmin
+            .from('manager_subscriptions')
+            .update(updatePayload)
+            .eq('user_id', subData.user_id);
+          if (updErr) {
+            logger.error('stripe.webhook.subscription_update_failed', { eventId: event.id, err: updErr.message });
+            throw updErr;
+          }
 
           // Fire subscription_renewed when the billing period advances (renewal).
           const prevAttribs = (event.data as any).previous_attributes || {};

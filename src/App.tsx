@@ -72,9 +72,14 @@ export default function App() {
   const { profile } = useProfile();
   const { status: billingStatus } = useBilling();
 
-  // Redirect to dashboard if logged in and on landing page
+  // Redirect to dashboard once authenticated if still on a pre-auth view.
+  // Must cover 'login' and 'signup' too — after a fresh login (especially the
+  // 2FA flow, which keeps the user on the 'login' view while the session is
+  // established) `currentView` is 'login'/'signup', not 'landing'. Without
+  // this, renderView() falls through to the "screen under development"
+  // placeholder because there is no `case 'login'`.
   React.useEffect(() => {
-    if (user && currentView === 'landing') {
+    if (user && (currentView === 'landing' || currentView === 'login' || currentView === 'signup')) {
       setCurrentView('dashboard');
     }
   }, [user, currentView]);
@@ -120,13 +125,13 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
+      // renderView only runs once the user is authenticated, so the pre-auth
+      // views (landing/login/signup) must resolve to the dashboard — never the
+      // landing page or the "under development" placeholder. This also kills
+      // the one-frame flash before the redirect effect above fires.
       case 'landing':
-        return (
-          <LandingPage 
-            onGetStarted={() => setCurrentView('dashboard')} 
-            onLogin={() => setCurrentView('dashboard')} 
-          />
-        );
+      case 'login':
+      case 'signup':
       case 'dashboard':
         return <Dashboard onNavigate={(view, data) => {
           if (data?.clientId) setSelectedClientId(data.clientId);
