@@ -14,22 +14,31 @@ interface Props {
   /** Opens the template selector to assign a different plan to this client. */
   onReassign: () => void;
   t: (key: string, vars?: any) => string;
+  /** Template-authoring mode: no client, editable name, "assign to client". */
+  isTemplate?: boolean;
+  templateName?: string;
+  onRenameTemplate?: (name: string) => void;
+  onAssign?: () => void;
 }
 
-export default function PlanningHeader({ roadmap, client, saveStatus, currentWeek: _currentWeek, hasChanges, onNavigate, onSave, onReassign, t }: Props) {
+export default function PlanningHeader({
+  roadmap, client, saveStatus, currentWeek: _currentWeek, hasChanges,
+  onNavigate, onSave, onReassign, t,
+  isTemplate, templateName, onRenameTemplate, onAssign,
+}: Props) {
   return (
     <div className="flex flex-col gap-4">
       <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 dark:text-slate-400">
         <ol className="inline-flex items-center space-x-1 md:space-x-3">
           <li className="inline-flex items-center">
-            <button onClick={() => onNavigate('planning')} className="inline-flex items-center hover:text-emerald-500 transition-colors focus:outline-none">
-              {t('planning')}
+            <button onClick={() => onNavigate(isTemplate ? 'planning-templates' : 'planning')} className="inline-flex items-center hover:text-emerald-500 transition-colors focus:outline-none">
+              {isTemplate ? t('planning_templates_title', { defaultValue: 'Plantillas de Planificación' }) : t('planning')}
             </button>
           </li>
           <li>
             <div className="flex items-center">
               <Icon name="chevron_right" className="text-[16px] mx-1" />
-              <span className="text-slate-900 dark:text-white font-medium">{client?.name}</span>
+              <span className="text-slate-900 dark:text-white font-medium">{isTemplate ? (templateName || t('new_template_name', { defaultValue: 'Nueva plantilla' })) : client?.name}</span>
             </div>
           </li>
         </ol>
@@ -37,15 +46,22 @@ export default function PlanningHeader({ roadmap, client, saveStatus, currentWee
 
       <div className="relative bg-white dark:bg-[#1e293b] rounded-3xl p-6 shadow-sm border border-amber-200 dark:border-amber-800/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 overflow-hidden">
         <div className={`absolute top-0 right-0 text-[10px] font-bold px-4 py-1 rounded-bl-lg shadow-sm z-10 uppercase tracking-wider ${
-          /active|live/i.test(roadmap.status || '') ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-amber-900'
+          isTemplate ? 'bg-emerald-500 text-white'
+            : /active|live/i.test(roadmap.status || '') ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-amber-900'
         }`}>
-          {/active|live/i.test(roadmap.status || '')
-            ? t('planning_published', { defaultValue: 'Published' })
-            : t('planning_editing_draft')}
+          {isTemplate
+            ? t('template_label', { defaultValue: 'Plantilla' })
+            : /active|live/i.test(roadmap.status || '')
+              ? t('planning_published', { defaultValue: 'Published' })
+              : t('planning_editing_draft')}
         </div>
 
         <div className="flex items-center gap-4 relative z-10">
-          {(client?.avatar_url || client?.avatar) ? (
+          {isTemplate ? (
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 shadow-inner border-2 border-slate-50 flex items-center justify-center text-emerald-500">
+              <Icon name="map" className="text-[32px]" />
+            </div>
+          ) : (client?.avatar_url || client?.avatar) ? (
             <div
               className="w-16 h-16 rounded-full bg-cover bg-center shadow-inner border-2 border-slate-50"
               style={{ backgroundImage: `url("${client.avatar_url || client.avatar}")` }}
@@ -56,10 +72,21 @@ export default function PlanningHeader({ roadmap, client, saveStatus, currentWee
             </div>
           )}
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{client?.name}</h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm text-slate-500">{client?.gender}, {t('years_old_short', { age: client?.age })}</span>
-            </div>
+            {isTemplate ? (
+              <input
+                value={templateName || ''}
+                onChange={(e) => onRenameTemplate?.(e.target.value)}
+                placeholder={t('template_name', { defaultValue: 'Nombre de la plantilla' })}
+                className="text-2xl font-bold text-slate-900 dark:text-white leading-tight bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-emerald-500 outline-none transition-colors"
+              />
+            ) : (
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{client?.name}</h2>
+            )}
+            {!isTemplate && (
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-sm text-slate-500">{client?.gender}, {t('years_old_short', { age: client?.age })}</span>
+              </div>
+            )}
             {roadmap.config && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {roadmap.config.primaryGoal && (
@@ -82,8 +109,8 @@ export default function PlanningHeader({ roadmap, client, saveStatus, currentWee
           </div>
         </div>
 
-        {/* Exactly two actions: "Save changes" (only when there are unsaved
-            edits) and "Reassign plan" (opens the template selector). */}
+        {/* "Save changes" (only with unsaved edits) plus a context action:
+            reassign the client's plan, or assign the template to a client. */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0 relative z-10">
           <div className="flex gap-2 w-full sm:w-auto">
             {(hasChanges || saveStatus !== 'idle') && (
@@ -107,13 +134,23 @@ export default function PlanningHeader({ roadmap, client, saveStatus, currentWee
                 </span>
               </button>
             )}
-            <button
-              onClick={onReassign}
-              className="flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
-            >
-              <Icon name="swap_horiz" className="text-[18px]" />
-              <span>{t('planning_reassign_plan', { defaultValue: 'Reasignar plan' })}</span>
-            </button>
+            {isTemplate ? (
+              <button
+                onClick={onAssign}
+                className="flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+              >
+                <Icon name="person_add" className="text-[18px]" />
+                <span>{t('assign_to_client', { defaultValue: 'Asignar a cliente' })}</span>
+              </button>
+            ) : (
+              <button
+                onClick={onReassign}
+                className="flex-1 sm:flex-none py-2 px-6 rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+              >
+                <Icon name="swap_horiz" className="text-[18px]" />
+                <span>{t('planning_reassign_plan', { defaultValue: 'Reasignar plan' })}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

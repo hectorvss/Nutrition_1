@@ -12,10 +12,13 @@ import GoalsCard from './planning/GoalsCard';
 import MilestonesSection from './planning/MilestonesSection';
 import BlockEditModal from './planning/BlockEditModal';
 
-export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData }) {
+export default function PlanningDetail({ onNavigate, clientId, initialRoadmap, templateId }: { onNavigate: (view: string) => void, clientId?: string, initialRoadmap?: RoadmapData, templateId?: string }) {
   const { t, language } = useLanguage();
   const { clients, reloadClients } = useClient();
   const client = clients.find(c => c.id === clientId);
+  // Template-authoring mode: edit a planning template as a full roadmap with
+  // no client attached. The roadmap lives in the template's data_json.
+  const isTemplate = !!templateId;
 
   const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +29,11 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   const [draftStratData, setDraftStratData] = useState<BlockStrategicDetails | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  // Template mode extras.
+  const [templateName, setTemplateName] = useState('');
+  const [showAssign, setShowAssign] = useState(false);
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   // --- Trajectory Data ---
   const [checkInsHistory, setCheckInsHistory] = useState<{ date: string; weight: number }[]>([]);
@@ -44,11 +52,46 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
   }, [selectedBlockId]);
 
   useEffect(() => {
-    if (clientId) {
+    if (templateId) {
+      loadTemplate();
+    } else if (clientId) {
       loadRoadmap();
       loadTrajectoryData();
     }
-  }, [clientId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, templateId]);
+
+  // Load a planning template and treat its data_json as the roadmap.
+  const loadTemplate = async () => {
+    setLoadError(null);
+    try {
+      const tpl = await fetchWithAuth(`/manager/planning-templates/${templateId}`);
+      const dj = tpl?.data_json && typeof tpl.data_json === 'object' ? tpl.data_json : {};
+      const finalRoadmap: RoadmapData = {
+        ...getInitialData(t),
+        // Only pull real roadmap fields — ignore template-only metadata keys.
+        ...(Array.isArray(dj.nutrition) ? { nutrition: dj.nutrition } : {}),
+        ...(Array.isArray(dj.training) ? { training: dj.training } : {}),
+        ...(Array.isArray(dj.goals) ? { goals: dj.goals } : {}),
+        ...(Array.isArray(dj.milestones) ? { milestones: dj.milestones } : {}),
+        ...(dj.assumptions ? { assumptions: dj.assumptions } : {}),
+        ...(dj.config ? { config: dj.config } : {}),
+        totalWeeks: tpl?.duration_weeks || dj.totalWeeks || 12,
+        currentWeek: 1,
+        status: 'Draft',
+      };
+      setTemplateName(tpl?.name || '');
+      setRoadmap(finalRoadmap);
+      const firstNut = finalRoadmap.nutrition[0];
+      setSelectedBlockId(firstNut?.id || null);
+    } catch (error: any) {
+      console.error('Error loading planning template:', error);
+      setLoadError(error?.message || t('error_loading_data'));
+      setRoadmap(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadTrajectoryData = async () => {
     if (!clientId) return;
@@ -148,10 +191,24 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
         training: roadmap.training || []
       };
 
-      const response = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
-        method: 'POST',
-        body: JSON.stringify({ data_json: payload, status: resolvedStatus })
-      });
+      let response;
+      if (isTemplate) {
+        // Persist the roadmap into the planning template itself.
+        response = await fetchWithAuth(`/manager/planning-templates/${templateId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: (templateName || '').trim() || t('new_template_name', { defaultValue: 'Nueva plantilla' }),
+            data_json: payload,
+            duration_weeks: roadmap.totalWeeks || 12,
+            phases: roadmap.nutrition.length || roadmap.training.length || 1,
+          }),
+        });
+      } else {
+        response = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
+          method: 'POST',
+          body: JSON.stringify({ data_json: payload, status: resolvedStatus })
+        });
+      }
 
       if (!response || response.error) {
         throw new Error(response?.error || "Server failed to save roadmap");
@@ -170,6 +227,37 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
       console.error("CRITICAL: Save failed:", e);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 4000);
+    }
+  };
+
+  // Assign the current template roadmap to a chosen client (template mode).
+  const assignToClient = async (cid: string) => {
+    if (!roadmap || assignBusy) return;
+    setAssignBusy(true);
+    setAssignError(null);
+    try {
+      const payload = {
+        ...getInitialData(t),
+        ...roadmap,
+        status: 'Draft',
+        currentWeek: 1,
+        updated_at: new Date().toISOString(),
+      };
+      const response = await fetchWithAuth(`/manager/clients/${cid}/roadmap`, {
+        method: 'POST',
+        body: JSON.stringify({ data_json: payload, status: 'Draft' }),
+      });
+      if (!response || response.error) {
+        throw new Error(response?.error || 'Server failed to assign roadmap');
+      }
+      await reloadClients();
+      setShowAssign(false);
+      onNavigate('planning');
+    } catch (e: any) {
+      console.error('Assign template failed:', e);
+      setAssignError(e?.message || t('error_loading_data'));
+    } finally {
+      setAssignBusy(false);
     }
   };
 
@@ -401,6 +489,10 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
             onSave={handleSave}
             onReassign={() => onNavigate('planning-template-selector')}
             t={t}
+            isTemplate={isTemplate}
+            templateName={templateName}
+            onRenameTemplate={(name) => { setTemplateName(name); setHasChanges(true); }}
+            onAssign={() => { setAssignError(null); setShowAssign(true); }}
           />
 
           {/* --- 2. MASTER ROADMAP --- */}
@@ -434,7 +526,8 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
           />
 
           {/* --- 4. GOAL TRAJECTORY & PREDICTIONS --- */}
-          {roadmap && (
+          {/* Trajectory is client-specific (weight history) — hidden for templates. */}
+          {roadmap && !isTemplate && (
             <TrajectoryChart
               roadmap={roadmap}
               checkInsHistory={checkInsHistory}
@@ -485,6 +578,45 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap }:
           onConfirm={updateBlockWithValidation}
           t={t}
         />
+      )}
+
+      {/* --- ASSIGN TEMPLATE TO CLIENT MODAL --- */}
+      {showAssign && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 p-4" onClick={() => !assignBusy && setShowAssign(false)}>
+          <div className="bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t('assign_to_client', { defaultValue: 'Asignar a cliente' })}</h3>
+              <button onClick={() => !assignBusy && setShowAssign(false)} className="text-slate-400 hover:text-slate-600">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="p-3 max-h-[60vh] overflow-y-auto">
+              {assignError && (
+                <div className="m-2 px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-medium">{assignError}</div>
+              )}
+              {clients.length === 0 && (
+                <p className="p-6 text-center text-sm text-slate-400">{t('no_clients_found', { defaultValue: 'No hay clientes.' })}</p>
+              )}
+              {clients.map((c: any) => (
+                <button
+                  key={c.id}
+                  disabled={assignBusy}
+                  onClick={() => assignToClient(c.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors text-left disabled:opacity-50"
+                >
+                  {c.avatar ? (
+                    <div className="w-10 h-10 rounded-xl bg-cover bg-center shadow-sm" style={{ backgroundImage: `url("${c.avatar}")` }} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                      {(c.name || 'C').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="font-semibold text-sm text-slate-800 dark:text-slate-100">{c.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

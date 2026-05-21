@@ -52,7 +52,7 @@ import { useBilling } from './context/BillingContext';
 import TrialBanner from './components/TrialBanner';
 import Paywall from './components/Paywall';
 
-type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions';
+type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'planning-template-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
@@ -67,6 +67,7 @@ export default function App() {
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [draftPlanning, setDraftPlanning] = useState<any>(null);
+  const [selectedPlanningTemplateId, setSelectedPlanningTemplateId] = useState<string | null>(null);
   const { clients: globalClients, assignPlanningDraft } = useClient();
   const { t } = useLanguage();
   
@@ -195,7 +196,20 @@ export default function App() {
           setCurrentView(view as View);
         }} />;
       case 'planning-templates':
-        return <PlanningPlanTemplates onBack={() => setCurrentView('planning')} />;
+        return <PlanningPlanTemplates
+          onBack={() => setCurrentView('planning')}
+          onEditTemplate={(tid) => {
+            setSelectedPlanningTemplateId(tid);
+            setCurrentView('planning-template-detail');
+          }}
+        />;
+      case 'planning-template-detail':
+        return (
+          <PlanningDetail
+            templateId={selectedPlanningTemplateId || undefined}
+            onNavigate={(view) => setCurrentView(view as View)}
+          />
+        );
       case 'planning-template-selector':
         return (
           <PlanningTemplateSelector 
