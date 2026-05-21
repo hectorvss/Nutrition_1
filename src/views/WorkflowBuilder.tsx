@@ -23,9 +23,11 @@ import Select from '../components/ui/Select';
 interface CatalogNode {
   type: string; key: string; label: string; category: string;
   icon: string; description: string;
-  configFields: { name: string; label: string; type: string; options?: string[] }[];
+  configFields: { name: string; label: string; type: string; options?: string[]; source?: string }[];
   branches?: string[];
 }
+// Dynamic option lists keyed by configField.source (templates, clients…).
+type ConfigOptions = Record<string, Array<{ value: string; label: string }>>;
 interface WorkflowBuilderProps {
   workflowId: string | null;
   onBack: () => void;
@@ -120,6 +122,7 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
   const { t } = useLanguage();
   const { screenToFlowPosition } = useReactFlow();
   const [catalog, setCatalog] = useState<CatalogNode[]>([]);
+  const [configOptions, setConfigOptions] = useState<ConfigOptions>({});
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [wfId, setWfId] = useState<string | null>(workflowId);
@@ -131,6 +134,13 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   /* load catalog + (optional) existing workflow */
+  useEffect(() => {
+    // Real-data option lists for the config dropdowns (templates, clients…).
+    fetchWithAuth('/workflows/config-options')
+      .then(d => setConfigOptions(d || {}))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cat: CatalogNode[] = [];
     fetchWithAuth('/workflows/catalog')
@@ -415,10 +425,25 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
               )}
               {selectedCat.configFields.map(f => {
                 const val = (selected.data as any).config?.[f.name] ?? '';
+                // Dynamic source (templates/clients) wins over static options.
+                const dynOpts = f.source ? (configOptions[f.source] || []) : null;
                 return (
                   <div key={f.name} className="flex flex-col gap-1">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">{f.label}</label>
-                    {f.type === 'select' ? (
+                    {f.type === 'select' && dynOpts ? (
+                      <>
+                        <Select value={val} onChange={(v) => updateConfig(f.name, v)}
+                          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm px-2 py-1.5">
+                          <option value="">{t('select_one', { defaultValue: '— Elige una opción —' })}</option>
+                          {dynOpts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </Select>
+                        {dynOpts.length === 0 && (
+                          <span className="text-[11px] text-amber-600">
+                            {t('no_options_available', { defaultValue: 'No hay elementos disponibles — crea uno primero.' })}
+                          </span>
+                        )}
+                      </>
+                    ) : f.type === 'select' ? (
                       <Select value={val} onChange={(v) => updateConfig(f.name, v)}
                         className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm px-2 py-1.5">
                         <option value="">—</option>

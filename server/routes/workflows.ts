@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
+import { safeErr } from '../lib/http.js';
 import { makeEnforceLimit } from '../lib/plans.js';
 import { sendPushToUser } from '../lib/push.js';
 
@@ -99,7 +100,9 @@ export const WORKFLOW_CATALOG = [
     icon: 'ListTodo', description: 'Create a task for the manager.',
     configFields: [
       { name: 'title', label: 'Title', type: 'text' },
-      { name: 'type', label: 'Type', type: 'text' },
+      { name: 'type', label: 'Type', type: 'select',
+        options: ['Admin', 'Check-in', 'Call', 'Training', 'Nutrition', 'Video Call', 'In-Person'] },
+      { name: 'priority', label: 'Priority', type: 'select', options: ['low', 'medium', 'high'] },
     ] },
 
   // ── New triggers ─────────────────────────────────────────────
@@ -167,15 +170,18 @@ export const WORKFLOW_CATALOG = [
   { type: 'action', key: 'action.assign_plan', label: 'Assign plan template', category: 'Actions',
     icon: 'ClipboardPlus', description: 'Assign a nutrition or training template to the client.',
     configFields: [
-      { name: 'planKind', label: 'Plan', type: 'select', options: ['nutrition', 'training'] },
-      { name: 'templateName', label: 'Template name', type: 'text' },
+      { name: 'template', label: 'Plan template', type: 'select', source: 'plan_templates' },
     ] },
   { type: 'action', key: 'action.assign_onboarding', label: 'Assign onboarding', category: 'Actions',
     icon: 'UserCog', description: 'Assign an onboarding template to the client.',
-    configFields: [{ name: 'templateName', label: 'Template name', type: 'text' }] },
+    configFields: [
+      { name: 'template', label: 'Onboarding template', type: 'select', source: 'onboarding_templates' },
+    ] },
   { type: 'action', key: 'action.request_checkin', label: 'Request check-in', category: 'Actions',
     icon: 'ClipboardCheck', description: 'Assign a check-in template the client must fill in.',
-    configFields: [{ name: 'templateName', label: 'Check-in template name', type: 'text' }] },
+    configFields: [
+      { name: 'template', label: 'Check-in template', type: 'select', source: 'checkin_templates' },
+    ] },
   { type: 'action', key: 'action.set_client_field', label: 'Set client field', category: 'Actions',
     icon: 'PenSquare', description: 'Update a field on the client profile (notes, goal, etc.).',
     configFields: [
@@ -286,6 +292,29 @@ function delayMs(cfg: any): number {
   const amount = Number(cfg?.amount) || 0;
   if (amount <= 0) return 0;
   return cfg?.unit === 'days' ? amount * 86400000 : amount * 3600000;
+}
+
+const TPL_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolves a template config value to a row. The node dropdowns now store the
+ * template's UUID; legacy workflows stored the name as plain text. We accept
+ * both: try id first, fall back to a name lookup. All four template tables
+ * own rows via `manager_id` (a global seeded template has manager_id = null).
+ */
+async function resolveTemplate(
+  table: string, managerId: string, ref: string, select = 'id, name',
+): Promise<any | null> {
+  const v = String(ref || '').trim();
+  if (!v) return null;
+  if (TPL_UUID_RE.test(v)) {
+    const { data } = await supabaseAdmin.from(table).select(select).eq('id', v).maybeSingle();
+    if (data) return data;
+  }
+  const { data } = await supabaseAdmin.from(table).select(select)
+    .eq('name', v).or(`manager_id.eq.${managerId},manager_id.is.null`)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  return data || null;
 }
 
 const ALLOWED_VERSION_FIELDS = ['nodes', 'edges', 'trigger'] as const;
@@ -604,20 +633,27 @@ async function runLoop(p: {
             await logStep(node, 'skipped', { reason: 'no client in context' });
             break;
           }
-          const planKind = cfg.planKind === 'training' ? 'training' : 'nutrition';
-          const tplName = String(cfg.templateName || '').trim();
+          // The dropdown stores "<kind>:<templateId>"; legacy workflows stored
+          // a planKind field + a templateName string.
+          const raw = String(cfg.template || '').trim();
+          let planKind: 'nutrition' | 'training';
+          let tplRef: string;
+          if (raw.includes(':')) {
+            const [k, ...rest] = raw.split(':');
+            planKind = k === 'training' ? 'training' : 'nutrition';
+            tplRef = rest.join(':');
+          } else {
+            planKind = cfg.planKind === 'training' ? 'training' : 'nutrition';
+            tplRef = raw || String(cfg.templateName || '').trim();
+          }
           if (dryRun) {
-            await logStep(node, 'completed', { dryRun: true, planKind, tplName });
+            await logStep(node, 'completed', { dryRun: true, planKind, tplRef });
             break;
           }
-          // Look up the manager's template by name (most recent if duplicates).
           const tplTable = planKind === 'training' ? 'training_templates' : 'nutrition_templates';
-          const { data: tpl } = await supabaseAdmin
-            .from(tplTable).select('id, name, data_json')
-            .eq('created_by', managerId).eq('name', tplName)
-            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          const tpl = await resolveTemplate(tplTable, managerId, tplRef, 'id, name, data_json');
           if (!tpl) {
-            await logStep(node, 'skipped', { reason: `template "${tplName}" not found` });
+            await logStep(node, 'skipped', { reason: `template "${tplRef}" not found` });
             break;
           }
           const planTable = planKind === 'training' ? 'training_programs' : 'nutrition_plans';
@@ -625,7 +661,7 @@ async function runLoop(p: {
             client_id: ctx.client.id, created_by: managerId,
             name: tpl.name, data_json: tpl.data_json || {},
           });
-          await logStep(node, error ? 'failed' : 'completed', { planKind, tplName }, error?.message);
+          await logStep(node, error ? 'failed' : 'completed', { planKind, template: tpl.name }, error?.message);
           if (error) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
@@ -634,17 +670,14 @@ async function runLoop(p: {
             await logStep(node, 'skipped', { reason: 'no client in context' });
             break;
           }
-          const tplName = String(cfg.templateName || '').trim();
+          const tplRef = String(cfg.template || cfg.templateName || '').trim();
           if (dryRun) {
-            await logStep(node, 'completed', { dryRun: true, tplName });
+            await logStep(node, 'completed', { dryRun: true, tplRef });
             break;
           }
-          const { data: tpl } = await supabaseAdmin
-            .from('onboarding_templates').select('id, name')
-            .eq('manager_id', managerId).eq('name', tplName)
-            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          const tpl = await resolveTemplate('onboarding_templates', managerId, tplRef);
           if (!tpl) {
-            await logStep(node, 'skipped', { reason: `template "${tplName}" not found` });
+            await logStep(node, 'skipped', { reason: `template "${tplRef}" not found` });
             break;
           }
           // Deactivate previous, then insert.
@@ -656,7 +689,7 @@ async function runLoop(p: {
             assigned_by: managerId, is_active: true,
             assigned_at: new Date().toISOString(),
           });
-          await logStep(node, error ? 'failed' : 'completed', { tplName }, error?.message);
+          await logStep(node, error ? 'failed' : 'completed', { template: tpl.name }, error?.message);
           if (error) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
@@ -665,25 +698,26 @@ async function runLoop(p: {
             await logStep(node, 'skipped', { reason: 'no client in context' });
             break;
           }
-          const tplName = String(cfg.templateName || '').trim();
+          const tplRef = String(cfg.template || cfg.templateName || '').trim();
           if (dryRun) {
-            await logStep(node, 'completed', { dryRun: true, tplName });
+            await logStep(node, 'completed', { dryRun: true, tplRef });
             break;
           }
-          const { data: tpl } = await supabaseAdmin
-            .from('checkin_templates').select('id, name')
-            .eq('created_by', managerId).eq('name', tplName)
-            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          const tpl = await resolveTemplate('checkin_templates', managerId, tplRef);
           if (!tpl) {
-            await logStep(node, 'skipped', { reason: `check-in template "${tplName}" not found` });
+            await logStep(node, 'skipped', { reason: `check-in template "${tplRef}" not found` });
             break;
           }
+          // Deactivate previous active assignment, then insert the new one.
+          await supabaseAdmin.from('client_checkin_assignments')
+            .update({ is_active: false })
+            .eq('client_id', ctx.client.id).eq('is_active', true);
           const { error } = await insertWithRetry('client_checkin_assignments', {
             client_id: ctx.client.id, template_id: tpl.id,
             assigned_by: managerId, is_active: true,
             assigned_at: new Date().toISOString(),
           });
-          await logStep(node, error ? 'failed' : 'completed', { tplName }, error?.message);
+          await logStep(node, error ? 'failed' : 'completed', { template: tpl.name }, error?.message);
           if (error) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
@@ -1088,6 +1122,44 @@ async function loadPublishedTriggerVersions(managerId: string) {
 
 router.get('/catalog', verifyManager, (_req, res) => {
   res.json({ nodes: WORKFLOW_CATALOG, triggers: TRIGGER_KEYS });
+});
+
+// Real-data option lists for node config dropdowns (configField.source).
+// The inspector fetches this once so nodes like "Assign onboarding" let the
+// coach pick an actual template instead of typing a name.
+router.get('/config-options', verifyManager, async (req: any, res) => {
+  try {
+    const mid = req.user.id;
+    const ownFilter = `manager_id.eq.${mid},manager_id.is.null`;
+    const [onb, chk, nut, trn, cli] = await Promise.all([
+      supabaseAdmin.from('onboarding_templates').select('id, name').or(ownFilter).order('name'),
+      supabaseAdmin.from('checkin_templates').select('id, name').or(ownFilter).order('name'),
+      supabaseAdmin.from('nutrition_templates').select('id, name').or(ownFilter).order('name'),
+      supabaseAdmin.from('training_templates').select('id, name').or(ownFilter).order('name'),
+      supabaseAdmin.from('users').select('id, email, profiles(full_name)')
+        .eq('manager_id', mid).eq('role', 'CLIENT'),
+    ]);
+    const opt = (rows: any[] | null) =>
+      (rows || []).map(r => ({ value: r.id, label: r.name || 'Sin nombre' }));
+    res.json({
+      onboarding_templates: opt(onb.data),
+      checkin_templates: opt(chk.data),
+      nutrition_templates: opt(nut.data),
+      training_templates: opt(trn.data),
+      // assign_plan uses one combined list; value encodes the plan kind.
+      plan_templates: [
+        ...(nut.data || []).map(r => ({ value: `nutrition:${r.id}`, label: `🥗 ${r.name || 'Sin nombre'}` })),
+        ...(trn.data || []).map(r => ({ value: `training:${r.id}`,  label: `🏋 ${r.name || 'Sin nombre'}` })),
+      ],
+      clients: (cli.data || []).map((c: any) => {
+        const p = Array.isArray(c.profiles) ? c.profiles[0] : c.profiles;
+        return { value: c.id, label: p?.full_name || c.email || 'Cliente' };
+      }),
+    });
+  } catch (error: any) {
+    console.error('workflows.config-options failed:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
 });
 
 router.get('/', verifyManager, async (req: any, res) => {
