@@ -18,6 +18,8 @@ import {
   Settings,
   ShieldCheck,
   ArrowUpCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { Zap } from 'lucide-react';
 import { X } from 'lucide-react';
@@ -28,13 +30,32 @@ interface SidebarProps {
   onNavigate: (view: string) => void;
 }
 
+// Persisted desktop collapse state — keeps the sidebar in the same state
+// across reloads so the layout never surprises the user.
+const COLLAPSE_KEY = 'sidebar:collapsed';
+
 export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: SidebarProps & { isOpen?: boolean, onClose?: () => void }) {
   const { profile } = useProfile();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === 'es';
   const [unreadCount, setUnreadCount] = useState(0);
-  // Colapsado por defecto en desktop; se expande al pasar el raton por encima.
-  const [hovered, setHovered] = useState(false);
+
+  // Desktop collapse is a deliberate click toggle (like the CRM-AI sidebar),
+  // NOT hover — hover-expand made the layout jump every time the cursor
+  // crossed the rail. As a real flex item the sidebar pushes the content and
+  // animates its width, so collapsing/expanding is smooth and predictable.
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem(COLLAPSE_KEY) === '1'; } catch { return false; }
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -124,41 +145,77 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
     (id === 'subscriptions' && ['subscriptions'].includes(currentView));
 
   /**
-   * `expanded` decide el ancho/visibilidad de labels.
-   * - En el overlay movil siempre va expandido.
-   * - En desktop: expandido solo mientras el raton esta encima.
+   * Cuerpo del sidebar. `expanded` decide ancho + visibilidad de labels.
+   * - `mobile`  → overlay movil: siempre expandido, con boton de cerrar.
+   * - desktop   → expanded = !collapsed, con boton de plegar/desplegar.
+   * El contenedor es un flex item normal (no overlay) que anima su ancho:
+   * el contenido principal se reajusta de forma fluida, sin saltos.
    */
   const renderSidebar = (expanded: boolean, mobile: boolean) => (
     <div
-      className={`flex flex-col h-full bg-white border-r border-slate-200 shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
+      className={`flex flex-col bg-white border-r border-slate-200 overflow-hidden transition-[width] duration-300 ease-in-out ${
         expanded ? 'w-64' : 'w-20'
-      } ${!mobile && expanded ? 'shadow-xl shadow-slate-900/5' : ''}`}
+      } ${mobile ? 'h-full' : 'h-screen'}`}
     >
-      {/* Header: avatar + (nombre solo si expandido) */}
-      <div className={`border-b border-slate-100 flex items-center justify-between ${expanded ? 'p-5' : 'p-3 justify-center'}`}>
-        <div className={`flex items-center gap-3 ${expanded ? '' : 'justify-center'}`}>
-          <div
-            className="rounded-full h-10 w-10 border border-emerald-500/30 bg-cover bg-center shrink-0"
-            style={{
-              backgroundImage: profile?.avatar_url
-                ? `url("${profile.avatar_url}")`
-                : 'url("https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop")'
-            }}
-          />
-          {expanded && (
-            <div className="flex flex-col overflow-hidden">
-              <h1 className="text-slate-900 text-sm font-bold truncate">
-                {profile?.full_name || 'Nutritionist'}
-              </h1>
-              <p className="text-slate-500 text-xs truncate">
-                {profile?.professional_title || 'Expert Coach'}
-              </p>
+      {/* Header: avatar + (nombre si expandido) + boton toggle */}
+      <div className={`h-16 flex items-center border-b border-slate-100 shrink-0 ${expanded ? 'px-4' : 'justify-center px-0'}`}>
+        {expanded ? (
+          <>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div
+                className="rounded-full h-10 w-10 border border-emerald-500/30 bg-cover bg-center shrink-0"
+                style={{
+                  backgroundImage: profile?.avatar_url
+                    ? `url("${profile.avatar_url}")`
+                    : 'url("https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop")'
+                }}
+              />
+              <div className="flex flex-col overflow-hidden">
+                <h1 className="text-slate-900 text-sm font-bold truncate">
+                  {profile?.full_name || 'Nutritionist'}
+                </h1>
+                <p className="text-slate-500 text-xs truncate">
+                  {profile?.professional_title || 'Expert Coach'}
+                </p>
+              </div>
             </div>
-          )}
-        </div>
-        {onClose && expanded && (
-          <button onClick={onClose} className="lg:hidden p-2 text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
+            {mobile ? (
+              onClose && (
+                <button
+                  onClick={onClose}
+                  className="ml-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )
+            ) : (
+              <button
+                onClick={toggleCollapsed}
+                title={isEs ? 'Contraer menú' : 'Collapse menu'}
+                className="ml-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              >
+                <PanelLeftClose className="w-5 h-5" />
+              </button>
+            )}
+          </>
+        ) : (
+          // Colapsado (solo desktop): el avatar es el propio boton de expandir.
+          <button
+            onClick={toggleCollapsed}
+            title={isEs ? 'Expandir menú' : 'Expand menu'}
+            className="group relative w-10 h-10 flex items-center justify-center"
+          >
+            <div
+              className="rounded-full h-10 w-10 border border-emerald-500/30 bg-cover bg-center group-hover:opacity-0 transition-opacity"
+              style={{
+                backgroundImage: profile?.avatar_url
+                  ? `url("${profile.avatar_url}")`
+                  : 'url("https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop")'
+              }}
+            />
+            <span className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-400 opacity-0 group-hover:opacity-100 group-hover:bg-slate-100 transition-all">
+              <PanelLeftOpen className="w-5 h-5" />
+            </span>
           </button>
         )}
       </div>
@@ -167,7 +224,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
         {menuGroups.map((group) => (
           <div key={group.title}>
             {expanded ? (
-              <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
                 {group.title}
               </h3>
             ) : (
@@ -185,8 +242,8 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                       if (onClose) onClose();
                     }}
                     title={!expanded ? item.label : undefined}
-                    className={`flex items-center rounded-lg transition-all group ${
-                      expanded ? 'gap-3 px-3 py-2' : 'justify-center px-0 py-2.5'
+                    className={`relative flex items-center rounded-lg transition-colors group ${
+                      expanded ? 'gap-3 px-3 py-2 w-full justify-start' : 'justify-center w-10 h-10 mx-auto'
                     } ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:bg-slate-50'}`}
                   >
                     <div className="relative shrink-0">
@@ -201,7 +258,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                     </div>
                     {expanded && (
                       <>
-                        <span className={`text-sm flex-1 text-left ${active ? 'font-bold' : 'font-medium'}`}>
+                        <span className={`text-sm flex-1 text-left truncate ${active ? 'font-bold' : 'font-medium'}`}>
                           {item.label}
                         </span>
                         {item.id === 'messages' && unreadCount > 0 && (
@@ -223,22 +280,11 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
 
   return (
     <>
-      {/* Desktop Sidebar — colapsado por defecto, se expande al hover.
-          El contenedor exterior reserva SIEMPRE 80px (w-20) para que el
-          contenido principal no salte; el sidebar real se expande en
-          position:absolute por encima sin empujar el layout.
-          z-[90]: por encima de cualquier header/sticky/overlay de las
-          pantallas (que usan z-10..z-50) para que el panel expandido NUNCA
-          quede tapado. Solo los modales full-screen (z-[100]) lo cubren,
-          que es el comportamiento correcto. */}
-      <div className="hidden lg:block h-screen sticky top-0 w-20 shrink-0 z-[90]">
-        <div
-          className="absolute top-0 left-0 h-screen z-[90]"
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          {renderSidebar(hovered, false)}
-        </div>
+      {/* Desktop Sidebar — flex item real del layout: empuja el contenido y
+          anima su ancho al plegar/desplegar (sin saltos). El estado de
+          colapso se controla con click y se persiste en localStorage. */}
+      <div className="hidden lg:block sticky top-0 shrink-0 z-40">
+        {renderSidebar(!collapsed, false)}
       </div>
 
       {/* Mobile Sidebar Overlay — siempre expandido */}
