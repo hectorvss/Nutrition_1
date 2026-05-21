@@ -18,8 +18,17 @@ interface WorkoutEditorProps {
   templateId?: string | null;
 }
 
+interface SetDetail {
+  set: number;
+  reps: string;
+  weight?: string;
+  rir: string;
+  intensity: string;
+  rest: string;
+}
+
 interface PlannedExercise {
-  id: string; 
+  id: string;
   exerciseId: string;
   name: string;
   type: string;
@@ -28,7 +37,11 @@ interface PlannedExercise {
   reps: string;
   rir: string;
   rest: string;
+  intensity?: string;
+  tempo?: string;
+  notes?: string;
   explanation?: string;
+  setDetails?: SetDetail[];
 }
 
 interface WorkoutBlock {
@@ -42,26 +55,138 @@ interface WorkoutBlock {
 
 interface WorkoutLogExpansionProps {
   exercise: PlannedExercise;
-  clientId: string;
   onUpdateExplanation: (text: string) => void;
+  onUpdateSetDetails: (setDetails: SetDetail[] | undefined) => void;
 }
 
-const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onUpdateExplanation }) => {
-  const { t } = useLanguage();
+const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onUpdateExplanation, onUpdateSetDetails }) => {
+  const { t, language } = useLanguage();
+  const setDetails = exercise.setDetails || [];
+
+  const tt = (key: string, es: string, en: string) =>
+    t(key, { defaultValue: language === 'en' ? en : es });
+
+  const makeRow = (n: number): SetDetail => ({
+    set: n,
+    reps: exercise.reps || '',
+    weight: exercise.weight && exercise.weight !== '-' ? exercise.weight : '',
+    rir: exercise.rir || '',
+    intensity: exercise.intensity || '',
+    rest: exercise.rest || '',
+  });
+
+  const addSetRow = () => {
+    onUpdateSetDetails([...setDetails, makeRow(setDetails.length + 1)]);
+  };
+
+  const removeSetRow = (idx: number) => {
+    const next = setDetails
+      .filter((_, i) => i !== idx)
+      .map((r, i) => ({ ...r, set: i + 1 }));
+    onUpdateSetDetails(next.length ? next : undefined);
+  };
+
+  const updateSetField = (idx: number, field: keyof SetDetail, value: string) => {
+    onUpdateSetDetails(setDetails.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  };
+
+  // Sync the per-set rows to the flat `sets` count.
+  const syncFromSetsCount = () => {
+    const target = parseInt(exercise.sets, 10) || 0;
+    if (target <= 0) {
+      onUpdateSetDetails(undefined);
+      return;
+    }
+    let next = [...setDetails];
+    if (target > next.length) {
+      for (let i = next.length; i < target; i++) next.push(makeRow(i + 1));
+    } else if (target < next.length) {
+      next = next.slice(0, target);
+    }
+    onUpdateSetDetails(next.map((r, i) => ({ ...r, set: i + 1 })));
+  };
+
+  const countMismatch =
+    setDetails.length > 0 && setDetails.length !== (parseInt(exercise.sets, 10) || 0);
+
   return (
     <div className="px-6 py-6 bg-slate-50/50 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 px-1">
-          <span className="material-symbols-outlined text-[18px] text-emerald-500">description</span>
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{t('exercise_explanation')}</span>
+      <div className="flex flex-col gap-6">
+        {/* Per-set distribution editor */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-emerald-500">view_list</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                {tt('per_set_distribution', 'Distribución por serie', 'Per-set distribution')}
+              </span>
+            </div>
+            {countMismatch && (
+              <button
+                onClick={syncFromSetsCount}
+                className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-lg transition-colors"
+              >
+                <span className="material-symbols-outlined text-[14px]">sync</span>
+                {tt('sync_set_rows', 'Sincronizar con series', 'Sync to sets count')}
+              </button>
+            )}
+          </div>
+
+          {setDetails.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-12 gap-2 px-1 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">
+                <div className="col-span-1">{tt('set_label', 'Serie', 'Set')}</div>
+                <div className="col-span-2">{t('reps_label')}</div>
+                <div className="col-span-2">{t('weight')}</div>
+                <div className="col-span-2">{t('rir_label')}</div>
+                <div className="col-span-2">{tt('intensity_label', 'Intensidad', 'Intensity')}</div>
+                <div className="col-span-2">{t('rest')}</div>
+                <div className="col-span-1"></div>
+              </div>
+              {setDetails.map((row, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-1 text-center text-xs font-bold text-slate-400">#{row.set}</div>
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.reps} onChange={(e) => updateSetField(idx, 'reps', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.weight || ''} onChange={(e) => updateSetField(idx, 'weight', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.rir} onChange={(e) => updateSetField(idx, 'rir', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.intensity} onChange={(e) => updateSetField(idx, 'intensity', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.rest} onChange={(e) => updateSetField(idx, 'rest', e.target.value)} />
+                  <button onClick={() => removeSetRow(idx)} className="col-span-1 flex items-center justify-center p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={addSetRow}
+            className="self-start text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-3 py-1.5 bg-emerald-50 rounded-xl transition-colors"
+          >
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            {tt('add_set_row', 'Añadir serie', 'Add set row')}
+          </button>
+          {setDetails.length === 0 && (
+            <p className="text-[9px] text-slate-400 px-1 italic">
+              {tt('per_set_hint', 'Opcional: define cada serie de forma individual.', 'Optional: define each set individually.')}
+            </p>
+          )}
         </div>
-        <textarea 
-          className="w-full p-4 rounded-2xl bg-white border border-slate-200 min-h-[100px] text-sm text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500/50 resize-none font-medium placeholder:text-slate-300 transition-all shadow-sm"
-          placeholder={t('exercise_explanation_placeholder')}
-          value={exercise.explanation || ""}
-          onChange={(e) => onUpdateExplanation(e.target.value)}
-        />
-        <p className="text-[9px] text-slate-400 px-1 italic">{t('exercise_explanation_mobile_hint')}</p>
+
+        {/* Explanation */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 px-1">
+            <span className="material-symbols-outlined text-[18px] text-emerald-500">description</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{t('exercise_explanation')}</span>
+          </div>
+          <textarea
+            className="w-full p-4 rounded-2xl bg-white border border-slate-200 min-h-[100px] text-sm text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500/50 resize-none font-medium placeholder:text-slate-300 transition-all shadow-sm"
+            placeholder={t('exercise_explanation_placeholder')}
+            value={exercise.explanation || ""}
+            onChange={(e) => onUpdateExplanation(e.target.value)}
+          />
+          <p className="text-[9px] text-slate-400 px-1 italic">{t('exercise_explanation_mobile_hint')}</p>
+        </div>
       </div>
     </div>
   );
@@ -348,6 +473,13 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
       exercises: b.exercises.map(e => e.id === exId ? { ...e, [field]: value } : e)
     } : b));
   };
+
+  const updateExerciseSetDetails = (blockId: number, exId: string, setDetails: SetDetail[] | undefined) => {
+    setBlocks(prev => prev.map(b => b.id === blockId ? {
+      ...b,
+      exercises: b.exercises.map(e => e.id === exId ? { ...e, setDetails } : e)
+    } : b));
+  };
   
   const startEditBlockName = (block: WorkoutBlock) => {
     setEditingBlockId(block.id);
@@ -534,11 +666,11 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                                   </div>
                                 </div>
                               </div>
-                              {isExpanded && clientId && (
-                                <WorkoutLogExpansion 
-                                  exercise={ex} 
-                                  clientId={clientId} 
+                              {isExpanded && (
+                                <WorkoutLogExpansion
+                                  exercise={ex}
                                   onUpdateExplanation={(text) => updateExerciseField(block.id, ex.id, 'explanation', text)}
+                                  onUpdateSetDetails={(sd) => updateExerciseSetDetails(block.id, ex.id, sd)}
                                 />
                               )}
                             </div>

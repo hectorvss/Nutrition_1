@@ -578,6 +578,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                         onAddSet={addSet}
                         onUpdateNotes={(notes) => updateExerciseLog(key, 'notes', notes)}
                         explanation={ex.explanation}
+                        setDetails={ex.setDetails}
                       />
                     );
                   })}
@@ -619,11 +620,13 @@ interface DetailedExerciseRowProps {
   onAddSet: (key: string) => void;
   onUpdateNotes: (notes: string) => void;
   explanation?: string;
+  setDetails?: { set: number; reps: string; weight?: string; rir: string; intensity: string; rest: string }[];
 }
 
-const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes, explanation }) => {
-  const { t } = useLanguage();
+const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes, explanation, setDetails }) => {
+  const { t, language } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
+  const tt = (key: string, es: string, en: string) => t(key, { defaultValue: language === 'en' ? en : es });
 
   useEffect(() => {
     if (!logData) {
@@ -678,6 +681,32 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
               <p className="text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                 {explanation}
               </p>
+            </div>
+          )}
+          {setDetails && setDetails.length > 0 && (
+            <div className="mb-6 mx-2 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="material-symbols-outlined text-[18px] text-[#17cf54]">view_list</span>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                  {tt('per_set_distribution', 'Distribución por serie', 'Per-set distribution')}
+                </span>
+              </div>
+              <div className="grid grid-cols-5 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                <div>{t('set_label')}</div>
+                <div>{t('reps_label')}</div>
+                <div>{tt('intensity_label', 'Intensidad', 'Intensity')}</div>
+                <div>{t('rir_label')}</div>
+                <div>{t('rest')}</div>
+              </div>
+              {setDetails.map((s, i) => (
+                <div key={i} className="grid grid-cols-5 gap-2 text-center text-sm text-slate-700 dark:text-slate-300 py-1.5 border-b border-slate-50 dark:border-slate-800/50 last:border-0">
+                  <div className="font-bold text-slate-400">#{s.set}</div>
+                  <div>{s.reps || '—'}</div>
+                  <div>{s.intensity || '—'}</div>
+                  <div>{s.rir || '—'}</div>
+                  <div>{s.rest || '—'}</div>
+                </div>
+              ))}
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
