@@ -20,10 +20,20 @@ interface Template {
 const GOAL_OPTIONS = ['fat_loss', 'muscle_gain', 'body_recomposition', 'metabolic_reset', 'endurance_focus'];
 const INTENSITY_OPTIONS = ['low', 'moderate', 'aggressive', 'elite'];
 
+interface PhaseDef { name: string; focus: string; }
+
 const emptyDraft = (): Template => ({
   id: '', name: '', description: '',
   goal_type: 'fat_loss', intensity: 'moderate', duration_weeks: 12, phases: 3,
-  data_json: { type: 'template', preview: '' },
+  data_json: {
+    type: 'template',
+    preview: '',
+    phases: [
+      { name: 'Fase 1', focus: '' },
+      { name: 'Fase 2', focus: '' },
+      { name: 'Fase 3', focus: '' },
+    ] as PhaseDef[],
+  },
 });
 
 export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesProps) {
@@ -48,13 +58,15 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
     if (!editing.name.trim()) return;
     setBusy(true);
     try {
+      const phaseList: PhaseDef[] = Array.isArray(editing.data_json?.phases) ? editing.data_json.phases : [];
       const body = {
         name: editing.name.trim(),
         description: editing.description || '',
         goal_type: editing.goal_type,
         intensity: editing.intensity,
         duration_weeks: editing.duration_weeks,
-        phases: editing.phases,
+        // phase count is derived from the authored phase list
+        phases: phaseList.length || editing.phases || 1,
         data_json: editing.data_json || { type: 'template' },
       };
       const isNew = !editing.id && !editing.key;
@@ -225,28 +237,6 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('phases_label', { defaultValue: 'Fases' })}</label>
-                  <input type="number" min={1} max={12}
-                    value={editing.phases ?? ''}
-                    onChange={(e) => setEditing({ ...editing, phases: Number(e.target.value) })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('primary_goal_override', { defaultValue: 'Objetivo' })}</label>
-                  <select
-                    value={editing.goal_type}
-                    onChange={(e) => setEditing({ ...editing, goal_type: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium"
-                  >
-                    {GOAL_OPTIONS.map((g) => (
-                      <option key={g} value={g}>{t(`analytics_${g}`, { defaultValue: g })}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
                   <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('intensity_level', { defaultValue: 'Intensidad' })}</label>
                   <select
                     value={editing.intensity}
@@ -257,6 +247,72 @@ export default function PlanningPlanTemplates({ onBack }: PlanningPlanTemplatesP
                       <option key={i} value={i}>{t(`planning_intensity_${i}`, { defaultValue: i })}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('primary_goal_override', { defaultValue: 'Objetivo' })}</label>
+                <select
+                  value={editing.goal_type}
+                  onChange={(e) => setEditing({ ...editing, goal_type: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium"
+                >
+                  {GOAL_OPTIONS.map((g) => (
+                    <option key={g} value={g}>{t(`analytics_${g}`, { defaultValue: g })}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Phase authoring — the real roadmap structure of the template */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{t('phases_label', { defaultValue: 'Fases' })}</label>
+                <div className="flex flex-col gap-2">
+                  {((editing.data_json?.phases as PhaseDef[]) || []).map((ph, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <span className="w-6 h-6 shrink-0 rounded-lg bg-emerald-100 text-emerald-600 text-[11px] font-bold flex items-center justify-center">{idx + 1}</span>
+                      <input
+                        value={ph.name}
+                        onChange={(e) => {
+                          const arr = [...(editing.data_json?.phases || [])];
+                          arr[idx] = { ...arr[idx], name: e.target.value };
+                          setEditing({ ...editing, data_json: { ...(editing.data_json || {}), phases: arr } });
+                        }}
+                        placeholder={t('phase_name_placeholder', { defaultValue: 'Nombre de la fase' })}
+                        className="w-1/3 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none text-sm font-medium"
+                      />
+                      <input
+                        value={ph.focus}
+                        onChange={(e) => {
+                          const arr = [...(editing.data_json?.phases || [])];
+                          arr[idx] = { ...arr[idx], focus: e.target.value };
+                          setEditing({ ...editing, data_json: { ...(editing.data_json || {}), phases: arr } });
+                        }}
+                        placeholder={t('phase_focus_placeholder', { defaultValue: 'Objetivo / foco de la fase' })}
+                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const arr = (editing.data_json?.phases || []).filter((_: any, i: number) => i !== idx);
+                          setEditing({ ...editing, data_json: { ...(editing.data_json || {}), phases: arr } });
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-500 shrink-0"
+                        title={t('delete', { defaultValue: 'Eliminar' })}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const arr = [...(editing.data_json?.phases || [])];
+                      arr.push({ name: `Fase ${arr.length + 1}`, focus: '' });
+                      setEditing({ ...editing, data_json: { ...(editing.data_json || {}), phases: arr } });
+                    }}
+                    className="self-start flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 mt-1"
+                  >
+                    <Plus className="w-4 h-4" /> {t('add_phase', { defaultValue: 'Añadir fase' })}
+                  </button>
                 </div>
               </div>
               <div>

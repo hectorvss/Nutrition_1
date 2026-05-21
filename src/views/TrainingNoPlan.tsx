@@ -155,6 +155,27 @@ const PRESETS = [
   }
 ];
 
+// Canonical weekday spread per weekly frequency. A variant simply redistributes
+// the template's workouts across these days so the chosen frequency actually
+// changes the real training structure (not just a metadata label).
+const FREQ_DAY_SPREAD: Record<number, string[]> = {
+  2: ['monday', 'thursday'],
+  3: ['monday', 'wednesday', 'friday'],
+  4: ['monday', 'tuesday', 'thursday', 'friday'],
+  5: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+  6: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+};
+
+// Build a weeklySchedule (day -> workoutId) by spreading the workout list
+// across `freq` training days, cycling if there are fewer workouts than days.
+function buildWeeklySchedule(workouts: any[], freq: number): Record<string, string> {
+  const days = FREQ_DAY_SPREAD[freq] || FREQ_DAY_SPREAD[3];
+  const sched: Record<string, string> = {};
+  if (!workouts.length) return sched;
+  days.forEach((d, i) => { sched[d] = workouts[i % workouts.length].id; });
+  return sched;
+}
+
 const WEEKDAYS = [
   { char: 'M', full: 'Monday' },
   { char: 'T', full: 'Tuesday' },
@@ -255,30 +276,36 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
       const selectedProgram = allPresets.find(p => p.id === selectedId) || recommendedPreset;
       let dataJson: any;
 
-      const parsedFreq = parseInt(freqOverride, 10) || undefined;
+      const parsedFreq = parseInt(freqOverride, 10) || 3;
 
       if ((selectedProgram as any).isDbTemplate) {
+        const baseJson = (selectedProgram as any).data_json || {};
+        const workouts = Array.isArray(baseJson.workouts) ? baseJson.workouts : [];
         dataJson = {
-          ...((selectedProgram as any).data_json || {}),
+          ...baseJson,
           focus: focusOverride,
-          frequency: parsedFreq
+          frequency: parsedFreq,
+          // Rebuild the schedule so changing the frequency really changes the
+          // training week instead of leaving the template's original days.
+          weeklySchedule: buildWeeklySchedule(workouts, parsedFreq),
         };
       } else {
         const template = PROGRAM_TEMPLATES[selectedId];
         // Use the program the coach actually selected — never fall back to a
         // different one from `trainingPrograms`.
         const prog: any = selectedProgram;
+        const workouts = template?.workouts || [];
 
         dataJson = {
           name: prog.name,
           level: prog.level,
           focus: focusOverride || prog.focus,
-          frequency: parsedFreq || prog.frequency,
+          frequency: parsedFreq,
           duration: prog.duration,
           schedule: prog.schedule,
           description: prog.description,
-          workouts: template?.workouts || [],
-          weeklySchedule: template?.defaultSchedule || {}
+          workouts,
+          weeklySchedule: buildWeeklySchedule(workouts, parsedFreq),
         };
       }
 
@@ -499,8 +526,8 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                 
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('weekly_frequency')}</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {['2x', '3x', '4x', '5x'].map((freq) => {
+                  <div className="grid grid-cols-5 gap-2">
+                    {['2x', '3x', '4x', '5x', '6x'].map((freq) => {
                       const isFreqSelected = freqOverride === freq;
                       return (
                         <button

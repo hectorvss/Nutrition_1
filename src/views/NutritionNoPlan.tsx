@@ -30,7 +30,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 38,
       fats: 30,
       weekViewLabel: '3+2',
-      structure: t('three_meals_two_snacks'),
+      structure: '3 Meals + 2 Snacks',
       macroId: 'Balanced (40/30/30)',
       bars: [60, 80, 70, 60, 90, {h: 50, p: true}, {h: 40, p: true}],
       recommendedFor: ['Weight Loss', 'Fat Loss']
@@ -46,7 +46,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 50,
       fats: 25,
       weekViewLabel: '4 meals',
-      structure: t('four_meals'),
+      structure: '4 Meals',
       macroId: 'High Carb (25/50/25)',
       bars: [70, 70, 70, 80, 80, {h: 60, p: true}, {h: 60, p: true}],
       recommendedFor: ['Maintenance', 'Not Set']
@@ -62,7 +62,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 35,
       fats: 25,
       weekViewLabel: '3+2',
-      structure: t('three_meals_two_snacks'),
+      structure: '3 Meals + 2 Snacks',
       macroId: 'Balanced (40/30/30)',
       bars: [80, 80, 80, 80, 80, {h: 80, p: true}, {h: 80, p: true}],
       recommendedFor: ['Muscle Gain']
@@ -78,7 +78,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 40,
       fats: 30,
       weekViewLabel: '3+3',
-      structure: t('three_meals_three_snacks'),
+      structure: '3 Meals + 3 Snacks',
       macroId: 'Balanced (40/30/30)',
       bars: [90, 90, 90, 90, 90, 90, {h: 70, p: true}],
       recommendedFor: ['Muscle Gain']
@@ -94,7 +94,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 48,
       fats: 27,
       weekViewLabel: '4+2',
-      structure: t('four_meals_two_snacks'),
+      structure: '4 Meals + 2 Snacks',
       macroId: 'Balanced (40/30/30)',
       bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 60, p: true}],
       recommendedFor: ['Performance']
@@ -110,7 +110,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 55,
       fats: 20,
       weekViewLabel: '5 meals',
-      structure: t('five_meals'),
+      structure: '5 Meals',
       macroId: 'High Carb (25/55/20)',
       bars: [95, 95, 95, 95, 95, {h: 80, p: true}, {h: 80, p: true}],
       recommendedFor: ['Muscle Gain']
@@ -126,7 +126,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 40,
       fats: 30,
       weekViewLabel: '5+1',
-      structure: t('five_meals_one_snack'),
+      structure: '5 Meals + 1 Snack',
       macroId: 'Balanced (40/30/30)',
       bars: [100, 100, 100, 100, 100, {h: 100, p: true}, {h: 50, p: true}],
       recommendedFor: ['Strength']
@@ -142,7 +142,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       carbs: 60,
       fats: 20,
       weekViewLabel: '6 meals',
-      structure: t('six_meals'),
+      structure: '6 Meals',
       macroId: 'High Carb (20/60/20)',
       bars: [100, 100, 100, 100, 100, 100, {h: 100, p: true}],
       recommendedFor: ['Muscle Gain']
@@ -192,6 +192,35 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     return { tag: t('balanced_tag', { defaultValue: 'Equilibrado' }), tagColor: 'bg-blue-50 text-blue-600' };
   };
 
+  // Map a meal count to a canonical daily-structure value (must match the
+  // <option value> strings and the branches inside generatePlanData()).
+  const structureFromMeals = (n: number): string => {
+    if (n >= 6) return '6 Meals';
+    if (n === 5) return '5 Meals';
+    if (n === 4) return '4 Meals';
+    return '3 Meals';
+  };
+
+  // Snap an arbitrary macro split to the closest canonical option so the
+  // macro <select> and generatePlanData() always agree on a valid value.
+  const MACRO_OPTIONS: { id: string; p: number; c: number; f: number }[] = [
+    { id: 'Balanced (40/30/30)', p: 40, c: 30, f: 30 },
+    { id: 'Low Carb (40/40/20)', p: 40, c: 40, f: 20 },
+    { id: 'High Carb (25/50/25)', p: 25, c: 50, f: 25 },
+    { id: 'High Carb (25/55/20)', p: 25, c: 55, f: 20 },
+    { id: 'High Carb (20/60/20)', p: 20, c: 60, f: 20 },
+    { id: 'Ketogenic (20/5/75)', p: 20, c: 5, f: 75 },
+  ];
+  const nearestMacroSplit = (p: number, c: number, f: number): string => {
+    let best = MACRO_OPTIONS[0];
+    let bestDist = Infinity;
+    for (const o of MACRO_OPTIONS) {
+      const d = (o.p - p) ** 2 + (o.c - c) ** 2 + (o.f - f) ** 2;
+      if (d < bestDist) { bestDist = d; best = o; }
+    }
+    return best.id;
+  };
+
   // Show the manager's real templates (from the template library). Fall back to
   // the built-in presets only when there are no templates yet.
   const dbPresets = (Array.isArray(templates) ? templates : []).map(tpl => {
@@ -209,8 +238,9 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       tagColor: tagInfo.tagColor,
       protein: p, carbs: c, fats: f,
       weekViewLabel: mealCount ? `${mealCount} ${t('meals', { defaultValue: 'comidas' })}` : t('meals', { defaultValue: 'comidas' }),
-      structure: mealCount ? `${mealCount} ${t('meals', { defaultValue: 'comidas' })}` : 'Custom',
-      macroId: 'Custom',
+      // Canonical, valid values so the right-hand editor drives generation.
+      structure: structureFromMeals(mealCount || 4),
+      macroId: nearestMacroSplit(p, c, f),
       bars: [70, 82, 76, 88, 80, 64, 58],
       recommendedFor: tpl.data_json?.goal ? [tpl.data_json.goal] : [],
       isDbTemplate: true,
@@ -491,21 +521,15 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   };
 
   const handleConfirm = async () => {
-    let finalPlanData: any;
-    
-    if ((selectedPreset as any).isDbTemplate && (selectedPreset as any).data_json) {
-      finalPlanData = {
-        name: `Plan - ${client.name} (${(selectedPreset as any).title})`,
-        data_json: (selectedPreset as any).data_json
-      };
-    } else {
-      const generatedData = generatePlanData();
-      finalPlanData = {
-        name: `Plan Dinámico - ${client.name}`,
-        data_json: generatedData
-      };
-    }
-    
+    // Always materialise the plan from the editor selection (calories +
+    // structure + macro split). The template provides the base totals; the
+    // right-hand editor is the single source of truth for the distribution.
+    const generatedData = generatePlanData();
+    const finalPlanData = {
+      name: `Plan - ${client.name}${(selectedPreset as any)?.title ? ` (${(selectedPreset as any).title})` : ''}`,
+      data_json: { ...generatedData, sourceTemplateId: (selectedPreset as any)?.isDbTemplate ? selectedId : null },
+    };
+
     // Persist immediately to backend
     try {
       await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {

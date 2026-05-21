@@ -213,10 +213,10 @@ export default function App() {
                 status: 'Draft',
                 currentWeek: 1,
                 totalWeeks: settings.duration || 12,
-                nutrition: [],
-                training: [],
+                nutrition: settings.roadmapBlocks?.nutrition || [],
+                training: settings.roadmapBlocks?.training || [],
                 goals: [],
-                milestones: [],
+                milestones: settings.roadmapBlocks?.milestones || [],
                 assumptions: {
                   steps: '',
                   sleep: '',

@@ -52,8 +52,12 @@ function buildRoadmapPhases(
   totalWeeks: number,
   intensity: string,
   goalType: string,
+  phaseDefs?: { name: string; focus: string }[],
 ) {
-  const n = Math.max(1, Math.min(phasesCount || 3, 8));
+  // When the template carries authored phases (name + focus per phase) use
+  // them verbatim; otherwise fall back to a generic N-phase split.
+  const defs = Array.isArray(phaseDefs) && phaseDefs.length ? phaseDefs : null;
+  const n = defs ? defs.length : Math.max(1, Math.min(phasesCount || 3, 8));
   const weeks = Math.max(n, totalWeeks || 12);
   const per = Math.floor(weeks / n);
   const nutrition: any[] = [];
@@ -65,10 +69,12 @@ function buildRoadmapPhases(
     const span = i === n - 1 ? weeks - acc : per;
     const endWeek = acc + span;
     acc = endWeek;
-    const label = `Fase ${i + 1}`;
-    const strat = (track: 'nutrition' | 'training') => ({
+    const def = defs ? defs[i] : null;
+    const label = (def?.name || '').trim() || `Fase ${i + 1}`;
+    const objective = (def?.focus || '').trim() || (goalType ? goalType.replace(/_/g, ' ') : label);
+    const strat = (_track: 'nutrition' | 'training') => ({
       summary: '',
-      primaryObjective: goalType ? goalType.replace(/_/g, ' ') : label,
+      primaryObjective: objective,
       secondaryObjectives: [],
       trainingIntensity: intensity,
       kpis: [],
@@ -215,11 +221,15 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
   const handleCreateDraft = () => {
     if (!selectedTemplateId || !selectedTemplate) return;
     // Materialise the roadmap phases from the chosen template + editor settings.
+    const phaseDefs = Array.isArray(selectedTemplate.data?.phases)
+      ? selectedTemplate.data.phases
+      : undefined;
     const roadmapBlocks = buildRoadmapPhases(
       selectedTemplate.phases,
       settings.duration,
       settings.intensityLevel,
       settings.primaryGoal,
+      phaseDefs,
     );
     onSelect(selectedTemplateId, { ...settings, roadmapBlocks });
   };
