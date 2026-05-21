@@ -181,7 +181,10 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
       .catch(() => {});
   }, []);
 
-  const templates: PlanningTemplate[] = [...customTemplates, ...builtInTemplates];
+  // Only the real coach-managed planning templates are offered — the legacy
+  // hard-coded presets are intentionally excluded.
+  void builtInTemplates;
+  const templates: PlanningTemplate[] = customTemplates;
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
@@ -218,25 +221,17 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
     return map[template.id] || { name: template.name, description: template.description, badge: template.badge, preview: template.roadmapPreview };
   };
 
+  // Assign the selected template: its full authored roadmap is copied onto
+  // the client so the planning is really persisted.
   const handleCreateDraft = () => {
     if (!selectedTemplateId || !selectedTemplate) return;
-    // Materialise the roadmap phases from the chosen template + editor settings.
-    const phaseDefs = Array.isArray(selectedTemplate.data?.phases)
-      ? selectedTemplate.data.phases
-      : undefined;
-    const roadmapBlocks = buildRoadmapPhases(
-      selectedTemplate.phases,
-      settings.duration,
-      settings.intensityLevel,
-      settings.primaryGoal,
-      phaseDefs,
-    );
-    onSelect(selectedTemplateId, { ...settings, roadmapBlocks });
+    void buildRoadmapPhases;
+    onSelect(selectedTemplateId, { template: selectedTemplate });
   };
 
   // "Custom Strategy" = start from a blank roadmap (no template applied).
   const handleCreateCustom = () => {
-    onSelect('custom', settings);
+    onSelect('custom', { template: null });
   };
 
   return (

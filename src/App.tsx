@@ -215,37 +215,13 @@ export default function App() {
           <PlanningTemplateSelector 
             client={globalClients.find(c => c.id === selectedClientId)}
             onBack={() => setCurrentView('planning')}
-            onSelect={async (templateId, settings) => {
-              // 1. Assign via context (Persistence & Logic)
+            onSelect={async (_templateId, payload) => {
+              // Copy the chosen template's full roadmap onto the client and
+              // persist it. Then open the client's (now saved) planning.
               if (selectedClientId) {
-                await assignPlanningDraft(selectedClientId, templateId, settings);
+                await assignPlanningDraft(selectedClientId, payload?.template || null);
               }
-
-              // 2. Generate an EMPTY roadmap scaffold for routing — no invented
-              //    phases, macros or assumptions. The coach builds the blocks in
-              //    PlanningDetail. Only real user-chosen settings are carried over.
-              const generatedDraft = {
-                status: 'Draft',
-                currentWeek: 1,
-                totalWeeks: settings.duration || 12,
-                nutrition: settings.roadmapBlocks?.nutrition || [],
-                training: settings.roadmapBlocks?.training || [],
-                goals: [],
-                milestones: settings.roadmapBlocks?.milestones || [],
-                assumptions: {
-                  steps: '',
-                  sleep: '',
-                  constraints: ''
-                },
-                config: {
-                  primaryGoal: settings.primaryGoal,
-                  nutritionApproach: settings.nutritionApproach,
-                  trainingFreq: settings.trainingFreq,
-                  intensityLevel: settings.intensityLevel,
-                  duration: settings.duration
-                }
-              };
-              setDraftPlanning(generatedDraft);
+              setDraftPlanning(null);
               setCurrentView('planning-detail');
             }}
           />

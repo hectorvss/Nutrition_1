@@ -31,6 +31,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap, t
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   // Template mode extras.
   const [templateName, setTemplateName] = useState('');
+  const [templateGoalType, setTemplateGoalType] = useState<string | null>(null);
   const [showAssign, setShowAssign] = useState(false);
   const [assignBusy, setAssignBusy] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap, t
         status: 'Draft',
       };
       setTemplateName(tpl?.name || '');
+      setTemplateGoalType(tpl?.goal_type || dj.goalType || null);
       setRoadmap(finalRoadmap);
       const firstNut = finalRoadmap.nutrition[0];
       setSelectedBlockId(firstNut?.id || null);
@@ -239,13 +241,18 @@ export default function PlanningDetail({ onNavigate, clientId, initialRoadmap, t
       const payload = {
         ...getInitialData(t),
         ...roadmap,
-        status: 'Draft',
+        status: 'Active',
         currentWeek: 1,
+        // Carry the planning goal so nutrition/training can recommend plans.
+        goalType: templateGoalType,
+        planFamilyKey: templateGoalType,
+        planFamilyLabel: templateName || null,
+        planningTemplateId: templateId || null,
         updated_at: new Date().toISOString(),
       };
       const response = await fetchWithAuth(`/manager/clients/${cid}/roadmap`, {
         method: 'POST',
-        body: JSON.stringify({ data_json: payload, status: 'Draft' }),
+        body: JSON.stringify({ data_json: payload, status: 'Active' }),
       });
       if (!response || response.error) {
         throw new Error(response?.error || 'Server failed to assign roadmap');

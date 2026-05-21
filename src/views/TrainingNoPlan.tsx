@@ -189,10 +189,12 @@ const WEEKDAYS = [
 
 export default function TrainingNoPlan({ client, onBack, onStartPlan }: TrainingNoPlanProps) {
   const { t } = useLanguage();
-  const { assignTrainingPlan, reloadClients } = useClient();
+  const { assignTrainingPlan, reloadClients, clients } = useClient();
   const [templates, setTemplates] = useState<any[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
-  const clientGoal = client?.goal || 'Not Set';
+  // Resolve the full client from context to access assigned-planning fields.
+  const fullClient = clients.find((c: any) => c.id === client?.id) || client;
+  const clientGoal = fullClient?.goal || client?.goal || 'Not Set';
   
 
   // Fetch templates from backend on mount
@@ -244,7 +246,23 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
   }));
   const allPresets: any[] = dbPresets.length > 0 ? dbPresets : [...PRESETS];
 
-  const recommendedPreset = allPresets.find(p => Array.isArray(p.recommended) && p.recommended.includes(clientGoal)) ||
+  // When the client has an assigned planning, its goal drives which training
+  // template is recommended (preselected).
+  const planningKey = String(fullClient?.planFamilyKey || '').toLowerCase();
+  const TRA_HINTS: Record<string, string[]> = {
+    fat_loss: ['fat loss', 'grasa', 'circuit', 'circuito', 'hiit', 'quema'],
+    muscle_gain: ['hypertrophy', 'hipertrofia', 'push', 'torso', 'split', 'arms', 'brazos', 'glute', 'glúteo', 'gluteo'],
+    body_recomposition: ['recomposition', 'recomposic', 'upper', 'torso', 'powerbuilding'],
+    performance: ['performance', 'rendimiento', 'crossfit', 'hyrox', 'powerlifting', 'strength', 'fuerza', 'athletic', 'atlético', 'atletico'],
+    endurance_focus: ['running', 'carrera', 'engine', '5k', 'hyrox', 'crossfit'],
+    health: ['mobility', 'movilidad', 'beginner', 'principiante', 'full body', 'completo', 'functional', 'funcional'],
+    metabolic_reset: ['full body', 'completo', 'beginner', 'principiante', '5x5', 'strength', 'fuerza'],
+  };
+  const planningHintMatch = planningKey && TRA_HINTS[planningKey]
+    ? allPresets.find(p => TRA_HINTS[planningKey].some(h => String(p.title || '').toLowerCase().includes(h)))
+    : null;
+  const recommendedPreset = planningHintMatch ||
+                           allPresets.find(p => Array.isArray(p.recommended) && p.recommended.includes(clientGoal)) ||
                            allPresets[0];
 
   const [selectedId, setSelectedId] = useState<string>(recommendedPreset.id);

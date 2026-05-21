@@ -71,7 +71,7 @@ interface ClientContextType {
   reloadClients: () => Promise<void>;
   assignNutritionPlan: (clientId: string) => void;
   assignTrainingPlan: (clientId: string) => void;
-  assignPlanningDraft: (clientId: string, templateId: string, settings: any) => Promise<void>;
+  assignPlanningDraft: (clientId: string, template: any) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   archiveClient: (clientId: string, status: 'Active' | 'Archived') => Promise<void>;
 }
@@ -110,41 +110,38 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const assignPlanningDraft = async (clientId: string, templateId: string, settings: any) => {
+  // Assign a planning to a client: the template's full authored roadmap is
+  // copied onto the client and persisted. `template` may be null → blank plan.
+  const assignPlanningDraft = async (clientId: string, template: any) => {
     try {
-      const recommendations = getRecommendationsByPlanningId(templateId);
-      
-      const updateData = {
-        planningAssigned: true,
-        planningTemplateId: templateId,
-        recommendedNutritionId: recommendations?.nutritionTemplateId,
-        recommendedTrainingId: recommendations?.trainingTemplateId,
-        planFamilyKey: recommendations?.familyKey,
-        planFamilyLabel: recommendations?.familyLabel,
-        settings
+      const dj = (template && template.data && typeof template.data === 'object') ? template.data : {};
+      const roadmap = {
+        ...dj,
+        status: 'Active',
+        currentWeek: 1,
+        totalWeeks: dj.totalWeeks || template?.duration || 12,
+        planningTemplateId: template?.id || null,
+        goalType: template?.goalType || dj.goalType || null,
+        planFamilyKey: template?.goalType || dj.goalType || null,
+        planFamilyLabel: template?.name || dj.planFamilyLabel || null,
+        nutrition: Array.isArray(dj.nutrition) ? dj.nutrition : [],
+        training: Array.isArray(dj.training) ? dj.training : [],
+        goals: Array.isArray(dj.goals) ? dj.goals : [],
+        milestones: Array.isArray(dj.milestones) ? dj.milestones : [],
+        assumptions: dj.assumptions || { steps: '', sleep: '', constraints: '' },
       };
 
-      // In a real app, this would be a specific endpoint. 
-      // For now, persist as part of the client profile/meta in data_json of the roadmap
-      await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
+      const res = await fetchWithAuth(`/manager/clients/${clientId}/roadmap`, {
         method: 'POST',
-        body: JSON.stringify({ 
-          name: 'Draft Roadmap', 
-          data_json: { 
-            ...updateData, 
-            status: 'DRAFT', 
-            nutrition: [], 
-            training: [], 
-            goals: [], 
-            milestones: [],
-            assumptions: { steps: '', sleep: '', constraints: '' }
-          } 
-        })
+        body: JSON.stringify({ data_json: roadmap, status: 'Active' }),
       });
+      if (!res || res.error) throw new Error(res?.error || 'Roadmap not saved');
 
-      setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updateData } : c));
+      // Refresh from the server so planningAssigned and labels reflect reality.
+      await loadClients();
     } catch (err) {
       console.error('Error assigning planning draft:', err);
+      throw err;
     }
   };
 

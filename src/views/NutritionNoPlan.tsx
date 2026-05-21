@@ -149,11 +149,14 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     }
   ];
 
-  const { assignNutritionPlan, reloadClients } = useClient();
+  const { assignNutritionPlan, reloadClients, clients } = useClient();
   const { foods } = useFoodContext();
   const [templates, setTemplates] = useState<any[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
-  const clientGoal = client?.goal || 'Not Set';
+  // Resolve the full client from context — the prop is a stripped list object
+  // and lacks the assigned-planning fields (planFamilyKey, recommendations).
+  const fullClient = clients.find((c: any) => c.id === client?.id) || client;
+  const clientGoal = fullClient?.goal || client?.goal || 'Not Set';
   
   // Fetch templates from backend on mount
   React.useEffect(() => {
@@ -249,8 +252,24 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
   });
   const allPresets: any[] = dbPresets.length > 0 ? dbPresets : [...PRESETS];
 
-  const plannedRecommendedId = client?.recommendedNutritionId ? nutritionMapping[client.recommendedNutritionId] : null;
+  const plannedRecommendedId = fullClient?.recommendedNutritionId ? nutritionMapping[fullClient.recommendedNutritionId] : null;
+  // When the client has an assigned planning, its goal drives which nutrition
+  // template is recommended (preselected) here.
+  const planningKey = String(fullClient?.planFamilyKey || '').toLowerCase();
+  const NUT_HINTS: Record<string, string[]> = {
+    fat_loss: ['fat loss', 'pérdida', 'perdida', 'grasa', 'keto', 'cut'],
+    muscle_gain: ['gain', 'ganancia', 'volumen', 'bulk', 'lean'],
+    body_recomposition: ['maintain', 'mantenimiento', 'recomp', 'protein', 'proteína'],
+    performance: ['athlete', 'rendimiento', 'perform', 'power'],
+    endurance_focus: ['athlete', 'rendimiento', 'perform', 'endurance'],
+    health: ['maintain', 'mantenimiento', 'active'],
+    metabolic_reset: ['maintain', 'mantenimiento', 'active'],
+  };
+  const planningHintMatch = planningKey && NUT_HINTS[planningKey]
+    ? allPresets.find(p => NUT_HINTS[planningKey].some(h => String(p.title || '').toLowerCase().includes(h)))
+    : null;
   const recommendedPreset = allPresets.find(p => p.id === plannedRecommendedId) ||
+                       planningHintMatch ||
                        allPresets.find(p => p.recommendedFor.includes(clientGoal)) ||
                        allPresets[0];
   
