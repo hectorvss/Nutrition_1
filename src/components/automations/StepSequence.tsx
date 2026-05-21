@@ -21,7 +21,10 @@ export type AutomationStep =
   | { kind: 'wait'; amount: number; unit: 'hours' | 'days'; cancelIfReplied?: boolean }
   | { kind: 'create_task'; title: string; type?: string; priority?: 'low'|'medium'|'high'; date?: string }
   | { kind: 'set_field'; field: 'status' | 'goal' | 'notes'; value: string }
-  | { kind: 'stop_if'; conditionType: string; operator: string; value: string };
+  | { kind: 'stop_if'; conditionType: string; operator: string; value: string }
+  | { kind: 'notify_coach'; title: string; body: string }
+  | { kind: 'create_event'; title: string; eventType?: string; offsetDays?: number; time?: string }
+  | { kind: 'assign_checkin'; templateId: string };
 
 const STEP_TYPES: Array<{
   kind: AutomationStep['kind'];

@@ -10,6 +10,7 @@ import { makeEnforceLimit, limitsForTier, type PlanTier } from '../lib/plans.js'
 import { TRIGGERS, TRIGGER_BY_ID, filterTriggersByTier } from '../lib/automation-triggers.js';
 import { ACTIVATION_CONDITIONS, STOP_CONDITIONS, filterConditionsByTier } from '../lib/automation-conditions.js';
 import { FLOW_TEMPLATES } from '../lib/automation-templates.js';
+import { sendPushToUser } from '../lib/push.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
 // Block automation creation once the manager hits their tier's active-automation cap.
@@ -177,6 +178,65 @@ async function executeAutomationSteps(opts: {
         .update({ [step.field]: step.value })
         .eq(pk, ctx.clientId);
       if (error) console.error(`[automation ${ctx.automation.id}] set_field step ${i} failed:`, error);
+      continue;
+    }
+
+    if (step.kind === 'notify_coach') {
+      // Web-push to the coach. Best-effort: a missing subscription must not
+      // abort the chain.
+      try {
+        await sendPushToUser(ctx.managerId, {
+          title: renderMessage(step.title || 'Automatización', ctx.renderCtx),
+          body: renderMessage(step.body || '', ctx.renderCtx),
+          url: '/automations',
+        });
+      } catch (e: any) {
+        console.error(`[automation ${ctx.automation.id}] notify_coach step ${i} failed:`, e?.message);
+      }
+      continue;
+    }
+
+    if (step.kind === 'create_event') {
+      const offset = Number(step.offsetDays) || 0;
+      const date = new Date(Date.now() + offset * 86400 * 1000).toISOString().slice(0, 10);
+      const { error } = await supabaseAdmin.from('tasks').insert({
+        manager_id: ctx.managerId,
+        client_id: ctx.clientId,
+        title: renderMessage(step.title, ctx.renderCtx),
+        type: step.eventType || 'Call',
+        date,
+        time: step.time || '09:00',
+        status: 'pending',
+        priority: 'medium',
+      });
+      if (error) console.error(`[automation ${ctx.automation.id}] create_event step ${i} failed:`, error);
+      continue;
+    }
+
+    if (step.kind === 'assign_checkin') {
+      // Verify the template belongs to this manager before assigning.
+      if (step.templateId) {
+        const { data: tpl } = await supabaseAdmin
+          .from('checkin_templates')
+          .select('id, manager_id')
+          .eq('id', step.templateId)
+          .maybeSingle();
+        if (tpl && tpl.manager_id === ctx.managerId) {
+          await supabaseAdmin.from('client_checkin_assignments')
+            .update({ is_active: false })
+            .eq('client_id', ctx.clientId)
+            .eq('is_active', true);
+          const { error } = await supabaseAdmin.from('client_checkin_assignments').insert({
+            client_id: ctx.clientId,
+            template_id: step.templateId,
+            is_active: true,
+            assigned_at: new Date().toISOString(),
+          });
+          if (error) console.error(`[automation ${ctx.automation.id}] assign_checkin step ${i} failed:`, error);
+        } else {
+          console.error(`[automation ${ctx.automation.id}] assign_checkin step ${i}: template not owned`);
+        }
+      }
       continue;
     }
 
@@ -583,7 +643,7 @@ router.get('/catalog', verifyManager, async (req: any, res) => {
  */
 async function validateSteps(req: any, steps: any): Promise<{ ok: boolean; error?: string; steps?: AutomationStep[] }> {
   if (!Array.isArray(steps) || steps.length === 0) return { ok: true, steps: [] };
-  const VALID_KINDS = ['message', 'wait', 'create_task', 'set_field', 'stop_if'];
+  const VALID_KINDS = ['message', 'wait', 'create_task', 'set_field', 'stop_if', 'notify_coach', 'create_event', 'assign_checkin'];
   const cleaned: AutomationStep[] = [];
   for (const s of steps) {
     if (!s || typeof s !== 'object' || !VALID_KINDS.includes(s.kind)) continue;

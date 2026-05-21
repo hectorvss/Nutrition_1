@@ -108,17 +108,21 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
     : [{ kind: 'message', message: wizardData.message }];
   const messageSteps = flowSteps.filter(s => s.kind === 'message' && s.message?.trim());
   const STEP_LABEL: Record<string, string> = {
-    message: 'Enviar mensaje', wait: 'Esperar / pausa', create_task: 'Escalada al coach',
-    set_field: 'Etiquetar cliente', stop_if: 'Parar si…',
+    message: 'Enviar mensaje', wait: 'Esperar / pausa', create_task: 'Escalada (tarea)',
+    set_field: 'Etiquetar cliente', stop_if: 'Parar si…', notify_coach: 'Notificar al coach',
+    create_event: 'Agendar evento', assign_checkin: 'Asignar check-in',
   };
   const describeStep = (s: any): string => {
     switch (s.kind) {
-      case 'message':     return s.message || '(mensaje vacío)';
-      case 'wait':        return `Esperar ${s.amount} ${s.unit === 'hours' ? 'horas' : 'días'}${s.cancelIfReplied ? ' (cancela si responde)' : ''}`;
-      case 'create_task': return `Tarea: ${s.title || '(sin título)'} · prioridad ${s.priority || 'media'}`;
-      case 'set_field':   return `${s.field} = ${s.value}`;
-      case 'stop_if':     return `Parar si ${s.conditionType} ${s.operator} ${s.value}`;
-      default:            return '';
+      case 'message':       return s.message || '(mensaje vacío)';
+      case 'wait':          return `Esperar ${s.amount} ${s.unit === 'hours' ? 'horas' : 'días'}${s.cancelIfReplied ? ' (cancela si responde)' : ''}`;
+      case 'create_task':   return `Tarea: ${s.title || '(sin título)'} · prioridad ${s.priority || 'media'}`;
+      case 'set_field':     return `${s.field} = ${s.value}`;
+      case 'stop_if':       return `Parar si ${s.conditionType} ${s.operator} ${s.value}`;
+      case 'notify_coach':  return `Notificación: ${s.title || '(sin título)'}`;
+      case 'create_event':  return `Evento "${s.title || '(sin título)'}" (${s.eventType || 'Call'}) en ${s.offsetDays ?? 0} días a las ${s.time || '09:00'}`;
+      case 'assign_checkin':return `Asignar plantilla de check-in${s.templateId ? '' : ' (sin elegir)'}`;
+      default:              return '';
     }
   };
   

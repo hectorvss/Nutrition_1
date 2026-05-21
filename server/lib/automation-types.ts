@@ -8,4 +8,10 @@ export type AutomationStep =
   | { kind: 'wait'; amount: number; unit: 'hours' | 'days'; cancelIfReplied?: boolean }
   | { kind: 'create_task'; title: string; type?: string; priority?: 'low' | 'medium' | 'high'; date?: string }
   | { kind: 'set_field'; field: 'status' | 'goal' | 'notes'; value: string }
-  | { kind: 'stop_if'; conditionType: string; operator: string; value: string };
+  | { kind: 'stop_if'; conditionType: string; operator: string; value: string }
+  // Notify the coach with a web-push notification (escalation without a task).
+  | { kind: 'notify_coach'; title: string; body: string }
+  // Schedule a calendar event for the coach, `offsetDays` after the trigger.
+  | { kind: 'create_event'; title: string; eventType?: string; offsetDays?: number; time?: string }
+  // Assign a check-in template to the client so they get a fresh form.
+  | { kind: 'assign_checkin'; templateId: string };

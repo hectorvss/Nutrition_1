@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, ArrowRight, Check, Zap, Send, Clock, ClipboardList, Edit2,
   AlertCircle, Plus, Sunrise, Sun, Moon, Search, X, CheckCheck, Pause,
-  ChevronDown,
+  ChevronDown, Bell, CalendarPlus, ClipboardCheck, Filter,
 } from 'lucide-react';
 import { AutomationDeliveryRules } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
@@ -31,28 +31,37 @@ const VARIABLES = [
 
 // Metadata for every action-step kind: icon, label and the card's icon colour.
 const STEP_META: Record<AutomationStep['kind'], { label: string; tag: string; icon: React.ElementType; iconClass: string }> = {
-  message:     { label: 'Enviar mensaje',      tag: 'ACCIÓN', icon: Send,          iconClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
-  wait:        { label: 'Esperar / pausa',     tag: 'ACCIÓN', icon: Clock,         iconClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
-  create_task: { label: 'Escalada al coach',   tag: 'ACCIÓN', icon: ClipboardList, iconClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
-  set_field:   { label: 'Etiquetar al cliente',tag: 'ACCIÓN', icon: Edit2,         iconClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
-  stop_if:     { label: 'Parar si…',           tag: 'ACCIÓN', icon: AlertCircle,   iconClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' },
+  message:       { label: 'Enviar mensaje',       tag: 'ACCIÓN', icon: Send,          iconClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  wait:          { label: 'Esperar / pausa',      tag: 'ACCIÓN', icon: Clock,         iconClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
+  create_task:   { label: 'Escalada (tarea)',     tag: 'ACCIÓN', icon: ClipboardList, iconClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
+  notify_coach:  { label: 'Notificarme a mí',     tag: 'ACCIÓN', icon: Bell,          iconClass: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
+  create_event:  { label: 'Agendar evento',       tag: 'ACCIÓN', icon: CalendarPlus,  iconClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' },
+  assign_checkin:{ label: 'Asignar check-in',     tag: 'ACCIÓN', icon: ClipboardCheck,iconClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' },
+  set_field:     { label: 'Etiquetar al cliente', tag: 'ACCIÓN', icon: Edit2,         iconClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
+  stop_if:       { label: 'Parar si…',            tag: 'ACCIÓN', icon: AlertCircle,   iconClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' },
 };
 
 const ADDABLE: Array<{ kind: AutomationStep['kind']; desc: string }> = [
-  { kind: 'message',     desc: 'Envía un mensaje al chat del cliente.' },
-  { kind: 'wait',        desc: 'Pausa la cadena X horas o días.' },
-  { kind: 'create_task', desc: 'Crea una tarea para ti (escalada).' },
-  { kind: 'set_field',   desc: 'Cambia un campo del cliente.' },
-  { kind: 'stop_if',     desc: 'Aborta la cadena si se cumple una condición.' },
+  { kind: 'message',        desc: 'Envía un mensaje al chat del cliente.' },
+  { kind: 'wait',           desc: 'Pausa la cadena X horas o días.' },
+  { kind: 'create_task',    desc: 'Crea una tarea en tu panel (escalada).' },
+  { kind: 'notify_coach',   desc: 'Te envía una notificación push al instante.' },
+  { kind: 'create_event',   desc: 'Agenda un evento en tu calendario.' },
+  { kind: 'assign_checkin', desc: 'Asigna una plantilla de check-in al cliente.' },
+  { kind: 'set_field',      desc: 'Cambia un campo del cliente (status/goal/notas).' },
+  { kind: 'stop_if',        desc: 'Aborta la cadena si se cumple una condición.' },
 ];
 
 function defaultStepFor(kind: AutomationStep['kind']): AutomationStep {
   switch (kind) {
-    case 'message':     return { kind, message: '' };
-    case 'wait':        return { kind, amount: 1, unit: 'days', cancelIfReplied: true };
-    case 'create_task': return { kind, title: '', type: 'Admin', priority: 'medium' };
-    case 'set_field':   return { kind, field: 'status', value: 'Active' };
-    case 'stop_if':     return { kind, conditionType: 'reply', operator: 'within', value: '24' };
+    case 'message':        return { kind, message: '' };
+    case 'wait':           return { kind, amount: 1, unit: 'days', cancelIfReplied: true };
+    case 'create_task':    return { kind, title: '', type: 'Admin', priority: 'medium' };
+    case 'notify_coach':   return { kind, title: 'Revisar a {Client Name}', body: '' };
+    case 'create_event':   return { kind, title: 'Sesión con {First Name}', eventType: 'Call', offsetDays: 3, time: '09:00' };
+    case 'assign_checkin': return { kind, templateId: '' };
+    case 'set_field':      return { kind, field: 'status', value: 'Active' };
+    case 'stop_if':        return { kind, conditionType: 'reply', operator: 'within', value: '24' };
   }
 }
 
@@ -70,7 +79,8 @@ export default function AutomationFlowBuilder({
   );
   const [adding, setAdding] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
-  const [catalog, setCatalog] = useState<{ stopConditions: any[]; limits: { maxStepsPerFlow: number | null } } | null>(null);
+  const [catalog, setCatalog] = useState<{ stopConditions: any[]; activationConditions: any[]; limits: { maxStepsPerFlow: number | null } } | null>(null);
+  const [checkinTemplates, setCheckinTemplates] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     (async () => {
@@ -78,6 +88,11 @@ export default function AutomationFlowBuilder({
         const data = await fetchWithAuth('/automations/catalog');
         setCatalog(data);
       } catch (e) { console.error('catalog load failed', e); }
+      try {
+        const tpls = await fetchWithAuth('/check-ins/manager/checkin-templates');
+        const arr = Array.isArray(tpls) ? tpls : (tpls?.data || tpls?.templates || []);
+        setCheckinTemplates(arr.map((x: any) => ({ id: x.id, name: x.name || x.title || 'Plantilla' })));
+      } catch (e) { console.error('checkin templates load failed', e); }
     })();
   }, []);
 
@@ -98,14 +113,21 @@ export default function AutomationFlowBuilder({
   const maxSteps = catalog?.limits?.maxStepsPerFlow ?? null;
   const atCap = maxSteps != null && steps.length >= maxSteps;
 
-  const toggleStopCondition = (type: string, defaultOp: any, defaultVal: any) => {
-    const current = rules.stop_conditions || [];
-    const exists = current.find(c => c.type === type);
-    if (exists) {
-      updateRule('stop_conditions', current.map(c => c.type === type ? { ...c, enabled: !c.enabled } : c));
-    } else {
-      updateRule('stop_conditions', [...current, { type, operator: defaultOp, value: defaultVal, enabled: true }]);
-    }
+  // Adds a condition (activation or stop) from the catalog dropdown. If it's
+  // already present it's a no-op — the user removes it from the chip list.
+  const addCondition = (key: 'stop_conditions' | 'activation_conditions', type: string) => {
+    const cat = key === 'stop_conditions' ? catalog?.stopConditions : catalog?.activationConditions;
+    const def = (cat || []).find((c: any) => c.id === type);
+    if (!def) return;
+    const current = (rules[key] || []) as any[];
+    if (current.some(c => c.type === type)) return;
+    updateRule(key, [...current, { type, operator: def.defaultOperator, value: def.defaultValue, enabled: true }] as any);
+  };
+  const removeCondition = (key: 'stop_conditions' | 'activation_conditions', type: string) => {
+    updateRule(key, ((rules[key] || []) as any[]).filter(c => c.type !== type) as any);
+  };
+  const updateCondition = (key: 'stop_conditions' | 'activation_conditions', type: string, patch: any) => {
+    updateRule(key, ((rules[key] || []) as any[]).map(c => c.type === type ? { ...c, ...patch } : c) as any);
   };
 
   const removeClient = (id: string) => updateRule('selected_client_ids', (rules.selected_client_ids || []).filter(x => x !== id));
@@ -129,6 +151,63 @@ export default function AutomationFlowBuilder({
     const s = steps[i];
     if (s.kind === 'message') updateStep(i, { ...s, message: (s.message || '') + variable });
     if (s.kind === 'create_task') updateStep(i, { ...s, title: (s.title || '') + variable });
+  };
+
+  // Renders a condition module: a Select to add any condition from the full
+  // catalog, plus a configurable row per selected condition. Used for both
+  // the activation filter and the stop conditions so they look identical.
+  const renderConditionModule = (
+    key: 'activation_conditions' | 'stop_conditions',
+    catalogList: any[],
+    color: 'teal' | 'rose',
+  ) => {
+    const selected = ((rules[key] || []) as any[]);
+    const available = catalogList.filter(c => !selected.some(s => s.type === c.id));
+    const accent = color === 'teal' ? 'text-teal-600' : 'text-rose-600';
+    return (
+      <div className="space-y-3">
+        {/* Add dropdown — covers the whole catalog without a wall of chips */}
+        <Select
+          value=""
+          onChange={(v) => v && addCondition(key, v)}
+          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-3 py-2"
+        >
+          <option value="">{t('add_condition', { defaultValue: '+ Añadir condición…' })}</option>
+          {available.map(c => (
+            <option key={c.id} value={c.id}>{c.label}</option>
+          ))}
+        </Select>
+
+        {/* Configurable rows */}
+        {selected.length > 0 ? (
+          <div className="space-y-2">
+            {selected.map((c) => {
+              const def = catalogList.find(d => d.id === c.type);
+              const ops: string[] = def?.operators || ['>', '<', '==', 'within'];
+              return (
+                <div key={c.type} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <span className={`text-[11px] font-bold ${accent} flex-1 min-w-0 truncate`}>{def?.label || c.type}</span>
+                  <Select value={c.operator}
+                    onChange={(v) => updateCondition(key, c.type, { operator: v })}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs px-2 py-1">
+                    {ops.map(op => <option key={op} value={op}>{op === 'within' ? 'en' : op}</option>)}
+                  </Select>
+                  <input type="text" value={c.value}
+                    onChange={(e) => updateCondition(key, c.type, { value: e.target.value })}
+                    className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs px-2 py-1 focus:ring-1 focus:ring-emerald-500 outline-none" />
+                  {def?.hint && <span className="text-[10px] text-slate-400 shrink-0">{def.hint}</span>}
+                  <button onClick={() => removeCondition(key, c.type)} className="text-slate-300 hover:text-red-500 shrink-0">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 italic">{t('no_conditions_yet', { defaultValue: 'Sin condiciones — se aplica siempre.' })}</p>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -212,12 +291,12 @@ export default function AutomationFlowBuilder({
                       <input type="number" min={1} value={step.amount}
                         onChange={e => updateStep(i, { ...step, amount: Math.max(1, parseInt(e.target.value) || 1) })}
                         className="w-20 px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
-                      <select value={step.unit}
-                        onChange={e => updateStep(i, { ...step, unit: e.target.value as any })}
-                        className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none">
+                      <Select value={step.unit}
+                        onChange={(v) => updateStep(i, { ...step, unit: v as any })}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-2 py-1">
                         <option value="hours">horas</option>
                         <option value="days">días</option>
-                      </select>
+                      </Select>
                       <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
                         <input type="checkbox" checked={!!step.cancelIfReplied}
                           onChange={e => updateStep(i, { ...step, cancelIfReplied: e.target.checked })}
@@ -234,13 +313,13 @@ export default function AutomationFlowBuilder({
                         placeholder="Llamar a {First Name} si no responde"
                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
                       <div className="flex items-center gap-2">
-                        <select value={step.priority || 'medium'}
-                          onChange={e => updateStep(i, { ...step, priority: e.target.value as any })}
-                          className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500 outline-none">
+                        <Select value={step.priority || 'medium'}
+                          onChange={(v) => updateStep(i, { ...step, priority: v as any })}
+                          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs px-2 py-1">
                           <option value="high">Alta</option>
                           <option value="medium">Media</option>
                           <option value="low">Baja</option>
-                        </select>
+                        </Select>
                         <button type="button" onClick={() => insertVar(i, '{First Name}')}
                           className="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 px-2 py-1 rounded">
                           {'{First Name}'}
@@ -251,13 +330,13 @@ export default function AutomationFlowBuilder({
 
                   {step.kind === 'set_field' && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <select value={step.field}
-                        onChange={e => updateStep(i, { ...step, field: e.target.value as any })}
-                        className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none">
+                      <Select value={step.field}
+                        onChange={(v) => updateStep(i, { ...step, field: v as any })}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-2 py-1">
                         <option value="status">status</option>
                         <option value="goal">goal</option>
                         <option value="notes">notes</option>
-                      </select>
+                      </Select>
                       <span className="text-sm text-slate-500">=</span>
                       <input type="text" value={step.value}
                         onChange={e => updateStep(i, { ...step, value: e.target.value })}
@@ -268,25 +347,82 @@ export default function AutomationFlowBuilder({
 
                   {step.kind === 'stop_if' && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <select value={step.conditionType}
-                        onChange={e => updateStep(i, { ...step, conditionType: e.target.value })}
-                        className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none">
+                      <Select value={step.conditionType}
+                        onChange={(v) => updateStep(i, { ...step, conditionType: v })}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-2 py-1">
                         {(catalog?.stopConditions || [{ id: 'reply', label: 'Cliente respondió' }]).map((c: any) => (
                           <option key={c.id} value={c.id}>{c.label}</option>
                         ))}
-                      </select>
-                      <select value={step.operator}
-                        onChange={e => updateStep(i, { ...step, operator: e.target.value })}
-                        className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none">
+                      </Select>
+                      <Select value={step.operator}
+                        onChange={(v) => updateStep(i, { ...step, operator: v })}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-2 py-1">
                         <option value="within">en</option>
                         <option value="==">=</option>
                         <option value=">">{'>'}</option>
                         <option value="<">{'<'}</option>
-                      </select>
+                      </Select>
                       <input type="text" value={step.value}
                         onChange={e => updateStep(i, { ...step, value: e.target.value })}
                         placeholder="24"
                         className="w-24 px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                    </div>
+                  )}
+
+                  {step.kind === 'notify_coach' && (
+                    <div className="space-y-2">
+                      <input type="text" value={step.title}
+                        onChange={e => updateStep(i, { ...step, title: e.target.value })}
+                        placeholder="Título de la notificación"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      <input type="text" value={step.body}
+                        onChange={e => updateStep(i, { ...step, body: e.target.value })}
+                        placeholder="Detalle (opcional)"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                    </div>
+                  )}
+
+                  {step.kind === 'create_event' && (
+                    <div className="space-y-2">
+                      <input type="text" value={step.title}
+                        onChange={e => updateStep(i, { ...step, title: e.target.value })}
+                        placeholder="Título del evento"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select value={step.eventType || 'Call'}
+                          onChange={(v) => updateStep(i, { ...step, eventType: v })}
+                          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-2 py-1">
+                          <option value="Call">Llamada</option>
+                          <option value="Check-in">Check-in</option>
+                          <option value="Training">Entreno</option>
+                          <option value="Nutrition">Nutrición</option>
+                          <option value="Admin">Admin</option>
+                        </Select>
+                        <span className="text-sm text-slate-500">en</span>
+                        <input type="number" min={0} value={step.offsetDays ?? 0}
+                          onChange={e => updateStep(i, { ...step, offsetDays: Math.max(0, parseInt(e.target.value) || 0) })}
+                          className="w-16 px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                        <span className="text-sm text-slate-500">días, a las</span>
+                        <TimeSelect value={step.time || '09:00'}
+                          onChange={(v) => updateStep(i, { ...step, time: v })}
+                          className="w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-2 py-1" />
+                      </div>
+                    </div>
+                  )}
+
+                  {step.kind === 'assign_checkin' && (
+                    <div className="space-y-1.5">
+                      <Select value={step.templateId}
+                        onChange={(v) => updateStep(i, { ...step, templateId: v })}
+                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-3 py-2">
+                        <option value="">— Elige una plantilla de check-in —</option>
+                        {checkinTemplates.map(tpl => (
+                          <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                        ))}
+                      </Select>
+                      {checkinTemplates.length === 0 && (
+                        <p className="text-[11px] text-amber-600">No tienes plantillas de check-in. Crea una primero.</p>
+                      )}
                     </div>
                   )}
                 </AutomationCard>
@@ -445,7 +581,20 @@ export default function AutomationFlowBuilder({
             </div>
           </AutomationCard>
 
-          {/* 4. Stop conditions */}
+          {/* 4. Audience filter — activation conditions */}
+          <FlowConnector />
+          <AutomationCard
+            variant="module"
+            icon={Filter}
+            iconClass="bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400"
+            tag={t('filter_module_tag', { defaultValue: 'FILTRO' })}
+            title={t('audience_filter', { defaultValue: 'Filtro de cliente' })}
+            subtitle={t('audience_filter_desc', { defaultValue: 'Solo se envía a los clientes que cumplan estas condiciones (opcional).' })}
+          >
+            {renderConditionModule('activation_conditions', catalog?.activationConditions || [], 'teal')}
+          </AutomationCard>
+
+          {/* 5. Stop conditions */}
           <FlowConnector />
           <AutomationCard
             variant="module"
@@ -455,26 +604,7 @@ export default function AutomationFlowBuilder({
             title={t('stop_conditions', { defaultValue: 'Condiciones de parada' })}
             subtitle={t('stop_conditions_desc', { defaultValue: 'Cuándo el workflow deja de enviar a un cliente.' })}
           >
-            <div className="flex flex-wrap gap-2">
-              {(catalog?.stopConditions || []).map((cond: any) => {
-                const active = rules.stop_conditions?.some(c => c.type === cond.id && c.enabled);
-                return (
-                  <button key={cond.id} title={cond.desc}
-                    onClick={() => toggleStopCondition(cond.id, cond.defaultOperator, cond.defaultValue)}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                      active
-                        ? 'bg-rose-500 border-transparent text-white shadow-sm'
-                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-rose-400'
-                    }`}>
-                    {active ? <CheckCheck className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                    {cond.label}
-                  </button>
-                );
-              })}
-              {(!catalog || (catalog.stopConditions || []).length === 0) && (
-                <span className="text-xs text-slate-400 italic">{t('loading', { defaultValue: 'Cargando…' })}</span>
-              )}
-            </div>
+            {renderConditionModule('stop_conditions', catalog?.stopConditions || [], 'rose')}
           </AutomationCard>
         </div>
 
