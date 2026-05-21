@@ -3,8 +3,14 @@ import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
 import ClientScalePreview from '../components/recipes/ClientScalePreview';
 import { fetchWithAuth } from '../api';
+import {
+  CATEGORY_KEYS, categoryLabel,
+  DIFFICULTY_KEYS, difficultyLabel,
+  DIET_KEYS, dietLabel,
+  ALLERGEN_KEYS, allergenLabel,
+} from '../constants/recipeMeta';
 
-interface Ingredient { name: string; amount: string; unit: string; }
+interface Ingredient { name: string; amount: string; unit: string; note: string; }
 interface Step { title: string; text: string; }
 
 interface RecipeCreateProps {
@@ -12,24 +18,42 @@ interface RecipeCreateProps {
   onBack: () => void;
 }
 
-const emptyIngredient = (): Ingredient => ({ name: '', amount: '', unit: 'grams' });
+const emptyIngredient = (): Ingredient => ({ name: '', amount: '', unit: 'g', note: '' });
 const emptyStep = (): Step => ({ title: '', text: '' });
 
 export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === 'es';
   const isEditMode = !!recipeId;
 
+  // Básico
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Lunch / Dinner');
+  const [category, setCategory] = useState<string>('lunch_dinner');
+  const [difficulty, setDifficulty] = useState<string>('easy');
   const [prepTime, setPrepTime] = useState<string>('');
+  const [cookTime, setCookTime] = useState<string>('');
   const [servings, setServings] = useState<string>('1');
   const [imageUrl, setImageUrl] = useState('');
+  const [tagsText, setTagsText] = useState('');
+  // Macros
   const [calories, setCalories] = useState<string>('');
   const [protein, setProtein] = useState<string>('');
   const [carbs, setCarbs] = useState<string>('');
   const [fats, setFats] = useState<string>('');
-  const [tagsText, setTagsText] = useState('');
+  // Micronutrientes
+  const [fiber, setFiber] = useState<string>('');
+  const [sugar, setSugar] = useState<string>('');
+  const [saturatedFat, setSaturatedFat] = useState<string>('');
+  const [sodium, setSodium] = useState<string>('');
+  // Dieta / alérgenos
+  const [dietLabels, setDietLabels] = useState<string[]>([]);
+  const [allergens, setAllergens] = useState<string[]>([]);
+  // Equipo / tips / conservación
+  const [equipmentText, setEquipmentText] = useState('');
+  const [tipsText, setTipsText] = useState('');
+  const [storage, setStorage] = useState('');
+  // Listas
   const [ingredients, setIngredients] = useState<Ingredient[]>([emptyIngredient()]);
   const [steps, setSteps] = useState<Step[]>([emptyStep()]);
 
@@ -48,21 +72,33 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
         if (cancelled || !r) return;
         setTitle(r.title || '');
         setDescription(r.description || '');
-        setCategory(r.category || 'Lunch / Dinner');
+        setCategory(r.category || 'lunch_dinner');
+        setDifficulty(r.difficulty || 'easy');
         setPrepTime(r.prep_time != null ? String(r.prep_time) : '');
+        setCookTime(r.cook_time != null ? String(r.cook_time) : '');
         setServings(r.servings != null ? String(r.servings) : '1');
         setImageUrl(r.image_url || '');
+        setTagsText(Array.isArray(r.tags) ? r.tags.join(', ') : '');
         setCalories(r.calories != null ? String(r.calories) : '');
         setProtein(r.protein != null ? String(r.protein) : '');
         setCarbs(r.carbs != null ? String(r.carbs) : '');
         setFats(r.fats != null ? String(r.fats) : '');
-        setTagsText(Array.isArray(r.tags) ? r.tags.join(', ') : '');
+        setFiber(r.fiber != null ? String(r.fiber) : '');
+        setSugar(r.sugar != null ? String(r.sugar) : '');
+        setSaturatedFat(r.saturated_fat != null ? String(r.saturated_fat) : '');
+        setSodium(r.sodium != null ? String(r.sodium) : '');
+        setDietLabels(Array.isArray(r.diet_labels) ? r.diet_labels : []);
+        setAllergens(Array.isArray(r.allergens) ? r.allergens : []);
+        setEquipmentText(Array.isArray(r.equipment) ? r.equipment.join('\n') : '');
+        setTipsText(Array.isArray(r.tips) ? r.tips.join('\n') : '');
+        setStorage(r.storage || '');
         setIngredients(
           Array.isArray(r.ingredients) && r.ingredients.length
             ? r.ingredients.map((i: any) => ({
                 name: i.name || '',
                 amount: i.amount != null ? String(i.amount) : '',
-                unit: i.unit || 'grams',
+                unit: i.unit || 'g',
+                note: i.note || '',
               }))
             : [emptyIngredient()]
         );
@@ -87,9 +123,9 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
   const macroFats = num(fats);
   const macroTotal = macroProtein + macroCarbs + macroFats;
   const pct = (v: number) => (macroTotal > 0 ? Math.round((v / macroTotal) * 100) : 0);
-  // donut: circumference 439.8, offset shrinks as calories grow (cap at 1000 kcal)
   const calNum = num(calories);
   const donutOffset = 439.8 * (1 - Math.min(calNum, 1000) / 1000);
+  const totalTime = num(prepTime) + num(cookTime);
 
   const updateIngredient = (idx: number, patch: Partial<Ingredient>) => {
     setIngredients(prev => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -103,6 +139,9 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
   const removeStep = (idx: number) => {
     setSteps(prev => prev.filter((_, i) => i !== idx));
   };
+  const toggleIn = (list: string[], setter: (v: string[]) => void, key: string) => {
+    setter(list.includes(key) ? list.filter(k => k !== key) : [...list, key]);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -111,17 +150,28 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
       title,
       description,
       category,
+      difficulty,
       image_url: imageUrl,
       prep_time: prepTime === '' ? null : Number(prepTime),
+      cook_time: cookTime === '' ? null : Number(cookTime),
       servings: servings === '' ? null : Number(servings),
       calories: calories === '' ? null : Number(calories),
       protein: protein === '' ? null : Number(protein),
       carbs: carbs === '' ? null : Number(carbs),
       fats: fats === '' ? null : Number(fats),
+      fiber: fiber === '' ? null : Number(fiber),
+      sugar: sugar === '' ? null : Number(sugar),
+      saturated_fat: saturatedFat === '' ? null : Number(saturatedFat),
+      sodium: sodium === '' ? null : Number(sodium),
+      diet_labels: dietLabels,
+      allergens,
+      equipment: equipmentText.split('\n').map(s => s.trim()).filter(Boolean),
+      tips: tipsText.split('\n').map(s => s.trim()).filter(Boolean),
+      storage,
       tags: tagsText.split(',').map(s => s.trim()).filter(Boolean),
       ingredients: ingredients
         .filter(i => i.name.trim())
-        .map(i => ({ name: i.name, amount: i.amount, unit: i.unit })),
+        .map(i => ({ name: i.name, amount: i.amount, unit: i.unit, note: i.note })),
       steps: steps
         .filter(s => s.title.trim() || s.text.trim())
         .map(s => ({ title: s.title, text: s.text })),
@@ -147,6 +197,10 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
     );
   }
 
+  const fieldCls = 'w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all';
+  const labelCls = 'block text-sm font-bold text-slate-700 mb-2';
+  const cardCls = 'bg-white rounded-3xl shadow-sm border border-slate-200 p-8';
+
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
       <div className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
@@ -171,7 +225,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                 onClick={onBack}
                 className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all font-bold"
               >
-                {t('save_draft')}
+                {isEs ? 'Cancelar' : 'Cancel'}
               </button>
               <button
                 onClick={handleSave}
@@ -188,102 +242,90 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
             {/* Left Column: Form */}
             <div className="flex-1 space-y-8 pb-20">
               {/* Basic Info */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+              <div className={cardCls}>
                 <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
                   <span className="material-symbols-outlined text-emerald-500">info</span>
                   {t('basic_information')}
                 </h3>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('recipe_title')}</label>
+                    <label className={labelCls}>{t('recipe_title')}</label>
                     <input
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all"
+                      className={fieldCls}
                       placeholder={t('recipe_title_placeholder')}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('recipe_card_sample_desc')}</label>
+                    <label className={labelCls}>{isEs ? 'Descripción' : 'Description'}</label>
                     <textarea
                       value={description}
                       onChange={e => setDescription(e.target.value)}
-                      className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all min-h-[80px]"
+                      className={`${fieldCls} min-h-[80px]`}
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">{t('category_label')}</label>
-                      <Select
-                        value={category}
-                        onChange={setCategory}
-                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all"
-                      >
-                        <option value="Lunch / Dinner">{t('lunch_dinner_option')}</option>
-                        <option value="Breakfast">{t('breakfast_option')}</option>
-                        <option value="Snack">{t('snack_option')}</option>
+                      <label className={labelCls}>{t('category_label')}</label>
+                      <Select value={category} onChange={setCategory}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 outline-none p-4 text-sm font-medium">
+                        {CATEGORY_KEYS.map(k => (
+                          <option key={k} value={k}>{categoryLabel(k, language)}</option>
+                        ))}
                       </Select>
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">{t('prep_time')}</label>
-                      <input
-                        type="number"
-                        value={prepTime}
-                        onChange={e => setPrepTime(e.target.value)}
-                        className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all"
-                        placeholder="25"
-                      />
+                      <label className={labelCls}>{isEs ? 'Dificultad' : 'Difficulty'}</label>
+                      <Select value={difficulty} onChange={setDifficulty}
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 outline-none p-4 text-sm font-medium">
+                        {DIFFICULTY_KEYS.map(k => (
+                          <option key={k} value={k}>{difficultyLabel(k, language)}</option>
+                        ))}
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className={labelCls}>{isEs ? 'Preparación (min)' : 'Prep (min)'}</label>
+                      <input type="number" value={prepTime} onChange={e => setPrepTime(e.target.value)}
+                        className={fieldCls} placeholder="15" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 mb-2">{t('recipe_servings_sample')}</label>
-                      <input
-                        type="number"
-                        value={servings}
-                        onChange={e => setServings(e.target.value)}
-                        className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all"
-                        placeholder="1"
-                      />
+                      <label className={labelCls}>{isEs ? 'Cocción (min)' : 'Cook (min)'}</label>
+                      <input type="number" value={cookTime} onChange={e => setCookTime(e.target.value)}
+                        className={fieldCls} placeholder="20" />
+                    </div>
+                    <div>
+                      <label className={labelCls}>{t('recipe_servings_sample')}</label>
+                      <input type="number" value={servings} onChange={e => setServings(e.target.value)}
+                        className={fieldCls} placeholder="2" />
                     </div>
                   </div>
+                  {totalTime > 0 && (
+                    <p className="text-xs font-bold text-slate-400 -mt-2">
+                      {isEs ? 'Tiempo total' : 'Total time'}: {totalTime} min
+                    </p>
+                  )}
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('lunch_tag')}</label>
-                    <input
-                      type="text"
-                      value={tagsText}
-                      onChange={e => setTagsText(e.target.value)}
-                      className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all"
-                      placeholder="vegan, quick, summer"
-                    />
+                    <label className={labelCls}>{isEs ? 'Etiquetas (separadas por comas)' : 'Tags (comma separated)'}</label>
+                    <input type="text" value={tagsText} onChange={e => setTagsText(e.target.value)}
+                      className={fieldCls} placeholder={isEs ? 'rápido, batch cooking, verano' : 'quick, batch cooking, summer'} />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">{t('recipe_image')}</label>
-                    <input
-                      type="text"
-                      value={imageUrl}
-                      onChange={e => setImageUrl(e.target.value)}
-                      className="w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all mb-3"
-                      placeholder="https://..."
-                    />
-                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-slate-50 transition-all">
-                      {imageUrl ? (
-                        <img src={imageUrl} alt="" className="max-h-40 rounded-xl object-cover" />
-                      ) : (
-                        <>
-                          <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-                            <span className="material-symbols-outlined text-[28px] text-emerald-500">add</span>
-                          </div>
-                          <span className="text-sm font-bold text-slate-600">{t('click_upload')}</span>
-                          <span className="text-xs text-slate-400 mt-1">{t('image_upload_specs')}</span>
-                        </>
-                      )}
-                    </div>
+                    <label className={labelCls}>{t('recipe_image')}</label>
+                    <input type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
+                      className={`${fieldCls} mb-3`} placeholder="https://..." />
+                    {imageUrl && (
+                      <img src={imageUrl} alt="" className="max-h-48 rounded-2xl object-cover w-full" />
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Ingredients */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+              <div className={cardCls}>
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-500">shopping_basket</span>
@@ -297,53 +339,58 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                     {t('add_item')}
                   </button>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {ingredients.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50/50 group hover:border-emerald-500/30 transition-all">
-                      <span className="material-symbols-outlined text-slate-300 cursor-move">drag_indicator</span>
-                      <div className="flex-1">
+                    <div key={idx} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:border-emerald-500/30 transition-all space-y-3">
+                      <div className="flex items-center gap-3">
                         <input
                           type="text"
-                          className="w-full bg-transparent border-none p-0 text-sm font-bold focus:ring-0 placeholder-slate-400"
+                          className="flex-1 bg-transparent border-none p-0 text-sm font-bold focus:ring-0 placeholder-slate-400"
                           value={item.name}
                           onChange={e => updateIngredient(idx, { name: e.target.value })}
-                          placeholder={t('food_item')}
+                          placeholder={isEs ? 'Ingrediente' : 'Ingredient'}
                         />
-                      </div>
-                      <div className="w-24">
                         <input
                           type="number"
-                          className="w-full rounded-xl border-slate-200 bg-white py-2 text-sm text-center font-bold focus:ring-2 focus:ring-emerald-500"
+                          className="w-20 rounded-xl border-slate-200 bg-white py-2 text-sm text-center font-bold focus:ring-2 focus:ring-emerald-500"
                           value={item.amount}
                           onChange={e => updateIngredient(idx, { amount: e.target.value })}
+                          placeholder="0"
                         />
-                      </div>
-                      <div className="w-32">
                         <Select
                           value={item.unit}
                           onChange={(v) => updateIngredient(idx, { unit: v })}
-                          className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
+                          className="w-28 rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm font-bold"
                         >
-                          <option value="grams">grams</option>
+                          <option value="g">g</option>
                           <option value="ml">ml</option>
-                          <option value="cup">cup</option>
-                          <option value="tbsp">tbsp</option>
-                          <option value="unit">unit</option>
+                          <option value="ud">{isEs ? 'ud' : 'unit'}</option>
+                          <option value="cda">{isEs ? 'cda' : 'tbsp'}</option>
+                          <option value="cdta">{isEs ? 'cdta' : 'tsp'}</option>
+                          <option value="taza">{isEs ? 'taza' : 'cup'}</option>
+                          <option value="pizca">{isEs ? 'pizca' : 'pinch'}</option>
                         </Select>
+                        <button
+                          onClick={() => removeIngredient(idx)}
+                          className="text-slate-300 hover:text-red-500 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">delete</span>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => removeIngredient(idx)}
-                        className="text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[20px]">delete</span>
-                      </button>
+                      <input
+                        type="text"
+                        className="w-full bg-white rounded-xl border-slate-200 py-2 px-3 text-xs font-medium focus:ring-2 focus:ring-emerald-500"
+                        value={item.note}
+                        onChange={e => updateIngredient(idx, { note: e.target.value })}
+                        placeholder={isEs ? 'Nota / preparación (ej. picado, a temperatura ambiente)' : 'Note / prep (e.g. diced, at room temperature)'}
+                      />
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Preparation Guide */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+              <div className={cardCls}>
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-500">menu_book</span>
@@ -365,31 +412,67 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                         <div className="w-0.5 h-full bg-slate-200 rounded-full"></div>
                       </div>
                       <div className="flex-1 space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <input
                             type="text"
                             className="w-full bg-transparent border-none p-0 text-lg font-bold text-slate-900 focus:ring-0"
                             value={step.title}
                             onChange={e => updateStep(idx, { title: e.target.value })}
-                            placeholder={t('recipe_title')}
+                            placeholder={isEs ? 'Título del paso' : 'Step title'}
                           />
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => removeStep(idx)}
-                              className="text-slate-300 hover:text-red-500 transition-colors"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">delete</span>
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => removeStep(idx)}
+                            className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
                         </div>
                         <textarea
-                          className="w-full rounded-2xl border-slate-200 bg-white text-sm p-4 focus:ring-2 focus:ring-emerald-500 min-h-[100px] font-medium"
+                          className="w-full rounded-2xl border-slate-200 bg-white text-sm p-4 focus:ring-2 focus:ring-emerald-500 min-h-[90px] font-medium"
                           value={step.text}
                           onChange={e => updateStep(idx, { text: e.target.value })}
+                          placeholder={isEs ? 'Describe el paso con detalle…' : 'Describe the step in detail…'}
                         />
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Equipment, tips & storage */}
+              <div className={cardCls}>
+                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-emerald-500">blender</span>
+                  {isEs ? 'Equipo, consejos y conservación' : 'Equipment, tips & storage'}
+                </h3>
+                <div className="space-y-6">
+                  <div>
+                    <label className={labelCls}>{isEs ? 'Utensilios necesarios (uno por línea)' : 'Equipment needed (one per line)'}</label>
+                    <textarea
+                      value={equipmentText}
+                      onChange={e => setEquipmentText(e.target.value)}
+                      className={`${fieldCls} min-h-[90px]`}
+                      placeholder={isEs ? 'Sartén antiadherente\nBatidora\nBol' : 'Non-stick pan\nBlender\nMixing bowl'}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{isEs ? 'Consejos del chef / sustituciones (uno por línea)' : "Chef's tips / substitutions (one per line)"}</label>
+                    <textarea
+                      value={tipsText}
+                      onChange={e => setTipsText(e.target.value)}
+                      className={`${fieldCls} min-h-[90px]`}
+                      placeholder={isEs ? 'Sustituye el pollo por tofu para versión vegana\nAñade chili para un toque picante' : 'Swap chicken for tofu for a vegan version\nAdd chili for a spicy kick'}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{isEs ? 'Conservación y meal-prep' : 'Storage & meal-prep'}</label>
+                    <textarea
+                      value={storage}
+                      onChange={e => setStorage(e.target.value)}
+                      className={`${fieldCls} min-h-[80px]`}
+                      placeholder={isEs ? 'Se conserva 3 días en nevera en recipiente hermético. No apto para congelar.' : 'Keeps 3 days refrigerated in an airtight container. Not freezer-friendly.'}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -398,9 +481,8 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
             <div className="lg:w-96 space-y-8">
               {/* Nutrition Stats */}
               <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                <div className="p-6 border-b border-slate-100 bg-slate-50/50">
                   <h3 className="font-bold text-slate-900">{t('nutrition_per_serving')}</h3>
-                  <span className="text-[10px] font-bold px-2 py-1 bg-white rounded-lg border border-slate-200 text-slate-400 uppercase tracking-widest">{t('base_recipe')}</span>
                 </div>
                 <div className="p-8">
                   <div className="flex justify-center mb-8">
@@ -418,12 +500,8 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('kcal_short')}</label>
-                      <input
-                        type="number"
-                        value={calories}
-                        onChange={e => setCalories(e.target.value)}
-                        className="w-full rounded-xl border-slate-200 bg-slate-50 py-2 px-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500"
-                      />
+                      <input type="number" value={calories} onChange={e => setCalories(e.target.value)}
+                        className="w-full rounded-xl border-slate-200 bg-slate-50 py-2 px-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500" />
                     </div>
                     {[
                       { label: t('protein'), value: protein, setter: setProtein, color: 'bg-emerald-500', percent: pct(macroProtein) },
@@ -433,12 +511,8 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                       <div key={idx}>
                         <div className="flex justify-between items-center text-sm font-bold mb-2">
                           <span className="text-slate-500">{macro.label}</span>
-                          <input
-                            type="number"
-                            value={macro.value}
-                            onChange={e => macro.setter(e.target.value)}
-                            className="w-20 rounded-xl border-slate-200 bg-slate-50 py-1.5 px-2 text-sm text-right font-bold focus:ring-2 focus:ring-emerald-500"
-                          />
+                          <input type="number" value={macro.value} onChange={e => macro.setter(e.target.value)}
+                            className="w-20 rounded-xl border-slate-200 bg-slate-50 py-1.5 px-2 text-sm text-right font-bold focus:ring-2 focus:ring-emerald-500" />
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2">
                           <div className={`${macro.color} h-2 rounded-full`} style={{ width: `${macro.percent}%` }}></div>
@@ -446,6 +520,62 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                       </div>
                     ))}
                   </div>
+                  {/* Micronutrientes */}
+                  <div className="mt-8 pt-6 border-t border-slate-100">
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
+                      {isEs ? 'Micronutrientes (por ración)' : 'Micronutrients (per serving)'}
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: isEs ? 'Fibra (g)' : 'Fiber (g)', value: fiber, setter: setFiber },
+                        { label: isEs ? 'Azúcares (g)' : 'Sugar (g)', value: sugar, setter: setSugar },
+                        { label: isEs ? 'Grasa sat. (g)' : 'Sat. fat (g)', value: saturatedFat, setter: setSaturatedFat },
+                        { label: isEs ? 'Sodio (mg)' : 'Sodium (mg)', value: sodium, setter: setSodium },
+                      ].map((m, i) => (
+                        <div key={i}>
+                          <label className="block text-[10px] font-bold text-slate-400 mb-1">{m.label}</label>
+                          <input type="number" value={m.value} onChange={e => m.setter(e.target.value)}
+                            className="w-full rounded-xl border-slate-200 bg-slate-50 py-1.5 px-2 text-sm font-bold focus:ring-2 focus:ring-emerald-500" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Diet labels & allergens */}
+              <div className={cardCls}>
+                <h3 className="text-sm font-bold text-slate-900 mb-4">{isEs ? 'Apto para' : 'Suitable for'}</h3>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {DIET_KEYS.map(k => (
+                    <button
+                      key={k}
+                      onClick={() => toggleIn(dietLabels, setDietLabels, k)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                        dietLabels.includes(k)
+                          ? 'bg-emerald-500 text-white border-emerald-500'
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'
+                      }`}
+                    >
+                      {dietLabel(k, language)}
+                    </button>
+                  ))}
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 mb-4">{isEs ? 'Contiene alérgenos' : 'Contains allergens'}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {ALLERGEN_KEYS.map(k => (
+                    <button
+                      key={k}
+                      onClick={() => toggleIn(allergens, setAllergens, k)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                        allergens.includes(k)
+                          ? 'bg-amber-500 text-white border-amber-500'
+                          : 'bg-white text-slate-500 border-slate-200 hover:border-amber-300'
+                      }`}
+                    >
+                      {allergenLabel(k, language)}
+                    </button>
+                  ))}
                 </div>
               </div>
 

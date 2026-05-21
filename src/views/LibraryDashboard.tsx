@@ -16,6 +16,7 @@ import { useFoodContext } from '../context/FoodContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
+import { categoryLabel } from '../constants/recipeMeta';
 
 type Tab = 'recipes' | 'food' | 'supplements';
 
@@ -219,7 +220,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 categoryFilter === cat ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
               }`}
             >
-              {cat}
+              {categoryLabel(cat, language)}
             </button>
           ))}
           {tabCategories.length === 0 && (
@@ -279,7 +280,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
                       <h3 className="font-bold text-2xl text-slate-900 tracking-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
-                      <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">{recipe.category}</span>
+                      <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">{categoryLabel(recipe.category, language)}</span>
                     </div>
                     <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4">{recipe.description || t('recipe_card_sample_desc')}</p>
                     <div className="flex flex-wrap gap-2">

@@ -10,7 +10,10 @@ const router = Router();
 // NUNCA se aceptan manager_id, is_global ni id desde el body.
 const RECIPE_FIELDS = [
   'title', 'description', 'image_url', 'category', 'prep_time', 'servings',
-  'calories', 'protein', 'carbs', 'fats', 'tags', 'ingredients', 'steps'
+  'calories', 'protein', 'carbs', 'fats', 'tags', 'ingredients', 'steps',
+  // Bloques de ficha detallada (alta fidelidad).
+  'difficulty', 'cook_time', 'fiber', 'sugar', 'saturated_fat', 'sodium',
+  'allergens', 'diet_labels', 'equipment', 'tips', 'storage',
 ];
 
 const pickRecipeFields = (body: any) => {
