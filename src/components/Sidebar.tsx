@@ -4,19 +4,20 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 
-import { 
-  LayoutDashboard, 
-  CheckCircle2, 
-  Calendar as CalendarIcon, 
-  Users, 
-  ClipboardCheck, 
-  MessageSquare, 
-  UtensilsCrossed, 
-  Dumbbell, 
-  BookOpen, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  CheckCircle2,
+  Calendar as CalendarIcon,
+  Users,
+  ClipboardCheck,
+  MessageSquare,
+  UtensilsCrossed,
+  Dumbbell,
+  BookOpen,
+  BarChart3,
   Settings,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { Zap } from 'lucide-react';
 import { X } from 'lucide-react';
@@ -32,6 +33,8 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
   const { user } = useAuth();
   const { t } = useLanguage();
   const [unreadCount, setUnreadCount] = useState(0);
+  // Colapsado por defecto en desktop; se expande al pasar el raton por encima.
+  const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -110,109 +113,170 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
     }
   ];
 
-  const sidebarContent = (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200 w-64 shrink-0 overflow-hidden">
-      <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div 
-            className="rounded-full h-10 w-10 border border-emerald-500/30 bg-cover bg-center shrink-0" 
-            style={{ 
-              backgroundImage: profile?.avatar_url 
-                ? `url("${profile.avatar_url}")` 
-                : 'url("https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop")' 
+  // ¿Esta `item.id` activo? Algunas vistas hijas se cuentan como su padre.
+  const isActive = (id: string) =>
+    currentView === id ||
+    (id === 'planning' && ['planning-detail'].includes(currentView)) ||
+    (id === 'calendar' && ['create-task'].includes(currentView)) ||
+    (id === 'training' && ['assign-program', 'workout-editor', 'exercise-edit'].includes(currentView)) ||
+    (id === 'exercises' && ['exercise-create'].includes(currentView)) ||
+    (id === 'subscriptions' && ['subscriptions'].includes(currentView));
+
+  /**
+   * `expanded` decide el ancho/visibilidad de labels.
+   * - En el overlay movil siempre va expandido.
+   * - En desktop: expandido solo mientras el raton esta encima.
+   */
+  const renderSidebar = (expanded: boolean, mobile: boolean) => (
+    <div
+      className={`flex flex-col h-full bg-white border-r border-slate-200 shrink-0 overflow-hidden transition-[width] duration-200 ease-out ${
+        expanded ? 'w-64' : 'w-20'
+      } ${!mobile && expanded ? 'shadow-xl shadow-slate-900/5' : ''}`}
+    >
+      {/* Header: avatar + (nombre solo si expandido) */}
+      <div className={`border-b border-slate-100 flex items-center justify-between ${expanded ? 'p-5' : 'p-3 justify-center'}`}>
+        <div className={`flex items-center gap-3 ${expanded ? '' : 'justify-center'}`}>
+          <div
+            className="rounded-full h-10 w-10 border border-emerald-500/30 bg-cover bg-center shrink-0"
+            style={{
+              backgroundImage: profile?.avatar_url
+                ? `url("${profile.avatar_url}")`
+                : 'url("https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop")'
             }}
           />
-          <div className="flex flex-col overflow-hidden">
-            <h1 className="text-slate-900 text-sm font-bold truncate">
-              {profile?.full_name || 'Nutritionist'}
-            </h1>
-            <p className="text-slate-500 text-xs truncate">
-              {profile?.professional_title || 'Expert Coach'}
-            </p>
-          </div>
+          {expanded && (
+            <div className="flex flex-col overflow-hidden">
+              <h1 className="text-slate-900 text-sm font-bold truncate">
+                {profile?.full_name || 'Nutritionist'}
+              </h1>
+              <p className="text-slate-500 text-xs truncate">
+                {profile?.professional_title || 'Expert Coach'}
+              </p>
+            </div>
+          )}
         </div>
-        {onClose && (
+        {onClose && expanded && (
           <button onClick={onClose} className="lg:hidden p-2 text-slate-400 hover:text-slate-600">
             <X className="w-5 h-5" />
           </button>
         )}
       </div>
-      
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-6 overflow-y-auto scrollbar-hide">
+
+      <nav className={`flex-1 py-4 flex flex-col gap-5 overflow-y-auto overflow-x-hidden scrollbar-hide ${expanded ? 'px-3' : 'px-2'}`}>
         {menuGroups.map((group) => (
           <div key={group.title}>
-            <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              {group.title}
-            </h3>
+            {expanded ? (
+              <h3 className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {group.title}
+              </h3>
+            ) : (
+              // Colapsado: un separador fino en lugar del titulo de grupo.
+              <div className="mx-2 mb-2 h-px bg-slate-100" />
+            )}
             <div className="flex flex-col gap-1">
-              {group.items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onNavigate(item.id);
-                    if (onClose) onClose();
-                  }}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all group ${
-                    (currentView === item.id || 
-                     (item.id === 'planning' && ['planning-detail'].includes(currentView)) ||
-                     (item.id === 'calendar' && ['create-task'].includes(currentView)) ||
-                     (item.id === 'training' && ['assign-program', 'workout-editor', 'exercise-edit'].includes(currentView)) ||
-                     (item.id === 'exercises' && ['exercise-create'].includes(currentView)))
-                      ? 'bg-emerald-50 text-emerald-600' 
-                      : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <item.icon className={`w-[18px] h-[18px] ${
-                    (currentView === item.id || 
-                     (item.id === 'planning' && ['planning-detail'].includes(currentView)) ||
-                     (item.id === 'calendar' && ['create-task'].includes(currentView)) ||
-                     (item.id === 'training' && ['assign-program', 'workout-editor', 'exercise-edit'].includes(currentView)) ||
-                     (item.id === 'exercises' && ['exercise-create'].includes(currentView)))
-                     ? 'text-emerald-600' : 'text-slate-400 group-hover:text-emerald-500'
-                  }`} />
-                  <span className={`text-sm flex-1 text-left ${currentView === item.id ? 'font-bold' : 'font-medium'}`}>
-                    {item.label}
-                  </span>
-                  {item.id === 'messages' && unreadCount > 0 && (
-                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#10b981] text-white text-[10px] font-bold shadow-lg shadow-emerald-500/40 animate-in zoom-in-50 duration-300">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {group.items.map((item) => {
+                const active = isActive(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      onNavigate(item.id);
+                      if (onClose) onClose();
+                    }}
+                    title={!expanded ? item.label : undefined}
+                    className={`flex items-center rounded-lg transition-all group ${
+                      expanded ? 'gap-3 px-3 py-2' : 'justify-center px-0 py-2.5'
+                    } ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <div className="relative shrink-0">
+                      <item.icon className={`w-[18px] h-[18px] ${
+                        active ? 'text-emerald-600' : 'text-slate-400 group-hover:text-emerald-500'
+                      }`} />
+                      {/* Badge de no-leidos: en modo colapsado se muestra como
+                          un punto pequeno sobre el icono de mensajes. */}
+                      {item.id === 'messages' && unreadCount > 0 && !expanded && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-white" />
+                      )}
+                    </div>
+                    {expanded && (
+                      <>
+                        <span className={`text-sm flex-1 text-left ${active ? 'font-bold' : 'font-medium'}`}>
+                          {item.label}
+                        </span>
+                        {item.id === 'messages' && unreadCount > 0 && (
+                          <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[#10b981] text-white text-[10px] font-bold shadow-lg shadow-emerald-500/40 animate-in zoom-in-50 duration-300">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
       </nav>
+
+      {/* Upgrade / Suscripcion — pegado abajo, destacado. */}
+      <div className={`border-t border-slate-100 ${expanded ? 'p-3' : 'p-2'}`}>
+        <button
+          onClick={() => { onNavigate('subscriptions'); if (onClose) onClose(); }}
+          title={!expanded ? t('upgrade_plan', { defaultValue: 'Mejorar plan' }) : undefined}
+          className={`flex items-center rounded-xl transition-all w-full ${
+            expanded ? 'gap-3 px-3 py-2.5' : 'justify-center px-0 py-2.5'
+          } ${
+            isActive('subscriptions')
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 hover:from-amber-100 hover:to-orange-100'
+          }`}
+        >
+          <Sparkles className="w-[18px] h-[18px] shrink-0 text-amber-500" />
+          {expanded && (
+            <span className="text-sm font-bold flex-1 text-left">
+              {t('upgrade_plan', { defaultValue: 'Mejorar plan' })}
+            </span>
+          )}
+        </button>
+      </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:flex h-screen sticky top-0">
-        {sidebarContent}
+      {/* Desktop Sidebar — colapsado por defecto, se expande al hover.
+          El contenedor exterior reserva SIEMPRE 80px (w-20) para que el
+          contenido principal no salte; el sidebar real se expande en
+          position:absolute por encima sin empujar el layout. */}
+      <div className="hidden lg:block h-screen sticky top-0 w-20 shrink-0">
+        <div
+          className="absolute top-0 left-0 h-screen z-40"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          {renderSidebar(hovered, false)}
+        </div>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Overlay — siempre expandido */}
       <AnimatePresence>
         {isOpen && (
           <div className="fixed inset-0 z-[100] lg:hidden">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onClose}
               className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="absolute left-0 top-0 bottom-0 shadow-2xl"
             >
-              {sidebarContent}
+              {renderSidebar(true, true)}
             </motion.div>
           </div>
         )}

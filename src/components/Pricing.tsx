@@ -7,6 +7,13 @@ import { fetchWithAuth } from "../api";
 
 interface PricingProps {
   onGetStarted?: () => void;
+  /**
+   * Tier actual del manager. Si se pasa, la card correspondiente muestra un
+   * badge "Tu plan" y su boton queda deshabilitado (no tiene sentido pagar
+   * el plan que ya tienes). 'trial' no marca ninguna card (el trial es
+   * "pre-plan").
+   */
+  currentTier?: 'trial' | 'professional' | 'scale' | 'unlimited' | null;
 }
 
 // Stable plan tiers — never derived from translated labels.
@@ -18,7 +25,7 @@ const PRICE_MAP: Record<PlanTier, { monthly: string; annual: string }> = {
   unlimited: { monthly: "price_1TCNAcCR4WvolxlptLzNYdsz", annual: "price_1TCf5cCR4WvolxlpWGhpOgnI" },
 };
 
-export default function Pricing({ onGetStarted }: PricingProps) {
+export default function Pricing({ onGetStarted, currentTier }: PricingProps) {
   const { language } = useLanguage();
   const { user } = useAuth();
   const [isAnnual, setIsAnnual] = useState(false);
@@ -170,14 +177,25 @@ export default function Pricing({ onGetStarted }: PricingProps) {
               accent: false
             }
           ].map((plan, idx) => (
-            <motion.div 
+            <motion.div
               key={idx}
               whileHover={{ scale: 1.02, y: -5 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="bg-surface-container-lowest rounded-3xl p-10 flex flex-col border border-outline-variant/30 transition-shadow hover:shadow-2xl hover:shadow-black/5"
+              className={`bg-surface-container-lowest rounded-3xl p-10 flex flex-col border transition-shadow hover:shadow-2xl hover:shadow-black/5 ${
+                currentTier === plan.tier
+                  ? 'border-emerald-500 ring-2 ring-emerald-500/30'
+                  : 'border-outline-variant/30'
+              }`}
             >
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-primary mb-2">{plan.title}</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-xl font-bold text-primary">{plan.title}</h3>
+                  {currentTier === plan.tier && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                      {isEs ? 'Tu plan' : 'Your plan'}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-bold tracking-tight text-primary">{calculatePrice(plan.monthlyPrice)}€</span>
                   <span className="text-on-surface-variant font-medium">{isEs ? '/mes' : '/month'}</span>
@@ -194,24 +212,31 @@ export default function Pricing({ onGetStarted }: PricingProps) {
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={() => handleSubscribe(plan.tier)}
-                disabled={loading !== null}
-                className={`w-full py-4 rounded-full font-bold transition-all duration-300 cursor-pointer border flex items-center justify-center gap-2 ${
-                  loading === plan.tier ? 'opacity-70 cursor-wait' : ''
-                } ${
-                  idx === 1
-                  ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-transparent text-primary border-primary hover:bg-primary hover:text-on-primary'
-                }`}
-              >
-                {loading === plan.tier ? (
-                  <Clock className="w-5 h-5 animate-spin" />
-                ) : (
-                  <CreditCard className="w-5 h-5" />
-                )}
-                {loading === plan.tier ? (isEs ? 'Conectando...' : 'Connecting...') : plan.buttonLabel}
-              </button>
+              {currentTier === plan.tier ? (
+                <div className="w-full py-4 rounded-full font-bold border border-emerald-500 bg-emerald-50 text-emerald-700 flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  {isEs ? 'Plan actual' : 'Current plan'}
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleSubscribe(plan.tier)}
+                  disabled={loading !== null}
+                  className={`w-full py-4 rounded-full font-bold transition-all duration-300 cursor-pointer border flex items-center justify-center gap-2 ${
+                    loading === plan.tier ? 'opacity-70 cursor-wait' : ''
+                  } ${
+                    idx === 1
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'bg-transparent text-primary border-primary hover:bg-primary hover:text-on-primary'
+                  }`}
+                >
+                  {loading === plan.tier ? (
+                    <Clock className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-5 h-5" />
+                  )}
+                  {loading === plan.tier ? (isEs ? 'Conectando...' : 'Connecting...') : plan.buttonLabel}
+                </button>
+              )}
             </motion.div>
           ))}
         </div>

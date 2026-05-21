@@ -40,6 +40,7 @@ import ExerciseCreate from './views/ExerciseCreate';
 import Training from './views/Training';
 import ExerciseDetail from './views/ExerciseDetail';
 import OnboardingDashboard from './views/OnboardingDashboard';
+import Subscriptions from './views/Subscriptions';
 import ClientApp from './ClientApp';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
@@ -49,7 +50,7 @@ import { useBilling } from './context/BillingContext';
 import TrialBanner from './components/TrialBanner';
 import Paywall from './components/Paywall';
 
-type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor';
+type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
@@ -77,6 +78,18 @@ export default function App() {
       setCurrentView('dashboard');
     }
   }, [user, currentView]);
+
+  // Navegacion via CustomEvent — usado por componentes anidados (e.g.
+  // BillingSettings dentro de Settings) que no reciben setCurrentView por
+  // props. `detail` debe ser un id de vista valido.
+  React.useEffect(() => {
+    const onNavigate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail === 'string') setCurrentView(detail as View);
+    };
+    window.addEventListener('app:navigate', onNavigate as EventListener);
+    return () => window.removeEventListener('app:navigate', onNavigate as EventListener);
+  }, []);
   
   if (isLoading) {
     return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">{t('loading_application')}</div>;
@@ -283,6 +296,8 @@ export default function App() {
         }} />;
       case 'settings':
         return <Settings />;
+      case 'subscriptions':
+        return <Subscriptions onBack={() => setCurrentView('dashboard')} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 p-10">

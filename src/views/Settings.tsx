@@ -1133,6 +1133,25 @@ function BillingSettings() {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>
       )}
 
+      {/* Acceso a la pantalla completa de suscripciones (mismo modulo que
+          el sidebar "Mejorar plan"). Navega via CustomEvent porque
+          BillingSettings se renderiza anidado y no recibe setCurrentView. */}
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'subscriptions' }))}
+        className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 hover:from-amber-100 hover:to-orange-100 transition-colors group"
+      >
+        <div className="flex items-center gap-3 text-left">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-white text-[20px]">auto_awesome</span>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">{t('view_all_plans', { defaultValue: 'Ver planes y comparativa completa' })}</h3>
+            <p className="text-xs text-slate-500">{t('view_all_plans_desc', { defaultValue: 'Compara features, mira tu uso y mejora de plan.' })}</p>
+          </div>
+        </div>
+        <span className="material-symbols-outlined text-amber-500 group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+      </button>
+
       {/* Current Plan */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
