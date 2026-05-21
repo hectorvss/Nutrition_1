@@ -15,6 +15,7 @@ import { useClient } from './context/ClientContext';
 import CalendarView from './views/Calendar';
 import CreateTask from './views/CreateTask';
 import PlanningManagement from './views/PlanningManagement';
+import PlanningPlanTemplates from './views/PlanningPlanTemplates';
 // Vistas pesadas con `React.lazy()` para que no entren al bundle principal.
 // Cada una se descarga la primera vez que el usuario navega a ella.
 // Justificacion (LOC): PlanningDetail 1922, Settings 1663, NutritionPlanDetail
@@ -50,7 +51,7 @@ import { useBilling } from './context/BillingContext';
 import TrialBanner from './components/TrialBanner';
 import Paywall from './components/Paywall';
 
-type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions';
+type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
@@ -174,6 +175,8 @@ export default function App() {
           if (cid) setSelectedClientId(cid);
           setCurrentView(view as View);
         }} />;
+      case 'planning-templates':
+        return <PlanningPlanTemplates onBack={() => setCurrentView('planning')} />;
       case 'planning-template-selector':
         return (
           <PlanningTemplateSelector 

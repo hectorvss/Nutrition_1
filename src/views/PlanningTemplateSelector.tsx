@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Grid, 
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
+import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 
 interface PlanningTemplate {
   id: string;
@@ -41,7 +43,7 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 
 export default function PlanningTemplateSelector({ client, onBack, onSelect }: PlanningTemplateSelectorProps) {
   const { t } = useLanguage();
-  const templates: PlanningTemplate[] = [
+  const builtInTemplates: PlanningTemplate[] = [
     {
       id: 'pt1',
       name: 'Fat Loss Foundation',
@@ -99,6 +101,30 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
     }
   ];
 
+  // Coach-created planning templates loaded from the backend.
+  const [customTemplates, setCustomTemplates] = useState<PlanningTemplate[]>([]);
+  useEffect(() => {
+    fetchWithAuth('/manager/planning-templates?limit=200').then(unwrapList)
+      .then((rows: any[]) => {
+        if (!Array.isArray(rows)) return;
+        setCustomTemplates(rows.map((r) => ({
+          id: r.key || r.id,
+          name: r.name,
+          description: r.description || '',
+          duration: r.duration || 12,
+          phases: r.phases || 3,
+          goalType: r.goal_type || 'custom',
+          intensity: (r.intensity === 'aggressive' || r.intensity === 'elite' ? 'high'
+            : r.intensity === 'low' ? 'low' : 'moderate') as PlanningTemplate['intensity'],
+          roadmapPreview: r.data_json?.preview || '',
+          badge: r.goal_type ? t(`analytics_${r.goal_type}`, { defaultValue: r.goal_type }) : undefined,
+        })));
+      })
+      .catch(() => {});
+  }, []);
+
+  const templates: PlanningTemplate[] = [...customTemplates, ...builtInTemplates];
+
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
 
@@ -110,6 +136,18 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
     intensityLevel: 'moderate',
     primaryGoal: 'fat_loss'
   });
+
+  // Selecting a template pre-fills the settings panel from its blueprint.
+  const selectTemplate = (tpl: PlanningTemplate) => {
+    setSelectedTemplateId(tpl.id);
+    setSettings(s => ({
+      ...s,
+      duration: tpl.duration || s.duration,
+      intensityLevel: tpl.intensity === 'high' ? 'aggressive' : tpl.intensity || s.intensityLevel,
+      primaryGoal: ['fat_loss', 'muscle_gain', 'body_recomposition', 'metabolic_reset', 'endurance_focus'].includes(tpl.goalType)
+        ? tpl.goalType : s.primaryGoal,
+    }));
+  };
 
   const getTemplateText = (template: PlanningTemplate) => {
     const map: Record<string, { name: string; description: string; badge?: string; preview: string }> = {
@@ -222,7 +260,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             {templates.map((template) => (
               <div 
                 key={template.id}
-                onClick={() => setSelectedTemplateId(template.id)}
+                onClick={() => selectTemplate(template)}
                 className={`group w-full bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 ${
                   selectedTemplateId === template.id ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'
                 }`}

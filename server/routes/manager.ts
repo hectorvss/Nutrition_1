@@ -4412,6 +4412,135 @@ router.get('/training-templates/:id', async (req: any, res: any) => {
   }
 });
 
+// Planning Templates Routes (strategic roadmap blueprints, paginado ASC por duration + id)
+router.get('/planning-templates', async (req: any, res: any) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('language')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    const language = profile?.language || 'es';
+
+    let q = supabaseAdmin
+      .from('planning_templates')
+      .select('id, key, name, description, goal_type, intensity, duration, phases, data_json')
+      .eq('language', language)
+      .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
+      .order('duration', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'duration', 'asc');
+    const { data, error } = await q;
+    if (error) throw error;
+    res.json(buildPage(data || [], page.limit, 'duration'));
+  } catch (error: any) {
+    console.error('Error fetching planning templates:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// Create a new planning template
+router.post('/planning-templates', async (req: any, res: any) => {
+  try {
+    const { name, description, goal_type, intensity, duration, phases, data_json } = req.body || {};
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'name is required' });
+    }
+    const { data: profile } = await supabaseAdmin
+      .from('profiles').select('language').eq('user_id', req.user.id).maybeSingle();
+    const language = profile?.language || 'es';
+    const key = `pln_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const { data, error } = await supabaseAdmin
+      .from('planning_templates')
+      .insert({
+        key,
+        name: String(name).trim(),
+        description: description || null,
+        goal_type: goal_type || null,
+        intensity: intensity || null,
+        duration: Number(duration) || null,
+        phases: Number(phases) || null,
+        data_json: data_json || {},
+        language,
+        manager_id: req.user.id,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error creating planning template:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// Update a planning template (id may be a UUID or a key slug)
+router.put('/planning-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
+
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() };
+    for (const f of ['name', 'description', 'goal_type', 'intensity', 'duration', 'phases', 'data_json']) {
+      if (req.body?.[f] !== undefined) patch[f] = req.body[f];
+    }
+    const q = supabaseAdmin.from('planning_templates').update(patch).eq('manager_id', req.user.id);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Template not found or not editable' });
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error updating planning template:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// Delete a planning template (id may be a UUID or a key slug)
+router.delete('/planning-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) return res.status(400).json({ error: 'Invalid template id/key format' });
+    const q = supabaseAdmin.from('planning_templates').delete().eq('manager_id', req.user.id);
+    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select();
+    if (error) throw error;
+    if (!data || data.length === 0) return res.status(404).json({ error: 'Template not found or not deletable' });
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting planning template:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+router.get('/planning-templates/:id', async (req: any, res: any) => {
+  const { id } = req.params;
+  try {
+    const isUuid = UUID_RE.test(id);
+    const isKey = KEY_RE.test(id);
+    if (!isUuid && !isKey) {
+      return res.status(400).json({ error: 'Invalid template id/key format' });
+    }
+    const query = supabaseAdmin.from('planning_templates').select('*');
+    const { data, error } = await (isUuid ? query.eq('id', id) : query.eq('key', id)).maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Template not found' });
+    if (data.manager_id && data.manager_id !== req.user.id) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error fetching planning template detail:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // --- Web Push notifications ---
 
 // Public VAPID key the browser needs to create a push subscription.
