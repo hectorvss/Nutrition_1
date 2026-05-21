@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense } from 'react';
+import { lazyWithRetry } from './lazyWithRetry';
 import Sidebar from './components/Sidebar';
 import Dashboard from './views/Dashboard';
 import Tasks from './views/Tasks';
@@ -20,10 +21,10 @@ import PlanningPlanTemplates from './views/PlanningPlanTemplates';
 // Cada una se descarga la primera vez que el usuario navega a ella.
 // Justificacion (LOC): PlanningDetail 1922, Settings 1663, NutritionPlanDetail
 // 1332, Messages 1183, Analytics 774, ClientProgress 773, WorkoutEditor 677.
-const PlanningDetail        = lazy(() => import('./views/PlanningDetail'));
-const Analytics             = lazy(() => import('./views/Analytics'));
-const Settings              = lazy(() => import('./views/Settings'));
-const OnboardingFlowEditor  = lazy(() => import('./views/OnboardingFlowEditor'));
+const PlanningDetail        = lazyWithRetry(() => import('./views/PlanningDetail'));
+const Analytics             = lazyWithRetry(() => import('./views/Analytics'));
+const Settings              = lazyWithRetry(() => import('./views/Settings'));
+const OnboardingFlowEditor  = lazyWithRetry(() => import('./views/OnboardingFlowEditor'));
 import PlanningTemplateSelector from './views/PlanningTemplateSelector';
 import TaskIntelligence from './views/TaskIntelligence';
 import Clients from './views/Clients';
