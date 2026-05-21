@@ -4165,8 +4165,9 @@ router.get('/nutrition-templates', async (req: any, res: any) => {
     let q = supabaseAdmin
       .from('nutrition_templates')
       .select('id, key, name, description, target_calories, data_json')
-      .eq('language', language)
-      .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
+      // Global templates (manager_id IS NULL) show in EVERY UI language —
+      // only the manager's own templates are filtered by their language.
+      .or(`manager_id.is.null,and(manager_id.eq.${req.user.id},language.eq.${language})`)
       .order('target_calories', { ascending: true })
       .order('id', { ascending: true })
       .limit(page.limit + 1);
@@ -4297,8 +4298,8 @@ router.get('/training-templates', async (req: any, res: any) => {
     let q = supabaseAdmin
       .from('training_templates')
       .select('id, key, name, description, level, type, weekly_frequency, data_json')
-      .eq('language', language)
-      .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
+      // Global templates (manager_id IS NULL) show in EVERY UI language.
+      .or(`manager_id.is.null,and(manager_id.eq.${req.user.id},language.eq.${language})`)
       .order('weekly_frequency', { ascending: true })
       .order('id', { ascending: true })
       .limit(page.limit + 1);
@@ -4426,8 +4427,8 @@ router.get('/planning-templates', async (req: any, res: any) => {
     let q = supabaseAdmin
       .from('planning_templates')
       .select('id, key, name, description, goal_type, intensity, duration_weeks, phases, data_json')
-      .eq('language', language)
-      .or(`manager_id.is.null,manager_id.eq.${req.user.id}`)
+      // Global templates (manager_id IS NULL) show in EVERY UI language.
+      .or(`manager_id.is.null,and(manager_id.eq.${req.user.id},language.eq.${language})`)
       .order('duration_weeks', { ascending: true })
       .order('id', { ascending: true })
       .limit(page.limit + 1);
