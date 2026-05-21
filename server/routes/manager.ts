@@ -4151,6 +4151,63 @@ router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
   }
 });
 
+// --- Shared template helpers -------------------------------------------------
+// Preset templates exist once per language and share the same `key`, so a plain
+// .maybeSingle() lookup throws when both rows match. These helpers resolve the
+// right row and implement copy-on-write so a coach can customise a global preset.
+
+async function getManagerLanguage(userId: string): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from('profiles').select('language').eq('user_id', userId).maybeSingle();
+  return data?.language || 'es';
+}
+
+// Resolve a template by UUID or key, tolerating per-language duplicate keys.
+// Returns the manager's own copy first, then the row in the manager's language.
+async function resolveTemplateRow(table: string, id: string, userId: string, language: string) {
+  const isUuid = UUID_RE.test(id);
+  const base = supabaseAdmin.from(table).select('*');
+  const { data, error } = await (isUuid ? base.eq('id', id) : base.eq('key', id));
+  if (error) throw error;
+  const list = (data || []).filter((r: any) => !r.manager_id || r.manager_id === userId);
+  return list.find((r: any) => r.manager_id === userId)
+      || list.find((r: any) => r.language === language)
+      || list[0] || null;
+}
+
+// Update the manager's own template; if the target is a global preset, clone it
+// into a manager-owned copy with the edits applied (copy-on-write).
+async function updateTemplateCoW(opts: {
+  table: string; id: string; userId: string; language: string;
+  patch: Record<string, any>; cloneFields: string[]; keyPrefix: string;
+}): Promise<any | null> {
+  const { table, id, userId, language, patch, cloneFields, keyPrefix } = opts;
+  const isUuid = UUID_RE.test(id);
+  const ownQ = supabaseAdmin.from(table).update(patch).eq('manager_id', userId);
+  const { data: updated, error: updErr } = await (isUuid ? ownQ.eq('id', id) : ownQ.eq('key', id)).select();
+  if (updErr) throw updErr;
+  if (updated && updated.length) return updated[0];
+
+  // Not owned — copy-on-write from the matching global preset.
+  const gBase = supabaseAdmin.from(table).select('*').is('manager_id', null);
+  const { data: globals, error: gErr } = await (isUuid ? gBase.eq('id', id) : gBase.eq('key', id));
+  if (gErr) throw gErr;
+  const src = (globals || []).find((r: any) => r.language === language) || (globals || [])[0];
+  if (!src) return null;
+  const insertRow: Record<string, any> = {
+    key: `${keyPrefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    manager_id: userId,
+    // Tag the copy with the manager's language so it shows in their list.
+    language,
+  };
+  for (const f of cloneFields) insertRow[f] = src[f];
+  Object.assign(insertRow, patch);
+  const { data: created, error: insErr } = await supabaseAdmin
+    .from(table).insert(insertRow).select().single();
+  if (insErr) throw insErr;
+  return created;
+}
+
 // Nutrition Templates Routes (paginado ASC por target_calories + id tiebreak)
 router.get('/nutrition-templates', async (req: any, res: any) => {
   const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
@@ -4225,13 +4282,15 @@ router.put('/nutrition-templates/:id', async (req: any, res: any) => {
     for (const f of ['name', 'description', 'target_calories', 'data_json']) {
       if (req.body?.[f] !== undefined) patch[f] = req.body[f];
     }
-    // Only the owning manager may modify their templates; global presets
-    // (manager_id IS NULL) are read-only.
-    const q = supabaseAdmin.from('nutrition_templates').update(patch).eq('manager_id', req.user.id);
-    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().maybeSingle();
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Template not found or not editable' });
-    res.json(data);
+    // Edit the manager's own template, or copy-on-write from a global preset.
+    const language = await getManagerLanguage(req.user.id);
+    const row = await updateTemplateCoW({
+      table: 'nutrition_templates', id, userId: req.user.id, language, patch,
+      cloneFields: ['name', 'description', 'target_calories', 'data_json'],
+      keyPrefix: 'tpl',
+    });
+    if (!row) return res.status(404).json({ error: 'Template not found or not editable' });
+    res.json(row);
   } catch (error: any) {
     console.error('Error updating nutrition template:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -4266,17 +4325,10 @@ router.get('/nutrition-templates/:id', async (req: any, res: any) => {
     if (!isUuid && !isKey) {
       return res.status(400).json({ error: 'Invalid template id/key format' });
     }
-    const query = supabaseAdmin.from('nutrition_templates').select('*');
-    const { data, error } = await (isUuid ? query.eq('id', id) : query.eq('key', id)).maybeSingle();
-
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Template not found' });
-    // Only global presets or the manager's own templates are visible.
-    if (data.manager_id && data.manager_id !== req.user.id) {
-      return res.status(404).json({ error: 'Template not found' });
-    }
-
-    res.json(data);
+    const language = await getManagerLanguage(req.user.id);
+    const row = await resolveTemplateRow('nutrition_templates', id, req.user.id, language);
+    if (!row) return res.status(404).json({ error: 'Template not found' });
+    res.json(row);
   } catch (error: any) {
     console.error('Error fetching template detail:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -4359,11 +4411,14 @@ router.put('/training-templates/:id', async (req: any, res: any) => {
     for (const f of ['name', 'description', 'level', 'type', 'weekly_frequency', 'data_json']) {
       if (req.body?.[f] !== undefined) patch[f] = req.body[f];
     }
-    const q = supabaseAdmin.from('training_templates').update(patch).eq('manager_id', req.user.id);
-    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().maybeSingle();
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Template not found or not editable' });
-    res.json(data);
+    const language = await getManagerLanguage(req.user.id);
+    const row = await updateTemplateCoW({
+      table: 'training_templates', id, userId: req.user.id, language, patch,
+      cloneFields: ['name', 'description', 'level', 'type', 'weekly_frequency', 'data_json'],
+      keyPrefix: 'twf',
+    });
+    if (!row) return res.status(404).json({ error: 'Template not found or not editable' });
+    res.json(row);
   } catch (error: any) {
     console.error('Error updating training template:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -4396,16 +4451,10 @@ router.get('/training-templates/:id', async (req: any, res: any) => {
     if (!isUuid && !isKey) {
       return res.status(400).json({ error: 'Invalid template id/key format' });
     }
-    const query = supabaseAdmin.from('training_templates').select('*');
-    const { data, error } = await (isUuid ? query.eq('id', id) : query.eq('key', id)).maybeSingle();
-
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Template not found' });
-    if (data.manager_id && data.manager_id !== req.user.id) {
-      return res.status(404).json({ error: 'Template not found' });
-    }
-
-    res.json(data);
+    const language = await getManagerLanguage(req.user.id);
+    const row = await resolveTemplateRow('training_templates', id, req.user.id, language);
+    if (!row) return res.status(404).json({ error: 'Template not found' });
+    res.json(row);
   } catch (error: any) {
     console.error('Error fetching training template detail:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -4489,11 +4538,14 @@ router.put('/planning-templates/:id', async (req: any, res: any) => {
     for (const f of ['name', 'description', 'goal_type', 'intensity', 'duration_weeks', 'phases', 'data_json']) {
       if (req.body?.[f] !== undefined) patch[f] = req.body[f];
     }
-    const q = supabaseAdmin.from('planning_templates').update(patch).eq('manager_id', req.user.id);
-    const { data, error } = await (isUuid ? q.eq('id', id) : q.eq('key', id)).select().maybeSingle();
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Template not found or not editable' });
-    res.json(data);
+    const language = await getManagerLanguage(req.user.id);
+    const row = await updateTemplateCoW({
+      table: 'planning_templates', id, userId: req.user.id, language, patch,
+      cloneFields: ['name', 'description', 'goal_type', 'intensity', 'duration_weeks', 'phases', 'data_json'],
+      keyPrefix: 'pln',
+    });
+    if (!row) return res.status(404).json({ error: 'Template not found or not editable' });
+    res.json(row);
   } catch (error: any) {
     console.error('Error updating planning template:', error);
     res.status(500).json({ error: safeErr(error) });
@@ -4526,15 +4578,10 @@ router.get('/planning-templates/:id', async (req: any, res: any) => {
     if (!isUuid && !isKey) {
       return res.status(400).json({ error: 'Invalid template id/key format' });
     }
-    const query = supabaseAdmin.from('planning_templates').select('*');
-    const { data, error } = await (isUuid ? query.eq('id', id) : query.eq('key', id)).maybeSingle();
-
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Template not found' });
-    if (data.manager_id && data.manager_id !== req.user.id) {
-      return res.status(404).json({ error: 'Template not found' });
-    }
-    res.json(data);
+    const language = await getManagerLanguage(req.user.id);
+    const row = await resolveTemplateRow('planning_templates', id, req.user.id, language);
+    if (!row) return res.status(404).json({ error: 'Template not found' });
+    res.json(row);
   } catch (error: any) {
     console.error('Error fetching planning template detail:', error);
     res.status(500).json({ error: safeErr(error) });
