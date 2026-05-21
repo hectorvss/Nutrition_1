@@ -493,13 +493,24 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                   >
                     <div className="flex flex-col md:flex-row gap-6">
                       
-                      {/* Left Side: Avatar/Type */}
+                      {/* Left Side: minimalist decorative panel — identical on
+                          every card so all cards share the same structure. */}
                       <div className="flex-shrink-0 flex flex-col items-center gap-3">
-                        <div className={`relative w-16 h-24 rounded-lg flex items-center justify-center overflow-hidden ${isSelected ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-slate-100 dark:bg-slate-900/50'}`}>
-                          <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-700 absolute opacity-20 z-0">accessibility_new</span>
-                          {/* Decorative SVG placeholder similar to the HTML mockup */}
-                          <div className="z-10 text-emerald-500">
-                             <span className="material-symbols-outlined text-3xl">directions_run</span>
+                        <div className={`relative w-16 h-24 rounded-xl overflow-hidden flex items-center justify-center ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-900/10'
+                            : 'bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-900/60 dark:to-slate-800/40'
+                        }`}>
+                          {/* Abstract bar motif — neutral, decorative, the same
+                              on every template so the UI stays consistent. */}
+                          <div className="flex flex-col gap-1.5">
+                            {[5, 7, 4].map((w, i) => (
+                              <span
+                                key={i}
+                                className={`h-1.5 rounded-full ${isSelected ? 'bg-emerald-400/70' : 'bg-slate-300/80 dark:bg-slate-600'}`}
+                                style={{ width: `${w * 4}px` }}
+                              />
+                            ))}
                           </div>
                         </div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{preset.type}</span>
