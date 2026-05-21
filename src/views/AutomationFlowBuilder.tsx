@@ -23,10 +23,25 @@ interface AutomationFlowBuilderProps {
   onNext: (message: string, deliveryRules: AutomationDeliveryRules) => void;
 }
 
+// Full set of message variables — must stay in sync with KNOWN_VARIABLES in
+// server/lib/messageTemplate.ts (the only place these resolve to real values).
 const VARIABLES = [
-  { label: '{First Name}' }, { label: '{Client Name}' }, { label: '{Coach Name}' },
-  { label: '{Current Weight}' }, { label: '{Goal Weight}' }, { label: '{Adherence Rate}' },
-  { label: '{Check-in Day}' }, { label: '{Days Inactive}' }, { label: '{Days Until Expiry}' },
+  { label: '{First Name}',        desc: 'Nombre de pila del cliente' },
+  { label: '{Client Name}',       desc: 'Nombre completo del cliente' },
+  { label: '{Coach Name}',        desc: 'Tu nombre completo' },
+  { label: '{Coach First Name}',  desc: 'Tu nombre de pila' },
+  { label: '{Current Weight}',    desc: 'Último peso registrado' },
+  { label: '{Goal Weight}',       desc: 'Peso objetivo' },
+  { label: '{Goal}',              desc: 'Objetivo del cliente' },
+  { label: '{Height}',            desc: 'Altura del cliente' },
+  { label: '{Age}',               desc: 'Edad del cliente' },
+  { label: '{Adherence Rate}',    desc: 'Adherencia de la última semana' },
+  { label: '{Mood}',              desc: 'Ánimo del último check-in' },
+  { label: '{RPE}',               desc: 'Esfuerzo percibido del último entreno' },
+  { label: '{Check-in Day}',      desc: 'Día de check-in asignado' },
+  { label: '{Days Inactive}',     desc: 'Días sin abrir la app' },
+  { label: '{Days Until Expiry}', desc: 'Días hasta que vence el plan' },
+  { label: '{Today}',             desc: 'Fecha de hoy' },
 ];
 
 // Metadata for every action-step kind: icon, label and the card's icon colour.
@@ -158,11 +173,28 @@ export default function AutomationFlowBuilder({
     onNext(firstMessage, enrichedRules);
   };
 
+  // Appends a {Variable} into whatever text field the step exposes.
   const insertVar = (i: number, variable: string) => {
     const s = steps[i];
-    if (s.kind === 'message') updateStep(i, { ...s, message: (s.message || '') + variable });
-    if (s.kind === 'create_task') updateStep(i, { ...s, title: (s.title || '') + variable });
+    if (s.kind === 'message')      updateStep(i, { ...s, message: (s.message || '') + variable });
+    if (s.kind === 'create_task')  updateStep(i, { ...s, title: (s.title || '') + variable });
+    if (s.kind === 'create_event') updateStep(i, { ...s, title: (s.title || '') + variable });
+    if (s.kind === 'notify_coach') updateStep(i, { ...s, body: (s.body || '') + variable });
   };
+
+  // Reusable variable-insertion dropdown — same custom <Select> everywhere.
+  const variableSelect = (i: number) => (
+    <Select
+      value=""
+      onChange={(v) => v && insertVar(i, v)}
+      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs px-2 py-1.5"
+    >
+      <option value="">{t('insert_variable', { defaultValue: '+ Insertar variable…' })}</option>
+      {VARIABLES.map(v => (
+        <option key={v.label} value={v.label}>{v.label} — {v.desc}</option>
+      ))}
+    </Select>
+  );
 
   // Renders a condition module: a Select to add any condition from the full
   // catalog, plus a configurable row per selected condition. Used for both
@@ -311,14 +343,7 @@ export default function AutomationFlowBuilder({
                         rows={4}
                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
                       />
-                      <div className="flex flex-wrap gap-1">
-                        {VARIABLES.map(v => (
-                          <button key={v.label} type="button" onClick={() => insertVar(i, v.label)}
-                            className="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-slate-600 dark:text-slate-300 hover:text-emerald-600 px-2 py-0.5 rounded transition-colors">
-                            {v.label}
-                          </button>
-                        ))}
-                      </div>
+                      {variableSelect(i)}
                     </div>
                   )}
 
@@ -357,10 +382,7 @@ export default function AutomationFlowBuilder({
                           <option value="medium">Media</option>
                           <option value="low">Baja</option>
                         </Select>
-                        <button type="button" onClick={() => insertVar(i, '{First Name}')}
-                          className="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 px-2 py-1 rounded">
-                          {'{First Name}'}
-                        </button>
+                        <div className="flex-1">{variableSelect(i)}</div>
                       </div>
                     </div>
                   )}
@@ -416,6 +438,7 @@ export default function AutomationFlowBuilder({
                         onChange={e => updateStep(i, { ...step, body: e.target.value })}
                         placeholder="Detalle (opcional)"
                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      {variableSelect(i)}
                     </div>
                   )}
 

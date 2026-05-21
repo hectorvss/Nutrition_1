@@ -34,11 +34,13 @@ export const KNOWN_VARIABLES: Array<{ token: string; resolve: (ctx: RenderContex
     }
   },
   { token: '{Coach Name}', resolve: ctx => String(ctx.coachName || 'tu coach') },
+  { token: '{Coach First Name}', resolve: ctx => String(ctx.coachName || 'tu coach').split(' ')[0] },
   // {Current Weight}/{Goal Weight} NO incluyen "kg" en el output: el coach
   // suele escribir "estas a {Current Weight} kg de tu meta" y se duplicaria.
   // Mantenemos el shape numerico para compat con la version anterior.
   { token: '{Current Weight}', resolve: ctx => {
-      const w = ctx.latestCheckIn?.weight ?? ctx.latestCheckIn?.avgWeight ?? ctx.latestCheckIn?.bodyWeight;
+      const w = ctx.latestCheckIn?.weight ?? ctx.latestCheckIn?.avgWeight
+        ?? ctx.latestCheckIn?.bodyWeight ?? ctx.profile?.weight;
       return w != null ? String(w) : '0';
     }
   },
@@ -79,6 +81,18 @@ export const KNOWN_VARIABLES: Array<{ token: string; resolve: (ctx: RenderContex
       return r != null ? String(r) : '—';
     }
   },
+  { token: '{Goal}', resolve: ctx => String(ctx.profile?.goal || 'tu objetivo') },
+  { token: '{Height}', resolve: ctx => {
+      const h = ctx.profile?.height;
+      return h != null ? String(h) : '—';
+    }
+  },
+  { token: '{Age}', resolve: ctx => {
+      const a = ctx.profile?.age;
+      return a != null ? String(a) : '—';
+    }
+  },
+  { token: '{Today}', resolve: () => new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) },
 ];
 
 const TOKEN_RE = /\{[^}]+\}/g;
