@@ -17,7 +17,7 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
-  Sparkles,
+  ArrowUpCircle,
 } from 'lucide-react';
 import { Zap } from 'lucide-react';
 import { X } from 'lucide-react';
@@ -108,6 +108,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
       title: t('sidebar_insights'),
       items: [
         { id: 'analytics', label: t('analytics'), icon: BarChart3 },
+        { id: 'subscriptions', label: t('upgrade_plan', { defaultValue: 'Mejorar plan' }), icon: ArrowUpCircle },
         { id: 'settings', label: t('settings'), icon: Settings },
       ]
     }
@@ -217,28 +218,6 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
           </div>
         ))}
       </nav>
-
-      {/* Upgrade / Suscripcion — pegado abajo, destacado. */}
-      <div className={`border-t border-slate-100 ${expanded ? 'p-3' : 'p-2'}`}>
-        <button
-          onClick={() => { onNavigate('subscriptions'); if (onClose) onClose(); }}
-          title={!expanded ? t('upgrade_plan', { defaultValue: 'Mejorar plan' }) : undefined}
-          className={`flex items-center rounded-xl transition-all w-full ${
-            expanded ? 'gap-3 px-3 py-2.5' : 'justify-center px-0 py-2.5'
-          } ${
-            isActive('subscriptions')
-              ? 'bg-amber-100 text-amber-700'
-              : 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 hover:from-amber-100 hover:to-orange-100'
-          }`}
-        >
-          <Sparkles className="w-[18px] h-[18px] shrink-0 text-amber-500" />
-          {expanded && (
-            <span className="text-sm font-bold flex-1 text-left">
-              {t('upgrade_plan', { defaultValue: 'Mejorar plan' })}
-            </span>
-          )}
-        </button>
-      </div>
     </div>
   );
 
@@ -247,10 +226,14 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
       {/* Desktop Sidebar — colapsado por defecto, se expande al hover.
           El contenedor exterior reserva SIEMPRE 80px (w-20) para que el
           contenido principal no salte; el sidebar real se expande en
-          position:absolute por encima sin empujar el layout. */}
-      <div className="hidden lg:block h-screen sticky top-0 w-20 shrink-0">
+          position:absolute por encima sin empujar el layout.
+          z-[90]: por encima de cualquier header/sticky/overlay de las
+          pantallas (que usan z-10..z-50) para que el panel expandido NUNCA
+          quede tapado. Solo los modales full-screen (z-[100]) lo cubren,
+          que es el comportamiento correcto. */}
+      <div className="hidden lg:block h-screen sticky top-0 w-20 shrink-0 z-[90]">
         <div
-          className="absolute top-0 left-0 h-screen z-40"
+          className="absolute top-0 left-0 h-screen z-[90]"
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
         >
