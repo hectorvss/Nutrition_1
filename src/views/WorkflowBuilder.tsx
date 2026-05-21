@@ -66,20 +66,25 @@ function WorkflowNodeCard({ data, selected }: NodeProps) {
   const branches: string[] = nd.branches || [];
   const isStop = nd.key === 'flow.stop';
   const s = styleFor(nd.nodeType);
+  // NOTE: the card must NOT use `overflow-hidden`. React Flow handles sit on
+  // the card edge and stick half-way out; clipping them is what made the
+  // connection dots look "cut off". Corners are rounded on the inner pieces
+  // (accent strip + branch footer) so we keep clean edges without clipping.
+  const handleBase = '!w-3 !h-3 !rounded-full !border-2 !border-white dark:!border-slate-900 !shadow-sm transition-colors';
   return (
     <div
-      className={`relative bg-white dark:bg-slate-900 rounded-lg border min-w-[210px] overflow-hidden transition-shadow ${
+      className={`relative bg-white dark:bg-slate-900 rounded-lg border min-w-[210px] transition-shadow ${
         selected
           ? 'border-emerald-400 shadow-md ring-2 ring-emerald-500/15'
           : 'border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md'
       }`}
     >
       {/* Left accent strip — only colour signal for the node type. */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${s.stripe}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${s.stripe}`} />
 
       {nd.nodeType !== 'trigger' && (
         <Handle type="target" position={Position.Top}
-          className="!w-3 !h-3 !bg-slate-400 !border-2 !border-white hover:!bg-slate-600 transition-colors" />
+          className={`${handleBase} !bg-slate-400 hover:!bg-slate-600`} />
       )}
 
       <div className="pl-3 pr-3 py-2.5 flex items-center gap-2.5">
@@ -97,19 +102,19 @@ function WorkflowNodeCard({ data, selected }: NodeProps) {
       </div>
 
       {branches.length > 0 ? (
-        <div className="flex border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40">
+        <div className="flex border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 rounded-b-lg">
           {branches.map((b, i) => (
             <div key={b} className="relative flex-1 px-2 py-1.5 text-center first:border-r first:border-slate-100 dark:first:border-slate-800">
               <span className="text-[9px] uppercase tracking-wide font-semibold text-slate-500">{b}</span>
               <Handle type="source" position={Position.Bottom} id={b}
-                className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white hover:!bg-emerald-600 transition-colors"
+                className={`${handleBase} !bg-emerald-500 hover:!bg-emerald-600`}
                 style={{ left: `${((i + 0.5) / branches.length) * 100}%` }} />
             </div>
           ))}
         </div>
       ) : !isStop ? (
         <Handle type="source" position={Position.Bottom}
-          className="!w-3 !h-3 !bg-emerald-500 !border-2 !border-white hover:!bg-emerald-600 transition-colors" />
+          className={`${handleBase} !bg-emerald-500 hover:!bg-emerald-600`} />
       ) : null}
     </div>
   );
