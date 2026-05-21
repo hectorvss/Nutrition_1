@@ -630,6 +630,121 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const carbsDash = totalCalories > 0 ? (totalCarbs * 4 / totalCalories) * circumference : 0;
   const fatsDash = totalCalories > 0 ? (totalFats * 9 / totalCalories) * circumference : 0;
 
+  // The food library card — rendered near the top of the right column so
+  // foods stay within easy drag-and-drop reach of the day's meal blocks.
+  const LIBRARY_CARD = (
+          <div className="bg-white rounded-2xl border border-slate-200 p-0 shadow-sm flex flex-col overflow-hidden">
+            <div className="p-6 pb-4 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-slate-900">
+                    {mode === 'general' ? t('general_mode') : t('food_library')}
+                  </h3>
+                </div>
+                <span className="text-[10px] text-slate-400 font-bold">
+                  {mode === 'general' ? `${GENERAL_MACRO_ITEMS.length} ${t('items').toLowerCase()}` : `${filteredLibraryFoods.length} ${t('items').toLowerCase()}`}
+                </span>
+              </div>
+
+              {/* Search only in Example Mode */}
+              {mode === 'example' && (
+                <>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none text-slate-700 placeholder:text-slate-400 transition-all"
+                      placeholder={t('search_foods_placeholder')}
+                      value={librarySearch}
+                      onChange={e => setLibrarySearch(e.target.value)}
+                      type="text"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium mt-2 flex items-center gap-1">
+                    <GripVertical className="w-3 h-3" /> {t('drag_foods_from_library_short')}
+                  </p>
+                </>
+              )}
+              {mode === 'general' && (
+                <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                  <GripVertical className="w-3 h-3" /> {t('drag_categories_into_meal')}
+                </p>
+              )}
+            </div>
+
+            {/* General Mode items */}
+            {mode === 'general' && (
+              <div className="p-2 space-y-1 max-h-[480px] overflow-y-auto scrollbar-hide">
+                {GENERAL_MACRO_ITEMS.map((item) => (
+                  <div
+                    key={item.id}
+                    draggable
+                    onDragStart={() => handleGeneralDragStart(item)}
+                    className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 flex items-center gap-3"
+                  >
+                    <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
+                    <div className={`w-2 h-10 rounded-full shrink-0 ${item.color}`}></div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{item.label}</h4>
+                      <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{item.description}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${item.bgColor}`}>
+                      {item.defaultAmount}{item.id === 'fibrous-veg' || item.id === 'dairy-protein' || item.id === 'fruit' ? 'g' : 'g'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Example Mode food database items */}
+            {mode === 'example' && (
+              <div className="p-2 space-y-1 max-h-[420px] overflow-y-auto scrollbar-hide">
+                {filteredLibraryFoods.length === 0 && (
+                  <div className="p-6 text-center text-sm text-slate-400">{t('no_foods_match_search')}</div>
+                )}
+                {filteredLibraryFoods.map((food) => (
+                  <div
+                    key={food.id}
+                    draggable
+                    onDragStart={() => handleDragStart(food)}
+                    className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors truncate">{food.name}</h4>
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md uppercase tracking-widest shrink-0 ml-1">
+                            {food.servingSize}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                          <span className="text-orange-500">{food.calories} kcal</span>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                            <span>{food.protein}g P</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                            <span>{food.carbs}g C</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                            <span>{food.fats}g F</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+  );
+
   return (
     <>
     <div className="w-full p-6 md:p-8 lg:p-10 flex flex-col">
@@ -1177,6 +1292,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
             )}
           </div>
 
+          {/* Library Card – moved above the macro totals so foods are always
+              within easy drag-and-drop reach of the day's meal blocks. */}
+          {LIBRARY_CARD}
+
           {/* Live Macro Totals Card */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex-shrink-0">
             <div className="flex items-center justify-between mb-6">
@@ -1277,118 +1396,6 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Library Card – mode-conditional */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-0 shadow-sm flex flex-col overflow-hidden">
-            <div className="p-6 pb-4 border-b border-slate-100">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-slate-900">
-                    {mode === 'general' ? t('general_mode') : t('food_library')}
-                  </h3>
-                </div>
-                <span className="text-[10px] text-slate-400 font-bold">
-                  {mode === 'general' ? `${GENERAL_MACRO_ITEMS.length} ${t('items').toLowerCase()}` : `${filteredLibraryFoods.length} ${t('items').toLowerCase()}`}
-                </span>
-              </div>
-
-              {/* Search only in Example Mode */}
-              {mode === 'example' && (
-                <>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <input 
-                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none text-slate-700 placeholder:text-slate-400 transition-all" 
-                      placeholder={t('search_foods_placeholder')}
-                      value={librarySearch}
-                      onChange={e => setLibrarySearch(e.target.value)}
-                      type="text"
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-medium mt-2 flex items-center gap-1">
-                    <GripVertical className="w-3 h-3" /> {t('drag_foods_from_library_short')}
-                  </p>
-                </>
-              )}
-              {mode === 'general' && (
-                <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-                  <GripVertical className="w-3 h-3" /> {t('drag_categories_into_meal')}
-                </p>
-              )}
-            </div>
-
-            {/* General Mode items */}
-            {mode === 'general' && (
-              <div className="p-2 space-y-1 max-h-[480px] overflow-y-auto scrollbar-hide">
-                {GENERAL_MACRO_ITEMS.map((item) => (
-                  <div
-                    key={item.id}
-                    draggable
-                    onDragStart={() => handleGeneralDragStart(item)}
-                    className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 flex items-center gap-3"
-                  >
-                    <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
-                    <div className={`w-2 h-10 rounded-full shrink-0 ${item.color}`}></div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{item.label}</h4>
-                      <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{item.description}</p>
-                    </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${item.bgColor}`}>
-                      {item.defaultAmount}{item.id === 'fibrous-veg' || item.id === 'dairy-protein' || item.id === 'fruit' ? 'g' : 'g'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Example Mode food database items */}
-            {mode === 'example' && (
-              <div className="p-2 space-y-1 max-h-[420px] overflow-y-auto scrollbar-hide">
-                {filteredLibraryFoods.length === 0 && (
-                  <div className="p-6 text-center text-sm text-slate-400">{t('no_foods_match_search')}</div>
-                )}
-                {filteredLibraryFoods.map((food) => (
-                  <div
-                    key={food.id}
-                    draggable
-                    onDragStart={() => handleDragStart(food)}
-                    className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors truncate">{food.name}</h4>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md uppercase tracking-widest shrink-0 ml-1">
-                            {food.servingSize}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          <span className="text-orange-500">{food.calories} kcal</span>
-                          <div className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                            <span>{food.protein}g P</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                            <span>{food.carbs}g C</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                            <span>{food.fats}g F</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
           </div>
 
         </div>
