@@ -6,7 +6,6 @@ import { unwrapList } from '../api/unwrap';
 import { PROGRAM_TEMPLATES } from '../constants/training_presets';
 import { trainingPrograms } from '../constants/training';
 import { useLanguage } from '../context/LanguageContext';
-import Select from '../components/ui/Select';
 
 interface TrainingNoPlanProps {
   client: any;
@@ -177,6 +176,55 @@ function buildWeeklySchedule(workouts: any[], freq: number): Record<string, stri
   return sched;
 }
 
+// Intensity adjustment — re-tunes every MAIN-block exercise so the chosen
+// intensity actually changes the training stimulus instead of being a label.
+// Low = more reps in reserve + longer rest (easier); High = closer to failure
+// + shorter rest. Warm-up and cooldown blocks are left untouched.
+type IntensityLevel = 'low' | 'moderate' | 'high';
+const INTENSITY_CFG: Record<IntensityLevel, { rir: number; rest: number }> = {
+  low: { rir: 1, rest: 15 },
+  moderate: { rir: 0, rest: 0 },
+  high: { rir: -1, rest: -15 },
+};
+function applyIntensity(dataJson: any, level: IntensityLevel): any {
+  const cfg = INTENSITY_CFG[level] || INTENSITY_CFG.moderate;
+  if (cfg.rir === 0 && cfg.rest === 0) return dataJson;
+  const adjRir = (v: any) => {
+    if (v === null || v === undefined || v === '') return v;
+    const n = parseInt(String(v), 10);
+    if (Number.isNaN(n)) return v;
+    return String(Math.max(0, n + cfg.rir));
+  };
+  const adjRest = (v: any) => {
+    if (typeof v !== 'string') return v;
+    const m = v.match(/^(\d+)\s*(s|min)?$/i);
+    if (!m) return v;
+    let secs = parseInt(m[1], 10);
+    if ((m[2] || 's').toLowerCase() === 'min') secs *= 60;
+    secs = Math.max(20, secs + cfg.rest);
+    return secs >= 60 && secs % 60 === 0 ? `${secs / 60}min` : `${secs}s`;
+  };
+  const adjEx = (e: any) => ({
+    ...e,
+    rir: adjRir(e.rir),
+    rest: adjRest(e.rest),
+    setDetails: Array.isArray(e.setDetails)
+      ? e.setDetails.map((s: any) => ({ ...s, rir: adjRir(s.rir), rest: adjRest(s.rest) }))
+      : e.setDetails,
+  });
+  return {
+    ...dataJson,
+    workouts: (dataJson.workouts || []).map((w: any) => ({
+      ...w,
+      blocks: (w.blocks || []).map((b: any) =>
+        b.type === 'main'
+          ? { ...b, exercises: (b.exercises || []).map(adjEx) }
+          : b
+      ),
+    })),
+  };
+}
+
 const WEEKDAYS = [
   { char: 'M', full: 'Monday' },
   { char: 'T', full: 'Tuesday' },
@@ -275,16 +323,15 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadingTemplates]);
 
-  // Editable program settings (frequency / focus) — kept in sync with the
-  // currently selected preset and persisted into the saved program.
+  // Editable program settings. Frequency follows the selected preset; the
+  // intensity level re-tunes the exercises (RIR + rest) on apply.
   const [freqOverride, setFreqOverride] = useState<string>(selectedPreset.freqValue);
-  const [focusOverride, setFocusOverride] = useState<string>(selectedPreset.focusValue);
+  const [intensityLevel, setIntensityLevel] = useState<IntensityLevel>('moderate');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   React.useEffect(() => {
     setFreqOverride(selectedPreset.freqValue);
-    setFocusOverride(selectedPreset.focusValue);
   }, [selectedId]);
 
   const handleConfirm = async () => {
@@ -305,7 +352,6 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
         const workouts = Array.isArray(baseJson.workouts) ? baseJson.workouts : [];
         dataJson = {
           ...baseJson,
-          focus: focusOverride,
           frequency: parsedFreq,
           // Rebuild the schedule so changing the frequency really changes the
           // training week instead of leaving the template's original days.
@@ -321,7 +367,7 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
         dataJson = {
           name: prog.name,
           level: prog.level,
-          focus: focusOverride || prog.focus,
+          focus: prog.focus,
           frequency: parsedFreq,
           duration: prog.duration,
           schedule: prog.schedule,
@@ -330,6 +376,10 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
           weeklySchedule: buildWeeklySchedule(workouts, parsedFreq),
         };
       }
+
+      // Re-tune every exercise to the chosen intensity, then record the level.
+      dataJson = applyIntensity(dataJson, intensityLevel);
+      dataJson.intensity = intensityLevel;
 
       const finalPlanData = {
         name: dataJson.name || (selectedProgram as any)?.name || 'Training Program',
@@ -569,20 +619,37 @@ export default function TrainingNoPlan({ client, onBack, onStartPlan }: Training
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('primary_focus')}</label>
-                  <Select
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white text-sm focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium py-2.5 px-3"
-                    value={focusOverride}
-                    onChange={(val) => setFocusOverride(val)}
-                  >
-                    {!['Full Body Strength', 'Hypertrophy', 'Endurance', 'Mobility'].includes(focusOverride) && (
-                      <option value={focusOverride}>{focusOverride}</option>
-                    )}
-                    <option value="Full Body Strength">{t('training_focus_full_body_strength')}</option>
-                    <option value="Hypertrophy">{t('training_focus_hypertrophy')}</option>
-                    <option value="Endurance">{t('training_focus_endurance')}</option>
-                    <option value="Mobility">{t('training_focus_mobility')}</option>
-                  </Select>
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('intensity_level', { defaultValue: 'Nivel de intensidad' })}</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      ['low', t('intensity_low', { defaultValue: 'Baja' })],
+                      ['moderate', t('intensity_moderate', { defaultValue: 'Moderada' })],
+                      ['high', t('intensity_high', { defaultValue: 'Alta' })],
+                    ] as [IntensityLevel, string][]).map(([val, label]) => {
+                      const isSel = intensityLevel === val;
+                      return (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setIntensityLevel(val)}
+                          className={`p-2 rounded-lg border text-sm transition-colors ${
+                            isSel
+                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold ring-1 ring-emerald-500/50'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 font-medium'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2 leading-snug">
+                    {intensityLevel === 'low'
+                      ? t('intensity_low_hint', { defaultValue: 'Más repeticiones en reserva y descansos más largos — entreno más asequible.' })
+                      : intensityLevel === 'high'
+                      ? t('intensity_high_hint', { defaultValue: 'Series más cerca del fallo y descansos más cortos — máximo estímulo.' })
+                      : t('intensity_moderate_hint', { defaultValue: 'Prescripción equilibrada tal y como está diseñada la plantilla.' })}
+                  </p>
                 </div>
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-700 mt-2">
