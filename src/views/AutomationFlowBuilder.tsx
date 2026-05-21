@@ -49,7 +49,9 @@ const ADDABLE: Array<{ kind: AutomationStep['kind']; desc: string }> = [
   { kind: 'create_event',   desc: 'Agenda un evento en tu calendario.' },
   { kind: 'assign_checkin', desc: 'Asigna una plantilla de check-in al cliente.' },
   { kind: 'set_field',      desc: 'Cambia un campo del cliente (status/goal/notas).' },
-  { kind: 'stop_if',        desc: 'Aborta la cadena si se cumple una condición.' },
+  // `stop_if` is intentionally NOT addable here — the "Condiciones de parada"
+  // module always renders at the end of the flow, so offering it as a step too
+  // would duplicate the same concept. Existing stop_if steps still render.
 ];
 
 function defaultStepFor(kind: AutomationStep['kind']): AutomationStep {
