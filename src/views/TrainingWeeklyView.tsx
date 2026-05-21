@@ -41,6 +41,8 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
   const [dragOverDayId, setDragOverDayId] = useState<string | null>(null);
   // Keyboard swap: selectedForSwap = the day the user has "picked up" with Space
   const [selectedForSwap, setSelectedForSwap] = useState<string | null>(null);
+  // Monthly view: which week's "copy to…" menu is open.
+  const [copyMenuWeek, setCopyMenuWeek] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchPlanData = async () => {
@@ -89,25 +91,55 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
     fetchPlanData();
   }, [client?.id, initialPlanData, templateId]);
 
-  const handleUpdateDay = (dayId: string, workoutId: string | null) => {
+  // --- Monthly (4-week) model: week 1 = base weeklySchedule; weeks 2-4 live in
+  // data_json.weekOverrides and only exist once the coach customises them. ---
+  const WEEKS = [1, 2, 3, 4];
+  const getWeekSchedule = (week: number): Record<string, string> => {
+    const dj = planData?.data_json || {};
+    if (week === 1) return dj.weeklySchedule || {};
+    return (dj.weekOverrides && dj.weekOverrides[week]) || dj.weeklySchedule || {};
+  };
+  const isWeekCustomised = (week: number): boolean =>
+    week !== 1 && !!(planData?.data_json?.weekOverrides && planData.data_json.weekOverrides[week]);
+
+  const handleUpdateDay = (dayId: string, workoutId: string | null, week: number = 1) => {
     if (!planData || !planData.data_json) return;
-    
-    const newWeeklySchedule = { ...planData.data_json.weeklySchedule };
-    if (workoutId) {
-      newWeeklySchedule[dayId] = workoutId;
-    } else {
-      delete newWeeklySchedule[dayId];
+    const dj = planData.data_json;
+    const sched = { ...getWeekSchedule(week) };
+    if (workoutId) sched[dayId] = workoutId;
+    else delete sched[dayId];
+
+    const updatedDataJson = week === 1
+      ? { ...dj, weeklySchedule: sched }
+      : { ...dj, weekOverrides: { ...(dj.weekOverrides || {}), [week]: sched } };
+
+    setPlanData({ ...planData, data_json: updatedDataJson });
+    setHasChanges(true);
+  };
+
+  // Copy one week's schedule onto the other weeks of the month.
+  const copyWeekTo = (from: number, targets: number[]) => {
+    if (!planData?.data_json) return;
+    const dj = planData.data_json;
+    const src = { ...getWeekSchedule(from) };
+    let weeklySchedule = dj.weeklySchedule;
+    const overrides = { ...(dj.weekOverrides || {}) };
+    for (const w of targets) {
+      if (w === from) continue;
+      if (w === 1) weeklySchedule = { ...src };
+      else overrides[w] = { ...src };
     }
+    setPlanData({ ...planData, data_json: { ...dj, weeklySchedule, weekOverrides: overrides } });
+    setHasChanges(true);
+  };
 
-    const updatedDataJson = { 
-      ...planData.data_json, 
-      weeklySchedule: newWeeklySchedule 
-    };
-
-    setPlanData({
-      ...planData,
-      data_json: updatedDataJson
-    });
+  // Drop a week's override so it falls back to the base week.
+  const resetWeek = (week: number) => {
+    if (!planData?.data_json || week === 1) return;
+    const dj = planData.data_json;
+    const overrides = { ...(dj.weekOverrides || {}) };
+    delete overrides[week];
+    setPlanData({ ...planData, data_json: { ...dj, weekOverrides: overrides } });
     setHasChanges(true);
   };
 
@@ -214,11 +246,11 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
     }
   };
   
-  const processedDays: DayTraining[] = DAY_IDS.map((dayId) => {
+  // Build the 7 day cards for an arbitrary week schedule (day -> workoutId).
+  const computeDays = (weeklySchedule: Record<string, string>): DayTraining[] => DAY_IDS.map((dayId) => {
     const day = { id: dayId, name: t(dayId) };
     if (planData && planData.data_json) {
       const dataJson = planData.data_json;
-      const weeklySchedule = dataJson.weeklySchedule || {};
       const workoutId = weeklySchedule[day.id];
       const workouts = dataJson.workouts || [];
       const workout = workouts.find((w: any) => w.id === workoutId);
@@ -265,10 +297,15 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
     };
   });
 
+  const processedDays: DayTraining[] = computeDays(getWeekSchedule(1));
+
   // One day card — shared by the weekly list and the monthly (4-week) view.
-  const renderDayCard = (day: DayTraining, keyPrefix: string, drag: boolean) => (
+  // `week` scopes the workout picker and edits to that month-week.
+  const renderDayCard = (day: DayTraining, week: number, drag: boolean) => {
+   const pickerKey = `${week}:${day.id}`;
+   return (
     <div
-      key={`${keyPrefix}${day.id}`}
+      key={`w${week}-${day.id}`}
       className={`relative group transition-all ${draggedDayId === day.id ? 'opacity-40 grayscale' : ''} ${dragOverDayId === day.id ? 'scale-[1.02] -translate-y-1' : ''} ${selectedForSwap === day.id ? 'ring-2 ring-emerald-500 rounded-2xl' : ''}`}
       draggable={drag}
       onDragStart={drag ? (e) => handleDragStart(e, day.id) : undefined}
@@ -349,10 +386,10 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setShowWorkoutPicker(showWorkoutPicker === day.id ? null : day.id);
+              setShowWorkoutPicker(showWorkoutPicker === pickerKey ? null : pickerKey);
             }}
             className={`p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
-              showWorkoutPicker === day.id ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500'
+              showWorkoutPicker === pickerKey ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500'
             }`}
           >
             <span className="material-symbols-outlined">edit_calendar</span>
@@ -360,25 +397,27 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
         </div>
       </button>
 
-      {showWorkoutPicker === day.id && (
+      {showWorkoutPicker === pickerKey && (
         <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in duration-200">
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2 border-b border-slate-50 mb-2">
             {t('change_workout_title')}
           </div>
           <div className="space-y-1">
             <button
-              onClick={() => { handleUpdateDay(day.id, null); setShowWorkoutPicker(null); }}
+              onClick={() => { handleUpdateDay(day.id, null, week); setShowWorkoutPicker(null); }}
               className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all flex items-center gap-3"
             >
               <span className="material-symbols-outlined text-[20px]">block</span>
               {t('rest_day_title')}
             </button>
-            {planData?.data_json?.workouts?.map((w: any) => (
+            {planData?.data_json?.workouts?.map((w: any) => {
+              const isCurrent = getWeekSchedule(week)[day.id] === w.id;
+              return (
               <button
                 key={w.id}
-                onClick={() => { handleUpdateDay(day.id, w.id); setShowWorkoutPicker(null); }}
+                onClick={() => { handleUpdateDay(day.id, w.id, week); setShowWorkoutPicker(null); }}
                 className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between group/item ${
-                  planData.data_json.weeklySchedule?.[day.id] === w.id
+                  isCurrent
                     ? 'bg-emerald-50 text-emerald-600'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-emerald-500'
                 }`}
@@ -387,16 +426,17 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                   <span className="material-symbols-outlined text-[20px]">fitness_center</span>
                   {w.name}
                 </div>
-                {planData.data_json.weeklySchedule?.[day.id] === w.id && (
+                {isCurrent && (
                   <span className="material-symbols-outlined text-[18px]">check_circle</span>
                 )}
               </button>
-            ))}
+            );})}
           </div>
         </div>
       )}
     </div>
-  );
+   );
+  };
 
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
@@ -523,15 +563,78 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               <p className="text-sm font-medium">{loadError}</p>
             </div>
           ) : viewMode === 'monthly' ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2.5 rounded-2xl px-4 py-3 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                <span className="material-symbols-outlined text-lg">event_repeat</span>
-                <span>{t('weekly_plan_repeats_training', { defaultValue: 'Esta rutina semanal se repite cada semana del mes.' })}</span>
-              </div>
-              {processedDays.map((day) => renderDayCard(day, '', false))}
+            <div className="flex flex-col gap-5">
+              {WEEKS.map((week) => {
+                const customised = isWeekCustomised(week);
+                return (
+                  <div key={`week-${week}`} className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                    {/* Week block header */}
+                    <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-slate-50 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-sm">
+                          {week}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-sm leading-tight">{t('week')} {week}</h3>
+                          <span className={`text-[10px] font-bold uppercase tracking-wide ${week === 1 ? 'text-emerald-600' : customised ? 'text-amber-600' : 'text-slate-400'}`}>
+                            {week === 1
+                              ? t('planning_base_week', { defaultValue: 'Semana base' })
+                              : customised
+                                ? t('planning_custom_week', { defaultValue: 'Personalizada' })
+                                : t('planning_same_as_base', { defaultValue: 'Igual que la base' })}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 relative">
+                        {customised && (
+                          <button
+                            onClick={() => resetWeek(week)}
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-all"
+                          >
+                            {t('planning_reset_to_base', { defaultValue: 'Restablecer' })}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setCopyMenuWeek(copyMenuWeek === week ? null : week)}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all flex items-center gap-1.5"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">content_copy</span>
+                          {t('planning_copy_week', { defaultValue: 'Copiar a…' })}
+                        </button>
+                        {copyMenuWeek === week && (
+                          <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-2">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 py-1.5">
+                              {t('planning_copy_week_to', { defaultValue: 'Copiar esta semana a' })}
+                            </div>
+                            {WEEKS.filter(w => w !== week).map(w => (
+                              <button
+                                key={w}
+                                onClick={() => { copyWeekTo(week, [w]); setCopyMenuWeek(null); }}
+                                className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+                              >
+                                {t('week')} {w}
+                              </button>
+                            ))}
+                            <button
+                              onClick={() => { copyWeekTo(week, WEEKS.filter(w => w !== week)); setCopyMenuWeek(null); }}
+                              className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-50 transition-all border-t border-slate-50 mt-1"
+                            >
+                              {t('planning_copy_all_weeks', { defaultValue: 'Todas las demás semanas' })}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* Week block day cards */}
+                    <div className="p-4 flex flex-col gap-3">
+                      {computeDays(getWeekSchedule(week)).map((day) => renderDayCard(day, week, false))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            processedDays.map((day) => renderDayCard(day, '', true))
+            processedDays.map((day) => renderDayCard(day, 1, true))
           )}
         </div>
       </div>
