@@ -14,4 +14,6 @@ export type AutomationStep =
   // Schedule a calendar event for the coach, `offsetDays` after the trigger.
   | { kind: 'create_event'; title: string; eventType?: string; offsetDays?: number; time?: string }
   // Assign a check-in template to the client so they get a fresh form.
-  | { kind: 'assign_checkin'; templateId: string };
+  | { kind: 'assign_checkin'; templateId: string }
+  // Assign an onboarding template (welcome form) to the client.
+  | { kind: 'assign_onboarding'; templateId: string };

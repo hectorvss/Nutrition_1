@@ -24,7 +24,8 @@ export type AutomationStep =
   | { kind: 'stop_if'; conditionType: string; operator: string; value: string }
   | { kind: 'notify_coach'; title: string; body: string }
   | { kind: 'create_event'; title: string; eventType?: string; offsetDays?: number; time?: string }
-  | { kind: 'assign_checkin'; templateId: string };
+  | { kind: 'assign_checkin'; templateId: string }
+  | { kind: 'assign_onboarding'; templateId: string };
 
 const STEP_TYPES: Array<{
   kind: AutomationStep['kind'];

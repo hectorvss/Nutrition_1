@@ -240,6 +240,34 @@ async function executeAutomationSteps(opts: {
       continue;
     }
 
+    if (step.kind === 'assign_onboarding') {
+      // Verify the onboarding template is the manager's (or a global one).
+      if (step.templateId) {
+        const { data: tpl } = await supabaseAdmin
+          .from('onboarding_templates')
+          .select('id, manager_id')
+          .eq('id', step.templateId)
+          .maybeSingle();
+        if (tpl && (!tpl.manager_id || tpl.manager_id === ctx.managerId)) {
+          await supabaseAdmin.from('profiles').upsert({ user_id: ctx.clientId }, { onConflict: 'user_id' });
+          await supabaseAdmin.from('client_onboarding_assignments')
+            .update({ is_active: false })
+            .eq('client_id', ctx.clientId)
+            .eq('is_active', true);
+          const { error } = await supabaseAdmin.from('client_onboarding_assignments').insert({
+            client_id: ctx.clientId,
+            template_id: step.templateId,
+            is_active: true,
+            assigned_at: new Date().toISOString(),
+          });
+          if (error) console.error(`[automation ${ctx.automation.id}] assign_onboarding step ${i} failed:`, error);
+        } else {
+          console.error(`[automation ${ctx.automation.id}] assign_onboarding step ${i}: template not owned`);
+        }
+      }
+      continue;
+    }
+
     if (step.kind === 'stop_if') {
       const condArr = [{
         type: step.conditionType, operator: step.operator,
@@ -643,7 +671,7 @@ router.get('/catalog', verifyManager, async (req: any, res) => {
  */
 async function validateSteps(req: any, steps: any): Promise<{ ok: boolean; error?: string; steps?: AutomationStep[] }> {
   if (!Array.isArray(steps) || steps.length === 0) return { ok: true, steps: [] };
-  const VALID_KINDS = ['message', 'wait', 'create_task', 'set_field', 'stop_if', 'notify_coach', 'create_event', 'assign_checkin'];
+  const VALID_KINDS = ['message', 'wait', 'create_task', 'set_field', 'stop_if', 'notify_coach', 'create_event', 'assign_checkin', 'assign_onboarding'];
   const cleaned: AutomationStep[] = [];
   for (const s of steps) {
     if (!s || typeof s !== 'object' || !VALID_KINDS.includes(s.kind)) continue;

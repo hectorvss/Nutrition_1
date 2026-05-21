@@ -37,6 +37,7 @@ const STEP_META: Record<AutomationStep['kind'], { label: string; tag: string; ic
   notify_coach:  { label: 'Notificarme a mí',     tag: 'ACCIÓN', icon: Bell,          iconClass: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
   create_event:  { label: 'Agendar evento',       tag: 'ACCIÓN', icon: CalendarPlus,  iconClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' },
   assign_checkin:{ label: 'Asignar check-in',     tag: 'ACCIÓN', icon: ClipboardCheck,iconClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' },
+  assign_onboarding:{ label: 'Asignar onboarding', tag: 'ACCIÓN', icon: ClipboardCheck, iconClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400' },
   set_field:     { label: 'Etiquetar al cliente', tag: 'ACCIÓN', icon: Edit2,         iconClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' },
   stop_if:       { label: 'Parar si…',            tag: 'ACCIÓN', icon: AlertCircle,   iconClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' },
 };
@@ -48,6 +49,7 @@ const ADDABLE: Array<{ kind: AutomationStep['kind']; desc: string }> = [
   { kind: 'notify_coach',   desc: 'Te envía una notificación push al instante.' },
   { kind: 'create_event',   desc: 'Agenda un evento en tu calendario.' },
   { kind: 'assign_checkin', desc: 'Asigna una plantilla de check-in al cliente.' },
+  { kind: 'assign_onboarding', desc: 'Asigna un formulario de onboarding al cliente.' },
   { kind: 'set_field',      desc: 'Cambia un campo del cliente (status/goal/notas).' },
   // `stop_if` is intentionally NOT addable here — the "Condiciones de parada"
   // module always renders at the end of the flow, so offering it as a step too
@@ -62,6 +64,7 @@ function defaultStepFor(kind: AutomationStep['kind']): AutomationStep {
     case 'notify_coach':   return { kind, title: 'Revisar a {Client Name}', body: '' };
     case 'create_event':   return { kind, title: 'Sesión con {First Name}', eventType: 'Call', offsetDays: 3, time: '09:00' };
     case 'assign_checkin': return { kind, templateId: '' };
+    case 'assign_onboarding': return { kind, templateId: '' };
     case 'set_field':      return { kind, field: 'status', value: 'Active' };
     case 'stop_if':        return { kind, conditionType: 'reply', operator: 'within', value: '24' };
   }
@@ -83,6 +86,7 @@ export default function AutomationFlowBuilder({
   const [clientSearch, setClientSearch] = useState('');
   const [catalog, setCatalog] = useState<{ stopConditions: any[]; activationConditions: any[]; limits: { maxStepsPerFlow: number | null } } | null>(null);
   const [checkinTemplates, setCheckinTemplates] = useState<Array<{ id: string; name: string }>>([]);
+  const [onboardingTemplates, setOnboardingTemplates] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     (async () => {
@@ -95,6 +99,11 @@ export default function AutomationFlowBuilder({
         const arr = Array.isArray(tpls) ? tpls : (tpls?.data || tpls?.templates || []);
         setCheckinTemplates(arr.map((x: any) => ({ id: x.id, name: x.name || x.title || 'Plantilla' })));
       } catch (e) { console.error('checkin templates load failed', e); }
+      try {
+        const tpls = await fetchWithAuth('/onboarding/manager/templates');
+        const arr = Array.isArray(tpls) ? tpls : (tpls?.data || tpls?.templates || []);
+        setOnboardingTemplates(arr.map((x: any) => ({ id: x.id, name: x.name || x.title || 'Plantilla' })));
+      } catch (e) { console.error('onboarding templates load failed', e); }
     })();
   }, []);
 
@@ -213,10 +222,10 @@ export default function AutomationFlowBuilder({
   };
 
   return (
-    <div className="flex flex-1 h-full overflow-hidden p-6">
+    <div className="flex flex-1 h-full overflow-hidden p-6 gap-6">
       <div className="w-full flex flex-col h-full max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6 shrink-0">
+        {/* Header — mirrors step 1 (trigger) layout: title + 3-step indicator */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 shrink-0">
           <div>
             <button onClick={onBack} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors flex items-center gap-1 text-sm font-medium mb-2">
               <ArrowLeft className="w-4 h-4" />
@@ -225,14 +234,40 @@ export default function AutomationFlowBuilder({
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               {isEditing ? t('edit_automation') : t('create_new_automation')}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              {t('flow_builder_desc', { defaultValue: 'Define el flujo completo: disparador, acciones, cuándo y condiciones de parada.' })}
-            </p>
+          </div>
+          <div className="flex items-center">
+            <div className="flex items-center relative">
+              <div className="flex flex-col items-center relative z-10">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">
+                  <Check className="w-4 h-4 md:w-5 md:h-5" />
+                </div>
+                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('trigger_label', { defaultValue: 'Disparador' })}</span>
+              </div>
+              <div className="w-16 md:w-24 h-1 bg-emerald-500 -ml-2 -mr-2 relative z-0"></div>
+              <div className="flex flex-col items-center relative z-10">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">2</div>
+                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('message_label', { defaultValue: 'Flujo' })}</span>
+              </div>
+              <div className="w-16 md:w-24 h-1 bg-slate-200 dark:bg-slate-800 -ml-2 -mr-2 relative z-0"></div>
+              <div className="flex flex-col items-center relative z-10">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center font-semibold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">3</div>
+                <span className="text-xs font-medium mt-2 text-slate-400">{t('review', { defaultValue: 'Revisar' })}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Scrollable card flow */}
-        <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide pb-4">
+        {/* Everything sits inside one white panel, like the trigger step */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1">
+          <div className="px-6 md:px-8 py-5 border-b border-slate-200 dark:border-slate-800 shrink-0">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{t('build_your_flow', { defaultValue: 'Construye tu flujo' })}</h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
+              {t('flow_builder_desc', { defaultValue: 'Disparador, acciones, cuándo se envía y condiciones de parada.' })}
+            </p>
+          </div>
+
+          {/* Scrollable card flow */}
+          <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 scrollbar-hide">
           {/* 1. Trigger */}
           <AutomationCard
             variant="trigger"
@@ -427,6 +462,22 @@ export default function AutomationFlowBuilder({
                       )}
                     </div>
                   )}
+
+                  {step.kind === 'assign_onboarding' && (
+                    <div className="space-y-1.5">
+                      <Select value={step.templateId}
+                        onChange={(v) => updateStep(i, { ...step, templateId: v })}
+                        className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-3 py-2">
+                        <option value="">— Elige un formulario de onboarding —</option>
+                        {onboardingTemplates.map(tpl => (
+                          <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+                        ))}
+                      </Select>
+                      {onboardingTemplates.length === 0 && (
+                        <p className="text-[11px] text-amber-600">No tienes formularios de onboarding. Crea uno primero.</p>
+                      )}
+                    </div>
+                  )}
                 </AutomationCard>
               </React.Fragment>
             );
@@ -608,19 +659,20 @@ export default function AutomationFlowBuilder({
           >
             {renderConditionModule('stop_conditions', catalog?.stopConditions || [], 'rose')}
           </AutomationCard>
-        </div>
+          </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-800 shrink-0">
-          <button onClick={onBack}
-            className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-300 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-            {t('back', { defaultValue: 'Atrás' })}
-          </button>
-          <button onClick={handleContinue} disabled={!canContinue}
-            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition-colors flex items-center gap-2">
-            {t('continue_to_review', { defaultValue: 'Continuar a verificación' })}
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          {/* Footer — inside the panel */}
+          <div className="flex justify-between items-center px-6 md:px-8 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 shrink-0">
+            <button onClick={onBack}
+              className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-300 font-medium text-sm hover:bg-white dark:hover:bg-slate-800 transition-colors">
+              {t('back', { defaultValue: 'Atrás' })}
+            </button>
+            <button onClick={handleContinue} disabled={!canContinue}
+              className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition-colors flex items-center gap-2">
+              {t('continue_to_review', { defaultValue: 'Continuar a verificación' })}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

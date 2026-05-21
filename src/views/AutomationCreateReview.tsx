@@ -111,6 +111,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
     message: 'Enviar mensaje', wait: 'Esperar / pausa', create_task: 'Escalada (tarea)',
     set_field: 'Etiquetar cliente', stop_if: 'Parar si…', notify_coach: 'Notificar al coach',
     create_event: 'Agendar evento', assign_checkin: 'Asignar check-in',
+    assign_onboarding: 'Asignar onboarding',
   };
   const describeStep = (s: any): string => {
     switch (s.kind) {
@@ -122,6 +123,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
       case 'notify_coach':  return `Notificación: ${s.title || '(sin título)'}`;
       case 'create_event':  return `Evento "${s.title || '(sin título)'}" (${s.eventType || 'Call'}) en ${s.offsetDays ?? 0} días a las ${s.time || '09:00'}`;
       case 'assign_checkin':return `Asignar plantilla de check-in${s.templateId ? '' : ' (sin elegir)'}`;
+      case 'assign_onboarding':return `Asignar formulario de onboarding${s.templateId ? '' : ' (sin elegir)'}`;
       default:              return '';
     }
   };
