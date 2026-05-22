@@ -5,6 +5,7 @@ import { supabase, supabaseAdmin } from '../db/index.js';
 import { logger } from '../lib/logger.js';
 import { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../schemas/auth.js';
 import { safeErr } from '../lib/http.js';
+import { seedManagerWorkflows } from '../lib/seed-workflows.js';
 
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -154,6 +155,10 @@ router.post('/register', async (req, res) => {
       }, { onConflict: 'user_id' });
     }
 
+    // Seed the 10 advanced workflows (disabled) so the new manager can
+    // activate them from the Workflows view like the simple automations.
+    await seedManagerWorkflows(data.user.id);
+
     // Sign the new manager in straight away so the funnel doesn't dead-end.
     const { data: sess } = await supabase.auth.signInWithPassword({ email, password });
     if (sess?.session) {
@@ -243,6 +248,11 @@ router.post('/setup', async (req, res) => {
         .from('users')
         .update({ manager_id: req.body.managerId })
         .eq('id', data.user.id);
+    }
+
+    // A manager created via setup also gets the 10 advanced workflows (disabled).
+    if (targetRole === 'MANAGER' && data.user) {
+      await seedManagerWorkflows(data.user.id);
     }
 
     res.json({ success: true, id: data.user?.id });
