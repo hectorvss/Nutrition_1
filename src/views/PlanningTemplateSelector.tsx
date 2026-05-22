@@ -5,8 +5,7 @@ import {
   Filter, 
   Plus, 
   ArrowRight, 
-  CheckCircle2, 
-  Eye, 
+  CheckCircle2,
   Settings2,
   Calendar,
   Layers,
@@ -394,21 +393,6 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
           {/* Scrollable area — preview + blueprint scroll independently so the
               config card + button below stay pinned and always visible. */}
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-hide flex flex-col gap-6">
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 text-center shadow-sm relative overflow-hidden group shrink-0">
-            <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/20 group-hover:bg-emerald-500 transition-colors"></div>
-            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-inner group-hover:scale-110 transition-transform">
-              <Eye className="w-8 h-8 text-slate-300" />
-            </div>
-            <h3 className="font-bold text-slate-900 mb-2 uppercase tracking-tight">{t('template_preview')}</h3>
-            <p className="text-sm text-slate-500 font-medium leading-relaxed">
-              {selectedTemplate
-                ? (selectedTemplate.data?.summary
-                    || t('planning_selected_template_summary', { name: getTemplateText(selectedTemplate).name, preview: getTemplateText(selectedTemplate).preview }))
-                : t('select_template_preview')
-              }
-            </p>
-          </div>
-
           {/* Detailed blueprint — surfaces the template's data_json (blocks
               week-by-week, KPI targets, goals) so the coach sees exactly what
               the plan contains before creating the draft. */}
