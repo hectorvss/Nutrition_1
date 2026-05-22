@@ -123,13 +123,16 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       curr.setDate(curr.getDate() - 1);
     }
 
-    let completedDays = 0;
-    for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      if (checkInDates.has(d.toISOString().split('T')[0])) completedDays++;
-    }
-    const adherence = Math.round((completedDays / 7) * 100);
+    // Adherencia al check-in semanal: nº de check-ins en las últimas 4 semanas
+    // sobre 4 (un check-in por semana = 100%). Antes se dividía entre 7 días,
+    // dando como máximo ~14% aunque el cliente cumpliera a la perfección.
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+    let recentCheckIns = 0;
+    checkInDates.forEach((dateStr) => {
+      if (new Date(String(dateStr)) >= fourWeeksAgo) recentCheckIns++;
+    });
+    const adherence = Math.min(100, Math.round((recentCheckIns / 4) * 100));
     return { adherence: adherence || 0, streak: consecutiveDays || 0 };
   };
 
@@ -316,7 +319,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
               <h2 className="text-lg font-semibold opacity-90 mb-4">{t('weekly_adherence')}</h2>
               <div className="flex items-end gap-2 mb-6">
                 <span className="text-5xl font-bold">{adherence}%</span>
-                <span className="text-sm pb-2 opacity-80">{t('based_on_last_7_days')}</span>
+                <span className="text-sm pb-2 opacity-80">{t('based_on_last_4_weeks', { defaultValue: 'Según tus check-ins de las últimas 4 semanas' })}</span>
               </div>
               <div className="grid grid-cols-7 gap-1">
                 {[0, 1, 2, 3, 4, 5, 6].map((i) => {

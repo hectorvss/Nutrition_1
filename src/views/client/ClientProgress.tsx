@@ -66,8 +66,19 @@ const STROKE_COLOR_MAP: Record<string, string> = {
 };
 
 export default function ClientProgress() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
   const { user } = useAuth();
+  // Tooltip de recharts adaptado al tema (antes estaba fijo a blanco y se veía
+  // ilegible en modo oscuro).
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const chartTooltipStyle = {
+    borderRadius: '12px',
+    border: 'none',
+    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+    backgroundColor: isDark ? '#1e293b' : '#ffffff',
+    color: isDark ? '#f1f5f9' : '#0f172a',
+  };
   const [activeTab, setActiveTab] = useState<Tab>('Nutrition');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
@@ -283,7 +294,7 @@ export default function ClientProgress() {
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}} />
                 <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)', color: 'var(--tw-colors-slate-900)' }}
+                  contentStyle={chartTooltipStyle}
                   labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
                 />
                 <Area type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorWeight)" />
@@ -490,7 +501,7 @@ export default function ClientProgress() {
               />
               <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
               <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#fff' }}
+                contentStyle={chartTooltipStyle}
                 labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
                 labelFormatter={(label) => {
                   try { return new Date(label).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }); } catch { return label; }
@@ -702,23 +713,23 @@ export default function ClientProgress() {
 
   const renderInsights = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-        <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900">{t('recent_activity')}</h3>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full">
+        <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('recent_activity')}</h3>
         </div>
         <div className="p-6 flex-1 overflow-auto">
-          <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
+          <div className="relative pl-6 border-l-2 border-slate-100 dark:border-slate-800 space-y-8">
             {stats?.activity?.map((act: any, idx: number) => (
               <div key={idx} className="relative">
-                <div className="absolute -left-[31px] bg-white p-1">
-                  <div className={`h-3 w-3 rounded-full ${act.type === 'CHECK_IN' ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-blue-400 ring-4 ring-blue-50'}`}></div>
+                <div className="absolute -left-[31px] bg-white dark:bg-slate-900 p-1">
+                  <div className={`h-3 w-3 rounded-full ${act.type === 'CHECK_IN' ? 'bg-emerald-500 ring-4 ring-emerald-50 dark:ring-emerald-900/30' : 'bg-blue-400 ring-4 ring-blue-50 dark:ring-blue-900/30'}`}></div>
                 </div>
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-900">{act.title}</span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(act.time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{act.title}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(act.time).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <p className="text-xs text-slate-600">{act.sub}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{act.sub}</p>
                 </div>
               </div>
             ))}
