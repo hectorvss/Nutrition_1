@@ -31,6 +31,9 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
   
   const [videoUrl, setVideoUrl] = useState("");
   const [notes, setNotes] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [commonMistakes, setCommonMistakes] = useState("");
+  const [tips, setTips] = useState("");
 
   // Initialize fields
   useEffect(() => {
@@ -45,6 +48,9 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
       setEquipmentStr(exercise.tools?.join(', ') || "");
       setVideoUrl(exercise.video_url || "");
       setNotes(exercise.description || "");
+      setInstructions(exercise.instructions || "");
+      setCommonMistakes(exercise.commonMistakes || "");
+      setTips(exercise.tips || "");
     } else if (exerciseName) {
       setName(exerciseName);
     }
@@ -65,7 +71,10 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
         secondaryMuscles: secondaryMusclesStr.split(',').map(s => s.trim()).filter(Boolean),
         tools: equipmentStr.split(',').map(s => s.trim()).filter(Boolean),
         video_url: videoUrl,
-        description: notes
+        description: notes,
+        instructions,
+        commonMistakes,
+        tips
       });
       setIsEditing(false);
     } catch (err: any) {
@@ -359,28 +368,85 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
 
             <hr className="border-slate-200 dark:border-slate-700" />
 
-            {/* Prescription Preview (Readonly generally, part of protocol logic, keeping as visual) */}
+            {/* Execution Instructions */}
             <section>
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">tune</span>
-                  {t('default_prescription_preview')}
+                  <span className="material-symbols-outlined text-[18px]">format_list_numbered</span>
+                  {t('exercise_instructions_title', { defaultValue: 'Instrucciones de ejecución' })}
                 </h3>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('hypertrophy')}</span>
-                  <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">3 x 10-12</span>
-                </div>
-                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('strength_label')}</span>
-                  <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">5 x 5</span>
-                </div>
-                <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                  <span className="font-bold text-base mb-1 text-slate-600 dark:text-slate-300">{t('endurance')}</span>
-                  <span className="text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-500 px-2 py-0.5 rounded-full">3 x 15+</span>
-                </div>
+              <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
+                {isEditing ? (
+                  <textarea
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
+                    className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
+                    placeholder={t('exercise_instructions_section_placeholder', { defaultValue: 'Describe paso a paso cómo ejecutar el ejercicio…' })}
+                  />
+                ) : (
+                  <div className="p-5 min-h-[160px]">
+                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                      {instructions || t('exercise_no_info', { defaultValue: 'Sin información' })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <hr className="border-slate-200 dark:border-slate-700" />
+
+            {/* Common Mistakes */}
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">warning</span>
+                  {t('exercise_common_mistakes_title', { defaultValue: 'Errores comunes' })}
+                </h3>
+              </div>
+              <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
+                {isEditing ? (
+                  <textarea
+                    value={commonMistakes}
+                    onChange={(e) => setCommonMistakes(e.target.value)}
+                    className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
+                    placeholder={t('exercise_common_mistakes_placeholder', { defaultValue: 'Describe los errores típicos que cometen los clientes…' })}
+                  />
+                ) : (
+                  <div className="p-5 min-h-[160px]">
+                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                      {commonMistakes || t('exercise_no_info', { defaultValue: 'Sin información' })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <hr className="border-slate-200 dark:border-slate-700" />
+
+            {/* Technique Tips */}
+            <section>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">lightbulb</span>
+                  {t('exercise_tips_title', { defaultValue: 'Consejos técnicos' })}
+                </h3>
+              </div>
+              <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
+                {isEditing ? (
+                  <textarea
+                    value={tips}
+                    onChange={(e) => setTips(e.target.value)}
+                    className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
+                    placeholder={t('exercise_tips_placeholder', { defaultValue: 'Añade cues y consejos para mejorar la técnica…' })}
+                  />
+                ) : (
+                  <div className="p-5 min-h-[160px]">
+                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                      {tips || t('exercise_no_info', { defaultValue: 'Sin información' })}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 

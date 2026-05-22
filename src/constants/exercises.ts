@@ -11,6 +11,9 @@ export interface Exercise {
   tools: string[];
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   icon: string;
+  instructions?: string;
+  commonMistakes?: string;
+  tips?: string;
 }
 
 export const exercises: Exercise[] = [

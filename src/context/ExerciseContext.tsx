@@ -44,7 +44,10 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
         secondaryMuscles: item.secondary_muscles || [],
         tools: item.tools || [],
         level: item.difficulty_level as any,
-        icon: item.icon || 'fitness_center'
+        icon: item.icon || 'fitness_center',
+        instructions: item.instructions || undefined,
+        commonMistakes: item.common_mistakes || undefined,
+        tips: item.tips || undefined
       }));
 
       setExercises(mappedExercises);
@@ -75,6 +78,9 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
           tools: exercise.tools,
           difficulty_level: exercise.level,
           icon: exercise.icon,
+          instructions: exercise.instructions ?? null,
+          common_mistakes: exercise.commonMistakes ?? null,
+          tips: exercise.tips ?? null,
           safety_rating: (exercise as any).safety_rating ?? null,
           language: language
         }]);
@@ -116,6 +122,9 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
       if (updates.tools) dbUpdates.tools = updates.tools;
       if (updates.level) dbUpdates.difficulty_level = updates.level;
       if (updates.icon) dbUpdates.icon = updates.icon;
+      if (updates.instructions !== undefined) dbUpdates.instructions = updates.instructions;
+      if (updates.commonMistakes !== undefined) dbUpdates.common_mistakes = updates.commonMistakes;
+      if (updates.tips !== undefined) dbUpdates.tips = updates.tips;
 
       const { error } = await supabase
         .from('exercises')

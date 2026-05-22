@@ -17,7 +17,10 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
   const [secondaryMuscles, setSecondaryMuscles] = useState('');
   const [tools, setTools] = useState('');
   const [level, setLevel] = useState<'Beginner'|'Intermediate'|'Advanced'>('Beginner');
+  const [description, setDescription] = useState('');
   const [instructions, setInstructions] = useState('');
+  const [commonMistakes, setCommonMistakes] = useState('');
+  const [tips, setTips] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [safetyRating, setSafetyRating] = useState(0);
@@ -33,12 +36,15 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
         type,
         subcategory: subcategory.trim() || undefined,
         video_url: videoUrl.trim() || undefined,
-        description: instructions.trim() || undefined,
+        description: description.trim() || undefined,
         muscleGroups: primaryMuscle ? [primaryMuscle.trim()] : ['Full Body'],
         secondaryMuscles: secondaryMuscles ? secondaryMuscles.split(',').map(s => s.trim()) : [],
         tools: tools ? tools.split(',').map(s => s.trim()) : ['Bodyweight'],
         level,
         icon: 'fitness_center',
+        instructions: instructions.trim() || undefined,
+        commonMistakes: commonMistakes.trim() || undefined,
+        tips: tips.trim() || undefined,
         safety_rating: safetyRating || null,
       } as any);
       onBack();
@@ -139,10 +145,37 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_instructions')}</label>
                     <textarea
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      placeholder={t('exercise_instructions_placeholder')}
+                    ></textarea>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_instructions_title', { defaultValue: 'Instrucciones de ejecución' })}</label>
+                    <textarea
                       value={instructions}
                       onChange={e => setInstructions(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
-                      placeholder={t('exercise_instructions_placeholder')}
+                      placeholder={t('exercise_instructions_section_placeholder', { defaultValue: 'Describe paso a paso cómo ejecutar el ejercicio…' })}
+                    ></textarea>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_common_mistakes_title', { defaultValue: 'Errores comunes' })}</label>
+                    <textarea
+                      value={commonMistakes}
+                      onChange={e => setCommonMistakes(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      placeholder={t('exercise_common_mistakes_placeholder', { defaultValue: 'Describe los errores típicos que cometen los clientes…' })}
+                    ></textarea>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('exercise_tips_title', { defaultValue: 'Consejos técnicos' })}</label>
+                    <textarea
+                      value={tips}
+                      onChange={e => setTips(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      placeholder={t('exercise_tips_placeholder', { defaultValue: 'Añade cues y consejos para mejorar la técnica…' })}
                     ></textarea>
                   </div>
                 </div>

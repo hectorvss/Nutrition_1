@@ -20,6 +20,9 @@ export interface Exercise {
   weight?: string;
   rir?: number;
   rest?: string;
+  instructions?: string;
+  commonMistakes?: string;
+  tips?: string;
 }
 
 export interface WorkoutBlock {
