@@ -442,6 +442,11 @@ router.get('/client/active', verifyClient, async (req: any, res) => {
 router.post('/client/submit', verifyClient, async (req: any, res) => {
   const clientId = req.user.id;
   const { answers_json } = req.body;
+  // answers_json es JSONB libre: acota el tamaño para evitar abuso de
+  // almacenamiento / DoS (un cliente podría enviar payloads enormes).
+  if (answers_json && JSON.stringify(answers_json).length > 100_000) {
+    return res.status(413).json({ error: 'answers_json is too large' });
+  }
   try {
     // Derive the template & assignment server-side from the client's own active
     // assignment — never trust template_id / assignment_id from the request body

@@ -1,70 +1,88 @@
 import { Router } from 'express';
 import { safeErr } from '../lib/http.js';
-import { supabase, supabaseAdmin } from '../db/index.js';
+import { supabaseAdmin } from '../db/index.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
+import { verifyClient } from '../middleware/auth.js';
 
 const router = Router();
 
-// Middleware to verify CLIENT role using Supabase Auth
-const verifyClient = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-
-    const { data: userData } = await supabaseAdmin
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    // Fallback a user_metadata si el registro aún no existe en la tabla users
-    const role = userData?.role || user.user_metadata?.role;
-
-    if (role !== 'CLIENT') {
-      return res.status(403).json({ error: 'Forbidden: se requiere rol CLIENT' });
-    }
-
-    req.user = user;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-};
-
+// Verificacion de rol CLIENT centralizada en middleware/auth.ts: la BD es la
+// unica fuente de verdad del rol y NUNCA se confia en user_metadata (mutable
+// por el propio usuario via supabase.auth.updateUser).
 router.use(verifyClient);
 
 // Get my profile
 router.get('/profile', async (req: any, res) => {
   try {
+    // `clients_profiles.notes` es la nota PRIVADA del coach sobre el cliente:
+    // NO debe exponerse en el portal del cliente. Solo se devuelven campos
+    // que pertenecen al propio cliente.
     const { data: profile, error } = await supabaseAdmin
       .from('users')
       .select(`
-        id, 
+        id,
         email,
-        manager_id,
-        clients_profiles (weight, goal, notes)
+        clients_profiles (weight, goal, gender, age, metadata)
       `)
       .eq('id', req.user.id)
       .single();
-      
+
     if (error || !profile) return res.status(404).json({ error: 'Not found' });
-    
+
+    const cp: any = profile.clients_profiles?.[0] || {};
     const formattedProfile = {
       id: profile.id,
       email: profile.email,
-      manager_id: profile.manager_id,
-      weight: profile.clients_profiles?.[0]?.weight || null,
-      goal: profile.clients_profiles?.[0]?.goal || null,
-      notes: profile.clients_profiles?.[0]?.notes || null,
+      weight: cp.weight || null,
+      goal: cp.goal || null,
+      gender: cp.gender || null,
+      age: cp.age || null,
+      full_name: cp.metadata?.full_name || null,
+      phone: cp.metadata?.phone || null,
     };
-    
+
     res.json(formattedProfile);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update my own profile (datos editables por el cliente desde su portal).
+// Allow-list explícita: NUNCA se aceptan manager_id, role, notes, weight, etc.
+router.patch('/profile', async (req: any, res) => {
+  const id = req.user.id;
+  try {
+    const { full_name, phone, gender, age, goal } = req.body || {};
+
+    // metadata es JSONB: merge para no pisar otras claves ya guardadas.
+    const { data: existing } = await supabaseAdmin
+      .from('clients_profiles')
+      .select('metadata')
+      .eq('user_id', id)
+      .maybeSingle();
+    const metadata: Record<string, any> = { ...(existing?.metadata || {}) };
+    if (typeof full_name === 'string') metadata.full_name = full_name.trim().slice(0, 120);
+    if (typeof phone === 'string') metadata.phone = phone.trim().slice(0, 40);
+
+    const update: Record<string, any> = { metadata, updated_at: new Date().toISOString() };
+    if (typeof gender === 'string') update.gender = gender.trim().slice(0, 40) || null;
+    if (typeof goal === 'string') update.goal = goal.trim().slice(0, 200) || null;
+    if (age !== undefined && age !== null && age !== '') {
+      const n = Number(age);
+      update.age = Number.isFinite(n) && n > 0 && n < 130 ? Math.round(n) : null;
+    }
+
+    const { error } = await supabaseAdmin
+      .from('clients_profiles')
+      .update(update)
+      .eq('user_id', id);
+    if (error) throw error;
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Error updating client profile:', error);
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 
@@ -322,21 +340,23 @@ router.get('/profile-stats', async (req: any, res) => {
   const now = new Date();
 
   try {
-    // 1. Fetch user profile
+    // 1. Fetch user profile — campos explícitos: NUNCA `clients_profiles(*)`
+    // porque incluiría `notes` (nota privada del coach) y `temp_password`.
     const { data: client, error: clientErr } = await supabaseAdmin
       .from('users')
-      .select('*, clients_profiles(*)')
+      .select('id, email, clients_profiles(weight, goal, goal_weight, height, gender, age, metadata)')
       .eq('id', id)
       .single();
 
     if (clientErr || !client) return res.status(404).json({ error: 'Profile not found' });
 
-    // 2. Fetch Check-ins
+    // 2. Fetch Check-ins — acotado para no escanear histórico ilimitado.
     const { data: checkIns } = await supabaseAdmin
       .from('check_ins')
       .select('*')
       .eq('client_id', id)
-      .order('date', { ascending: true });
+      .order('date', { ascending: true })
+      .limit(365);
 
     // 3. Weight & Body Fat History
     const num = (v: any): number | null => {

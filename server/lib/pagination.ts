@@ -51,16 +51,35 @@ export interface PaginatedResponse<T> {
   hasMore: boolean;
 }
 
+// SEGURIDAD: los campos del cursor se interpolan luego en un filtro PostgREST
+// `.or(...)` (ver applyCursor). Si un cliente envia un `?cursor=` manipulado con
+// metacaracteres de filtro (`,` `(` `)`) podria inyectar clausulas y, como las
+// queries corren con service-role (saltan RLS), leer datos de otros usuarios.
+// Por eso validamos estrictamente el cursor decodificado y, ante cualquier duda,
+// lo tratamos como "primera pagina" (null).
+const CURSOR_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// `v` y `t` son valores de ordenacion: timestamp ISO, fecha, numero o uuid.
+// Charset deliberadamente restringido — NUNCA admite `,` `(` `)` `*` ni espacios
+// de control que permitan romper el filtro.
+const CURSOR_VALUE_RE = /^[A-Za-z0-9:.+\/T_ -]{1,48}$/;
+
+const isSafeCursorField = (val: unknown): val is string =>
+  typeof val === 'string' && (CURSOR_ID_RE.test(val) || CURSOR_VALUE_RE.test(val));
+
 /**
- * Decodifica un cursor base64 a { v, i, t? } o null si esta malformado.
- * NUNCA throws — un cursor invalido se trata como "primera pagina".
+ * Decodifica un cursor base64 a { v, i, t? } o null si esta malformado o no
+ * supera la validacion de seguridad. NUNCA throws — un cursor invalido se trata
+ * como "primera pagina".
  */
 export function decodeCursor(s: string | undefined | null): { v: string; i: string; t?: string } | null {
   if (!s || typeof s !== 'string') return null;
   try {
     const decoded = Buffer.from(s, 'base64').toString('utf8');
     const obj = JSON.parse(decoded);
-    if (typeof obj?.v === 'string' && typeof obj?.i === 'string') {
+    // `i` debe ser SIEMPRE un uuid (es la columna id, tiebreak del keyset).
+    // `v` (y `t` si existe) deben pasar la validacion de charset seguro.
+    if (CURSOR_ID_RE.test(obj?.i ?? '') && isSafeCursorField(obj?.v)) {
+      if (obj.t !== undefined && !isSafeCursorField(obj.t)) return null;
       const out: { v: string; i: string; t?: string } = { v: obj.v, i: obj.i };
       if (typeof obj.t === 'string') out.t = obj.t;
       return out;

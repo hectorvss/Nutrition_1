@@ -150,10 +150,9 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
           <p className="text-slate-500 dark:text-slate-400 capitalize">{formattedDate}</p>
         </div>
         <div className="flex items-center gap-4">
-          <button className="w-10 h-10 rounded-full border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-            <span className="material-symbols-outlined">notifications</span>
-          </button>
-          <div className="h-10 w-10 rounded-full bg-cover bg-center border-2 border-[#17cf54]/20" style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.email}&background=random")` }} />
+          <div className="h-10 w-10 rounded-full bg-[#17cf54]/10 border-2 border-[#17cf54]/20 flex items-center justify-center text-[#17cf54] font-bold uppercase">
+            {user?.email?.charAt(0) || 'C'}
+          </div>
         </div>
       </header>
 
@@ -222,7 +221,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                         </div>
                       ))}
                       {(block.exercises || []).length > 4 && (
-                        <p className="text-[11px] text-slate-400 pl-4">+ {(block.exercises.length - 4)} more {t('exercises')}</p>
+                        <p className="text-[11px] text-slate-400 pl-4">+ {(block.exercises.length - 4)} {t('more', { defaultValue: 'más' })} {t('exercises')}</p>
                       )}
                     </div>
                   </div>
@@ -320,14 +319,16 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                 <span className="text-sm pb-2 opacity-80">{t('based_on_last_7_days')}</span>
               </div>
               <div className="grid grid-cols-7 gap-1">
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
+                {[0, 1, 2, 3, 4, 5, 6].map((i) => {
                    const d = new Date();
                    d.setDate(d.getDate() - (d.getDay() === 0 ? 6 : d.getDay() - 1) + i);
                    const isPast = d <= new Date();
                    const hasCheckIn = (checkIns || []).some(c => c.date?.split('T')[0] === d.toISOString().split('T')[0]);
+                   // Inicial del día según el idioma (L-M-X-J-V-S-D en es).
+                   const dayInitial = d.toLocaleDateString(locale, { weekday: 'narrow' }).toUpperCase();
                    return (
                      <div key={i} className={`h-10 rounded flex flex-col items-center justify-center font-bold text-[10px] ${hasCheckIn ? 'bg-white text-[#17cf54]' : isPast ? 'bg-white/10 text-white/50' : 'bg-black/10 text-white/30'}`}>
-                        {day}
+                        {dayInitial}
                         {hasCheckIn && <span className="material-symbols-outlined text-[10px]">check</span>}
                      </div>
                    );

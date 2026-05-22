@@ -46,8 +46,14 @@ import CheckInHistory from '../CheckInHistory';
 import CheckInReview from '../CheckInReview';
 import Select from '../../components/ui/Select';
 import WorkoutLogItem from './progress/WorkoutLogItem';
+import EditProfileModal from './EditProfileModal';
 
 type Tab = 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
+
+// Identificador estable de la opción "volumen semanal" del gráfico de fuerza.
+// NO usar el texto traducido como clave: al cambiar de idioma dejaría de
+// coincidir y el gráfico se rompería.
+const WEEKLY_VOLUME_KEY = '__weekly_volume__';
 
 // Maps Tailwind text-color classes to valid hex values for SVG/recharts strokes
 const STROKE_COLOR_MAP: Record<string, string> = {
@@ -65,7 +71,7 @@ export default function ClientProgress() {
   const [activeTab, setActiveTab] = useState<Tab>('Nutrition');
   const [innerView, setInnerView] = useState<'info' | 'review'>('info');
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
-  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState(t('weekly_volume'));
+  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState(WEEKLY_VOLUME_KEY);
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
   const [strengthWeekOffset, setStrengthWeekOffset] = useState(0);
@@ -76,23 +82,73 @@ export default function ClientProgress() {
 
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  // Perfil editable del cliente + estado del modal de edición.
+  const [profile, setProfile] = useState<any>(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '', gender: '', age: '', goal: '' });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const loadProfile = async () => {
+    try {
+      const p = await fetchWithAuth('/client/profile');
+      setProfile(p);
+      return p;
+    } catch { return null; }
+  };
 
   useEffect(() => {
     let mounted = true;
     const fetchStats = async () => {
       setIsLoading(true);
+      setLoadError(false);
       try {
         const data = await fetchWithAuth('/client/profile-stats');
         if (mounted) setStats(data);
       } catch (error) {
         console.error('Error fetching client stats:', error);
+        if (mounted) setLoadError(true);
       } finally {
         if (mounted) setIsLoading(false);
       }
     };
     fetchStats();
+    loadProfile();
     return () => { mounted = false; };
   }, []);
+
+  const openEditModal = () => {
+    setEditForm({
+      full_name: profile?.full_name || '',
+      phone: profile?.phone || '',
+      gender: profile?.gender || '',
+      age: profile?.age != null ? String(profile.age) : '',
+      goal: profile?.goal || stats?.goal || '',
+    });
+    setEditError(null);
+    setShowEdit(true);
+  };
+
+  const saveEditProfile = async () => {
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await fetchWithAuth('/client/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(editForm),
+      });
+      await loadProfile();
+      setShowEdit(false);
+    } catch (e: any) {
+      setEditError(e?.message || t('error', { defaultValue: 'Error' }));
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || t('my_progress');
 
   useEffect(() => {
     if (stats?.training?.allExercises?.length > 0 && !hasAutoSelected) {
@@ -181,7 +237,7 @@ export default function ClientProgress() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: t('weight'), value: stats?.latestWeight || '--', unit: 'kg', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-          { label: t('loss_goal'), value: stats?.goal || t('tbd'), unit: '', change: t('target'), icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('goal', { defaultValue: 'Objetivo' }), value: stats?.goal || t('tbd'), unit: '', change: t('target'), icon: TrendingDown, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: t('body_fat'), value: stats?.bodyFat || '--', unit: '%', change: '', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: t('active'), value: stats?.activeDays || '0', unit: t('days'), change: `${stats?.adherenceRate || 0}% ${t('rate')}`, icon: Calendar, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
         ].map((stat, idx) => (
@@ -244,9 +300,9 @@ export default function ClientProgress() {
             </div>
             <div className="space-y-6">
               {[
-                { label: 'PROTEIN', percent: stats?.macros?.protein || 0, color: 'bg-emerald-500' },
-                { label: 'CARBS', percent: stats?.macros?.carbs || 0, color: 'bg-blue-400' },
-                { label: 'FATS', percent: stats?.macros?.fats || 0, color: 'bg-amber-400' },
+                { label: t('protein'), percent: stats?.macros?.protein || 0, color: 'bg-emerald-500' },
+                { label: t('carbs'), percent: stats?.macros?.carbs || 0, color: 'bg-blue-400' },
+                { label: t('fats'), percent: stats?.macros?.fats || 0, color: 'bg-amber-400' },
               ].map((macro, idx) => (
                 <div key={idx}>
                   <div className="flex justify-between items-end mb-2">
@@ -276,12 +332,6 @@ export default function ClientProgress() {
                 </span>
               ))}
               {(!stats?.allergies || stats.allergies.length === 0) && <p className="text-xs text-slate-400 italic">{t('no_allergies_listed')}</p>}
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('dietary_preference')}</p>
-              <div className="flex gap-2">
-                <span className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{t('custom_plan')}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -376,18 +426,19 @@ export default function ClientProgress() {
 
         <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 no-scrollbar">
           {[
-            { name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
+            { id: WEEKLY_VOLUME_KEY, name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
             ...(stats?.training?.allExercises || []).map((ex: any) => ({
+              id: ex.name,
               name: ex.name,
               value: ex.pr || '--',
               unit: 'kg'
             }))
           ].map((ex, idx) => {
-            const isSelected = ex.name === selectedAnalysisSubject;
+            const isSelected = ex.id === selectedAnalysisSubject;
             return (
-              <div 
-                key={idx} 
-                onClick={() => setSelectedAnalysisSubject(ex.name)} 
+              <div
+                key={idx}
+                onClick={() => setSelectedAnalysisSubject(ex.id)}
                 className={`flex-shrink-0 w-48 p-5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/10 shadow-md shadow-emerald-50' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 shadow-sm'}`}
               >
                 <div className="flex justify-between items-start mb-5">
@@ -448,7 +499,7 @@ export default function ClientProgress() {
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '20px' }} />
               
               {(() => {
-                if (selectedAnalysisSubject === t('weekly_volume')) {
+                if (selectedAnalysisSubject === WEEKLY_VOLUME_KEY) {
                   return (
                     <Area name={t('weekly_volume')} type="natural" dataKey="volume" stroke="#10b981" strokeWidth={3} fill="url(#colorStrength1)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} connectNulls />
                   );
@@ -681,15 +732,15 @@ export default function ClientProgress() {
   );
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="relative flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="p-6 md:p-8 lg:p-10">
           <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-2xl bg-cover bg-center ring-4 ring-emerald-50 dark:ring-emerald-900/20 shadow-sm" style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.email || 'client'}&background=random")` }}></div>
+              <div className="w-24 h-24 rounded-2xl ring-4 ring-emerald-50 dark:ring-emerald-900/20 shadow-sm bg-emerald-500/10 flex items-center justify-center text-3xl font-bold text-emerald-600 dark:text-emerald-400 uppercase">{(displayName || user?.email || 'C').charAt(0)}</div>
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{user?.email?.split('@')[0] || t('my_progress')}</h1>
+                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{displayName}</h1>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200">{t('active')}</span>
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium capitalize">
@@ -705,7 +756,10 @@ export default function ClientProgress() {
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
-                <button className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 text-sm font-bold">
+                <button
+                  onClick={openEditModal}
+                  className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 text-sm font-bold"
+                >
                   <Edit className="w-4 h-4" />
                   {t('edit_profile')}
                 </button>
@@ -768,6 +822,26 @@ export default function ClientProgress() {
           {renderInsights()}
         </div>
       </div>
+
+      {/* Aviso de error de carga: antes el fallo de /profile-stats era
+          silencioso y el cliente veía '--' por todas partes como si no
+          tuviera datos. */}
+      {loadError && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg">
+          {t('error_loading_data', { defaultValue: 'No se pudieron cargar tus datos. Comprueba tu conexión.' })}
+        </div>
+      )}
+
+      <EditProfileModal
+        show={showEdit}
+        form={editForm}
+        setForm={setEditForm}
+        isSaving={editSaving}
+        error={editError}
+        onClose={() => setShowEdit(false)}
+        onSave={saveEditProfile}
+        t={t}
+      />
     </div>
   );
 }

@@ -153,7 +153,9 @@ export default function ClientNutrition() {
           
           dMeals.forEach((m: any) => {
             (m.items || []).forEach((i: any) => {
-              const qty = i.quantity || 1;
+              // Misma fórmula que en la vista diaria (multiplier || quantity)
+              // para que las kcal de la tarjeta semanal y del día coincidan.
+              const qty = i.multiplier || i.quantity || 1;
               dCals += (i.calories || 0) * qty;
               dP += (i.protein || 0) * qty;
               dC += (i.carbs || 0) * qty;
@@ -490,8 +492,7 @@ export default function ClientNutrition() {
         {/* Profile Card */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           <div className="relative flex-shrink-0">
-            <div className="w-16 h-16 rounded-3xl bg-cover bg-center shadow-sm" style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.email}&background=random")` }}></div>
-            <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
+            <div className="w-16 h-16 rounded-3xl shadow-sm bg-[#17cf54]/10 flex items-center justify-center text-2xl font-bold text-[#17cf54] uppercase">{user?.email?.charAt(0) || 'C'}</div>
           </div>
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{user?.email?.split('@')[0] || '—'}</h1>
@@ -565,11 +566,8 @@ function MealBlock({ title, time, kcal, icon, iconBg, macros, viewDetailsLabel }
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:text-emerald-500 transition-all flex items-center gap-2">
-            <span className="material-symbols-outlined text-[16px] text-orange-500">local_fire_department</span> {viewDetailsLabel}
-          </button>
-        </div>
+        {/* Las kcal y los macros de la comida ya se muestran debajo; el botón
+            "Ver detalles" era redundante y no tenía acción — se elimina. */}
       </div>
       <div className="pl-[76px] space-y-3">
         {macros.map((m: any, i: number) => (

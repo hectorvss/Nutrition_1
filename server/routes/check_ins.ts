@@ -572,6 +572,11 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
 router.get('/client/check-ins/:checkInId', verifyClient, async (req: AuthedRequest, res) => {
   const { checkInId } = req.params;
   const clientId = req.user.id;
+  // Valida el formato UUID antes de tocar la BD (coherente con los endpoints
+  // de manager): evita errores 22P02 de Postgres mal manejados.
+  if (!UUID_RE.test(String(checkInId))) {
+    return res.status(400).json({ error: 'Invalid check-in id' });
+  }
   try {
     // Build the client object (the authenticated user themselves)
     const { data: userData } = await supabaseAdmin
@@ -1428,8 +1433,13 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
   const clientId = req.user.id;
   const { template_id, answers_json } = req.body;
 
-  if (!answers_json) {
-    return res.status(400).json({ error: 'answers_json is required' });
+  if (!answers_json || typeof answers_json !== 'object' || Array.isArray(answers_json)) {
+    return res.status(400).json({ error: 'answers_json is required and must be an object' });
+  }
+  // Limita el tamaño del payload: answers_json es JSONB libre y sin cota un
+  // cliente podría inflar la BD (abuso de almacenamiento / DoS).
+  if (JSON.stringify(answers_json).length > 100_000) {
+    return res.status(413).json({ error: 'answers_json is too large' });
   }
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

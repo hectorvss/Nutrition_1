@@ -91,8 +91,7 @@ export default function ClientCheckIns() {
         {/* Profile Card */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           <div className="relative flex-shrink-0">
-            <div className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm" style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.email || 'client'}&background=random")` }}></div>
-            <div className="absolute -bottom-1 -right-1 bg-[#17cf54] w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
+            <div className="w-16 h-16 rounded-2xl shadow-sm bg-[#17cf54]/10 flex items-center justify-center text-2xl font-bold text-[#17cf54] uppercase">{user?.email?.charAt(0) || 'C'}</div>
           </div>
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email?.split('@')[0] || t('client')}</h1>
@@ -116,13 +115,31 @@ export default function ClientCheckIns() {
         {/* Toolbar */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm mb-6">
           <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 relative">
-            <button className="relative px-6 py-2 rounded-lg text-sm font-semibold transition-all z-10 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm">
+            <div className="relative px-6 py-2 rounded-lg text-sm font-semibold z-10 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm">
               {activeTemplate?.name || activeTemplate?.title || t('checkin_view')}
-            </button>
+            </div>
           </div>
           <div className="flex items-center gap-2 pr-2">
-            <button className="p-2 text-slate-400 hover:text-[#17cf54] transition-colors"><span className="material-symbols-outlined">print</span></button>
-            <button className="p-2 text-slate-400 hover:text-[#17cf54] transition-colors"><span className="material-symbols-outlined">share</span></button>
+            <button
+              onClick={() => window.print()}
+              aria-label={t('print', { defaultValue: 'Imprimir' })}
+              title={t('print', { defaultValue: 'Imprimir' })}
+              className="p-2 text-slate-400 hover:text-[#17cf54] transition-colors"
+            ><span className="material-symbols-outlined">print</span></button>
+            <button
+              onClick={async () => {
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ title: t('checkin_view'), url: window.location.href });
+                  } else {
+                    await navigator.clipboard.writeText(window.location.href);
+                  }
+                } catch { /* el usuario canceló el diálogo */ }
+              }}
+              aria-label={t('share', { defaultValue: 'Compartir' })}
+              title={t('share', { defaultValue: 'Compartir' })}
+              className="p-2 text-slate-400 hover:text-[#17cf54] transition-colors"
+            ><span className="material-symbols-outlined">share</span></button>
             <button 
               onClick={() => setIsCheckingIn(true)}
               className="bg-[#17cf54] hover:bg-[#15b84a] text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm"
@@ -137,7 +154,11 @@ export default function ClientCheckIns() {
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex-shrink-0">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-bold text-slate-900 dark:text-white">{t('checkin_overview')}</h3>
-              <span className="text-xs font-semibold px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-md uppercase">{t('next_review_due')}</span>
+              {/* Solo se muestra si el check-in más reciente aún no ha sido
+                  revisado por el coach — antes salía siempre (badge falso). */}
+              {checkIns.length > 0 && !checkIns[0]?.reviewed_at && !checkIns[0]?.reviewed && (
+                <span className="text-xs font-semibold px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-md uppercase">{t('next_review_due')}</span>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">

@@ -277,7 +277,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         .map(([key, ex]) => ({ ...ex, key }));
 
       if (exercisesToSave.length === 0) {
-        setSaveError(t('failed_sync_database'));
+        // No es un fallo de red: simplemente no hay series registradas.
+        setSaveError(t('nothing_to_save', { defaultValue: 'No hay series registradas para guardar.' }));
         setTimeout(() => setSaveError(null), 6000);
         setIsSaving(false);
         return;
@@ -403,8 +404,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         {/* Profile Card */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           <div className="relative flex-shrink-0">
-            <div className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm" style={{ backgroundImage: `url("https://ui-avatars.com/api/?name=${user?.email}&background=random")` }}></div>
-            <div className="absolute -bottom-1 -right-1 bg-[#17cf54] w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
+            <div className="w-16 h-16 rounded-2xl shadow-sm bg-[#17cf54]/10 flex items-center justify-center text-2xl font-bold text-[#17cf54] uppercase">{user?.email?.charAt(0) || 'C'}</div>
           </div>
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email?.split('@')[0] || t('client')}</h1>
@@ -483,7 +483,6 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 <h3 className="font-bold text-slate-900 dark:text-white text-lg">{t('workout_summary')}</h3>
                 {isWeekly && <p className="text-sm text-[#17cf54] font-medium mt-1">{currentWorkoutName}</p>}
               </div>
-              <button className="text-slate-400 hover:text-slate-600"><span className="material-symbols-outlined text-[20px]">info</span></button>
             </div>
             <div className="flex flex-col md:flex-row items-center justify-center gap-10">
               <div className="relative w-48 h-48 flex-shrink-0">
@@ -495,7 +494,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center flex-col">
                   <span className="text-4xl font-bold text-slate-900 dark:text-white">{totalExercises}</span>
-                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">Exercises</span>
+                  <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">{t('exercises')}</span>
                 </div>
               </div>
               {/* Session RPE input */}
@@ -645,17 +644,9 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
       <div className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors group">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
         <div className="md:col-span-4 flex items-center gap-4">
-          <div className="cursor-grab text-slate-300 dark:text-slate-700 group-hover:text-slate-400">
-            <span className="material-symbols-outlined text-[20px]">drag_handle</span>
-          </div>
           <div className="min-w-0 flex flex-col gap-1 flex-1">
             <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{name}</h4>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-slate-400 truncate">{type}</p>
-              <button className="text-[10px] font-medium text-[#17cf54] hover:text-[#15b84a] flex items-center gap-1 px-1.5 py-0.5 bg-[#17cf54]/5 rounded transition-colors">
-                <span className="material-symbols-outlined text-[12px]">videocam</span> {t('video')}
-              </button>
-            </div>
+            <p className="text-xs text-slate-400 truncate">{type}</p>
           </div>
         </div>
         <div className="md:col-span-8 grid grid-cols-5 gap-2 relative pr-12">
@@ -767,7 +758,7 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
               {/* Notes */}
               <div className="relative">
                 <textarea
-                  placeholder="Notes, sensations, difficulties..."
+                  placeholder={t('exercise_notes_placeholder', { defaultValue: 'Notas, sensaciones, dificultades...' })}
                   value={logData?.notes || ''}
                   onChange={e => onUpdateNotes(e.target.value)}
                   className="w-full text-sm p-3 pr-10 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-medium focus:outline-none focus:ring-2 focus:ring-[#17cf54]/20 focus:border-[#17cf54] transition-all resize-none h-20 placeholder:text-slate-400 dark:placeholder:text-slate-600"
