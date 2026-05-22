@@ -84,7 +84,7 @@ export const TRIGGERS: TriggerDef[] = [
     params: [{ key: 'hours', label: 'Horas pendiente', type: 'number', defaultValue: 24, unit: 'h' }] },
   { id: 'consecutive-checkins-missed', name: 'Varios check-ins seguidos perdidos',
     desc: 'Cliente que ha perdido X check-ins consecutivos.',
-    icon: 'XCircle', category: 'checkins', tier: 'advanced', wired: true,
+    icon: 'XCircle', category: 'checkins', tier: 'advanced', wired: false,
     params: [{ key: 'count', label: 'Check-ins seguidos', type: 'number', defaultValue: 2, unit: '' }] },
 
   // ─── Messaging ──────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ export const TRIGGERS: TriggerDef[] = [
     icon: 'MessageCircle', category: 'messaging', tier: 'basic', wired: true },
   { id: 'client-message-stale', name: 'Mensaje del cliente sin responder',
     desc: 'El cliente envio un mensaje y llevas mas de X horas sin contestar.',
-    icon: 'MessageSquareWarning', category: 'messaging', tier: 'advanced', wired: true,
+    icon: 'MessageSquareWarning', category: 'messaging', tier: 'advanced', wired: false,
     params: [{ key: 'hours', label: 'Horas sin responder', type: 'number', defaultValue: 2, unit: 'h' }] },
 
   // ─── Metrics ────────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ export const TRIGGERS: TriggerDef[] = [
     icon: 'Target', category: 'metrics', tier: 'advanced', wired: true },
   { id: 'weight-plateau', name: 'Estancamiento de peso',
     desc: 'Sin cambios significativos en X semanas.',
-    icon: 'Minus', category: 'metrics', tier: 'advanced', wired: true,
+    icon: 'Minus', category: 'metrics', tier: 'advanced', wired: false,
     params: [{ key: 'weeks', label: 'Semanas sin cambio', type: 'number', defaultValue: 3, unit: 'sem' }] },
 
   // ─── Training / Adherence ──────────────────────────────────────────────
@@ -124,11 +124,11 @@ export const TRIGGERS: TriggerDef[] = [
     params: [{ key: 'pct', label: 'Umbral %', type: 'number', defaultValue: 70, unit: '%' }] },
   { id: 'workout-streak-broken', name: 'Racha de entrenos rota',
     desc: 'No ha entrenado en X dias seguidos.',
-    icon: 'Flame', category: 'training', tier: 'advanced', wired: true,
+    icon: 'Flame', category: 'training', tier: 'advanced', wired: false,
     params: [{ key: 'days', label: 'Dias sin entrenar', type: 'number', defaultValue: 5, unit: 'd' }] },
   { id: 'workout-streak-milestone', name: 'Hito de entrenos',
     desc: 'Cliente alcanzo X entrenos loggeados (10, 30, 100).',
-    icon: 'Trophy', category: 'training', tier: 'advanced', wired: true,
+    icon: 'Trophy', category: 'training', tier: 'advanced', wired: false,
     params: [{ key: 'count', label: 'Numero de entrenos', type: 'number', defaultValue: 10, unit: '' }] },
 
   // ─── Schedule / Time ────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export const TRIGGERS: TriggerDef[] = [
     params: [{ key: 'days', label: 'Dias sin login', type: 'number', defaultValue: 3, unit: 'd' }] },
   { id: 'plan-update-due', name: 'Plan vencido',
     desc: 'Su plan lleva mas de X semanas sin actualizar.',
-    icon: 'CalendarClock', category: 'schedule', tier: 'advanced', wired: true,
+    icon: 'CalendarClock', category: 'schedule', tier: 'advanced', wired: false,
     params: [{ key: 'weeks', label: 'Semanas', type: 'number', defaultValue: 4, unit: 'sem' }] },
   { id: 'no-appointment', name: 'Sin cita futura',
     desc: 'El cliente no tiene ninguna cita programada.',

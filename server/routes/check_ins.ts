@@ -1585,6 +1585,21 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
         console.error('Workflow trigger error (checkin_submitted):', err);
       });
 
+      // first-checkin: fire the simple automation only on the client's very
+      // first submission ever (1 row exists = this one).
+      try {
+        const { count } = await supabaseAdmin
+          .from('client_checkin_submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('client_id', clientId);
+        if ((count ?? 0) <= 1) {
+          processTrigger(clientData.manager_id, 'first-checkin', { clientId })
+            .catch(err => console.error('Automation trigger error (first-checkin):', err));
+        }
+      } catch (fcErr) {
+        console.error('first-checkin derivation failed:', fcErr);
+      }
+
       // Weight change trigger: compare against the previous submission's weight
       // if this one carries one. Payload includes delta so workflows can branch.
       try {
@@ -1608,6 +1623,13 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
             direction: delta == null ? 'unknown' : delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'flat',
           }).catch(err => console.error('Workflow trigger error (weight_change):', err));
 
+          // Simple automations: weight-dropped / weight-gained on a notable
+          // change vs the previous check-in (>1 kg in either direction).
+          if (delta != null && Math.abs(delta) >= 1) {
+            processTrigger(clientData.manager_id, delta < 0 ? 'weight-dropped' : 'weight-gained', { clientId })
+              .catch(err => console.error('Automation trigger error (weight change):', err));
+          }
+
           // goal_reached: fire when this check-in's weight reaches the client's
           // goal weight. "Reached" = touched it, or crossed it since the
           // previous check-in. Deduped per submission via checkinId.
@@ -1624,6 +1646,8 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
                 runWorkflowsForEvent(clientData.manager_id, 'trigger.goal_reached', {
                   clientId, weight: newWeight, goalWeight: goal, checkinId: data.id,
                 }).catch(err => console.error('Workflow trigger error (goal_reached):', err));
+                processTrigger(clientData.manager_id, 'weight-goal-reached', { clientId })
+                  .catch(err => console.error('Automation trigger error (weight-goal-reached):', err));
               }
             }
           } catch (gErr) {

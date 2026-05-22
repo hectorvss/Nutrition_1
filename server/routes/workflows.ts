@@ -459,9 +459,14 @@ async function runLoop(p: {
           break;
         }
         case 'flow.switch': {
+          // Route by value: the node declares its branches in cfg.branches
+          // (comma-separated). A value that matches a branch follows that
+          // handle; anything else (or null) falls through to "default".
           const val = getByPath(ctx, cfg.field);
-          followHandle = val == null ? 'default' : String(val);
-          await logStep(node, 'completed', { field: cfg.field, value: val });
+          const branchList = String(cfg.branches || '').split(',').map(s => s.trim()).filter(Boolean);
+          const v = val == null ? '' : String(val);
+          followHandle = branchList.includes(v) ? v : 'default';
+          await logStep(node, 'completed', { field: cfg.field, value: val, branch: followHandle });
           break;
         }
         case 'flow.delay': {

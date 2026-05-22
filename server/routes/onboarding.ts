@@ -570,6 +570,9 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
         const { runWorkflowsForEvent } = await import('./workflows.js');
         runWorkflowsForEvent(clientRow.manager_id, 'trigger.onboarding_completed', { clientId })
           .catch(err => console.error('Workflow trigger error (onboarding_completed):', err));
+        const { processTrigger } = await import('./automations.js');
+        processTrigger(clientRow.manager_id, 'onboarding-completed', { clientId })
+          .catch(err => console.error('Automation trigger error (onboarding-completed):', err));
       }
     } catch (wfErr) {
       console.error('onboarding_completed workflow dispatch failed:', wfErr);

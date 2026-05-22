@@ -63,7 +63,12 @@ const DND_MIME = 'application/wf-node';
 function WorkflowNodeCard({ data, selected }: NodeProps) {
   const nd: any = data;
   const Icon = ICONS[nd.icon] || Zap;
-  const branches: string[] = nd.branches || [];
+  // flow.switch declares its branches dynamically via the `branches` config
+  // field (comma-separated) — plus an implicit "default" outlet — so the
+  // card renders one labelled output handle per route.
+  const branches: string[] = nd.key === 'flow.switch'
+    ? [...String(nd.config?.branches || '').split(',').map((s: string) => s.trim()).filter(Boolean), 'default']
+    : (nd.branches || []);
   const isStop = nd.key === 'flow.stop';
   const s = styleFor(nd.nodeType);
   // NOTE: the card must NOT use `overflow-hidden`. React Flow handles sit on

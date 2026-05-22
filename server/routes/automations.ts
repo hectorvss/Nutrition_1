@@ -775,7 +775,8 @@ const cronHandler = async (req: any, res: any) => {
       .from('automations')
       .select('*')
       .eq('enabled', true)
-      .in('trigger_id', ['weekly-checkin', 'birthday', 'inactivity', 'checkin-overdue', 'app-setup', 'adherence-high']);
+      .in('trigger_id', ['weekly-checkin', 'birthday', 'inactivity', 'checkin-overdue', 'app-setup',
+        'adherence-high', 'adherence-low', 'anniversary', 'onboarding-stalled', 'checkin-pending-review']);
     
     if (!automations) return res.json({ processed: 0 });
 
@@ -892,9 +893,82 @@ const cronHandler = async (req: any, res: any) => {
             if (!lastSent) shouldTrigger = true;
           }
         }
-        else if (automation.trigger_id === 'adherence-high') {
-          // Habit adherence tracking is not implemented (no habit_logs table),
-          // so this automation never triggers automatically from the cron.
+        else if (automation.trigger_id === 'adherence-high' || automation.trigger_id === 'adherence-low') {
+          // Adherence from the latest check-in (nutrition_adherence_score is 0-10
+          // → x10 for a %). High fires ≥90%, low fires <70%.
+          const { data: ci } = await supabaseAdmin
+            .from('check_ins').select('data_json, created_at')
+            .eq('client_id', client.id)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          const adh = ci ? Number((ci.data_json as any)?.nutrition_adherence_score
+            ?? (ci.data_json as any)?.adherence_score) : NaN;
+          if (Number.isFinite(adh)) {
+            const pct = adh * 10;
+            const hit = automation.trigger_id === 'adherence-high' ? pct >= 90 : pct < 70;
+            if (hit) {
+              const { data: lastSent } = await supabaseAdmin
+                .from('automation_logs').select('sent_at')
+                .eq('automation_id', automation.id).eq('client_id', client.id)
+                .order('sent_at', { ascending: false }).limit(1).maybeSingle();
+              if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / 86400000 >= 6) {
+                shouldTrigger = true;
+              }
+            }
+          }
+        }
+        else if (automation.trigger_id === 'anniversary') {
+          // Fires on the monthly anniversary of the signup day (day-of-month
+          // match, at least one full month elapsed). Deduped ~monthly.
+          const joined = new Date(client.created_at);
+          const monthsElapsed = (today.getUTCFullYear() - joined.getUTCFullYear()) * 12
+            + (today.getUTCMonth() - joined.getUTCMonth());
+          if (monthsElapsed >= 1 && today.getUTCDate() === joined.getUTCDate()) {
+            const { data: lastSent } = await supabaseAdmin
+              .from('automation_logs').select('sent_at')
+              .eq('automation_id', automation.id).eq('client_id', client.id)
+              .order('sent_at', { ascending: false }).limit(1).maybeSingle();
+            if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / 86400000 >= 25) {
+              shouldTrigger = true;
+            }
+          }
+        }
+        else if (automation.trigger_id === 'onboarding-stalled') {
+          // Active onboarding assignment older than 48 h with no submission.
+          const { data: assign } = await supabaseAdmin
+            .from('client_onboarding_assignments').select('assigned_at')
+            .eq('client_id', client.id).eq('is_active', true)
+            .order('assigned_at', { ascending: false }).limit(1).maybeSingle();
+          if (assign?.assigned_at
+              && (today.getTime() - new Date(assign.assigned_at).getTime()) / 3600000 >= 48) {
+            const { count: subs } = await supabaseAdmin
+              .from('client_onboarding_submissions').select('id', { count: 'exact', head: true })
+              .eq('client_id', client.id);
+            if ((subs ?? 0) === 0) {
+              const { data: lastSent } = await supabaseAdmin
+                .from('automation_logs').select('sent_at')
+                .eq('automation_id', automation.id).eq('client_id', client.id)
+                .order('sent_at', { ascending: false }).limit(1).maybeSingle();
+              if (!lastSent) shouldTrigger = true;
+            }
+          }
+        }
+        else if (automation.trigger_id === 'checkin-pending-review') {
+          // The coach has an unreviewed check-in older than 24 h.
+          const cutoff = new Date(today.getTime() - 24 * 3600000).toISOString();
+          const { data: pending } = await supabaseAdmin
+            .from('check_ins').select('id, created_at')
+            .eq('client_id', client.id).is('reviewed_at', null)
+            .lte('created_at', cutoff)
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          if (pending) {
+            const { data: lastSent } = await supabaseAdmin
+              .from('automation_logs').select('sent_at')
+              .eq('automation_id', automation.id).eq('client_id', client.id)
+              .order('sent_at', { ascending: false }).limit(1).maybeSingle();
+            if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / 86400000 >= 1) {
+              shouldTrigger = true;
+            }
+          }
         }
 
         if (shouldTrigger) {

@@ -304,11 +304,15 @@ router.post('/', enforceMonthlyMessages, async (req: any, res) => {
 
     if (error) throw error;
 
-    // Advanced Workflows: a client message can trigger 'message_received' workflows.
+    // A client message fires both the advanced workflow trigger and the
+    // simple automation 'client-reply' trigger.
     if (isClientToManager) {
       runWorkflowsForEvent(receiver_id, 'trigger.message_received',
         { clientId: sender_id, messageId: message.id }).catch(err =>
         console.error('Workflow trigger error (message_received):', err));
+      import('./automations.js').then(({ processTrigger }) =>
+        processTrigger(receiver_id, 'client-reply', { clientId: sender_id }))
+        .catch(err => console.error('Automation trigger error (client-reply):', err));
     }
 
     // Push notification to the receiver (respects the new_messages_push toggle).
