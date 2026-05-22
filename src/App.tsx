@@ -63,6 +63,9 @@ export default function App() {
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  // Evento del calendario a resaltar al llegar desde Tareas (clic en una tarea
+  // que en realidad es un evento del calendario).
+  const [focusCalendarEventId, setFocusCalendarEventId] = useState<string | null>(null);
   const [calendarViewMode, setCalendarViewMode] = useState<'Day' | 'Week' | 'Month'>('Day');
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -164,19 +167,25 @@ export default function App() {
           if (data?.taskId) setSelectedTaskId(data.taskId);
           if (data?.clientId) setSelectedClientId(data.clientId);
           if (data?.checkInId) setSelectedCheckInId(data.checkInId);
+          // Clic en una tarea que es un evento del calendario: ir al calendario
+          // en la fecha exacta del evento, en vista Día, y resaltarlo.
+          if (data?.calendarDate) setCalendarDate(new Date(data.calendarDate + 'T12:00:00'));
+          if (data?.calendarView) setCalendarViewMode(data.calendarView);
+          setFocusCalendarEventId(data?.focusEventId ?? null);
           setCurrentView(view as View);
         }} />;
       case 'calendar':
-        return <CalendarView 
+        return <CalendarView
           initialView={calendarViewMode}
           initialDate={calendarDate}
+          focusEventId={focusCalendarEventId}
           onNavigate={(view, data) => {
             if (data?.taskId) setSelectedTaskId(data.taskId);
             if (data?.date) setSelectedTaskDate(data.date);
             if (data?.returnTo) setCalendarViewMode(data.returnTo);
             if (data?.currentDate) setCalendarDate(new Date(data.currentDate + 'T12:00:00'));
             setCurrentView(view as View);
-          }} 
+          }}
         />;
       case 'create-task':
         return <CreateTask 

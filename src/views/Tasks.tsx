@@ -241,7 +241,19 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                       : 'planning';
                                   onNavigate(target, { clientId: task.clientId });
                                 } else {
-                                  onNavigate('create-task', { taskId: task.id });
+                                  // Las tareas manuales SON eventos del calendario. Al hacer
+                                  // clic, llevar al calendario a la posición exacta del evento
+                                  // (su día, en vista Día) y resaltarlo — en vez de abrir el
+                                  // editor de la tarea.
+                                  if (task.date) {
+                                    onNavigate('calendar', {
+                                      calendarDate: task.date,
+                                      calendarView: 'Day',
+                                      focusEventId: task.id,
+                                    });
+                                  } else {
+                                    onNavigate('create-task', { taskId: task.id });
+                                  }
                                 }
                               }}
                               className={`group relative rounded-2xl p-4 sm:p-6 shadow-sm transition-colors duration-200 cursor-pointer border border-l-4 ${

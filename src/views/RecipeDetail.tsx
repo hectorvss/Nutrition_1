@@ -61,6 +61,28 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Receta guardada/marcada por el coach (persistido en localStorage).
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!recipeId) return;
+    try {
+      const list = JSON.parse(localStorage.getItem('saved_recipes') || '[]');
+      setSaved(Array.isArray(list) && list.includes(recipeId));
+    } catch { /* ignore */ }
+  }, [recipeId]);
+
+  const toggleSaved = () => {
+    if (!recipeId) return;
+    try {
+      const list: string[] = JSON.parse(localStorage.getItem('saved_recipes') || '[]');
+      const next = list.includes(recipeId)
+        ? list.filter((x) => x !== recipeId)
+        : [...list, recipeId];
+      localStorage.setItem('saved_recipes', JSON.stringify(next));
+      setSaved(next.includes(recipeId));
+    } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     if (!recipeId) {
@@ -188,9 +210,16 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
                 </div>
               </div>
               <div className="flex gap-4">
-                <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white px-6 py-4 rounded-2xl border border-white/30 transition-all flex items-center gap-2 font-bold">
-                  <Bookmark className="w-5 h-5" />
-                  {t('save')}
+                <button
+                  onClick={toggleSaved}
+                  className={`backdrop-blur-md px-6 py-4 rounded-2xl border transition-all flex items-center gap-2 font-bold ${
+                    saved
+                      ? 'bg-emerald-500/90 hover:bg-emerald-500 text-white border-emerald-400'
+                      : 'bg-white/10 hover:bg-white/20 text-white border-white/30'
+                  }`}
+                >
+                  <Bookmark className={`w-5 h-5 ${saved ? 'fill-white' : ''}`} />
+                  {saved ? (isEs ? 'Guardada' : 'Saved') : t('save')}
                 </button>
               </div>
             </div>

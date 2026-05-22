@@ -20,6 +20,8 @@ interface CalendarProps {
   onNavigate: (view: string, data?: any) => void;
   initialView?: ViewMode;
   initialDate?: Date;
+  /** Evento a resaltar y enfocar al abrir (p. ej. al venir desde Tareas). */
+  focusEventId?: string | null;
 }
 
 import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
@@ -196,15 +198,29 @@ const getOverlapData = (events: any[]) => {
   return eventStyles;
 };
 
-export default function CalendarView({ onNavigate, initialView, initialDate }: CalendarProps) {
+export default function CalendarView({ onNavigate, initialView, initialDate, focusEventId }: CalendarProps) {
   const { t, language } = useLanguage();
   const [viewMode, setViewMode] = useState<ViewMode>(initialView || 'Day');
   const [currentDate, setCurrentDate] = useState(initialDate || new Date());
   const [now, setNow] = useState(new Date());
-  
+
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Evento resaltado al llegar desde Tareas. El anillo se desvanece a los 4 s.
+  const [highlightId, setHighlightId] = useState<string | null>(focusEventId || null);
+  const focusedEventRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!focusEventId) return;
+    setHighlightId(focusEventId);
+    // Deja que el evento se pinte y luego céntralo en el scroll.
+    const scrollT = setTimeout(() => {
+      focusedEventRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 150);
+    const clearT = setTimeout(() => setHighlightId(null), 4000);
+    return () => { clearTimeout(scrollT); clearTimeout(clearT); };
+  }, [focusEventId]);
 
   useEffect(() => {
     if (viewMode === 'Month') return;
@@ -520,13 +536,17 @@ export default function CalendarView({ onNavigate, initialView, initialDate }: C
                   const EventIcon = info.icon;
                   const style = overlapData[event.id] || { width: 100, left: 0 };
 
+                  const isFocused = event.id === highlightId;
                   return (
-                    <div 
+                    <div
                       key={event.id}
+                      ref={isFocused ? focusedEventRef : undefined}
                       onClick={() => onNavigate('create-task', { taskId: event.id, returnTo: 'Day', currentDate: getLocalDateString(currentDate) })}
-                      className={`absolute p-1 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-3 transition-all hover:shadow-md cursor-pointer ${info.color}`}
-                      style={{ 
-                        top: `${layout.top}px`, 
+                      className={`absolute p-1 border-l-4 rounded-xl shadow-sm z-10 flex items-start gap-3 transition-all hover:shadow-md cursor-pointer ${info.color} ${
+                        isFocused ? 'ring-2 ring-emerald-500 ring-offset-2 z-20 animate-pulse' : ''
+                      }`}
+                      style={{
+                        top: `${layout.top}px`,
                         height: `${layout.height}px`,
                         left: `${style.left}%`,
                         width: `${style.width}%`

@@ -41,6 +41,19 @@ router.get('/', verifyManager, async (req: any, res) => {
   const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
     const language = await getManagerLanguage(managerId);
+
+    // Presets globales que este manager ya ha editado (tiene una copia propia).
+    // Se ocultan para que el manager NUNCA vea el original junto a su versión
+    // editada — solo ve su receta. El preset global sigue intacto para el resto.
+    const { data: derived } = await supabaseAdmin
+      .from('recipes')
+      .select('source_recipe_id')
+      .eq('manager_id', managerId)
+      .not('source_recipe_id', 'is', null);
+    const overriddenIds = Array.from(
+      new Set((derived || []).map((r: any) => r.source_recipe_id).filter(Boolean))
+    );
+
     let q = supabaseAdmin
       .from('recipes')
       .select('*')
@@ -49,6 +62,9 @@ router.get('/', verifyManager, async (req: any, res) => {
       .order('created_at', { ascending: false })
       .order('id', { ascending: false })
       .limit(page.limit + 1);
+    if (overriddenIds.length) {
+      q = q.not('id', 'in', `(${overriddenIds.map((id) => `"${id}"`).join(',')})`);
+    }
     q = applyCursor(q, page.cursor, 'created_at', 'desc');
     const { data, error } = await q;
 
@@ -140,6 +156,9 @@ router.patch('/:id', verifyManager, async (req: any, res) => {
     clone.manager_id = managerId;
     clone.is_global = false;
     clone.language = language;
+    // Vínculo con el preset global de origen: GET / oculta ese preset a este
+    // manager para que solo vea su versión editada (sin duplicados visibles).
+    clone.source_recipe_id = req.params.id;
 
     const { data: created, error: insErr } = await supabaseAdmin
       .from('recipes')
