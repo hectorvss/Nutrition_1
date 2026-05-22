@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useExerciseContext } from '../context/ExerciseContext';
 import { TrainingCategory } from '../types/training';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
+import ComboBox from '../components/ui/ComboBox';
 
 interface ExerciseDetailProps {
   exerciseName?: string;
   onBack: () => void;
 }
+
+// Strips a leading "1." / "2)" / "-" / "•" prefix so each line renders cleanly
+// inside its own card regardless of how the stored text was formatted.
+const stripPrefix = (s: string) => s.replace(/^\s*(\d+[.)]\s*|[-•*]\s*)/, '').trim();
+const parseItems = (txt?: string | null): string[] =>
+  (txt || '').split('\n').map(stripPrefix).filter(Boolean);
 
 export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailProps) {
   const { t } = useLanguage();
@@ -24,16 +31,32 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
   const [subcategory, setSubcategory] = useState("");
   const [type, setType] = useState<"Compound" | "Isolation" | "Stretch" | "Hold">("Compound");
   const [difficultyLevel, setDifficultyLevel] = useState<"Beginner" | "Intermediate" | "Advanced">("Beginner");
-  
-  const [musclesStr, setMusclesStr] = useState("");
-  const [secondaryMusclesStr, setSecondaryMusclesStr] = useState("");
-  const [equipmentStr, setEquipmentStr] = useState("");
-  
+
+  const [muscles, setMuscles] = useState<string[]>([]);
+  const [secondaryMuscles, setSecondaryMuscles] = useState<string[]>([]);
+  const [equipment, setEquipment] = useState<string[]>([]);
+
   const [videoUrl, setVideoUrl] = useState("");
-  const [notes, setNotes] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [commonMistakes, setCommonMistakes] = useState("");
-  const [tips, setTips] = useState("");
+  const [noteItems, setNoteItems] = useState<string[]>([]);
+  const [instructionItems, setInstructionItems] = useState<string[]>([]);
+  const [mistakeItems, setMistakeItems] = useState<string[]>([]);
+  const [tipItems, setTipItems] = useState<string[]>([]);
+
+  // Suggestion pools — every distinct value already used across the catalog.
+  const subcategoryOptions = useMemo(
+    () => Array.from(new Set(exercises.map(e => e.subcategory).filter(Boolean) as string[])).sort(),
+    [exercises]
+  );
+  const muscleOptions = useMemo(
+    () => Array.from(new Set(
+      exercises.flatMap(e => [...(e.muscleGroups || []), ...(e.secondaryMuscles || [])])
+    )).filter(Boolean).sort(),
+    [exercises]
+  );
+  const toolOptions = useMemo(
+    () => Array.from(new Set(exercises.flatMap(e => e.tools || []))).filter(Boolean).sort(),
+    [exercises]
+  );
 
   // Initialize fields
   useEffect(() => {
@@ -43,14 +66,14 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
       setSubcategory(exercise.subcategory || "");
       setType(exercise.type);
       setDifficultyLevel(exercise.level);
-      setMusclesStr(exercise.muscleGroups?.join(', ') || "");
-      setSecondaryMusclesStr(exercise.secondaryMuscles?.join(', ') || "");
-      setEquipmentStr(exercise.tools?.join(', ') || "");
+      setMuscles(exercise.muscleGroups || []);
+      setSecondaryMuscles(exercise.secondaryMuscles || []);
+      setEquipment(exercise.tools || []);
       setVideoUrl(exercise.video_url || "");
-      setNotes(exercise.description || "");
-      setInstructions(exercise.instructions || "");
-      setCommonMistakes(exercise.commonMistakes || "");
-      setTips(exercise.tips || "");
+      setNoteItems(parseItems(exercise.description));
+      setInstructionItems(parseItems(exercise.instructions));
+      setMistakeItems(parseItems(exercise.commonMistakes));
+      setTipItems(parseItems(exercise.tips));
     } else if (exerciseName) {
       setName(exerciseName);
     }
@@ -67,14 +90,14 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
         subcategory,
         type,
         level: difficultyLevel,
-        muscleGroups: musclesStr.split(',').map(s => s.trim()).filter(Boolean),
-        secondaryMuscles: secondaryMusclesStr.split(',').map(s => s.trim()).filter(Boolean),
-        tools: equipmentStr.split(',').map(s => s.trim()).filter(Boolean),
+        muscleGroups: muscles.map(s => s.trim()).filter(Boolean),
+        secondaryMuscles: secondaryMuscles.map(s => s.trim()).filter(Boolean),
+        tools: equipment.map(s => s.trim()).filter(Boolean),
         video_url: videoUrl,
-        description: notes,
-        instructions,
-        commonMistakes,
-        tips
+        description: noteItems.map(s => s.trim()).filter(Boolean).join('\n'),
+        instructions: instructionItems.map(s => s.trim()).filter(Boolean).join('\n'),
+        commonMistakes: mistakeItems.map(s => s.trim()).filter(Boolean).join('\n'),
+        tips: tipItems.map(s => s.trim()).filter(Boolean).join('\n'),
       });
       setIsEditing(false);
     } catch (err: any) {
@@ -86,6 +109,91 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
 
   const handleCancel = () => {
     setIsEditing(false);
+  };
+
+  // Shared display / editing styling for the General Information fields.
+  const viewBox = "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate";
+  const editComboBox = "w-full px-4 py-2.5 min-h-[48px] rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 focus-within:ring-2 focus-within:ring-emerald-500 transition-all";
+
+  // Renders an "instructions / mistakes / tips" block as a list of mini-cards.
+  const renderItemSection = (
+    items: string[],
+    setItems: React.Dispatch<React.SetStateAction<string[]>>,
+    ordered: boolean,
+    addLabel: string,
+    placeholder: string,
+  ) => {
+    const badge = (idx: number) => ordered ? (
+      <span className="shrink-0 w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center justify-center mt-0.5">
+        {idx + 1}
+      </span>
+    ) : (
+      <span className="shrink-0 w-2 h-2 rounded-full bg-emerald-500 mt-2" />
+    );
+
+    if (isEditing) {
+      return (
+        <div className="space-y-2.5">
+          {items.map((item, idx) => (
+            <div
+              key={idx}
+              className="flex items-start gap-3 bg-emerald-50/30 dark:bg-emerald-900/10 rounded-xl border border-emerald-300 dark:border-emerald-700/50 px-3 py-2.5 transition-all focus-within:ring-2 focus-within:ring-emerald-500/30"
+            >
+              {badge(idx)}
+              <textarea
+                value={item}
+                rows={1}
+                onChange={(e) => {
+                  const next = [...items];
+                  next[idx] = e.target.value;
+                  setItems(next);
+                }}
+                placeholder={placeholder}
+                className="flex-1 bg-transparent border-none outline-none focus:ring-0 resize-none text-sm leading-relaxed text-slate-900 dark:text-white placeholder:text-slate-400 p-0 mt-0.5"
+              />
+              <button
+                type="button"
+                onClick={() => setItems(items.filter((_, i) => i !== idx))}
+                className="shrink-0 p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-0.5"
+                aria-label={t('delete_btn')}
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setItems([...items, ''])}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-700/50 text-emerald-600 dark:text-emerald-400 text-sm font-semibold hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            {addLabel}
+          </button>
+        </div>
+      );
+    }
+
+    if (items.length === 0) {
+      return (
+        <div className="bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+          <p className="text-slate-400 text-sm">{t('exercise_no_info', { defaultValue: 'Sin información' })}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2.5">
+        {items.map((item, idx) => (
+          <div
+            key={idx}
+            className="flex items-start gap-3 bg-white dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3"
+          >
+            {badge(idx)}
+            <p className="flex-1 text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{item}</p>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   if (!exercise) {
@@ -118,8 +226,8 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
           <div className="flex gap-3">
             {!isEditing ? (
               <>
-                <button 
-                  onClick={() => setIsEditing(true)} 
+                <button
+                  onClick={() => setIsEditing(true)}
                   className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-2 text-sm"
                 >
                   <span className="material-symbols-outlined text-[18px]">edit</span>
@@ -132,8 +240,8 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
               </>
             ) : (
               <>
-                <button 
-                  onClick={handleCancel} 
+                <button
+                  onClick={handleCancel}
                   className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
                   {t('cancel')}
@@ -170,9 +278,9 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('activity_name')}</label>
                   <div className="relative">
                     {isEditing ? (
-                      <input 
-                        type="text" 
-                        value={name} 
+                      <input
+                        type="text"
+                        value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full pl-4 pr-10 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
                       />
@@ -184,8 +292,8 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                     {!isEditing && <span className="material-symbols-outlined absolute right-3 top-3.5 text-emerald-500">check_circle</span>}
                   </div>
                 </div>
-                
-                {/* Category Fields */}
+
+                {/* Category */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('category_label')}</label>
                   {isEditing ? (
@@ -201,29 +309,28 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                       <option value="Rehab">{t('rehab_cat')}</option>
                     </Select>
                   ) : (
-                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {category}
-                    </div>
+                    <div className={viewBox}>{category}</div>
                   )}
                 </div>
 
+                {/* Subcategory */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('subcategory_label')}</label>
                   {isEditing ? (
-                    <input 
-                      type="text" 
-                      value={subcategory} 
-                      onChange={(e) => setSubcategory(e.target.value)}
+                    <ComboBox
+                      value={subcategory}
+                      onChange={(val) => setSubcategory(val as string)}
+                      options={subcategoryOptions}
                       placeholder={t('subcategory_placeholder')}
-                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
+                      className={editComboBox}
+                      createLabel={t('combo_create', { defaultValue: 'Crear' })}
                     />
                   ) : (
-                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {subcategory || t('none')}
-                    </div>
+                    <div className={viewBox}>{subcategory || t('none')}</div>
                   )}
                 </div>
 
+                {/* Type */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('type_label')}</label>
                   {isEditing ? (
@@ -238,61 +345,65 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                       <option value="Hold">{t('hold_type')}</option>
                     </Select>
                   ) : (
-                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {type}
-                    </div>
+                    <div className={viewBox}>{type}</div>
                   )}
                 </div>
 
-                {/* Body and Gear Fields */}
+                {/* Primary muscle groups */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('primary_muscle_groups_csv')}</label>
                   {isEditing ? (
-                    <input 
-                      type="text" 
-                      value={musclesStr} 
-                      onChange={(e) => setMusclesStr(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
+                    <ComboBox
+                      multiple
+                      value={muscles}
+                      onChange={(val) => setMuscles(val as string[])}
+                      options={muscleOptions}
+                      placeholder={t('combo_search_placeholder', { defaultValue: 'Buscar o añadir…' })}
+                      className={editComboBox}
+                      createLabel={t('combo_create', { defaultValue: 'Crear' })}
                     />
                   ) : (
-                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {musclesStr || t('none')}
-                    </div>
+                    <div className={viewBox}>{muscles.join(', ') || t('none')}</div>
                   )}
                 </div>
 
+                {/* Secondary muscles */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('secondary_muscles_csv')}</label>
                   {isEditing ? (
-                    <input 
-                      type="text" 
-                      value={secondaryMusclesStr} 
-                      onChange={(e) => setSecondaryMusclesStr(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
+                    <ComboBox
+                      multiple
+                      value={secondaryMuscles}
+                      onChange={(val) => setSecondaryMuscles(val as string[])}
+                      options={muscleOptions}
+                      placeholder={t('combo_search_placeholder', { defaultValue: 'Buscar o añadir…' })}
+                      className={editComboBox}
+                      createLabel={t('combo_create', { defaultValue: 'Crear' })}
                     />
                   ) : (
-                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {secondaryMusclesStr || t('none')}
-                    </div>
+                    <div className={viewBox}>{secondaryMuscles.join(', ') || t('none')}</div>
                   )}
                 </div>
 
+                {/* Equipment / tools */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('equipment_tools_csv')}</label>
                   {isEditing ? (
-                    <input 
-                      type="text" 
-                      value={equipmentStr} 
-                      onChange={(e) => setEquipmentStr(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
+                    <ComboBox
+                      multiple
+                      value={equipment}
+                      onChange={(val) => setEquipment(val as string[])}
+                      options={toolOptions}
+                      placeholder={t('combo_search_placeholder', { defaultValue: 'Buscar o añadir…' })}
+                      className={editComboBox}
+                      createLabel={t('combo_create', { defaultValue: 'Crear' })}
                     />
                   ) : (
-                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {equipmentStr || t('none')}
-                    </div>
+                    <div className={viewBox}>{equipment.join(', ') || t('none')}</div>
                   )}
                 </div>
-                
+
+                {/* Difficulty level */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-2">{t('difficulty_level')}</label>
                   {isEditing ? (
@@ -306,9 +417,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                       <option value="Advanced">{t('advanced_level')}</option>
                     </Select>
                   ) : (
-                    <div className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white font-medium opacity-90 cursor-default truncate">
-                      {difficultyLevel}
-                    </div>
+                    <div className={viewBox}>{difficultyLevel}</div>
                   )}
                 </div>
 
@@ -316,7 +425,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
             </section>
 
             <hr className="border-slate-200 dark:border-slate-700" />
-            
+
             {/* Video & Media */}
             <section>
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
@@ -327,9 +436,9 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 <div className="flex gap-3">
                   <div className="relative flex-1">
                     {isEditing ? (
-                      <input 
-                        type="text" 
-                        value={videoUrl} 
+                      <input
+                        type="text"
+                        value={videoUrl}
                         onChange={(e) => setVideoUrl(e.target.value)}
                         placeholder={t('paste_video_link')}
                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-emerald-300 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-900/10 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-medium"
@@ -345,7 +454,7 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                 {videoUrl ? (
                   <div className="relative w-full aspect-video rounded-2xl bg-slate-900 overflow-hidden group shadow-md border border-slate-200 dark:border-slate-700">
                     <div className="w-full h-full flex items-center justify-center bg-slate-800">
-                      <iframe 
+                      <iframe
                         className="w-full h-full"
                         src={videoUrl.replace('watch?v=', 'embed/').split('?')[0].replace('shorts/', 'embed/')}
                         title={t('exercise_video')}
@@ -376,22 +485,11 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   {t('exercise_instructions_title', { defaultValue: 'Instrucciones de ejecución' })}
                 </h3>
               </div>
-              <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
-                {isEditing ? (
-                  <textarea
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                    className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
-                    placeholder={t('exercise_instructions_section_placeholder', { defaultValue: 'Describe paso a paso cómo ejecutar el ejercicio…' })}
-                  />
-                ) : (
-                  <div className="p-5 min-h-[160px]">
-                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                      {instructions || t('exercise_no_info', { defaultValue: 'Sin información' })}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {renderItemSection(
+                instructionItems, setInstructionItems, true,
+                t('exercise_add_instruction', { defaultValue: 'Añadir paso' }),
+                t('exercise_item_placeholder', { defaultValue: 'Escribe aquí…' }),
+              )}
             </section>
 
             <hr className="border-slate-200 dark:border-slate-700" />
@@ -404,22 +502,11 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   {t('exercise_common_mistakes_title', { defaultValue: 'Errores comunes' })}
                 </h3>
               </div>
-              <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
-                {isEditing ? (
-                  <textarea
-                    value={commonMistakes}
-                    onChange={(e) => setCommonMistakes(e.target.value)}
-                    className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
-                    placeholder={t('exercise_common_mistakes_placeholder', { defaultValue: 'Describe los errores típicos que cometen los clientes…' })}
-                  />
-                ) : (
-                  <div className="p-5 min-h-[160px]">
-                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                      {commonMistakes || t('exercise_no_info', { defaultValue: 'Sin información' })}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {renderItemSection(
+                mistakeItems, setMistakeItems, false,
+                t('exercise_add_mistake', { defaultValue: 'Añadir error' }),
+                t('exercise_item_placeholder', { defaultValue: 'Escribe aquí…' }),
+              )}
             </section>
 
             <hr className="border-slate-200 dark:border-slate-700" />
@@ -432,22 +519,11 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   {t('exercise_tips_title', { defaultValue: 'Consejos técnicos' })}
                 </h3>
               </div>
-              <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
-                {isEditing ? (
-                  <textarea
-                    value={tips}
-                    onChange={(e) => setTips(e.target.value)}
-                    className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
-                    placeholder={t('exercise_tips_placeholder', { defaultValue: 'Añade cues y consejos para mejorar la técnica…' })}
-                  />
-                ) : (
-                  <div className="p-5 min-h-[160px]">
-                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                      {tips || t('exercise_no_info', { defaultValue: 'Sin información' })}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {renderItemSection(
+                tipItems, setTipItems, false,
+                t('exercise_add_tip', { defaultValue: 'Añadir consejo' }),
+                t('exercise_item_placeholder', { defaultValue: 'Escribe aquí…' }),
+              )}
             </section>
 
             <hr className="border-slate-200 dark:border-slate-700" />
@@ -460,22 +536,11 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
                   {t('exercise_details_description')}
                 </h3>
               </div>
-              <div className={`relative bg-white dark:bg-slate-800/50 rounded-2xl border ${isEditing ? 'border-emerald-300 dark:border-emerald-700/50 ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-700'} p-0 overflow-hidden min-h-[160px] transition-all`}>
-                {isEditing ? (
-                  <textarea 
-                    value={notes} 
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full min-h-[160px] p-5 bg-transparent border-none text-slate-900 dark:text-white focus:ring-0 resize-y placeholder:text-slate-400 outline-none text-sm leading-relaxed"
-                    placeholder={t('exercise_details_placeholder')}
-                  />
-                ) : (
-                  <div className="p-5 min-h-[160px]">
-                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
-                      {notes || t('no_description_provided')}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {renderItemSection(
+                noteItems, setNoteItems, false,
+                t('exercise_add_note', { defaultValue: 'Añadir detalle' }),
+                t('exercise_item_placeholder', { defaultValue: 'Escribe aquí…' }),
+              )}
             </section>
 
           </div>
