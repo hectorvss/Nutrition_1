@@ -582,20 +582,232 @@ export const DEFAULT_WORKFLOWS: SeedWorkflow[] = [
   },
 ];
 
+// ── Traducciones al inglés ────────────────────────────────────────────────
+// Overlay de SOLO TEXTO sobre la definición canónica (español). La estructura
+// del grafo (ids, keys, posiciones, edges, configs numéricas, tags, plantillas)
+// es idéntica; aquí solo viajan name/description y los campos de texto de los
+// nodos (message / title / body / description). Clave = nombre del workflow ES.
+interface TextOverlay {
+  name: string;
+  description: string;
+  nodes: Record<string, Partial<Record<'message' | 'title' | 'body' | 'description', string>>>;
+}
+
+export const WORKFLOW_TEXT_EN: Record<string, TextOverlay> = {
+  'Onboarding completado: arranque del plan': {
+    name: 'Onboarding complete: plan kickoff',
+    description: 'When onboarding is finished, it creates the task to prepare the plan and confirms to the client. Two days later it checks whether the plan is assigned: if so it notifies the client; if not it escalates to the coach and reassures the client with a push.',
+    nodes: {
+      nc1: { title: "Prepare {Client Name}'s plan", description: 'The client completed their onboarding. Design their personalized plan so they can start without delays.' },
+      m1: { message: "Great, {First Name}! I've received your full onboarding 🙌 I'm preparing your personalized plan — I'll let you know as soon as it's ready." },
+      ym: { message: "{First Name}, your plan is now available in the app 🎯 Take a look and let's get started. Any questions, just message me." },
+      nnc: { title: "⏰ {Client Name}'s plan is pending", description: "Two days have passed since onboarding and the client still has no plan. It's a priority so we don't lose their initial momentum." },
+      npush: { title: 'Your plan is on the way', body: "We're polishing the final details. You'll have it very soon!" },
+    },
+  },
+  'Escalera de retención de cliente inactivo': {
+    name: 'Inactive client retention ladder',
+    description: "Detects 5+ days of inactivity and escalates over 2 levels (push → personal message → call → pause). Uses a tag as state so it doesn't restart if the client is already in the ladder, and clears it as soon as they return.",
+    nodes: {
+      ps: { title: 'We miss you 👀', body: "Come back whenever you want, we're still here to help you." },
+      bs1: { message: "Great to have you back, {First Name}! Let's pick up where we left off 🙌" },
+      m1: { message: "Hi {First Name}, it's been a few days since I saw you here. Is everything ok? Tell me what's going on and we'll sort it out together." },
+      bs2: { message: 'So glad to see you here again, {First Name}! 💪' },
+      nc: { title: 'Contact {Client Name} — churn risk', description: 'The client is still inactive after two automatic attempts. A personal call is recommended before pausing.' },
+    },
+  },
+  'Análisis de check-in con feedback diferenciado': {
+    name: 'Check-in analysis with tailored feedback',
+    description: 'On a new check-in it reads the nutrition adherence score (1-10) and responds differently: ≤4 empathetic message + coach alert; ≥8 positive reinforcement and streak tag; in between it checks for reported pain and, if any, alerts the coach.',
+    nodes: {
+      lm: { message: "I've seen your check-in, {First Name}. This week was tougher — and that's ok, what matters is not stopping. Tell me what was hardest and we'll adjust it together." },
+      lnc: { title: 'Low adherence: {Client Name}', description: 'Latest check-in with nutrition adherence of 4/10 or lower. Review the case: possible plan adjustment or a call.' },
+      om: { message: "Excellent week, {First Name}! 🔥 Adherence of {{latestCheckin.nutrition_adherence_score}}/10. You're doing great, keep it exactly like this." },
+      pnc: { title: '{Client Name} reports discomfort', description: 'The client flagged pain or discomfort in their check-in. Review the injury section before the next workout.' },
+      sm: { message: "Great job keeping the pace, {First Name} 💪 We're consolidating. One more week adding up." },
+    },
+  },
+  'Revisión quincenal proactiva': {
+    name: 'Proactive biweekly review',
+    description: 'Every 14 days it checks whether the client has done a check-in. If not, it requests one and alerts the coach. If yes, it reads their nutrition adherence: reinforcement if it stays high (≥7/10), or coach alert + adjustment message if it is below.',
+    nodes: {
+      nm: { message: "{First Name}, it's time for your biweekly review 📋 Send me your check-in and we'll see what to adjust." },
+      nnc: { title: '{Client Name} without check-in (15 days)', description: 'The client has no check-in recorded in the last two weeks. A direct contact is advisable.' },
+      okm: { message: "You're doing great, {First Name}! Your adherence stays high. Let's keep the course these two weeks 💪" },
+      hnc: { title: "Review {Client Name}'s plan", description: 'Adherence below 7/10 over the last two weeks. Consider simplifying or adjusting the plan.' },
+      hm: { message: '{First Name}, looking back at these two weeks I see things we can adjust to make it easier for you. I will review it and let you know 💪' },
+    },
+  },
+  'A/B test de mensaje motivacional semanal': {
+    name: 'Weekly motivational message A/B test',
+    description: 'Each week it randomly splits clients into two groups and sends a different message style (motivational vs. data-based), tagging each one. Lets you compare which approach drives more engagement.',
+    nodes: {
+      am: { message: "{First Name}, new week, new opportunity. You've got this — give it your all! 🔥" },
+      bm: { message: "{First Name}, review last week's numbers: every data point counts. This week, beat them 📈" },
+    },
+  },
+  'Bienvenida progresiva con puntos de control': {
+    name: 'Progressive welcome with checkpoints',
+    description: 'Guides the new client through their first days verifying real milestones: on day 1 it checks they have a plan (and alerts the coach if not), on day 3 it checks they did their first check-in, and if not, requests it via push and escalates to the coach.',
+    nodes: {
+      m0: { message: "Hi {First Name}! I'm {Coach Name}. Welcome 🙌 Over the next few days we'll set everything up step by step." },
+      np: { title: 'Assign a plan to {Client Name}', description: "The client has been 1 day without an assigned plan. Prepare it so we don't slow down their start." },
+      yp: { message: '{First Name}, your plan is now available in the app. Take a look and let me know if you have any questions.' },
+      okm: { message: "Great, {First Name}! You're up and running. Keep it up 💪" },
+      push: { title: 'Your first check-in is waiting', body: "It'll only take a couple of minutes. Let's go!" },
+      esc: { title: "{Client Name} isn't getting started", description: "The client hasn't completed their first check-in after several reminders. A personal contact is recommended." },
+    },
+  },
+  'Meta alcanzada: transición de fase guiada': {
+    name: 'Goal reached: guided phase transition',
+    description: 'When the client reaches their weight goal it tags them, congratulates them and, one day later, schedules a video call review and creates the task for the coach to prepare the next-phase proposal.',
+    nodes: {
+      m1: { message: "🎉 CONGRATULATIONS {First Name}! You've reached your goal. This is 100% down to your consistency and effort. I'm really proud of you." },
+      ap: { title: 'New-phase review — {Client Name}' },
+      m2: { message: "{First Name}, I've scheduled a video call to define your next phase together (maintenance, recomposition, a new goal...). Talk soon!" },
+      nc: { title: 'Define the next phase with {Client Name}', description: 'The client reached their goal. You have a call scheduled in 3 days — prepare the new-phase proposal (plan and goals).' },
+    },
+  },
+  'Check-in atrasado segmentado por historial': {
+    name: 'Overdue check-in segmented by history',
+    description: "Handles the overdue check-in based on the client's history: if already flagged as a repeat offender, a firm alert + a task for the coach; if it is the first time, a gentle reminder and, only if they fail again, they are flagged as a repeat offender.",
+    nodes: {
+      rnc: { title: '{Client Name} skips the check-in again', description: 'Client who repeatedly misses check-ins. Consider a direct conversation about commitment.' },
+      rm: { message: "{First Name}, no check-in again. I need your data to really help you — shall we talk about what's going wrong?" },
+      sm: { message: "Hi {First Name} 👋 You missed this week's check-in. Whenever you can, send it over — it won't take long!" },
+      lnc: { title: '{Client Name}: check-in pending', description: "The client didn't send their check-in after the reminder. Flagged as a repeat offender for follow-up." },
+    },
+  },
+  'Win-back de cliente en riesgo profundo': {
+    name: 'Deep-risk client win-back',
+    description: "For clients inactive 21+ days it launches a single recovery attempt (personal message + priority call task), protected by a tag so it isn't repeated. If they return, it celebrates; if not, it pauses them and alerts the coach.",
+    nodes: {
+      m1: { message: "{First Name}, I'm writing to you personally. I know getting back on track is hard, and I want to help you without pressure. Can I call you this week so we figure out how to continue?" },
+      ct: { title: 'Win-back call — {Client Name}' },
+      bm: { message: "Welcome back, {First Name}! 🙌 I'm really glad. Let's go for it calmly and consistently." },
+      lnc: { title: '{Client Name}: no response to win-back', description: "The client didn't respond to the recovery attempt. Paused automatically — decide whether to archive or try again." },
+    },
+  },
+  'Vigilancia de adherencia al entrenamiento': {
+    name: 'Training adherence monitoring',
+    description: 'Each week it evaluates days since the last workout: if 7+ have passed it alerts the client and the coach and flags them at risk; if they train regularly it sends a reinforcement push (an extra one for a streak) and clears the risk tag.',
+    nodes: {
+      bm: { message: "{First Name}, I don't see any workouts logged this week. What happened? Let's get back to it today, even a short session 💪" },
+      bnc: { title: '{Client Name} not training (7+ days)', description: 'The client has gone more than a week without logging workouts. Check possible causes (injury, motivation, schedule).' },
+      hp: { title: 'Unstoppable streak! 🔥', body: "Another week getting it done. That's how results are built." },
+      op: { title: 'Good training week 💪', body: "Keep adding sessions, you're on the right track." },
+    },
+  },
+  'Auto-Coach: revisión semanal del cliente': {
+    name: 'Auto-Coach: weekly client review',
+    description: "Each week it reviews every client: if there's no check-in it requests one; if there is, it classifies by the adherence score (1-10) and acts — ready for progression (≥8), close follow-up (≤4) or consistency (5-7), also alerting the coach if pain is reported.",
+    nodes: {
+      rpush: { title: 'Your weekly check-in is waiting', body: "2 minutes so I can adjust your plan. Let's go!" },
+      tpnc: { title: '⬆️ {Client Name} ready for progression', description: 'Adherence ≥ 8/10 this week. Consider moving their plan up to the next level to keep the challenge.' },
+      tpm: { message: "{First Name}, a {{latestCheckin.nutrition_adherence_score}}/10 week 🔥 You're ready to level up. Your coach will review your plan for the next challenge." },
+      stnc: { title: '⚠️ {Client Name} needs support', description: 'Adherence of 4/10 or lower this week. Close contact recommended before they disengage.' },
+      stm: { message: "{First Name}, this week was hard and that's ok. What matters is to keep going. Tell me what was hardest and we'll adjust it — I'm with you." },
+      midm: { message: 'Great job keeping the pace, {First Name} 💪 Consistency week after week — that is how results are built.' },
+      midnc: { title: '{Client Name} reports discomfort', description: 'Discomfort flagged in the check-in. Review it before the next workout.' },
+    },
+  },
+  'Customer Journey: onboarding guiado de 14 días': {
+    name: 'Customer Journey: 14-day guided onboarding',
+    description: 'Orchestrates the client first 14 days with verification gates: plan assigned (day 1), first check-in (day 3), mid-point review reading adherence (day 7) and graduation vs. re-engagement (day 14).',
+    nodes: {
+      m0: { message: "Hi {First Name}! I'm {Coach Name} 🙌 Welcome. Over these first 14 days I'll guide you step by step so you start on the right foot." },
+      hpno: { title: 'Assign a plan to {Client Name}', description: "Client 1 day old and with no plan. Assign it so we don't slow down their start." },
+      hpyes: { message: '{First Name}, your plan is now in the app 🎯 Take today to review it calmly.' },
+      push1: { title: 'How are your first days going?', body: 'Remember to log your meals and workouts in the app.' },
+      d7nom: { message: "{First Name}, we've been together for a week. I still haven't seen your first check-in — tell me how you're doing, it's key to helping you 🙏" },
+      d7nonc: { title: '{Client Name}: 7 days without check-in', description: 'First week with no data. A personal message may re-engage them.' },
+      d7ok: { message: "Solid first week, {First Name}! 💪 You're getting into the rhythm. Let's keep going." },
+      d7low: { message: "{First Name}, first week completed — that's already an achievement! Let's fine-tune a couple of things to make next week easier." },
+      gradm: { message: "🎓 {First Name}, you've completed your first 14 days! The habit is now in motion. From here on, let's go for the results 🚀" },
+      risknc: { title: '{Client Name} finishes onboarding at risk', description: '14 days completed but with little activity. Schedule a re-engagement call.' },
+      riskap: { title: 'Follow-up call — {Client Name}' },
+    },
+  },
+  'Churn Radar: detección de riesgo de abandono': {
+    name: 'Churn Radar: dropout risk detection',
+    description: "Each day it classifies dropout risk by days without a check-in (7 / 14 / 21) and applies a proportional intervention — push, message, call — protected by state tags so it isn't repeated. When the client is active again, it clears the tags.",
+    nodes: {
+      redtask: { title: '🚨 Critical churn risk — {Client Name}' },
+      redm: { message: "{First Name}, I'm writing from the heart: it's been three weeks since I heard from you and I don't want you to throw away what you've achieved. I'm still here to help you. Can I call you?" },
+      rednc: { title: '🚨 {Client Name} at critical churn risk', description: '21+ days without a check-in. Urgent personal call — decide whether to recover or close the case.' },
+      orm: { message: "Hi {First Name}, it's been two weeks without news from you and I'm concerned. Is everything ok? Tell me and we'll pick it back up at your pace, no pressure." },
+      ornc: { title: '🟠 {Client Name}: 14 days without check-in', description: 'Medium dropout risk. A good moment for a personal contact from the coach.' },
+      yepush: { title: 'We miss you 👀', body: "It's been a week since we saw you. Come back whenever you want, we're still here!" },
+    },
+  },
+  'Quarterly Review: retención y crecimiento': {
+    name: 'Quarterly Review: retention and growth',
+    description: 'Every 90 days it reviews long-standing clients: if they are disengaged it schedules a strategic review; if they are active with high adherence it tags them as promoters and creates the task to ask for a testimonial and referrals.',
+    nodes: {
+      disnc: { title: 'Quarterly review: {Client Name} disengaged', description: 'Client with 90+ days but no check-in in the last month. Prepare a strategic review to win them back.' },
+      disap: { title: 'Strategic review — {Client Name}' },
+      dism: { message: "{First Name}, we've been together for a quarter and I want to make sure we're on the right track. I've scheduled a review to rethink whatever is needed 💪" },
+      winm: { message: "{First Name}, what a spectacular quarter! 🌟 Your consistency speaks for itself. If you feel like it, I'd love you to share your experience — and if you know someone I could help, they're more than welcome 🙌" },
+      winnc: { title: '⭐ {Client Name}: ask for testimonial / referral', description: 'Client of 90+ days with high adherence. Ideal moment to ask them for a review and referrals.' },
+      midm: { message: "{First Name}, we're closing a quarter together 🙌 We're doing well and there's still room. Let's keep fine-tuning so the next one is even better." },
+    },
+  },
+  'Smart Inbox: triaje de mensajes entrantes': {
+    name: 'Smart Inbox: incoming message triage',
+    description: 'When a client writes, it classifies the message by context: if they have a very recent check-in it flags it as priority for the coach; if they reappear after 2+ weeks inactive, it creates a reconnection task and replies warmly; if they are up to date, it creates a normal reply task.',
+    nodes: {
+      urgnc: { title: '💬 {Client Name} writes after their check-in', description: "The client sent a message and has a recent check-in. They're probably waiting for feedback — prioritize the reply." },
+      renc: { title: '🔄 {Client Name} reappears', description: 'Client with no check-in in 2+ weeks who writes again. Take the chance to re-engage them warmly.' },
+      rem: { message: "So great to hear from you, {First Name}! 🙌 Tell me how you're doing and we'll pick up right where we left off, no stress." },
+      nmtask: { title: 'Reply to {Client Name}' },
+      nmm: { message: "Got it, {First Name}! 👍 I'll reply right away." },
+    },
+  },
+};
+
+const TEXT_KEYS = ['message', 'title', 'body', 'description'] as const;
+
 /**
- * Siembra los 10 workflows avanzados por defecto para un manager.
- * Idempotente: salta los que ya existan (por nombre). Todos quedan
- * DESACTIVADOS — el manager los activa y edita cuando quiera.
+ * Devuelve los 15 workflows en el idioma indicado. Para 'en' aplica el
+ * overlay de texto sobre la estructura canónica (español); cualquier otro
+ * idioma devuelve el catálogo en español.
+ */
+export function localizeWorkflows(language: string): SeedWorkflow[] {
+  if (language !== 'en') return DEFAULT_WORKFLOWS;
+  return DEFAULT_WORKFLOWS.map(wf => {
+    const tx = WORKFLOW_TEXT_EN[wf.name];
+    if (!tx) return wf;
+    const clone: SeedWorkflow = JSON.parse(JSON.stringify(wf));
+    clone.name = tx.name;
+    clone.description = tx.description;
+    for (const n of clone.nodes as any[]) {
+      const nt = tx.nodes[n.id];
+      if (!nt || !n.config) continue;
+      for (const k of TEXT_KEYS) if (nt[k] !== undefined) n.config[k] = nt[k];
+    }
+    return clone;
+  });
+}
+
+/**
+ * Siembra los 15 workflows avanzados por defecto para un manager, en el
+ * idioma del manager (`profiles.language`). Idempotente: salta los que ya
+ * existan (por nombre). Todos quedan DESACTIVADOS — el manager los activa
+ * y edita cuando quiera.
  */
 export async function seedManagerWorkflows(managerId: string): Promise<void> {
   try {
+    const { data: prof } = await supabaseAdmin
+      .from('profiles').select('language').eq('user_id', managerId).maybeSingle();
+    const workflows = localizeWorkflows(prof?.language === 'en' ? 'en' : 'es');
+
     const { data: existing } = await supabaseAdmin
       .from('workflow_definitions')
       .select('name')
       .eq('manager_id', managerId);
     const have = new Set((existing || []).map((r: { name: string }) => r.name));
 
-    for (const wf of DEFAULT_WORKFLOWS) {
+    for (const wf of workflows) {
       if (have.has(wf.name)) continue;
 
       const { data: def, error: defErr } = await supabaseAdmin
