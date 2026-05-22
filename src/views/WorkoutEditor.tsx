@@ -739,7 +739,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
           {/* Right Column: Summary & Library */}
           <div className="w-full lg:w-[400px] flex flex-col gap-8">
             {/* Exercise Library */}
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col relative sticky top-6">
+            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col relative">
               <div className="px-6 py-6 border-b border-slate-100 flex flex-col gap-4 shrink-0">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-slate-900">{t('exercise_library')}</h3>
