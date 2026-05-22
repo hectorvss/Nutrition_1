@@ -10,6 +10,10 @@ import { vapidPublicKey, pushConfigured } from '../lib/push.js';
 import { nutritionPlanSchema, trainingProgramSchema } from '../schemas/plans.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { limitsForTier, isAccessBlocked, trialDaysLeft, makeEnforceLimit, countActiveAutomations, type PlanTier } from '../lib/plans.js';
+import type { AnalyticsContext } from '../lib/analytics/types.js';
+import { computeBusinessExtras } from '../lib/analytics/business.js';
+import { computeNutritionExtras } from '../lib/analytics/nutrition.js';
+import { computeTrainingExtras } from '../lib/analytics/training.js';
 import { repeatLabelToRrule, expandTaskDates, applyExceptions, virtualInstanceId, parseVirtualId, type TaskRow, type TaskException } from '../lib/recurrence.js';
 
 // Limit enforcer for client creation. Counts active clients under this manager
@@ -2204,10 +2208,15 @@ router.get('/analytics', async (req: any, res) => {
 
   try {
     const now = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const sixtyDaysAgo = new Date();
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    // Ventana temporal seleccionable desde la UI: ?days=7|30|90|365 (def. 30).
+    // TODOS los KPIs basados en tiempo usan esta ventana.
+    const daysParam = parseInt(String(req.query.days), 10);
+    const windowDays = Number.isFinite(daysParam) ? Math.min(365, Math.max(7, daysParam)) : 30;
+    const windowStart = new Date(now);
+    windowStart.setDate(windowStart.getDate() - windowDays);
+    // Ventana anterior de la misma longitud — para comparar el churn.
+    const prevStart = new Date(now);
+    prevStart.setDate(prevStart.getDate() - windowDays * 2);
 
     // 1. Single clients fetch — replaces 3 serial COUNT queries
     const { data: allClientData } = await supabaseAdmin
@@ -2219,7 +2228,7 @@ router.get('/analytics', async (req: any, res) => {
 
     const totalClients = allClientData?.length || 0;
     const activeClients = allClientData?.filter(c => c.status === 'Active').length || 0;
-    const newClients = allClientData?.filter(c => new Date(c.created_at) >= thirtyDaysAgo).length || 0;
+    const newClients = allClientData?.filter(c => new Date(c.created_at) >= windowStart).length || 0;
     const clientIds = (allClientData || []).map(c => c.id);
 
     // 2. Run all main data queries in parallel
@@ -2236,9 +2245,10 @@ router.get('/analytics', async (req: any, res) => {
       workoutLogsRes,
       nutritionPlansRes,
     ] = await Promise.all([
-      // Performance metrics: check_ins last 60 days — filtered by clientIds (no join needed)
+      // Performance metrics: check_ins de la ventana actual + la anterior
+      // (para el churn) — filtrado por clientIds (sin join).
       clientIds.length > 0
-        ? supabaseAdmin.from('check_ins').select('date, data_json, client_id').in('client_id', clientIds).gte('date', sixtyDaysAgo.toISOString().split('T')[0])
+        ? supabaseAdmin.from('check_ins').select('date, data_json, client_id').in('client_id', clientIds).gte('date', prevStart.toISOString().split('T')[0])
         : Promise.resolve({ data: [], error: null }),
       // Recent legacy check-ins for activity feed
       clientIds.length > 0
@@ -2260,17 +2270,17 @@ router.get('/analytics', async (req: any, res) => {
       clientIds.length > 0
         ? supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, reviewed_at, client_id, users!inner (email, profiles!left (full_name))').in('client_id', clientIds).order('submitted_at', { ascending: false }).limit(10)
         : Promise.resolve({ data: [], error: null }),
-      // Performance metrics: dynamic submissions last 60 days (merged with legacy below)
+      // Performance metrics: dynamic submissions de ventana actual + anterior
       clientIds.length > 0
-        ? supabaseAdmin.from('client_checkin_submissions').select('submitted_at, answers_json, client_id').in('client_id', clientIds).gte('submitted_at', sixtyDaysAgo.toISOString())
+        ? supabaseAdmin.from('client_checkin_submissions').select('submitted_at, answers_json, client_id').in('client_id', clientIds).gte('submitted_at', prevStart.toISOString())
         : Promise.resolve({ data: [], error: null }),
       // All dynamic submissions for cohort analysis (lightweight: client_id + date)
       clientIds.length > 0
         ? supabaseAdmin.from('client_checkin_submissions').select('client_id, submitted_at').in('client_id', clientIds)
         : Promise.resolve({ data: [], error: null }),
-      // Workout logs last 30 days — for real training volume
+      // Workout logs de la ventana seleccionada — volumen de entrenamiento real
       clientIds.length > 0
-        ? supabaseAdmin.from('workout_logs').select('logged_at, exercises, client_id').in('client_id', clientIds).gte('logged_at', thirtyDaysAgo.toISOString())
+        ? supabaseAdmin.from('workout_logs').select('logged_at, exercises, client_id').in('client_id', clientIds).gte('logged_at', windowStart.toISOString())
         : Promise.resolve({ data: [], error: null }),
       // Nutrition plans — for the calorie-goal line
       clientIds.length > 0
@@ -2303,11 +2313,11 @@ router.get('/analytics', async (req: any, res) => {
     }));
     const allCheckIns = [...(allCheckInsRes.data || []), ...allSubmissions];
 
-    // Filter check-ins into buckets
-    const last30DaysCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= thirtyDaysAgo);
+    // Filter check-ins into buckets — ventana actual vs ventana anterior
+    const last30DaysCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= windowStart);
     const previous30DaysCheckIns = (checkIns || []).filter(ci => {
       const d = new Date(ci.date);
-      return d >= sixtyDaysAgo && d < thirtyDaysAgo;
+      return d >= prevStart && d < windowStart;
     });
 
     const activeClientsLast30 = new Set(last30DaysCheckIns.map(ci => ci.client_id)).size;
@@ -2328,19 +2338,30 @@ router.get('/analytics', async (req: any, res) => {
       ? Number((activeClientsLast30 / totalClients * 100).toFixed(1)) 
       : 0;
 
-    // 3. Aggregate Nutrition & Training Stats (Last 30 Days)
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (6 - i));
-      return d.toISOString().split('T')[0];
+    // 3. Aggregate Nutrition & Training Stats (sobre la ventana seleccionada)
+    // Las series temporales (gráficos de calorías y volumen) dividen la
+    // ventana en 7 segmentos iguales. `bucketIndexOf` mapea una fecha a su
+    // segmento; `trendLabels` son las fechas de inicio de cada segmento.
+    const BUCKETS = 7;
+    const bucketSpanMs = (windowDays / BUCKETS) * 86400000;
+    const bucketIndexOf = (dateStr: string): number => {
+      if (!dateStr) return -1;
+      const ts = new Date(dateStr).getTime();
+      if (Number.isNaN(ts)) return -1;
+      const diff = ts - windowStart.getTime();
+      if (diff < 0) return -1;
+      let idx = Math.floor(diff / bucketSpanMs);
+      if (idx >= BUCKETS) idx = BUCKETS - 1;
+      return idx;
+    };
+    const trendLabels = Array.from({ length: BUCKETS }, (_, i) => {
+      const d = new Date(windowStart.getTime() + i * bucketSpanMs);
+      return `${d.getDate()}/${d.getMonth() + 1}`;
     });
 
-    let dailyNutrition: Record<string, { intake: number[], goal: number[], count: number[] }> = {};
-    let dailyTraining: Record<string, { volume: number[], rpe: number[], count: number[] }> = {};
-    
-    // Initialize day buckets
-    const caloriesByDay = last7Days.map(() => ({ intake: 0, goal: 0, count: 0 }));
-    const trainingByDay = last7Days.map(() => ({ volume: 0, intensity: 0, count: 0 }));
+    // Initialize bucket accumulators
+    const caloriesByDay = Array.from({ length: BUCKETS }, () => ({ intake: 0, goal: 0, count: 0 }));
+    const trainingByDay = Array.from({ length: BUCKETS }, () => ({ volume: 0, intensity: 0, count: 0 }));
     const clientDeficits: Record<string, { name: string, email: string, deficit: number }> = {};
 
     let nutrition = {
@@ -2377,7 +2398,7 @@ router.get('/analytics', async (req: any, res) => {
       last30DaysCheckIns.forEach(ci => {
         const d = ci.data_json as any;
         const ciDate = ci.date;
-        const dayIdx = last7Days.indexOf(ciDate);
+        const dayIdx = bucketIndexOf(ciDate);
 
         // Nutrition adherence — fixed metric `nutrition_adherence_score` (1-10).
         const adherenceBase = d.nutrition_adherence_score !== undefined ? Number(d.nutrition_adherence_score) * 10
@@ -2472,16 +2493,18 @@ router.get('/analytics', async (req: any, res) => {
         return v;
       };
       const logs = workoutLogsRes.data || [];
-      const volByDay = last7Days.map(() => 0);
+      const volByDay = Array.from({ length: BUCKETS }, () => 0);
       let totalVol = 0;
       logs.forEach((log: any) => {
         const v = sessionVolume(log);
         totalVol += v;
         const day = (log.logged_at || '').split('T')[0];
-        const idx = last7Days.indexOf(day);
+        const idx = bucketIndexOf(day);
         if (idx !== -1) volByDay[idx] += v;
       });
-      training.totalVolume = logs.length > 0 ? Math.round(totalVol / logs.length) : 0;
+      // Volumen TOTAL real movido en los últimos 30 días (peso × reps de
+      // todas las series de todas las sesiones), no la media por sesión.
+      training.totalVolume = Math.round(totalVol);
       training.volumeTrends = volByDay;
     }
 
@@ -2507,7 +2530,7 @@ router.get('/analytics', async (req: any, res) => {
       const avgGoal = planVals.length
         ? Math.round(planVals.reduce((a: number, b: number) => a + b, 0) / planVals.length)
         : 0;
-      nutrition.calories.goal = last7Days.map(() => avgGoal);
+      nutrition.calories.goal = Array.from({ length: BUCKETS }, () => avgGoal);
     }
 
     // 4. Cohort Analysis Logic (uses allClientData + allCheckIns already fetched)
@@ -2554,9 +2577,10 @@ router.get('/analytics', async (req: any, res) => {
     // 5. Compliance Score Calculation (Weighted aggregation of adherence)
     const complianceScore = training.avgCompletion * 0.4 + nutrition.avgHydration * 0.3 + (retentionRate) * 0.3;
 
-    // Check-in reliability: % of active clients who submitted a check-in in the last 7 days.
+    // Check-in reliability: % of active clients who submitted a check-in
+    // within the selected window.
     const checkedInClientIds = new Set(
-      (checkIns || []).filter(ci => last7Days.includes(ci.date)).map(ci => ci.client_id)
+      (checkIns || []).filter(ci => bucketIndexOf(ci.date) >= 0).map(ci => ci.client_id)
     );
     const checkInReliability = activeClients > 0
       ? Math.round((checkedInClientIds.size / activeClients) * 100)
@@ -2675,14 +2699,23 @@ router.get('/analytics', async (req: any, res) => {
       try {
         const stripe = newStripeClient(integrations.stripe_secret_key);
         const startOfYear = Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000);
-        const charges = await stripe.charges.list({ created: { gte: startOfYear }, limit: 100 });
-        charges.data.forEach(c => {
+        const windowStartSec = Math.floor(windowStart.getTime() / 1000);
+        // Auto-paginación: recorre TODOS los cobros (no solo los primeros 100).
+        // Solo cuenta cobros exitosos y descuenta reembolsos → ingreso neto.
+        // `revenue` = ingreso de la ventana seleccionada; `monthlyRevenue` =
+        // gráfico anual de los 12 meses del año en curso.
+        let windowRevenue = 0;
+        for await (const c of stripe.charges.list({ created: { gte: Math.min(startOfYear, windowStartSec) }, limit: 100 })) {
+          if (c.status !== 'succeeded' || !c.paid) continue;
+          const net = (c.amount - (c.amount_refunded || 0)) / 100;
           const date = new Date(c.created * 1000);
           if (date.getFullYear() === now.getFullYear()) {
-            monthlyRevenue[date.getMonth()] += (c.amount / 100);
+            monthlyRevenue[date.getMonth()] += net;
           }
-        });
-        revenue = monthlyRevenue[now.getMonth()];
+          if (c.created >= windowStartSec) windowRevenue += net;
+        }
+        monthlyRevenue = monthlyRevenue.map(v => Math.round(v * 100) / 100);
+        revenue = Math.round(windowRevenue * 100) / 100;
       } catch (sErr) { console.error('Stripe analytics error:', sErr); }
     }
 
@@ -2736,29 +2769,76 @@ router.get('/analytics', async (req: any, res) => {
       percentage: totalExercises > 0 ? Math.round((count / totalExercises) * 100) : 0
     }));
 
+    // LTV: normaliza el ingreso de la ventana a un equivalente mensual
+    // (revenue / windowDays * 30) y asume una vida media de 6 meses, para
+    // que el LTV no varíe artificialmente al cambiar la ventana.
+    const monthlyEquivRevenue = windowDays > 0 ? (revenue / windowDays) * 30 : 0;
+
+    // Objetos base de cada pestaña (KPIs originales ya verificados).
+    const businessBase = {
+      totalClients: totalClients || 0,
+      activeClients: activeClients || 0,
+      newLeads: newClients || 0,
+      retention: retentionRate,
+      churnRate,
+      revenue: revenue || 0,
+      ltv: totalClients ? Math.round((monthlyEquivRevenue * 6) / totalClients) : 0,
+      monthlyRevenue,
+      cohorts,
+      complianceScore: Math.round(complianceScore || 0),
+      workoutAdherence: training.avgCompletion,
+      nutritionConsistency: nutrition.consistency,
+      checkInReliability,
+    };
+    const nutritionBase = { ...nutrition, trendLabels };
+    const trainingBase = {
+      ...training,
+      activePrograms,
+      distribution: trainingDistribution,
+      muscleFrequency,
+      trendLabels,
+    };
+
+    // Mapa client_id -> nombre, para que los módulos de KPIs muestren nombres
+    // reales en rankings y listas (los check-ins no traen datos de usuario).
+    const { data: clientProfilesRows } = clientIds.length > 0
+      ? await supabaseAdmin.from('profiles').select('user_id, full_name').in('user_id', clientIds)
+      : { data: [] as any[] };
+    const clientNames: Record<string, string> = {};
+    (clientProfilesRows || []).forEach((p: any) => {
+      if (p.full_name) clientNames[p.user_id] = p.full_name;
+    });
+
+    // Contexto compartido para los módulos de KPIs ampliados. Cada módulo
+    // (business / nutrition / training) vive en server/lib/analytics/ y
+    // devuelve claves que se fusionan sobre el objeto base de su pestaña.
+    const analyticsCtx: AnalyticsContext = {
+      managerId, now, windowDays, windowStart, prevStart,
+      allClientData: allClientData || [],
+      clientIds, totalClients, activeClients,
+      checkIns, allCheckIns, last30DaysCheckIns, previous30DaysCheckIns,
+      workoutLogs: workoutLogsRes.data || [],
+      programs: allPrograms,
+      nutritionPlans: nutritionPlansRes.data || [],
+      integrations,
+      recentMessages: recentMessages || [],
+      recentCheckIns: recentCheckIns || [],
+      recentSubmissions: recentSubmissions || [],
+      clientNames,
+      BUCKETS, trendLabels, bucketIndexOf,
+      business: businessBase, nutrition: nutritionBase, training: trainingBase,
+    };
+    const [businessExtra, nutritionExtra, trainingExtra] = await Promise.all([
+      computeBusinessExtras(analyticsCtx).catch((e) => { console.error('business KPIs:', e); return {}; }),
+      computeNutritionExtras(analyticsCtx).catch((e) => { console.error('nutrition KPIs:', e); return {}; }),
+      computeTrainingExtras(analyticsCtx).catch((e) => { console.error('training KPIs:', e); return {}; }),
+    ]);
+
     res.json({
-      business: {
-        totalClients: totalClients || 0,
-        activeClients: activeClients || 0,
-        newLeads: newClients || 0,
-        retention: retentionRate, 
-        churnRate,
-        revenue: revenue || 0,
-        ltv: totalClients ? Math.round((revenue * 6) / totalClients) : 0,
-        monthlyRevenue,
-        cohorts,
-        complianceScore: Math.round(complianceScore || 0),
-        workoutAdherence: training.avgCompletion,
-        nutritionConsistency: nutrition.consistency,
-        checkInReliability
-      },
-      nutrition,
-      training: {
-        ...training,
-        activePrograms,
-        distribution: trainingDistribution,
-        muscleFrequency
-      },
+      windowDays,
+      business: { ...businessBase, ...businessExtra },
+      nutrition: { ...nutritionBase, ...nutritionExtra },
+      training: { ...trainingBase, ...trainingExtra },
       recentActivity: activity.length > 0 ? activity : [
          { type: 'SYSTEM', title: 'Welcome', sub: 'to your dashboard', time: 'Just now', color: 'bg-blue-100 text-blue-600' }
       ],

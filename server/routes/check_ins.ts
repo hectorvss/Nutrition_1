@@ -326,6 +326,15 @@ const injectFixedQuestions = (schema: CheckInSchemaStep[]) => {
   return [...stepsToInject, ...safeSchema];
 };
 
+// Inverso de injectFixedQuestions: quita los pasos fijos (locked) antes de
+// PERSISTIR un template. FIXED_CHECKIN_QUESTIONS es la única fuente de verdad
+// de las preguntas de KPI — se reinyectan en cada lectura, así que nunca se
+// guardan en la fila del template (evita duplicados y desincronización si el
+// contrato de KPIs cambia). Los pasos fijos se reconocen por `locked: true`.
+const stripFixedQuestions = (schema: CheckInSchemaStep[]): CheckInSchemaStep[] => {
+  return (schema || []).filter((step: any) => !step?.locked);
+};
+
 // Returns the ids of every `required` question in `schema` that has no usable
 // answer in `answers`. Mirrors the client-side validation: conditional
 // questions that are not currently visible are skipped, and composite types
@@ -1069,7 +1078,16 @@ router.get('/manager/checkin-templates', verifyManager, async (req: AuthedReques
       }
     }
 
-    res.json(buildPage(list, page.limit, 'created_at'));
+    // Inyecta las preguntas fijas de KPI en cada template para que el editor
+    // del coach las muestre como pasos bloqueados (no eliminables), igual que
+    // las ve el cliente. No se persisten así: el PATCH/POST las quita antes
+    // de guardar (stripFixedQuestions).
+    const listWithFixed = list.map((tpl: Record<string, any>) => ({
+      ...tpl,
+      template_schema: injectFixedQuestions(tpl.template_schema),
+    }));
+
+    res.json(buildPage(listWithFixed, page.limit, 'created_at'));
   } catch (error: unknown) {
     console.error('Error fetching templates:', error);
     res.status(500).json({ error: 'Server error' });
@@ -1095,7 +1113,8 @@ router.post('/manager/checkin-templates', verifyManager, async (req: AuthedReque
         manager_id: managerId,
         name,
         description,
-        template_schema: template_schema || [],
+        // No persistir los pasos fijos: se reinyectan en cada lectura.
+        template_schema: stripFixedQuestions(template_schema || []),
         is_default: !!is_default,
         version: 1
       })
@@ -1120,6 +1139,12 @@ router.patch('/manager/checkin-templates/:id', verifyManager, async (req: Authed
   const updates: Record<string, any> = {};
   for (const key of ALLOWED) {
     if (key in req.body) updates[key] = req.body[key];
+  }
+  // No persistir los pasos fijos de KPI: son la fuente de verdad de
+  // FIXED_CHECKIN_QUESTIONS y se reinyectan al leer. Esto también hace que la
+  // comparación de versión de abajo sea correcta (schema limpio vs. limpio).
+  if (updates.template_schema) {
+    updates.template_schema = stripFixedQuestions(updates.template_schema);
   }
 
   try {
