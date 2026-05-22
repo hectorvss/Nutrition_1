@@ -3,21 +3,16 @@ import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { safeErr } from '../lib/http.js';
-import { makeEnforceLimit } from '../lib/plans.js';
+import { makeEnforceLimit, countActiveAutomations } from '../lib/plans.js';
 import { sendPushToUser } from '../lib/push.js';
 
 const router = Router();
 
-// Block workflow activation once the manager reaches their tier's active
-// workflow cap (PLAN_LIMITS.activeWorkflows). Counts `enabled=true` definitions.
-const enforceWorkflowLimit = makeEnforceLimit(supabaseAdmin, 'activeWorkflows', async (userId: string) => {
-  const { count } = await supabaseAdmin
-    .from('workflow_definitions')
-    .select('id', { count: 'exact', head: true })
-    .eq('manager_id', userId)
-    .eq('enabled', true);
-  return count ?? 0;
-});
+// Block workflow activation once the manager reaches their tier's automation
+// cap. Cupo unico `activeAutomations`: cuenta automations simples + workflows
+// avanzados juntos — para el usuario todo son "automatizaciones".
+const enforceWorkflowLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomations',
+  (userId: string) => countActiveAutomations(supabaseAdmin, userId));
 
 /* ============================================================
  * Advanced Workflow builder — backend

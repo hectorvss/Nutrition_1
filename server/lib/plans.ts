@@ -10,10 +10,12 @@ export interface PlanLimits {
   activeClients: number | null;
   monthlyMessages: number | null;
   storageGB: number | null;
+  /** Cupo unico de automatizaciones: cuenta automations simples + workflows
+   *  avanzados juntos. Ambos son "automatizaciones" y comparten este limite. */
   activeAutomations: number | null;
   activeAlerts: number | null;
-  /** Advanced Workflow Builder — separate from the simple `activeAutomations`
-   *  bucket because workflows are more powerful and we want to gate them harder. */
+  /** @deprecated Los workflows avanzados ya cuentan dentro de `activeAutomations`.
+   *  Se conserva el campo por compatibilidad pero no se usa para enforcement. */
   activeWorkflows: number | null;
   /**
    * Limites sobre el motor de automatizaciones simples (workflow simple).
@@ -130,6 +132,29 @@ export function trialDaysLeft(trialEndsAt: string | null | undefined): number | 
 //
 // `resource` is one of the keys in PlanLimits, used to look up the cap.
 export type LimitResource = keyof PlanLimits;
+
+/**
+ * Cuenta total de automatizaciones ACTIVAS de un manager: automations simples
+ * + workflows avanzados publicados. Ambos tipos comparten el mismo cupo
+ * `activeAutomations` del plan, porque para el usuario "todo son
+ * automatizaciones". Es la fuente de verdad tanto para el enforcement
+ * (al crear/publicar) como para la barra de uso en facturacion.
+ */
+export async function countActiveAutomations(supabaseAdmin: any, userId: string): Promise<number> {
+  const [simple, workflows] = await Promise.all([
+    supabaseAdmin
+      .from('automations')
+      .select('id', { count: 'exact', head: true })
+      .eq('manager_id', userId)
+      .eq('enabled', true),
+    supabaseAdmin
+      .from('workflow_definitions')
+      .select('id', { count: 'exact', head: true })
+      .eq('manager_id', userId)
+      .eq('enabled', true),
+  ]);
+  return (simple.count ?? 0) + (workflows.count ?? 0);
+}
 
 export function makeEnforceLimit(
   supabaseAdmin: any,

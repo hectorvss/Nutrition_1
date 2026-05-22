@@ -6,22 +6,17 @@ import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { resumeWaitingWorkflows, fireScheduledWorkflows } from './workflows.js';
 import { logger } from '../lib/logger.js';
-import { makeEnforceLimit, limitsForTier, type PlanTier } from '../lib/plans.js';
+import { makeEnforceLimit, limitsForTier, countActiveAutomations, type PlanTier } from '../lib/plans.js';
 import { TRIGGERS, TRIGGER_BY_ID, filterTriggersByTier } from '../lib/automation-triggers.js';
 import { ACTIVATION_CONDITIONS, STOP_CONDITIONS, filterConditionsByTier } from '../lib/automation-conditions.js';
 import { FLOW_TEMPLATES } from '../lib/automation-templates.js';
 import { sendPushToUser } from '../lib/push.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
-// Block automation creation once the manager hits their tier's active-automation cap.
-const enforceAutomationLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomations', async (userId: string) => {
-  const { count } = await supabaseAdmin
-    .from('automations')
-    .select('id', { count: 'exact', head: true })
-    .eq('manager_id', userId)
-    .eq('enabled', true);
-  return count ?? 0;
-});
+// Block automation creation once the manager hits their tier's active-automation
+// cap. El cupo es unico: cuenta automations simples + workflows avanzados juntos.
+const enforceAutomationLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomations',
+  (userId: string) => countActiveAutomations(supabaseAdmin, userId));
 
 const router = Router();
 

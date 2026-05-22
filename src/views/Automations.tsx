@@ -4,14 +4,13 @@ import AutomationsList from './AutomationsList';
 import AutomationCreateTrigger from './AutomationCreateTrigger';
 import AutomationFlowBuilder from './AutomationFlowBuilder';
 import AutomationCreateReview from './AutomationCreateReview';
-import WorkflowsList from './WorkflowsList';
 import WorkflowBuilder from './WorkflowBuilder';
 import { Automation, AutomationDeliveryRules } from '../context/AutomationContext';
 import { fetchWithAuth } from '../api';
 
 type AutomationsView =
   | 'list' | 'step-trigger' | 'step-message' | 'step-review'
-  | 'workflow-list' | 'workflow-builder';
+  | 'workflow-builder';
 
 interface WizardData {
   triggerId: string;
@@ -91,22 +90,16 @@ export default function Automations() {
         return (
           <AutomationsList
             onCreateNew={startCreate}
-            onCreateWorkflow={() => setCurrentView('workflow-list')}
+            onCreateWorkflow={() => { setActiveWorkflowId(null); setCurrentView('workflow-builder'); }}
             onEdit={startEdit}
-          />
-        );
-      case 'workflow-list':
-        return (
-          <WorkflowsList
-            onBack={() => setCurrentView('list')}
-            onOpen={(id) => { setActiveWorkflowId(id); setCurrentView('workflow-builder'); }}
+            onOpenWorkflow={(id) => { setActiveWorkflowId(id); setCurrentView('workflow-builder'); }}
           />
         );
       case 'workflow-builder':
         return (
           <WorkflowBuilder
             workflowId={activeWorkflowId}
-            onBack={() => setCurrentView('workflow-list')}
+            onBack={() => setCurrentView('list')}
           />
         );
       case 'step-trigger':
@@ -170,8 +163,9 @@ export default function Automations() {
         return (
           <AutomationsList
             onCreateNew={startCreate}
-            onCreateWorkflow={() => setCurrentView('workflow-list')}
+            onCreateWorkflow={() => { setActiveWorkflowId(null); setCurrentView('workflow-builder'); }}
             onEdit={startEdit}
+            onOpenWorkflow={(id) => { setActiveWorkflowId(id); setCurrentView('workflow-builder'); }}
           />
         );
     }

@@ -9,7 +9,7 @@ import { runWorkflowsForEvent } from './workflows.js';
 import { vapidPublicKey, pushConfigured } from '../lib/push.js';
 import { nutritionPlanSchema, trainingProgramSchema } from '../schemas/plans.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
-import { limitsForTier, isAccessBlocked, trialDaysLeft, makeEnforceLimit, type PlanTier } from '../lib/plans.js';
+import { limitsForTier, isAccessBlocked, trialDaysLeft, makeEnforceLimit, countActiveAutomations, type PlanTier } from '../lib/plans.js';
 import { repeatLabelToRrule, expandTaskDates, applyExceptions, virtualInstanceId, parseVirtualId, type TaskRow, type TaskException } from '../lib/recurrence.js';
 
 // Limit enforcer for client creation. Counts active clients under this manager
@@ -1933,11 +1933,8 @@ router.get('/billing/status', async (req: any, res) => {
         .eq('manager_id', userId)
         .eq('role', 'CLIENT')
         .neq('status', 'inactive'),
-      supabaseAdmin
-        .from('automations')
-        .select('id', { count: 'exact', head: true })
-        .eq('manager_id', userId)
-        .eq('enabled', true),
+      // Cupo unico: automations simples + workflows avanzados activos.
+      countActiveAutomations(supabaseAdmin, userId),
       supabaseAdmin
         .from('messages')
         .select('id', { count: 'exact', head: true })
@@ -1947,7 +1944,7 @@ router.get('/billing/status', async (req: any, res) => {
 
     const usage = {
       activeClients: clientsCount.count ?? 0,
-      activeAutomations: automationsCount.count ?? 0,
+      activeAutomations: automationsCount,
       monthlyMessages: monthlyMsgCount.count ?? 0,
       activeAlerts: 0,
       storageGB: 0,
