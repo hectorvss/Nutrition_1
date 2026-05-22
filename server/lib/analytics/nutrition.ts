@@ -157,18 +157,33 @@ export async function computeNutritionExtras(ctx: AnalyticsContext): Promise<Rec
   // -------------------------------------------------------------------------
   // 3. Cambio de peso de la cartera (check-ins actual vs anterior).
   // -------------------------------------------------------------------------
-  const avgWeightOf = (rows: any[]): number => {
-    let s = 0, n = 0;
+  // Peso más reciente de cada cliente dentro de un conjunto de check-ins.
+  const latestWeightByClient = (rows: any[]): Record<string, { date: string; weight: number }> => {
+    const m: Record<string, { date: string; weight: number }> = {};
     (rows || []).forEach((ci: any) => {
       const w = Number((ci.data_json || {}).weight);
-      if (Number.isFinite(w) && w > 0) { s += w; n++; }
+      if (!Number.isFinite(w) || w <= 0) return;
+      const prev = m[ci.client_id];
+      if (!prev || String(ci.date) > prev.date) {
+        m[ci.client_id] = { date: String(ci.date), weight: w };
+      }
     });
-    return n > 0 ? s / n : 0;
+    return m;
   };
-  const curWeight = avgWeightOf(last30DaysCheckIns);
-  const prevWeight = avgWeightOf(previous30DaysCheckIns);
-  const portfolioWeightChange = (curWeight > 0 && prevWeight > 0)
-    ? Number((curWeight - prevWeight).toFixed(1))
+  // Cambio de peso = media del delta POR CLIENTE (peso reciente vs. peso de la
+  // ventana anterior, del MISMO cliente). Antes se comparaba la media de
+  // clientes distintos entre ventanas, lo que no medía un cambio real.
+  const curWeights = latestWeightByClient(last30DaysCheckIns);
+  const prevWeights = latestWeightByClient(previous30DaysCheckIns);
+  let weightDeltaSum = 0, weightDeltaN = 0;
+  Object.keys(curWeights).forEach((cid) => {
+    if (prevWeights[cid]) {
+      weightDeltaSum += curWeights[cid].weight - prevWeights[cid].weight;
+      weightDeltaN++;
+    }
+  });
+  const portfolioWeightChange = weightDeltaN > 0
+    ? Number((weightDeltaSum / weightDeltaN).toFixed(1))
     : 0;
 
   // -------------------------------------------------------------------------

@@ -264,11 +264,19 @@ export async function computeBusinessExtras(ctx: AnalyticsContext): Promise<Reco
       out.arr = Math.round(mrr * 12 * 100) / 100;
       out.activeSubscriptions = activeSubs;
       out.activeTrials = activeTrials;
-      out.subscriptionChurnRate = totalSubsConsidered
-        ? Math.round((canceledInWindow / totalSubsConsidered) * 1000) / 10
+      // Churn de suscripción = cancelaciones en la ventana / suscripciones que
+      // estaban vivas al inicio de la ventana (activas ahora + las canceladas
+      // durante la ventana). NO sobre todas las subs de la historia.
+      const subsAtWindowStart = activeSubs + canceledInWindow;
+      out.subscriptionChurnRate = subsAtWindowStart
+        ? Math.round((canceledInWindow / subsAtWindowStart) * 1000) / 10
         : 0;
-      out.trialConversionRate = trialsTotal
-        ? Math.round((trialsConverted / trialsTotal) * 1000) / 10
+      // Conversión trial→pago = trials que ya pagan / trials YA RESUELTOS
+      // (se excluyen los trials aún en curso, que todavía no han convertido
+      // ni fallado y por tanto no deben lastrar el ratio).
+      const resolvedTrials = trialsTotal - activeTrials;
+      out.trialConversionRate = resolvedTrials > 0
+        ? Math.round((trialsConverted / resolvedTrials) * 1000) / 10
         : 0;
       out.upcomingRenewalsCount = upcomingRenewalsCount;
       out.upcomingRenewalsAmount = Math.round(upcomingRenewalsAmount * 100) / 100;
@@ -322,13 +330,19 @@ export async function computeBusinessExtras(ctx: AnalyticsContext): Promise<Reco
 
       // Ingreso neto = bruto - reembolsos
       out.netRevenue = Math.round((grossRevenue - refundsAmount) * 100) / 100;
+      // ARPU = ingreso neto NORMALIZADO a un mes / clientes activos. Se
+      // normaliza (netRevenue / windowDays * 30) para que el ARPU no cambie
+      // al variar la ventana — siempre es "ingreso mensual por cliente".
+      const monthlyNetRevenue = ctx.windowDays > 0
+        ? (out.netRevenue / ctx.windowDays) * 30
+        : 0;
       out.arpu = ctx.activeClients
-        ? Math.round((out.netRevenue / ctx.activeClients) * 100) / 100
+        ? Math.round((monthlyNetRevenue / ctx.activeClients) * 100) / 100
         : 0;
 
-      // --- Disputas abiertas ---
+      // --- Disputas abiertas en la ventana ---
       let openDisputes = 0;
-      for await (const dispute of stripe.disputes.list({ limit: 100 })) {
+      for await (const dispute of stripe.disputes.list({ limit: 100, created: { gte: windowStartTs } })) {
         const openStatuses = [
           'warning_needs_response',
           'warning_under_review',

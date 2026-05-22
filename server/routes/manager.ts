@@ -2262,7 +2262,7 @@ router.get('/analytics', async (req: any, res) => {
         : Promise.resolve({ data: [], error: null }),
       // Training programs
       clientIds.length > 0
-        ? supabaseAdmin.from('training_programs').select('data_json').in('client_id', clientIds)
+        ? supabaseAdmin.from('training_programs').select('data_json, client_id').in('client_id', clientIds)
         : Promise.resolve({ data: [], error: null }),
       // Integrations (for Stripe revenue)
       supabaseAdmin.from('integrations').select('*').eq('user_id', managerId).maybeSingle(),
@@ -2424,8 +2424,10 @@ router.get('/analytics', async (req: any, res) => {
         sumHydration += hydrateVal;
 
         // Alcohol — fixed metric `alcohol_intake`.
-        const alcohol = d.alcohol_intake ?? d.alcoholIntake;
-        if (alcohol && alcohol !== 'None') nutrition.alcoholAlerts++;
+        // Alerta de alcohol: solo consumo Moderado/Alto cuenta como alerta —
+        // un consumo "Bajo" (Low) no debería disparar una alerta.
+        const alcohol = String(d.alcohol_intake ?? d.alcoholIntake ?? '');
+        if (alcohol === 'Moderate' || alcohol === 'High') nutrition.alcoholAlerts++;
 
         // Supplement adherence — fixed metric `supplements_taken` (All/Most/Some/None).
         if (d.supplements_taken !== undefined) {
@@ -2585,7 +2587,12 @@ router.get('/analytics', async (req: any, res) => {
     const checkInReliability = activeClients > 0
       ? Math.round((checkedInClientIds.size / activeClients) * 100)
       : 0;
-    const activePrograms = allPrograms.length;
+    // Programas activos = nº de CLIENTES con al menos un programa de
+    // entrenamiento (distinct client_id), no el nº total de filas — un cliente
+    // con varios programas no debe contar varias veces.
+    const activePrograms = new Set(
+      (allPrograms || []).map((p: any) => p.client_id).filter(Boolean)
+    ).size;
 
     // 6. Recent Activity & Attention Required (recentCheckIns + recentMessages from Promise.all above)
     const activity = [

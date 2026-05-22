@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   CheckCircle2, Dumbbell, ListChecks, Gauge,
-  Activity, Timer, Trophy, UserX, Layers, Star, CalendarRange, TrendingUp,
+  Activity, Trophy, UserX, Layers, Star, CalendarRange, TrendingUp,
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -46,7 +46,6 @@ export default function TrainingAnalytics({ data }: any) {
 
   // ---- KPIs (data.<clave>) ---------------------------------------------
   const completedWorkouts = data?.completedWorkouts ?? 0;
-  const avgSessionDuration = data?.avgSessionDuration ?? null;
   const personalRecords = data?.personalRecords ?? 0;
   const clientsNoTraining7d = data?.clientsNoTraining7d ?? 0;
   const programAdherence = data?.programAdherence ?? null;
@@ -104,13 +103,6 @@ export default function TrainingAnalytics({ data }: any) {
           value={sessionsPerClientWeek}
           icon={<CalendarRange />}
           iconColor="text-blue-600"
-        />
-        <StatCard
-          title={t('avg_session_duration', { defaultValue: 'Duración media de sesión' })}
-          value={avgSessionDuration != null ? avgSessionDuration : '—'}
-          unit={avgSessionDuration != null ? t('minutes_short', { defaultValue: 'min' }) : undefined}
-          icon={<Timer />}
-          iconColor="text-purple-600"
         />
         <StatCard
           title={t('clients_no_training_7d', { defaultValue: 'Clientes sin entrenar (7d)' })}

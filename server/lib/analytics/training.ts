@@ -59,18 +59,8 @@ export async function computeTrainingExtras(ctx: AnalyticsContext): Promise<Reco
   // ---------------------------------------------------------------------
   out.completedWorkouts = logs.length;
 
-  // ---------------------------------------------------------------------
-  // 2. Duración media de sesión (sólo si workout_logs guarda `duration`).
-  //    duration puede venir en minutos. Si ningún log la tiene → null.
-  // ---------------------------------------------------------------------
-  {
-    const durs = logs
-      .map((l: any) => Number(l?.duration))
-      .filter((d: number) => Number.isFinite(d) && d > 0);
-    out.avgSessionDuration = durs.length
-      ? Math.round(durs.reduce((a: number, b: number) => a + b, 0) / durs.length)
-      : null;
-  }
+  // NOTA: la "duración media de sesión" se ha eliminado como KPI — workout_logs
+  // no captura la duración del entreno, así que no tenía origen de datos real.
 
   // ---------------------------------------------------------------------
   // 3. Series medias por sesión.
@@ -128,7 +118,10 @@ export async function computeTrainingExtras(ctx: AnalyticsContext): Promise<Reco
   }
 
   // ---------------------------------------------------------------------
-  // 7. Tendencia de RPE (7 segmentos). Media del rpe registrado en series.
+  // 7. Tendencia de RPE (7 segmentos). Media del `session_rpe` (RPE de la
+  //    sesión, 1-10) que el cliente registra al completar el entreno.
+  //    Las series guardan RIR (reps en reserva), no RPE — el RPE real es
+  //    el de sesión.
   // ---------------------------------------------------------------------
   {
     const sum = Array.from({ length: BUCKETS }, () => 0);
@@ -137,14 +130,10 @@ export async function computeTrainingExtras(ctx: AnalyticsContext): Promise<Reco
       const day = String(log?.logged_at || '').split('T')[0];
       const idx = bucketIndexOf(day);
       if (idx === -1) continue;
-      for (const ex of (log?.exercises || [])) {
-        for (const s of (ex?.sets_logged || [])) {
-          const rpe = Number(s?.rpe);
-          if (Number.isFinite(rpe) && rpe > 0) {
-            sum[idx] += rpe;
-            cnt[idx]++;
-          }
-        }
+      const rpe = Number(log?.session_rpe);
+      if (Number.isFinite(rpe) && rpe > 0) {
+        sum[idx] += rpe;
+        cnt[idx]++;
       }
     }
     out.rpeTrend = sum.map((s, i) => (cnt[i] > 0 ? Number((s / cnt[i]).toFixed(1)) : 0));
@@ -280,13 +269,21 @@ export async function computeTrainingExtras(ctx: AnalyticsContext): Promise<Reco
           .select('client_id, data_json')
           .in('client_id', clientIds);
 
-        // workouts/semana planificados por cliente (toma el programa con más
-        // workouts si hubiera varios).
+        // Sesiones/semana PLANIFICADAS por cliente: nº de días con un workout
+        // asignado en el weeklySchedule (no el nº total de workouts del plan,
+        // que no equivale a la frecuencia semanal). Fallback a workouts.length
+        // para planes antiguos sin weeklySchedule.
         const plannedPerWeek: Record<string, number> = {};
         for (const prog of (progRes.data || [])) {
           const dj = parseJson(prog?.data_json);
-          const n = Array.isArray(dj?.workouts) ? dj.workouts.length : 0;
-          if (n > (plannedPerWeek[prog.client_id] || 0)) plannedPerWeek[prog.client_id] = n;
+          let perWeek = 0;
+          const sched = dj?.weeklySchedule;
+          if (sched && typeof sched === 'object') {
+            perWeek = Object.values(sched).filter(Boolean).length;
+          } else if (Array.isArray(dj?.workouts)) {
+            perWeek = dj.workouts.length;
+          }
+          if (perWeek > (plannedPerWeek[prog.client_id] || 0)) plannedPerWeek[prog.client_id] = perWeek;
         }
 
         // sesiones realizadas por cliente dentro de la ventana.
