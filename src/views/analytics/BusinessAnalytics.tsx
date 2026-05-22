@@ -18,6 +18,8 @@ import {
   CalendarClock,
   Hourglass,
   Percent,
+  Banknote,
+  Activity,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -37,12 +39,23 @@ import {
   Legend,
 } from 'recharts';
 import { useLanguage } from '../../context/LanguageContext';
-import { StatCard, ProgressBar, CohortRow } from './components';
+import {
+  StatCard,
+  ChartCard,
+  SectionHeader,
+  ChartLegend,
+  EmptyChart,
+  ProgressBar,
+  CohortRow,
+} from './components';
 
 /* ============================================================================
  * Pestaña BUSINESS de Analytics.
  * Recibe `data` = respuesta `business` del endpoint /manager/analytics.
- * Los KPIs nuevos viven en data.<clave> (los calcula server/lib/analytics/business.ts).
+ * Los KPIs viven en data.<clave> (los calcula server/lib/analytics/business.ts).
+ *
+ * Layout minimalista estilo Stripe/Shopify: KPIs agrupados por categorías,
+ * cada categoría precedida por <SectionHeader/>, gráficas dentro de <ChartCard/>.
  * ========================================================================== */
 
 const COLORS = {
@@ -55,43 +68,12 @@ const COLORS = {
 };
 const PIE_PALETTE = [COLORS.emerald, COLORS.blue, COLORS.amber, COLORS.purple, COLORS.red, COLORS.slate];
 
-/* --- Sub-componentes locales ------------------------------------------------ */
+/* Estilo de ejes/grid/tooltip recharts — minimalista, compartido. */
+const axisProps = { axisLine: false as const, tickLine: false as const, tick: { fontSize: 12, fill: '#94a3b8' } };
+const gridProps = { strokeDasharray: '3 3', stroke: '#f1f5f9', vertical: false };
+const tooltipStyle = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 };
 
-function ChartCard({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-        {subtitle && <p className="text-sm text-slate-500">{subtitle}</p>}
-      </div>
-      <div className="h-[280px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          {children as any}
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-base font-bold text-slate-800 uppercase tracking-wide pt-2">{children}</h2>
-  );
-}
-
-const tooltipStyle = {
-  borderRadius: '12px',
-  border: 'none',
-  boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
-};
+const CHART_HEIGHT = 280;
 
 function money(v: any): string {
   const n = Number(v) || 0;
@@ -109,133 +91,511 @@ export default function BusinessAnalytics({ data }: any) {
 
   const stripeConnected = !!data?.stripeConnected;
 
+  const revenueData = monthLabels.map((m, i) => {
+    const currentMonth = new Date().getMonth();
+    return { month: m, revenue: i <= currentMonth ? data?.monthlyRevenue?.[i] || 0 : null };
+  });
+
+  const mrrGrowth = data?.mrrGrowth || [];
+  const clientGrowth = data?.clientGrowthByMonth || [];
+  const cumulativeGrowth = data?.cumulativeClientGrowth || [];
+  const revenueByPlan = data?.revenueByPlan || [];
+  const subStatus = data?.subscriptionStatusDistribution || [];
+  const payments = data?.successfulVsFailedPayments || [];
+  const clientStatus = data?.clientStatusDistribution || [];
+
   return (
-    <div className="space-y-6">
-      {/* ===== KPIs base existentes ===== */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 pt-2">
+    <div className="space-y-5">
+      {/* ============================ CLIENTES ============================ */}
+      <SectionHeader
+        title={t('biz_cat_clients', { defaultValue: 'Clientes' })}
+        subtitle={t('biz_cat_clients_sub', { defaultValue: 'Volumen, captación y retención de tu cartera' })}
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         <StatCard
           title={t('analytics_total_clients')}
           value={data?.totalClients || '0'}
-          icon={<Users className="w-6 h-6" />}
-          iconBg="bg-blue-50"
+          icon={<Users />}
           iconColor="text-blue-600"
         />
         <StatCard
-          title={t('analytics_monthly_rev')}
-          value={data?.revenue >= 1000 ? `$${(data.revenue / 1000).toFixed(1)}k` : `$${data?.revenue || '0'}`}
-          icon={<DollarSign className="w-6 h-6" />}
-          iconBg="bg-emerald-50"
+          title={t('biz_active_clients', { defaultValue: 'Clientes activos' })}
+          value={data?.activeClients || '0'}
+          icon={<Activity />}
           iconColor="text-emerald-600"
-          showChart={true}
+        />
+        <StatCard
+          title={t('biz_new_clients', { defaultValue: 'Clientes nuevos' })}
+          value={data?.newLeads || '0'}
+          icon={<UserPlus />}
+          iconColor="text-teal-600"
+        />
+        <StatCard
+          title={t('biz_lost_clients', { defaultValue: 'Clientes perdidos' })}
+          value={data?.lostClients || '0'}
+          icon={<UserMinus />}
+          iconColor="text-red-600"
         />
         <StatCard
           title={t('analytics_retention')}
           value={`${data?.retention || '0'}%`}
-          icon={<Heart className="w-6 h-6" />}
-          iconBg="bg-purple-50"
+          icon={<Heart />}
           iconColor="text-purple-600"
-        />
-        <StatCard
-          title={t('analytics_avg_ltv')}
-          value={`$${data?.ltv || '0'}`}
-          icon={<Award className="w-6 h-6" />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
         />
         <StatCard
           title={t('analytics_churn_rate')}
           value={`${data?.churnRate || '0'}%`}
-          icon={<UserMinus className="w-6 h-6" />}
-          iconBg="bg-red-50"
+          icon={<UserMinus />}
           iconColor="text-red-600"
         />
         <StatCard
-          title={t('analytics_new_leads')}
-          value={data?.newLeads || '0'}
-          icon={<UserPlus className="w-6 h-6" />}
-          iconBg="bg-teal-50"
-          iconColor="text-teal-600"
+          title={t('biz_client_lifetime', { defaultValue: 'Vida media del cliente' })}
+          value={data?.avgClientLifetimeMonths || '0'}
+          unit={t('biz_unit_months', { defaultValue: 'meses' })}
+          icon={<CalendarClock />}
+          iconColor="text-blue-600"
         />
       </div>
 
-      {/* ===== Revenue chart + Compliance (existentes) ===== */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">{t('revenue_renewals')}</h2>
-              <p className="text-sm text-slate-500">{t('revenue_renewals_desc')}</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="w-3 h-3 rounded-full bg-emerald-500"></span>
-                <span className="text-slate-600">{t('revenue_label')}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="w-3 h-3 rounded-full bg-slate-200"></span>
-                <span className="text-slate-600">{t('renewals_label')}</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-[300px] w-full mt-4">
+      {/* ==================== INGRESOS Y SUSCRIPCIONES ==================== */}
+      <SectionHeader
+        title={t('biz_cat_revenue', { defaultValue: 'Ingresos y suscripciones' })}
+        subtitle={t('biz_cat_revenue_sub', { defaultValue: 'Métricas de facturación recurrente' })}
+      />
+      {!stripeConnected && (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          {t('biz_stripe_disconnected', {
+            defaultValue: 'Conecta Stripe en Integraciones para ver los KPIs de ingresos y suscripciones.',
+          })}
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <StatCard
+          title={t('biz_revenue', { defaultValue: 'Ingresos' })}
+          value={money(data?.revenue)}
+          icon={<DollarSign />}
+          iconColor="text-emerald-600"
+        />
+        <StatCard
+          title={t('biz_net_revenue', { defaultValue: 'Ingreso neto' })}
+          value={money(data?.netRevenue)}
+          icon={<Banknote />}
+          iconColor="text-emerald-600"
+        />
+        <StatCard
+          title={t('biz_mrr', { defaultValue: 'MRR' })}
+          value={money(data?.mrr)}
+          icon={<TrendingUp />}
+          iconColor="text-emerald-600"
+        />
+        <StatCard
+          title={t('biz_arr', { defaultValue: 'ARR' })}
+          value={money(data?.arr)}
+          icon={<TrendingUp />}
+          iconColor="text-emerald-600"
+        />
+        <StatCard
+          title={t('biz_arpu', { defaultValue: 'ARPU' })}
+          value={money(data?.arpu)}
+          icon={<DollarSign />}
+          iconColor="text-blue-600"
+        />
+        <StatCard
+          title={t('biz_avg_ticket', { defaultValue: 'Ticket medio' })}
+          value={money(data?.avgTicket)}
+          icon={<Receipt />}
+          iconColor="text-amber-600"
+        />
+        <StatCard
+          title={t('analytics_avg_ltv')}
+          value={money(data?.ltv)}
+          icon={<Award />}
+          iconColor="text-amber-600"
+        />
+        <StatCard
+          title={t('biz_active_subs', { defaultValue: 'Suscripciones activas' })}
+          value={data?.activeSubscriptions || '0'}
+          icon={<CreditCard />}
+          iconColor="text-purple-600"
+        />
+        <StatCard
+          title={t('biz_active_trials', { defaultValue: 'Trials activos' })}
+          value={data?.activeTrials || '0'}
+          icon={<Hourglass />}
+          iconColor="text-blue-600"
+        />
+        <StatCard
+          title={t('biz_trial_conversion', { defaultValue: 'Conversión trial→pago' })}
+          value={`${data?.trialConversionRate || '0'}%`}
+          icon={<Percent />}
+          iconColor="text-emerald-600"
+        />
+        <StatCard
+          title={t('biz_sub_churn', { defaultValue: 'Churn de suscripción' })}
+          value={`${data?.subscriptionChurnRate || '0'}%`}
+          icon={<UserMinus />}
+          iconColor="text-red-600"
+        />
+      </div>
+
+      {/* ====================== COBROS Y FACTURACIÓN ====================== */}
+      <SectionHeader
+        title={t('biz_cat_billing', { defaultValue: 'Cobros y facturación' })}
+        subtitle={t('biz_cat_billing_sub', { defaultValue: 'Estado de pagos, reembolsos y disputas' })}
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <StatCard
+          title={t('biz_failed_payments', { defaultValue: 'Pagos fallidos' })}
+          value={data?.failedPayments || '0'}
+          icon={<AlertTriangle />}
+          iconColor="text-red-600"
+        />
+        <StatCard
+          title={t('biz_refunds', { defaultValue: 'Reembolsos' })}
+          value={money(data?.refundsAmount)}
+          unit={`(${data?.refundsCount || 0})`}
+          icon={<RefreshCw />}
+          iconColor="text-amber-600"
+        />
+        <StatCard
+          title={t('biz_open_disputes', { defaultValue: 'Disputas abiertas' })}
+          value={data?.openDisputes || '0'}
+          icon={<AlertTriangle />}
+          iconColor="text-red-600"
+        />
+        <StatCard
+          title={t('biz_upcoming_renewals', { defaultValue: 'Renovaciones 30d' })}
+          value={data?.upcomingRenewalsCount || '0'}
+          unit={money(data?.upcomingRenewalsAmount)}
+          icon={<Repeat />}
+          iconColor="text-emerald-600"
+        />
+        <StatCard
+          title={t('biz_pending_invoices', { defaultValue: 'Facturas pendientes' })}
+          value={money(data?.pendingInvoicesAmount)}
+          icon={<Receipt />}
+          iconColor="text-amber-600"
+        />
+      </div>
+
+      {/* ============================ OPERATIVA =========================== */}
+      <SectionHeader
+        title={t('biz_cat_operations', { defaultValue: 'Operativa' })}
+        subtitle={t('biz_cat_operations_sub', { defaultValue: 'Carga de trabajo y comunicación con clientes' })}
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <StatCard
+          title={t('biz_pending_reviews', { defaultValue: 'Check-ins por revisar' })}
+          value={data?.pendingCheckinReviews || '0'}
+          icon={<CheckSquare />}
+          iconColor="text-amber-600"
+        />
+        <StatCard
+          title={t('biz_avg_response', { defaultValue: 'Tiempo medio de respuesta' })}
+          value={data?.avgCoachResponseHours || '0'}
+          unit={t('biz_unit_hours', { defaultValue: 'h' })}
+          icon={<Clock />}
+          iconColor="text-blue-600"
+        />
+        <StatCard
+          title={t('biz_messages_sent', { defaultValue: 'Mensajes enviados' })}
+          value={data?.messagesSent || '0'}
+          icon={<MessageSquare />}
+          iconColor="text-emerald-600"
+        />
+        <StatCard
+          title={t('biz_messages_received', { defaultValue: 'Mensajes recibidos' })}
+          value={data?.messagesReceived || '0'}
+          icon={<MessageSquare />}
+          iconColor="text-purple-600"
+        />
+      </div>
+
+      {/* =========================== TENDENCIAS =========================== */}
+      <SectionHeader
+        title={t('biz_cat_trends', { defaultValue: 'Tendencias' })}
+        subtitle={t('biz_cat_trends_sub', { defaultValue: 'Evolución temporal y distribuciones' })}
+      />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        {/* Revenue & Renewals — ancho completo */}
+        <ChartCard
+          title={t('revenue_renewals')}
+          subtitle={t('revenue_renewals_desc')}
+          legend={
+            <ChartLegend
+              items={[
+                { color: COLORS.emerald, label: t('revenue_label') },
+                { color: COLORS.slate, label: t('renewals_label') },
+              ]}
+            />
+          }
+          className="xl:col-span-2"
+        >
+          <div style={{ height: CHART_HEIGHT }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={monthLabels.map((m, i) => {
-                  const now = new Date();
-                  const currentMonth = now.getMonth();
-                  return {
-                    month: m,
-                    revenue: i <= currentMonth ? data?.monthlyRevenue?.[i] || 0 : null,
-                  };
-                })}
-              >
+              <AreaChart data={revenueData}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    <stop offset="5%" stopColor={COLORS.emerald} stopOpacity={0.18} />
+                    <stop offset="95%" stopColor={COLORS.emerald} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#64748b' }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: '#64748b' }}
-                  tickFormatter={(value) => `$${value}`}
-                />
-                <Tooltip
-                  contentStyle={tooltipStyle}
-                  formatter={(value: any) => [`$${value}`, t('revenue_label')]}
-                />
+                <CartesianGrid {...gridProps} />
+                <XAxis dataKey="month" {...axisProps} dy={6} />
+                <YAxis {...axisProps} tickFormatter={(v) => `$${v}`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${v}`, t('revenue_label')]} />
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#10b981"
-                  strokeWidth={3}
+                  stroke={COLORS.emerald}
+                  strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
-                  dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }}
-                  activeDot={{ r: 6 }}
+                  dot={{ r: 3, fill: COLORS.emerald, strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 5 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </ChartCard>
 
-        <div className="xl:col-span-1 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">{t('protocol_compliance')}</h3>
-              <p className="text-xs text-slate-500">{t('compliance_desc')}</p>
-            </div>
+        {/* Crecimiento de MRR */}
+        <ChartCard
+          title={t('biz_chart_mrr_growth', { defaultValue: 'Crecimiento de MRR' })}
+          subtitle={t('biz_chart_mrr_growth_desc', { defaultValue: 'Ingreso facturado por mes' })}
+        >
+          <div style={{ height: CHART_HEIGHT }}>
+            {mrrGrowth.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={mrrGrowth}>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="month" {...axisProps} />
+                  <YAxis {...axisProps} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${v}`, 'MRR']} />
+                  <Line type="monotone" dataKey="mrr" stroke={COLORS.emerald} strokeWidth={2.5} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart label={t('no_data')} height={CHART_HEIGHT} />
+            )}
+          </div>
+        </ChartCard>
+
+        {/* Altas vs bajas */}
+        <ChartCard
+          title={t('biz_chart_signups_losses', { defaultValue: 'Altas vs bajas' })}
+          subtitle={t('biz_chart_signups_losses_desc', { defaultValue: 'Por mes, últimos 6 meses' })}
+          legend={
+            <ChartLegend
+              items={[
+                { color: COLORS.emerald, label: t('biz_legend_signups', { defaultValue: 'Altas' }) },
+                { color: COLORS.red, label: t('biz_legend_losses', { defaultValue: 'Bajas' }) },
+              ]}
+            />
+          }
+        >
+          <div style={{ height: CHART_HEIGHT }}>
+            {clientGrowth.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={clientGrowth}>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="month" {...axisProps} />
+                  <YAxis {...axisProps} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar
+                    dataKey="signups"
+                    name={t('biz_legend_signups', { defaultValue: 'Altas' })}
+                    fill={COLORS.emerald}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="losses"
+                    name={t('biz_legend_losses', { defaultValue: 'Bajas' })}
+                    fill={COLORS.red}
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart label={t('no_data')} height={CHART_HEIGHT} />
+            )}
+          </div>
+        </ChartCard>
+
+        {/* Crecimiento acumulado */}
+        <ChartCard
+          title={t('biz_chart_cumulative', { defaultValue: 'Crecimiento acumulado' })}
+          subtitle={t('biz_chart_cumulative_desc', { defaultValue: 'Total de clientes a lo largo del tiempo' })}
+        >
+          <div style={{ height: CHART_HEIGHT }}>
+            {cumulativeGrowth.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={cumulativeGrowth}>
+                  <defs>
+                    <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.2} />
+                      <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="month" {...axisProps} />
+                  <YAxis {...axisProps} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    stroke={COLORS.blue}
+                    strokeWidth={2.5}
+                    fill="url(#colorCumulative)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart label={t('no_data')} height={CHART_HEIGHT} />
+            )}
+          </div>
+        </ChartCard>
+
+        {/* Ingreso por plan */}
+        <ChartCard
+          title={t('biz_chart_revenue_by_plan', { defaultValue: 'Ingreso por plan' })}
+          subtitle={t('biz_chart_revenue_by_plan_desc', { defaultValue: 'MRR repartido por tier' })}
+        >
+          <div style={{ height: CHART_HEIGHT }}>
+            {revenueByPlan.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={revenueByPlan}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={58}
+                    outerRadius={92}
+                    paddingAngle={2}
+                  >
+                    {revenueByPlan.map((_: any, i: number) => (
+                      <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `$${v}`} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart label={t('no_data')} height={CHART_HEIGHT} />
+            )}
+          </div>
+        </ChartCard>
+
+        {/* Estado de suscripciones */}
+        <ChartCard
+          title={t('biz_chart_sub_status', { defaultValue: 'Estado de suscripciones' })}
+          subtitle={t('biz_chart_sub_status_desc', { defaultValue: 'Activas, trial, canceladas, impago' })}
+        >
+          <div style={{ height: CHART_HEIGHT }}>
+            {subStatus.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={subStatus}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={58}
+                    outerRadius={92}
+                    paddingAngle={2}
+                  >
+                    {subStatus.map((_: any, i: number) => (
+                      <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart label={t('no_data')} height={CHART_HEIGHT} />
+            )}
+          </div>
+        </ChartCard>
+
+        {/* Pagos exitosos vs fallidos */}
+        <ChartCard
+          title={t('biz_chart_payments', { defaultValue: 'Pagos exitosos vs fallidos' })}
+          subtitle={t('biz_chart_payments_desc', { defaultValue: 'Cobros en la ventana' })}
+        >
+          <div style={{ height: CHART_HEIGHT }}>
+            {payments.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={payments}>
+                  <CartesianGrid {...gridProps} />
+                  <XAxis dataKey="name" {...axisProps} />
+                  <YAxis {...axisProps} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {payments.map((entry: any, i: number) => (
+                      <Cell key={i} fill={entry.name === 'failed' ? COLORS.red : COLORS.emerald} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart label={t('no_data')} height={CHART_HEIGHT} />
+            )}
+          </div>
+        </ChartCard>
+
+        {/* Distribución de estados de cliente */}
+        <ChartCard
+          title={t('biz_chart_client_status', { defaultValue: 'Distribución de estados de cliente' })}
+          subtitle={t('biz_chart_client_status_desc', { defaultValue: 'Clientes por estado' })}
+        >
+          <div style={{ height: CHART_HEIGHT }}>
+            {clientStatus.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={clientStatus}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={58}
+                    outerRadius={92}
+                    paddingAngle={2}
+                  >
+                    {clientStatus.map((_: any, i: number) => (
+                      <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <EmptyChart label={t('no_data')} height={CHART_HEIGHT} />
+            )}
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* ==================== CUMPLIMIENTO Y RETENCIÓN ==================== */}
+      <SectionHeader
+        title={t('biz_cat_compliance', { defaultValue: 'Cumplimiento y retención' })}
+        subtitle={t('biz_cat_compliance_sub', { defaultValue: 'Adherencia de protocolo y retención por cohorte' })}
+      />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        {/* Panel de Compliance */}
+        <ChartCard
+          title={t('protocol_compliance')}
+          subtitle={t('compliance_desc')}
+          action={
             <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center font-semibold text-base tabular-nums ${
                 (data?.complianceScore || 0) > 80
                   ? 'bg-emerald-50 text-emerald-600'
                   : (data?.complianceScore || 0) > 60
@@ -245,8 +605,9 @@ export default function BusinessAnalytics({ data }: any) {
             >
               {data?.complianceScore || 0}
             </div>
-          </div>
-          <div className="flex flex-col gap-6 flex-1 justify-center">
+          }
+        >
+          <div className="flex flex-col gap-6 justify-center" style={{ minHeight: CHART_HEIGHT }}>
             <ProgressBar
               label={t('workout_adherence')}
               value={`${data?.workoutAdherence || 0}%`}
@@ -265,382 +626,54 @@ export default function BusinessAnalytics({ data }: any) {
               percentage={data?.checkInReliability || 0}
               color="bg-purple-500"
             />
+            <p className="text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
+              {t('compliance_note')}
+            </p>
           </div>
-          <p className="mt-6 text-[10px] text-slate-400 leading-relaxed uppercase tracking-widest font-bold">
-            {t('compliance_note')}
-          </p>
-        </div>
-      </div>
-
-      {/* ===== SECCIÓN: Suscripciones & Stripe ===== */}
-      <SectionTitle>{t('biz_section_subscriptions', { defaultValue: 'Suscripciones e ingresos' })}</SectionTitle>
-      {!stripeConnected && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-700 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
-          {t('biz_stripe_disconnected', {
-            defaultValue: 'Conecta Stripe en Integraciones para ver los KPIs de ingresos y suscripciones.',
-          })}
-        </div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        <StatCard
-          title={t('biz_mrr', { defaultValue: 'MRR' })}
-          value={money(data?.mrr)}
-          icon={<TrendingUp className="w-6 h-6" />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
-        <StatCard
-          title={t('biz_arr', { defaultValue: 'ARR' })}
-          value={money(data?.arr)}
-          icon={<TrendingUp className="w-6 h-6" />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
-        <StatCard
-          title={t('biz_net_revenue', { defaultValue: 'Ingreso neto' })}
-          value={money(data?.netRevenue)}
-          icon={<DollarSign className="w-6 h-6" />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          title={t('biz_arpu', { defaultValue: 'ARPU' })}
-          value={money(data?.arpu)}
-          icon={<DollarSign className="w-6 h-6" />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          title={t('biz_avg_ticket', { defaultValue: 'Ticket medio' })}
-          value={money(data?.avgTicket)}
-          icon={<Receipt className="w-6 h-6" />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
-        />
-        <StatCard
-          title={t('biz_active_subs', { defaultValue: 'Suscripciones activas' })}
-          value={data?.activeSubscriptions || '0'}
-          icon={<CreditCard className="w-6 h-6" />}
-          iconBg="bg-purple-50"
-          iconColor="text-purple-600"
-        />
-        <StatCard
-          title={t('biz_active_trials', { defaultValue: 'Trials activos' })}
-          value={data?.activeTrials || '0'}
-          icon={<Hourglass className="w-6 h-6" />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          title={t('biz_trial_conversion', { defaultValue: 'Conversión trial→pago' })}
-          value={`${data?.trialConversionRate || '0'}%`}
-          icon={<Percent className="w-6 h-6" />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
-        <StatCard
-          title={t('biz_sub_churn', { defaultValue: 'Churn de suscripción' })}
-          value={`${data?.subscriptionChurnRate || '0'}%`}
-          icon={<UserMinus className="w-6 h-6" />}
-          iconBg="bg-red-50"
-          iconColor="text-red-600"
-        />
-        <StatCard
-          title={t('biz_failed_payments', { defaultValue: 'Pagos fallidos / dunning' })}
-          value={data?.failedPayments || '0'}
-          icon={<AlertTriangle className="w-6 h-6" />}
-          iconBg="bg-red-50"
-          iconColor="text-red-600"
-        />
-        <StatCard
-          title={t('biz_refunds', { defaultValue: 'Reembolsos' })}
-          value={`${money(data?.refundsAmount)} (${data?.refundsCount || 0})`}
-          icon={<RefreshCw className="w-6 h-6" />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
-        />
-        <StatCard
-          title={t('biz_open_disputes', { defaultValue: 'Disputas abiertas' })}
-          value={data?.openDisputes || '0'}
-          icon={<AlertTriangle className="w-6 h-6" />}
-          iconBg="bg-red-50"
-          iconColor="text-red-600"
-        />
-        <StatCard
-          title={t('biz_upcoming_renewals', { defaultValue: 'Renovaciones 30d' })}
-          value={`${data?.upcomingRenewalsCount || 0} · ${money(data?.upcomingRenewalsAmount)}`}
-          icon={<Repeat className="w-6 h-6" />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
-        <StatCard
-          title={t('biz_pending_invoices', { defaultValue: 'Facturas pendientes' })}
-          value={money(data?.pendingInvoicesAmount)}
-          icon={<Receipt className="w-6 h-6" />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
-        />
-      </div>
-
-      {/* ===== SECCIÓN: Operativa ===== */}
-      <SectionTitle>{t('biz_section_operations', { defaultValue: 'Operativa y clientes' })}</SectionTitle>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        <StatCard
-          title={t('biz_lost_clients', { defaultValue: 'Clientes perdidos' })}
-          value={data?.lostClients || '0'}
-          icon={<UserMinus className="w-6 h-6" />}
-          iconBg="bg-red-50"
-          iconColor="text-red-600"
-        />
-        <StatCard
-          title={t('biz_pending_reviews', { defaultValue: 'Check-ins por revisar' })}
-          value={data?.pendingCheckinReviews || '0'}
-          icon={<CheckSquare className="w-6 h-6" />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
-        />
-        <StatCard
-          title={t('biz_avg_response', { defaultValue: 'Resp. media coach (h)' })}
-          value={`${data?.avgCoachResponseHours || '0'}h`}
-          icon={<Clock className="w-6 h-6" />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          title={t('biz_messages_sent', { defaultValue: 'Mensajes enviados' })}
-          value={data?.messagesSent || '0'}
-          icon={<MessageSquare className="w-6 h-6" />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-        />
-        <StatCard
-          title={t('biz_messages_received', { defaultValue: 'Mensajes recibidos' })}
-          value={data?.messagesReceived || '0'}
-          icon={<MessageSquare className="w-6 h-6" />}
-          iconBg="bg-purple-50"
-          iconColor="text-purple-600"
-        />
-        <StatCard
-          title={t('biz_client_lifetime', { defaultValue: 'Vida media (meses)' })}
-          value={data?.avgClientLifetimeMonths || '0'}
-          icon={<CalendarClock className="w-6 h-6" />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-        />
-      </div>
-
-      {/* ===== GRÁFICAS: fila 1 ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard
-          title={t('biz_chart_mrr_growth', { defaultValue: 'Crecimiento de MRR' })}
-          subtitle={t('biz_chart_mrr_growth_desc', { defaultValue: 'Ingreso facturado por mes' })}
-        >
-          <LineChart data={data?.mrrGrowth || []}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 11, fill: '#64748b' }}
-              tickFormatter={(v) => `$${v}`}
-            />
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${v}`, 'MRR']} />
-            <Line type="monotone" dataKey="mrr" stroke={COLORS.emerald} strokeWidth={3} dot={{ r: 4 }} />
-          </LineChart>
         </ChartCard>
 
+        {/* Tabla de cohortes */}
         <ChartCard
-          title={t('biz_chart_signups_losses', { defaultValue: 'Altas vs bajas de clientes' })}
-          subtitle={t('biz_chart_signups_losses_desc', { defaultValue: 'Por mes, últimos 6 meses' })}
-        >
-          <BarChart data={data?.clientGrowthByMonth || []}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar
-              dataKey="signups"
-              name={t('biz_legend_signups', { defaultValue: 'Altas' })}
-              fill={COLORS.emerald}
-              radius={[4, 4, 0, 0]}
-            />
-            <Bar
-              dataKey="losses"
-              name={t('biz_legend_losses', { defaultValue: 'Bajas' })}
-              fill={COLORS.red}
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ChartCard>
-      </div>
-
-      {/* ===== GRÁFICAS: fila 2 ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard
-          title={t('biz_chart_cumulative', { defaultValue: 'Crecimiento acumulado de clientes' })}
-          subtitle={t('biz_chart_cumulative_desc', { defaultValue: 'Total de clientes a lo largo del tiempo' })}
-        >
-          <AreaChart data={data?.cumulativeClientGrowth || []}>
-            <defs>
-              <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.blue} stopOpacity={0.25} />
-                <stop offset="95%" stopColor={COLORS.blue} stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Area
-              type="monotone"
-              dataKey="total"
-              stroke={COLORS.blue}
-              strokeWidth={3}
-              fill="url(#colorCumulative)"
-            />
-          </AreaChart>
-        </ChartCard>
-
-        <ChartCard
-          title={t('biz_chart_revenue_by_plan', { defaultValue: 'Ingreso por plan' })}
-          subtitle={t('biz_chart_revenue_by_plan_desc', { defaultValue: 'MRR repartido por tier' })}
-        >
-          <PieChart>
-            <Pie
-              data={data?.revenueByPlan || []}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={95}
-              paddingAngle={2}
-            >
-              {(data?.revenueByPlan || []).map((_: any, i: number) => (
-                <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => `$${v}`} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-          </PieChart>
-        </ChartCard>
-      </div>
-
-      {/* ===== GRÁFICAS: fila 3 ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard
-          title={t('biz_chart_sub_status', { defaultValue: 'Estado de suscripciones' })}
-          subtitle={t('biz_chart_sub_status_desc', { defaultValue: 'Activas, trial, canceladas, impago' })}
-        >
-          <PieChart>
-            <Pie
-              data={data?.subscriptionStatusDistribution || []}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={95}
-              paddingAngle={2}
-            >
-              {(data?.subscriptionStatusDistribution || []).map((_: any, i: number) => (
-                <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-          </PieChart>
-        </ChartCard>
-
-        <ChartCard
-          title={t('biz_chart_payments', { defaultValue: 'Pagos exitosos vs fallidos' })}
-          subtitle={t('biz_chart_payments_desc', { defaultValue: 'Cobros en la ventana' })}
-        >
-          <BarChart data={data?.successfulVsFailedPayments || []}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-              {(data?.successfulVsFailedPayments || []).map((entry: any, i: number) => (
-                <Cell key={i} fill={entry.name === 'failed' ? COLORS.red : COLORS.emerald} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ChartCard>
-      </div>
-
-      {/* ===== GRÁFICA: distribución de estados de cliente ===== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard
-          title={t('biz_chart_client_status', { defaultValue: 'Distribución de estados de cliente' })}
-          subtitle={t('biz_chart_client_status_desc', { defaultValue: 'Clientes por estado' })}
-        >
-          <PieChart>
-            <Pie
-              data={data?.clientStatusDistribution || []}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={95}
-              paddingAngle={2}
-            >
-              {(data?.clientStatusDistribution || []).map((_: any, i: number) => (
-                <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-          </PieChart>
-        </ChartCard>
-      </div>
-
-      {/* ===== Cohortes (existente) ===== */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">{t('retention_by_cohort')}</h3>
-            <p className="text-sm text-slate-500">{t('retention_subtitle')}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">{t('less_label')}</span>
-            <div className="flex gap-1">
-              <div className="w-3 h-3 rounded-sm bg-emerald-50"></div>
-              <div className="w-3 h-3 rounded-sm bg-emerald-200"></div>
-              <div className="w-3 h-3 rounded-sm bg-emerald-400"></div>
-              <div className="w-3 h-3 rounded-sm bg-emerald-600"></div>
+          title={t('retention_by_cohort')}
+          subtitle={t('retention_subtitle')}
+          legend={
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-400">{t('less_label')}</span>
+              <div className="flex gap-1">
+                <div className="w-3 h-3 rounded-sm bg-emerald-50" />
+                <div className="w-3 h-3 rounded-sm bg-emerald-200" />
+                <div className="w-3 h-3 rounded-sm bg-emerald-400" />
+                <div className="w-3 h-3 rounded-sm bg-emerald-600" />
+              </div>
+              <span className="text-xs font-medium text-slate-400">{t('more_label')}</span>
             </div>
-            <span className="text-xs font-medium text-slate-500">{t('more_label')}</span>
+          }
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-center">
+              <thead>
+                <tr className="text-xs text-slate-400 font-medium border-b border-slate-100">
+                  <th className="pb-3 text-left pl-4 font-normal">{t('cohort_label')}</th>
+                  <th className="pb-3 font-normal">{t('analytics_month_1')}</th>
+                  <th className="pb-3 font-normal">{t('analytics_month_2')}</th>
+                  <th className="pb-3 font-normal">{t('analytics_month_3')}</th>
+                  <th className="pb-3 font-normal">{t('analytics_month_4')}</th>
+                  <th className="pb-3 font-normal">{t('analytics_month_5')}</th>
+                  <th className="pb-3 font-normal">{t('analytics_month_6')}</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-600">
+                {data?.cohorts && data.cohorts.length > 0 ? (
+                  data.cohorts.map((c: any, i: number) => (
+                    <CohortRow key={i} cohort={c.cohort} data={c.data} />
+                  ))
+                ) : (
+                  <CohortRow cohort={t('no_data')} data={[null, null, null, null, null, null]} />
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-center">
-            <thead>
-              <tr className="text-xs text-slate-500 font-medium border-b border-slate-100">
-                <th className="pb-3 text-left pl-4 font-normal">{t('cohort_label')}</th>
-                <th className="pb-3 font-normal">{t('analytics_month_1')}</th>
-                <th className="pb-3 font-normal">{t('analytics_month_2')}</th>
-                <th className="pb-3 font-normal">{t('analytics_month_3')}</th>
-                <th className="pb-3 font-normal">{t('analytics_month_4')}</th>
-                <th className="pb-3 font-normal">{t('analytics_month_5')}</th>
-                <th className="pb-3 font-normal">{t('analytics_month_6')}</th>
-              </tr>
-            </thead>
-            <tbody className="text-slate-600">
-              {data?.cohorts && data.cohorts.length > 0 ? (
-                data.cohorts.map((c: any, i: number) => (
-                  <CohortRow key={i} cohort={c.cohort} data={c.data} />
-                ))
-              ) : (
-                <CohortRow cohort={t('no_data')} data={[null, null, null, null, null, null]} />
-              )}
-            </tbody>
-          </table>
-        </div>
+        </ChartCard>
       </div>
     </div>
   );

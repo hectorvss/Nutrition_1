@@ -1,65 +1,169 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, Info } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 /* ============================================================================
- * Componentes compartidos de Analytics.
- * Usados por las tres pestañas (Business / Nutrition / Training). Mantener el
- * mismo estilo visual aquí garantiza que todas las tarjetas y gráficas sean
- * coherentes — no dupliques estos componentes en las pestañas.
+ * Componentes compartidos de Analytics — sistema de diseño.
+ *
+ * Estilo: minimalista, inspirado en los dashboards de Stripe y Shopify.
+ * Dos tarjetas canónicas:
+ *   · StatCard  → KPIs de un solo dato (número / porcentaje / texto).
+ *   · ChartCard → KPIs con gráfica.
+ * Más un SectionHeader para clasificar los KPIs por categorías.
+ *
+ * Reglas: tarjetas blancas, bordes redondeados (rounded-2xl), borde sutil,
+ * sin sombras pesadas, mucho aire, una sola jerarquía visual clara.
+ * No dupliques estas piezas en las pestañas — impórtalas siempre desde aquí.
  * ========================================================================== */
 
-/** Tarjeta de KPI estándar. Toda métrica de dato debe usar este componente. */
-export function StatCard({ title, value, unit, change, isPositive, isNeutral, icon, iconBg, iconColor, showChart, chartColor = 'text-emerald-500', changeLabel = '' }: any) {
+/* --- StatCard: KPI de un solo dato ----------------------------------------- */
+/**
+ * Tarjeta de un KPI numérico. Props (compatibles con el uso existente):
+ *  - title       etiqueta del KPI
+ *  - value       valor principal (número, %, texto)
+ *  - unit        unidad opcional mostrada en gris junto al valor
+ *  - change      texto del delta (ej. "+12%", "Por encima"); si está vacío no se muestra
+ *  - isPositive  pinta el delta en verde (true) o rojo (false)
+ *  - isNeutral   pinta el delta en gris (tiene prioridad sobre isPositive)
+ *  - icon        icono lucide; se renderiza pequeño y sutil
+ *  - iconColor   clase de color de texto para el icono (ej. "text-emerald-600")
+ *  - changeLabel leyenda gris junto al delta (ej. "vs período anterior")
+ *  - hint        texto de ayuda; muestra un icono de info con tooltip nativo
+ */
+export function StatCard({
+  title, value, unit, change, isPositive, isNeutral,
+  icon, iconColor = 'text-slate-400', changeLabel = '', hint,
+}: any) {
   const { t } = useLanguage();
-  const resolvedChangeLabel = changeLabel || t('vs_last_month');
+  const showDelta = change !== undefined && change !== null && change !== '';
+  const DeltaIcon = isNeutral ? Minus : isPositive ? ArrowUpRight : ArrowDownRight;
+  const deltaTone = isNeutral
+    ? 'text-slate-500'
+    : isPositive ? 'text-emerald-600' : 'text-red-600';
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between h-40 group hover:border-emerald-500/30 transition-all relative overflow-hidden">
-      <div className="flex justify-between items-start relative z-10">
-        <div className="flex flex-col">
-          <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-          <h3 className="text-3xl font-bold text-slate-900">
-            {value} {unit && <span className="text-lg font-normal text-slate-400">{unit}</span>}
-          </h3>
+    <div className="group flex flex-col bg-white rounded-2xl border border-slate-200/70 p-5 transition-all duration-200 hover:border-slate-300 hover:shadow-[0_4px_16px_-4px_rgba(15,23,42,0.08)]">
+      {/* Cabecera: etiqueta + icono sutil */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-[13px] font-medium text-slate-500 leading-snug truncate">{title}</p>
+          {hint && (
+            <span title={hint} className="shrink-0 text-slate-300 hover:text-slate-400 cursor-help">
+              <Info className="w-3.5 h-3.5" />
+            </span>
+          )}
         </div>
-        <div className={`p-2 rounded-lg ${iconBg} ${iconColor}`}>
-          {icon}
-        </div>
+        {icon && (
+          <div className={`shrink-0 flex items-center justify-center ${iconColor} [&>svg]:w-[18px] [&>svg]:h-[18px]`}>
+            {icon}
+          </div>
+        )}
       </div>
-      {showChart && (
-        <div className="absolute bottom-0 left-0 right-0 h-12 opacity-10">
-          <svg className={`w-full h-full ${chartColor} fill-current`} viewBox="0 0 100 20">
-            <path d="M0 20 L0 15 L10 12 L20 16 L30 10 L40 14 L50 8 L60 12 L70 6 L80 10 L90 4 L100 8 L100 20 Z"></path>
-          </svg>
-        </div>
-      )}
-      {(change !== undefined && change !== null && change !== '') && (
-        <div className="flex items-center gap-2 relative z-10">
-          <span className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${
-            isNeutral ? 'text-slate-500 bg-slate-100' :
-            isPositive ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'
-          }`}>
-            {!isNeutral && (isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />)}
+
+      {/* Valor principal */}
+      <div className="mt-3.5 flex items-baseline gap-1.5">
+        <span className="text-[28px] leading-none font-semibold tracking-tight text-slate-900 tabular-nums">
+          {value}
+        </span>
+        {unit && <span className="text-sm font-medium text-slate-400">{unit}</span>}
+      </div>
+
+      {/* Delta + leyenda comparativa */}
+      {showDelta && (
+        <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+          <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${deltaTone}`}>
+            <DeltaIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
             {change}
           </span>
-          <span className="text-xs text-slate-400">{resolvedChangeLabel}</span>
+          <span className="text-xs text-slate-400">{changeLabel || t('vs_last_month')}</span>
         </div>
       )}
     </div>
   );
 }
 
-/** Barra de progreso etiquetada (label + valor + barra). */
-export function ProgressBar({ label, value, percentage, color }: any) {
+/* --- ChartCard: KPI con gráfica -------------------------------------------- */
+/**
+ * Contenedor canónico para cualquier gráfica. Pasa la gráfica (recharts u
+ * otra) como children. `legend` y `action` se alinean a la derecha del título.
+ */
+export function ChartCard({
+  title, subtitle, legend, action, children, className = '',
+}: {
+  title: string;
+  subtitle?: string;
+  legend?: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm">
-        <span className="font-medium text-slate-700">{label}</span>
-        <span className="font-bold text-slate-900">{value} ({percentage}%)</span>
+    <div className={`flex flex-col bg-white rounded-2xl border border-slate-200/70 p-6 transition-all duration-200 hover:border-slate-300 ${className}`}>
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="min-w-0">
+          <h3 className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</h3>
+          {subtitle && <p className="text-[13px] text-slate-500 mt-0.5">{subtitle}</p>}
+        </div>
+        {(legend || action) && (
+          <div className="flex items-center gap-3 shrink-0">{legend}{action}</div>
+        )}
       </div>
-      <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full`} style={{ width: `${percentage}%` }}></div>
+      <div className="flex-1 min-h-0">{children}</div>
+    </div>
+  );
+}
+
+/* --- SectionHeader: clasificador de categorías ----------------------------- */
+/** Encabezado de categoría — agrupa los KPIs en bloques claros. */
+export function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="flex items-baseline gap-3 pt-3">
+      <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400 shrink-0">{title}</h2>
+      {subtitle && <span className="text-xs text-slate-400 font-normal truncate">{subtitle}</span>}
+      <div className="h-px bg-slate-200/70 flex-1" />
+    </div>
+  );
+}
+
+/** Leyenda compacta para cabeceras de ChartCard (punto de color + texto). */
+export function ChartLegend({ items }: { items: { color: string; label: string }[] }) {
+  return (
+    <>
+      {items.map((it, i) => (
+        <span key={i} className="flex items-center gap-1.5 text-xs text-slate-500">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: it.color }} />
+          {it.label}
+        </span>
+      ))}
+    </>
+  );
+}
+
+/** Estado vacío coherente para una gráfica sin datos. */
+export function EmptyChart({ label, height = 240 }: { label: string; height?: number }) {
+  return (
+    <div
+      className="w-full flex items-center justify-center text-sm text-slate-400 rounded-xl bg-slate-50/60"
+      style={{ height }}
+    >
+      {label}
+    </div>
+  );
+}
+
+/* --- Helpers de detalle (restilizados) ------------------------------------- */
+
+/** Barra de progreso etiquetada. */
+export function ProgressBar({ label, value, percentage, color }: any) {
+  const pct = Math.min(100, Math.max(0, Number(percentage) || 0));
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-baseline text-sm">
+        <span className="font-medium text-slate-600">{label}</span>
+        <span className="font-semibold text-slate-900 tabular-nums">{value}</span>
+      </div>
+      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+        <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -69,11 +173,11 @@ export function ProgressBar({ label, value, percentage, color }: any) {
 export function CohortRow({ cohort, data }: any) {
   return (
     <tr>
-      <td className="py-3 text-left pl-4 font-medium text-slate-900">{cohort}</td>
+      <td className="py-3 text-left pl-4 font-medium text-slate-900 text-sm">{cohort}</td>
       {data.map((val: any, i: number) => (
         <td key={i} className="py-3">
           {val !== null ? (
-            <div className={`inline-block px-3 py-1 rounded text-white font-medium ${
+            <div className={`inline-block min-w-[44px] px-2.5 py-1 rounded-lg text-white text-xs font-semibold tabular-nums ${
               val >= 95 ? 'bg-emerald-600' :
               val >= 90 ? 'bg-emerald-500' :
               val >= 85 ? 'bg-emerald-400' : 'bg-emerald-300'
@@ -81,7 +185,7 @@ export function CohortRow({ cohort, data }: any) {
               {val}%
             </div>
           ) : (
-            <span className="text-slate-400">-</span>
+            <span className="text-slate-300">—</span>
           )}
         </td>
       ))}
@@ -89,43 +193,27 @@ export function CohortRow({ cohort, data }: any) {
   );
 }
 
-/** Item de leyenda (punto de color + etiqueta). */
-export function LegendItem({ color, label }: any) {
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className={`w-2 h-2 rounded-full ${color}`}></span>
-      <span className="text-slate-600">{label}</span>
-    </div>
-  );
-}
-
 /** Fila de cliente con déficit (lista de "Top Deficit Clients"). */
 export function DeficitClient({ name, deficit, severity }: any) {
   const { t } = useLanguage();
-  const severityStyles = {
-    high: 'bg-red-50 border-red-100 text-red-500',
-    med: 'bg-amber-50 border-amber-100 text-amber-500',
-    low: 'bg-slate-50 border-slate-100 text-slate-500'
-  };
-
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-xl border ${severity === 'high' ? severityStyles.high : 'bg-white border-transparent hover:bg-slate-50'} transition-colors`}>
-      <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-bold text-sm shrink-0">
+    <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+      severity === 'high' ? 'bg-red-50/70 border-red-100' : 'bg-white border-slate-100 hover:bg-slate-50'
+    }`}>
+      <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-semibold text-sm shrink-0">
         {String(name || 'C').charAt(0).toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
         <h4 className="text-sm font-semibold text-slate-900 truncate">{name}</h4>
-        <p className={`text-xs font-medium ${severity === 'high' ? 'text-red-500' : 'text-slate-500'}`}>{deficit}</p>
+        <p className={`text-xs font-medium ${severity === 'high' ? 'text-red-500' : 'text-slate-400'}`}>{deficit}</p>
       </div>
-      <div className="text-right">
-        {severity === 'high' ? (
-          <AlertTriangle className="w-5 h-5 text-red-500" />
-        ) : (
-          <span className={`text-xs font-bold px-2 py-1 rounded-md ${severity === 'med' ? 'bg-amber-50 text-amber-500' : 'bg-slate-100 text-slate-500'}`}>
-            {severity === 'med' ? t('analytics_med') : t('analytics_low')}
-          </span>
-        )}
-      </div>
+      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${
+        severity === 'high' ? 'bg-red-100 text-red-600'
+          : severity === 'med' ? 'bg-amber-100 text-amber-600'
+          : 'bg-slate-100 text-slate-500'
+      }`}>
+        {severity === 'high' ? t('analytics_high') : severity === 'med' ? t('analytics_med') : t('analytics_low')}
+      </span>
     </div>
   );
 }
@@ -134,26 +222,37 @@ export function DeficitClient({ name, deficit, severity }: any) {
 export function DistributionItem({ color, label, value }: any) {
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className={`w-3 h-3 rounded-full ${color}`}></span>
-        <span className="text-sm text-slate-600">{label}</span>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />
+        <span className="text-sm text-slate-600 truncate">{label}</span>
       </div>
-      <span className="text-sm font-bold text-slate-900">{value}</span>
+      <span className="text-sm font-semibold text-slate-900 tabular-nums">{value}</span>
     </div>
   );
 }
 
-/** Fila de frecuencia (label + % + barra) — usada en frecuencia muscular. */
+/** Fila de frecuencia (label + % + barra). */
 export function FrequencyItem({ label, percentage, color }: any) {
+  const pct = Math.min(100, Math.max(0, Number(percentage) || 0));
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="flex justify-between text-xs font-medium">
         <span className="text-slate-600">{label}</span>
-        <span className="text-slate-900">{percentage}%</span>
+        <span className="text-slate-900 tabular-nums">{percentage}%</span>
       </div>
       <div className="w-full bg-slate-100 rounded-full h-2">
-        <div className={`${color} h-2 rounded-full`} style={{ width: `${percentage}%` }}></div>
+        <div className={`${color} h-2 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
       </div>
+    </div>
+  );
+}
+
+/** Leyenda suelta (compatibilidad). */
+export function LegendItem({ color, label }: any) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className={`w-2 h-2 rounded-full ${color}`} />
+      <span className="text-slate-500">{label}</span>
     </div>
   );
 }
