@@ -59,6 +59,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   // with confusing IDs. Track the fallback so we can surface a clear error
   // state and disable submission until the real template loads.
   const [templateError, setTemplateError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const loadTemplate = async () => {
     setIsLoading(true);
@@ -253,6 +254,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
 
   const handleFinish = async () => {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       await fetchWithAuth('/check-ins/client/submissions', {
         method: 'POST',
@@ -263,8 +265,10 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
         })
       });
       onComplete();
-    } catch (err) {
-      alert(t('error_submitting_checkin'));
+    } catch (err: any) {
+      // Inline banner instead of a blocking alert() — the modal stays open
+      // and the user can fix and retry without losing their answers.
+      setSubmitError(err?.message || t('error_submitting_checkin'));
     } finally {
       setIsSubmitting(false);
     }
@@ -342,6 +346,16 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
               <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl flex items-center gap-3 text-red-600 dark:text-red-400 text-sm font-bold animate-in shake duration-300">
                 <span className="material-symbols-outlined">error</span>
                 {validationError}
+              </div>
+            )}
+
+            {submitError && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl flex items-center gap-3 text-red-600 dark:text-red-400 text-sm font-bold">
+                <span className="material-symbols-outlined">error</span>
+                <span className="flex-1">{submitError}</span>
+                <button type="button" onClick={() => setSubmitError(null)} className="text-red-500 hover:text-red-700 ml-2" aria-label={t('cancel')}>
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
               </div>
             )}
 

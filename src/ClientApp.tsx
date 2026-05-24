@@ -14,7 +14,10 @@ const ClientProgress = lazy(() => import('./views/client/ClientProgress'));
 const ClientSettings = lazy(() => import('./views/client/ClientSettings'));
 import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
-import ActivityEditor from './views/ActivityEditor';
+// Client-only read-only view of an exercise. Replaces the manager-side
+// ActivityEditor that used to be wired here — that screen had a fake
+// "Save" button and exposed prescription editing the client must not touch.
+import ClientActivityView from './views/client/ClientActivityView';
 import OnboardingPopup from './components/OnboardingPopup';
 import { fetchWithAuth } from './api';
 import WeeklyCheckinFlow from './views/client/WeeklyCheckinFlow';
@@ -99,9 +102,9 @@ export default function ClientApp() {
         return <ClientProgress />;
       case 'activity-editor':
         return (
-          <ActivityEditor 
+          <ClientActivityView
             activityName={selectedActivityName || undefined}
-            onBack={() => setCurrentView('training')} 
+            onBack={() => setCurrentView('training')}
           />
         );
       case 'messages':
@@ -136,7 +139,9 @@ export default function ClientApp() {
         onboardingData={onboardingData}
         submittedThisWeek={submittedThisWeek}
         onOpenOnboarding={() => {
-          setCurrentView('none');
+          // Just open the modal — don't switch view to a placeholder. If the
+          // user dismisses the onboarding, they should stay on whatever they
+          // were looking at, not land on the "screen under development" page.
           setShowOnboarding(true);
         }}
         onOpenCheckIn={() => {

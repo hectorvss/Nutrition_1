@@ -591,9 +591,9 @@ export default function ClientNutrition() {
               {t('example_mode')}
             </button>
           </div>
-          <div className="flex gap-2 pr-2">
-            <button onClick={() => window.print()} title={t('print', { defaultValue: 'Print' })} className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"><span className="material-symbols-outlined">print</span></button>
-          </div>
+          {/* Print button removed — the SPA layout has no @media print styles
+              so the output was unusable. Re-add only when a real print view
+              (export to PDF) is implemented. */}
         </div>
 
         {viewState === 'weekly' ? renderWeeklyView() : (

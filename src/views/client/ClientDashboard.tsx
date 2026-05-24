@@ -251,9 +251,16 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
           <p className="text-slate-500 dark:text-slate-400 capitalize">{formattedDate}</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-full bg-[#17cf54]/10 border-2 border-[#17cf54]/20 flex items-center justify-center text-[#17cf54] font-bold uppercase">
-            {user?.email?.charAt(0) || 'C'}
-          </div>
+          {/* The avatar shape implied a clickable account target — make that
+              real and route to settings instead of being a dead affordance. */}
+          <button
+            type="button"
+            onClick={() => onNavigate('settings')}
+            aria-label={t('settings')}
+            className="h-10 w-10 rounded-full bg-[#17cf54]/10 border-2 border-[#17cf54]/20 flex items-center justify-center text-[#17cf54] font-bold uppercase hover:bg-[#17cf54]/20 transition-colors"
+          >
+            {(profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'C').toUpperCase()}
+          </button>
         </div>
       </header>
 

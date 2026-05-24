@@ -261,10 +261,12 @@ export default function ClientRoadmap() {
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="bg-[#17cf54] px-5 py-3 rounded-2xl text-white flex items-center gap-3 shadow-lg shadow-[#17cf54]/20 font-bold text-xs tracking-widest uppercase cursor-default">
+              {/* Decorative status badge — flat span, not a button-shaped div
+                  with cursor-default that misled users into clicking. */}
+              <span className="bg-[#17cf54] px-5 py-3 rounded-2xl text-white inline-flex items-center gap-3 shadow-lg shadow-[#17cf54]/20 font-bold text-xs tracking-widest uppercase">
                 <PlayIcon className="w-5 h-5 fill-white/20" />
                 <span>{t('status')}: {roadmap.status}</span>
-              </div>
+              </span>
             </div>
           </div>
 

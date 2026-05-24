@@ -533,9 +533,11 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 })()}
               </span>
             </div>
-            <button 
-              onClick={() => setWeekOffset(prev => prev + 1)}
-              className="px-3 py-2 rounded-lg text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 transition-all"
+            <button
+              onClick={() => setWeekOffset(prev => Math.min(0, prev + 1))}
+              disabled={weekOffset >= 0}
+              className="px-3 py-2 rounded-lg text-slate-500 hover:bg-white dark:hover:bg-slate-700 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+              aria-label={t('next_week', { defaultValue: 'Semana siguiente' })}
             >
               <span className="material-symbols-outlined text-lg">chevron_right</span>
             </button>

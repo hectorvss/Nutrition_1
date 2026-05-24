@@ -120,27 +120,11 @@ export default function ClientCheckIns() {
             </div>
           </div>
           <div className="flex items-center gap-2 pr-2">
+            {/* Print/share removed: print had no @media-print stylesheet and
+                share shipped the SPA URL — a deep link the recipient cannot
+                open. Re-add when there is a real per-check-in route or a PDF
+                export to share. */}
             <button
-              onClick={() => window.print()}
-              aria-label={t('print', { defaultValue: 'Imprimir' })}
-              title={t('print', { defaultValue: 'Imprimir' })}
-              className="p-2 text-slate-400 hover:text-[#17cf54] transition-colors"
-            ><span className="material-symbols-outlined">print</span></button>
-            <button
-              onClick={async () => {
-                try {
-                  if (navigator.share) {
-                    await navigator.share({ title: t('checkin_view'), url: window.location.href });
-                  } else {
-                    await navigator.clipboard.writeText(window.location.href);
-                  }
-                } catch { /* el usuario canceló el diálogo */ }
-              }}
-              aria-label={t('share', { defaultValue: 'Compartir' })}
-              title={t('share', { defaultValue: 'Compartir' })}
-              className="p-2 text-slate-400 hover:text-[#17cf54] transition-colors"
-            ><span className="material-symbols-outlined">share</span></button>
-            <button 
               onClick={() => setIsCheckingIn(true)}
               className="bg-[#17cf54] hover:bg-[#15b84a] text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm"
             >
