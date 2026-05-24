@@ -18,6 +18,8 @@ import SolutionsPage from "./landing/SolutionsPage";
 import ResourcesPage from "./landing/ResourcesPage";
 import AboutPage from "./landing/AboutPage";
 import ChangelogPage from "./landing/ChangelogPage";
+import ImpactSection from "./landing/ImpactSection";
+import ROISection from "./landing/ROISection";
 
 interface LandingPageProps {
   onGetStarted?: () => void;
@@ -57,8 +59,11 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
     });
   };
 
+  // Fondo en gradiente suave (modo de prueba): va de un toque índigo
+  // arriba-izquierda al blanco central y a rosa abajo-derecha. Los
+  // componentes con `bg-white` siguen destacando por contraste.
   return (
-    <div className="bg-white min-h-screen font-sans text-black">
+    <div className="bg-gradient-to-br from-indigo-50 via-white to-rose-50 min-h-screen font-sans text-black">
       {/* Floating Navigation Header */}
       <div className="fixed top-8 left-0 w-full px-8 flex justify-between items-center z-50 pointer-events-none">
         <div className="flex items-center pointer-events-auto">
@@ -70,11 +75,13 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             ></button>
             <div className="flex gap-5 md:gap-6 text-[15px] md:text-base">
               {[
-                { key: 'home' as const,       label: t('product') },
-                { key: 'features' as const,   label: isEs ? 'Funciones' : 'Features' },
+                // Etiquetas con mayúscula inicial explícita: los items de
+                // navegación de la landing son nombres propios de la sección.
+                { key: 'home' as const,       label: isEs ? 'Producto'   : 'Product' },
+                { key: 'features' as const,   label: isEs ? 'Funciones'  : 'Features' },
                 { key: 'solutions' as const,  label: isEs ? 'Soluciones' : 'Solutions' },
-                { key: 'pricing' as const,    label: t('pricing') },
-                { key: 'resources' as const,  label: isEs ? 'Recursos' : 'Resources' },
+                { key: 'pricing' as const,    label: isEs ? 'Precios'    : 'Pricing' },
+                { key: 'resources' as const,  label: isEs ? 'Recursos'   : 'Resources' },
               ].map(({ key, label }) => (
                 <button
                   key={key}
@@ -91,17 +98,19 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
         </div>
 
         <div className="flex gap-4 pointer-events-auto items-center">
-          <button 
+          {/* Etiquetas explicitas con mayuscula inicial y sin guion bajo
+              (antes salian "log_in" / "create_account" tal cual la clave). */}
+          <button
             onClick={onLogin}
             className="text-gray-400 hover:text-black font-medium text-lg transition-colors bg-transparent border-none cursor-pointer px-4 py-2"
           >
-            {t('log_in')}
+            {isEs ? 'Iniciar sesión' : 'Log in'}
           </button>
           <button 
             onClick={onGetStarted}
             className="bg-black text-white px-8 py-3 rounded-full font-medium text-lg hover:bg-gray-800 transition-all shadow-lg hover:shadow-black/5 active:scale-95 cursor-pointer border-none"
           >
-            {t('create_account')}
+            {isEs ? 'Crear cuenta' : 'Create account'}
           </button>
         </div>
       </div>
@@ -215,6 +224,10 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
           {/* Cifras de prueba justo despues del hero. */}
           <StatsSection />
 
+          {/* Gráfico visual "antes vs. después": el factor wow del scroll
+              superior, el visitante ve de un golpe la diferencia. */}
+          <ImpactSection />
+
           {/* "Cómo funciona" + grid de features + integraciones dan contexto
               del producto antes del recorrido animado. */}
           <HowItWorks />
@@ -266,10 +279,12 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               url="nutrifit.pro/alerts"
             />
 
-            {/* "Para quién es" + comparativa vs stack improvisado, antes de
-                la prueba social. */}
+            {/* "Para quién es" + comparativa de 4 columnas + calculadora de
+                ROI interactiva: el visitante ya ha visto el producto y ahora
+                toca convencerle con datos y un número concreto. */}
             <UseCasesSection />
             <ComparisonSection />
+            <ROISection />
 
             {/* Prueba social y resolución de dudas frecuentes antes del CTA
                 final, donde el visitante ya tiene contexto suficiente. */}
