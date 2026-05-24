@@ -736,8 +736,9 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             </button>
           </div>
 
-          {/* Right Column: Summary & Library */}
-          <div className="w-full lg:w-[400px] flex flex-col gap-8">
+          {/* Right Column: Summary & Library — sticky like the nutrition editor
+              so the exercise library stays in view while the workout cards scroll. */}
+          <div className="w-full lg:w-[400px] flex flex-col gap-8 sticky top-6">
             {/* Exercise Library */}
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col relative">
               <div className="px-6 py-6 border-b border-slate-100 flex flex-col gap-4 shrink-0">
