@@ -816,20 +816,32 @@ export default function ClientProgress() {
         </div>
         <div className="p-6 flex-1 overflow-auto">
           <div className="relative pl-6 border-l-2 border-slate-100 dark:border-slate-800 space-y-8">
-            {stats?.activity?.map((act: any, idx: number) => (
-              <div key={idx} className="relative">
-                <div className="absolute -left-[31px] bg-white dark:bg-slate-900 p-1">
-                  <div className={`h-3 w-3 rounded-full ${act.type === 'CHECK_IN' ? 'bg-emerald-500 ring-4 ring-emerald-50 dark:ring-emerald-900/30' : 'bg-blue-400 ring-4 ring-blue-50 dark:ring-blue-900/30'}`}></div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">{act.title}</span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(act.time).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            {stats?.activity?.map((act: any, idx: number) => {
+              // Server now sends canonical `type` + raw values. Translate
+              // the labels here so they follow the active app language.
+              const title = act.type === 'CHECK_IN'
+                ? t('activity_checkin_title', { defaultValue: 'Check-in' })
+                : t('activity_message_title', { defaultValue: 'Mensaje recibido' });
+              const sub = act.type === 'CHECK_IN'
+                ? (act.weight != null
+                    ? t('activity_checkin_weight', { weight: act.weight, defaultValue: `Peso registrado (${act.weight} kg)` })
+                    : t('activity_checkin_submitted', { defaultValue: 'Check-in enviado' }))
+                : (act.preview || act.sub || '');
+              return (
+                <div key={idx} className="relative">
+                  <div className="absolute -left-[31px] bg-white dark:bg-slate-900 p-1">
+                    <div className={`h-3 w-3 rounded-full ${act.type === 'CHECK_IN' ? 'bg-emerald-500 ring-4 ring-emerald-50 dark:ring-emerald-900/30' : 'bg-blue-400 ring-4 ring-blue-50 dark:ring-blue-900/30'}`}></div>
                   </div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{act.sub}</p>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">{title}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(act.time).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{sub}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {(!stats?.activity || stats.activity.length === 0) && (
               <p className="text-center text-slate-400 text-sm py-4">{t('no_recent_activity')}</p>
             )}

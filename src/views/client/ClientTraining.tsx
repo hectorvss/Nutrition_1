@@ -486,7 +486,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
             <li>
               <div className="flex items-center">
                 <span className="material-symbols-outlined text-slate-400 text-lg mx-1">chevron_right</span>
-                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.email?.split('@')[0]}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.full_name?.split(' ')[0] || user?.email?.split('@')[0]}</span>
               </div>
             </li>
           </ol>
@@ -498,7 +498,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
             <div className="w-16 h-16 rounded-2xl shadow-sm bg-[#17cf54]/10 flex items-center justify-center text-2xl font-bold text-[#17cf54] uppercase">{user?.email?.charAt(0) || 'C'}</div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.email?.split('@')[0] || t('client')}</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || t('client')}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">person</span> {t('client')}
@@ -685,18 +685,6 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function SummaryStat({ label, value, color }: any) {
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <div className="flex items-center gap-2">
-        <div className={`w-2.5 h-2.5 rounded-full ${color}`}></div>
-        <span className="text-slate-600 dark:text-slate-400">{label}</span>
-      </div>
-      <span className="font-bold text-slate-900 dark:text-white">{value}</span>
     </div>
   );
 }

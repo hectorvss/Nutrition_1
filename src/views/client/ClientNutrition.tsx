@@ -398,7 +398,7 @@ export default function ClientNutrition() {
               key={idx}
               title={m.name} 
               time={m.time} 
-              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0))}
+              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
               icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
               iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
               macros={(m.categories || []).map((c: any) => ({
@@ -510,7 +510,7 @@ export default function ClientNutrition() {
               key={idx}
               title={m.name} 
               time={m.time} 
-              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0))}
+              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
               icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
               iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
               items={(m.items || []).map((i: any) => {
@@ -541,7 +541,7 @@ export default function ClientNutrition() {
             <li>
               <div className="flex items-center">
                 <span className="material-symbols-outlined text-slate-400 text-lg mx-1">chevron_right</span>
-                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.email?.split('@')[0] || t('nutrition')}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">{user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || t('nutrition')}</span>
               </div>
             </li>
           </ol>
@@ -553,7 +553,7 @@ export default function ClientNutrition() {
             <div className="w-16 h-16 rounded-3xl shadow-sm bg-[#17cf54]/10 flex items-center justify-center text-2xl font-bold text-[#17cf54] uppercase">{user?.email?.charAt(0) || 'C'}</div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{user?.email?.split('@')[0] || '—'}</h1>
+            <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">{user?.full_name || user?.email?.split('@')[0] || '—'}</h1>
             <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
               {planGoal && (
                 <span className="flex items-center gap-1">

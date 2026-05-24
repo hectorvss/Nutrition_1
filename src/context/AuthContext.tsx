@@ -10,6 +10,11 @@ interface User {
   // requests to their own coach. The backend `/auth/login` and `/auth/me`
   // already return it; this declaration just exposes it to consumers.
   manager_id?: string | null;
+  // For clients, the display name from clients_profiles.metadata. Hydrated
+  // once after auth via /client/profile so views can greet the user by
+  // first name without each one re-fetching the profile. Optional —
+  // consumers should fall back to the email local part.
+  full_name?: string | null;
 }
 
 interface AuthContextType {
@@ -62,6 +67,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (data.user) {
             setUser(data.user);
             localStorage.setItem('auth_user', JSON.stringify(data.user));
+            // Hydrate the client's display name once so every view can read
+            // user.full_name instead of refetching /client/profile or
+            // falling back to email.split('@')[0]. Fire-and-forget — auth
+            // is already valid, this only enriches the cached user.
+            if (data.user.role === 'CLIENT') {
+              fetch('/api/client/profile', { headers: { Authorization: `Bearer ${token}` } })
+                .then(r => r.ok ? r.json() : null)
+                .then(p => {
+                  if (p?.full_name) {
+                    setUser(prev => prev ? { ...prev, full_name: p.full_name } : prev);
+                    try {
+                      const cached = JSON.parse(localStorage.getItem('auth_user') || 'null');
+                      if (cached) localStorage.setItem('auth_user', JSON.stringify({ ...cached, full_name: p.full_name }));
+                    } catch { /* ignore */ }
+                  }
+                })
+                .catch(() => { /* non-blocking */ });
+            }
           }
         } else {
           // Server error — fall back to cached user to avoid logging out on flaky network

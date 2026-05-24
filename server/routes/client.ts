@@ -434,25 +434,26 @@ router.get('/profile-stats', async (req: any, res) => {
     }
 
     // 6. Recent Activity (Messages) — fetched in parallel above.
+    // Carry canonical type + raw values so the client side translates the
+    // labels per the active language (was hardcoded English on the server).
     const activity = [
-      ...(checkIns || []).slice(-3).map(ci => {
-        const w = (ci.data_json as any)?.weight;
-        return {
-          type: 'CHECK_IN',
-          title: 'Morning Check-in',
-          sub: w ? `Logged weight (${w}kg)` : 'Check-in submitted',
-          time: ci.date,
-          color: 'bg-emerald-100 text-emerald-600'
-        };
-      }),
+      ...(checkIns || []).slice(-3).map(ci => ({
+        type: 'CHECK_IN',
+        weight: ((): number | null => {
+          const w = (ci.data_json as any)?.weight;
+          const n = w == null ? NaN : Number(w);
+          return Number.isFinite(n) && n > 0 ? n : null;
+        })(),
+        time: ci.date,
+        color: 'bg-emerald-100 text-emerald-600',
+      })),
       ...(recentMsgs || []).map(m => ({
         type: 'MESSAGE',
-        title: 'Message Received',
-        sub: m.content.substring(0, 50) + (m.content.length > 50 ? '...' : ''),
+        preview: (m.content || '').substring(0, 50) + ((m.content || '').length > 50 ? '...' : ''),
         time: m.created_at,
-        color: 'bg-blue-100 text-blue-600'
+        color: 'bg-blue-100 text-blue-600',
       }))
-    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+    ].sort((a: any, b: any) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
 
     // 7. Training Stats — workout_logs fetched in parallel above.
     const startOfWeek = new Date(now);
