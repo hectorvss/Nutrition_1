@@ -373,20 +373,38 @@ router.get('/clients', async (req: any, res) => {
       return 0;
     };
 
-    // Summarise a nutrition plan's data_json into calories + macro split.
+    // Summarise a nutrition plan's data_json into a representative daily
+    // calories + macro split. Before this fix the function only read
+    // `dj.days.monday`, so the client list chip always reflected Monday of
+    // week 1 — every other day (and any weekOverrides) was ignored. Now it
+    // averages across every day that actually has meals, which is what a
+    // "daily" chip should show.
     const summarizePlan = (dj: any) => {
       if (!dj) return null;
-      let meals: any[] = [];
-      if (Array.isArray(dj.meals)) meals = dj.meals;
-      else if (dj.days) meals = dj.days.monday?.meals || (Object.values(dj.days)[0] as any)?.meals || [];
+      const dayMealLists: any[][] = [];
+      if (Array.isArray(dj.meals)) dayMealLists.push(dj.meals);
+      else if (dj.days) {
+        for (const d of Object.values(dj.days)) {
+          const ms = (d as any)?.meals;
+          if (Array.isArray(ms) && ms.length) dayMealLists.push(ms);
+        }
+      }
+      if (!dayMealLists.length) {
+        if (dj.macros) return { calories: dj.targetCalories || 0, macros: dj.macros };
+        return null;
+      }
       let cal = 0, p = 0, c = 0, f = 0;
-      meals.forEach((m: any) => (m.items || []).forEach((i: any) => {
-        const q = Number(i.quantity || i.multiplier || 1);
-        cal += (Number(i.calories) || 0) * q;
-        p += (Number(i.protein) || 0) * q;
-        c += (Number(i.carbs) || 0) * q;
-        f += (Number(i.fats) || 0) * q;
-      }));
+      for (const meals of dayMealLists) {
+        for (const m of meals) for (const i of (m.items || [])) {
+          const q = Number(i.quantity || i.multiplier || 1);
+          cal += (Number(i.calories) || 0) * q;
+          p += (Number(i.protein) || 0) * q;
+          c += (Number(i.carbs) || 0) * q;
+          f += (Number(i.fats) || 0) * q;
+        }
+      }
+      const n = dayMealLists.length;
+      cal /= n; p /= n; c /= n; f /= n;
       const macroCal = p * 4 + c * 4 + f * 9;
       if (macroCal > 0) {
         return {

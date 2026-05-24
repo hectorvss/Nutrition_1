@@ -248,7 +248,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       }
     };
     fetchPlan();
-  }, [client?.id, initialPlanData, selectedDay, templateId]);
+    // `weekIndex` is read inside fetchPlan to pick the right week override —
+    // it must be in deps so switching weeks actually re-resolves the meals.
+  }, [client?.id, initialPlanData, selectedDay, templateId, weekIndex]);
 
   // Load the supplement database (global catalog + this manager's custom ones).
   React.useEffect(() => {

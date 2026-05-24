@@ -111,7 +111,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       await fetchWithAuth(`/manager/clients/${client.id}/nutrition-plan`, {
         method: 'POST',
         body: JSON.stringify({
-          name: planData?.name || `Plan de Nutrición - ${client.name}`,
+          name: planData?.name || t('nutrition_plan_for', { defaultValue: `Nutrition Plan - ${client.name}`, name: client.name }),
           data_json: updatedDataJson
         })
       });
@@ -238,12 +238,18 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
         totalC += (i.carbs || 0) * qty;
         totalF += (i.fats || 0) * qty;
       });
-      // Handle macro categories if present
+      // Handle macro categories if present. Categories store grams; before this
+      // fix grams were added to totalP/C/F but the equivalent kcal were not
+      // added to totalCals, so meals that mixed `items` (with own calories)
+      // and `categories` produced macro % bars > 100. Sum the kcal equivalent
+      // (4 kcal/g for protein and carbs, 9 kcal/g for fats) so totals stay
+      // consistent.
       if (m.categories) {
         m.categories.forEach((cat: any) => {
-          if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) totalP += cat.amount || 0;
-          else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) totalC += cat.amount || 0;
-          else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) totalF += cat.amount || 0;
+          const amt = cat.amount || 0;
+          if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) { totalP += amt; totalCals += amt * 4; }
+          else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) { totalC += amt; totalCals += amt * 4; }
+          else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) { totalF += amt; totalCals += amt * 9; }
         });
       }
     });
@@ -349,7 +355,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
                <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
                 {day.weekViewLabel.split(' ')[0]}
               </div>
-              <span className="text-xs font-bold text-slate-500 uppercase">{day.weekViewLabel.split(' ')[1] || 'Ingestas'}</span>
+              <span className="text-xs font-bold text-slate-500 uppercase">{day.weekViewLabel.split(' ')[1] || t('meals_label', { defaultValue: 'Meals' })}</span>
             </div>
           </div>
           <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
@@ -430,7 +436,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
               {(isLoading || isSaving) && (
                 <div className="flex items-center gap-2 mr-4">
                   <div className="w-4 h-4 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                  <span className="text-xs font-medium text-slate-400">{isSaving ? t('saving_dots') : 'Loading...'}</span>
+                  <span className="text-xs font-medium text-slate-400">{isSaving ? t('saving_dots') : t('loading', { defaultValue: 'Loading...' })}</span>
                 </div>
               )}
               {onReassign && (
