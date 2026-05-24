@@ -6,6 +6,12 @@ import { verifyClient } from '../middleware/auth.js';
 
 const router = Router();
 
+// Defense-in-depth: any value about to be interpolated into a PostgREST
+// .or() / filter string MUST be a valid UUID. The auth middleware already
+// guarantees req.user.id comes from Supabase Auth, but the explicit check
+// keeps the intent obvious and stops future regressions cold.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Verificacion de rol CLIENT centralizada en middleware/auth.ts: la BD es la
 // unica fuente de verdad del rol y NUNCA se confia en user_metadata (mutable
 // por el propio usuario via supabase.auth.updateUser).
@@ -284,66 +290,18 @@ router.patch('/workout-logs/:id', async (req: any, res) => {
   }
 });
 
-// --- ONBOARDING ROUTES ---
-
-// Get active onboarding message for the client
-router.get('/onboarding/active', async (req: any, res) => {
-  try {
-    const { data: assignments, error } = await supabaseAdmin
-      .from('onboarding_assignments')
-      .select('*, onboarding_messages(*)')
-      .eq('user_id', req.user.id)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      if (error.code === '42P01') return res.json(null);
-      throw error;
-    }
-
-    if (!assignments || assignments.length === 0) {
-      return res.json(null);
-    }
-
-    // Return the oldest pending assignment to ensure order (if multiple)
-    // Actually, usually we want the most recent one if it's a "pop up"
-    res.json(assignments[0]);
-  } catch (error) {
-    console.error('Error fetching active onboarding:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Update assignment status (seen/dismissed)
-router.post('/onboarding/active/:id/action', async (req: any, res) => {
-  const { status } = req.body; // 'seen' or 'dismissed'
-  const assignmentId = req.params.id;
-
-  const VALID_STATUSES = ['seen', 'dismissed', 'completed'];
-  if (!status || !VALID_STATUSES.includes(status)) {
-    return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
-  }
-
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('onboarding_assignments')
-      .update({ status })
-      .eq('id', assignmentId)
-      .eq('user_id', req.user.id) // Security check
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(data);
-  } catch (error: any) {
-    console.error('Error updating onboarding status:', error);
-    res.status(500).json({ error: safeErr(error) });
-  }
-});
+// NOTE: the legacy `/client/onboarding/active` GET + POST endpoints that
+// used to live here read from `onboarding_assignments`/`onboarding_messages`
+// (the old popup model). The UI moved to `/onboarding/client/active` long
+// ago (see server/routes/onboarding.ts and src/ClientApp.tsx), so those
+// routes were unreachable dead code. Removed to prevent future drift.
 
 // Get my performance statistics (for Progress view)
 router.get('/profile-stats', async (req: any, res) => {
   const id = req.user.id;
+  if (!UUID_RE.test(id)) {
+    return res.status(400).json({ error: 'Invalid user id' });
+  }
   const now = new Date();
 
   try {
@@ -632,6 +590,9 @@ router.get('/profile-stats', async (req: any, res) => {
     res.json({
       latestWeight: num((lastCheckIn?.data_json as any)?.weight),
       goal: cProfile?.goal || null,
+      goalWeight: num(cProfile?.goal_weight),
+      // The first check-in weight gives a stable "starting point" baseline.
+      startWeight: weightHistory.length > 0 ? num(weightHistory[0]?.weight) : null,
       bodyFat: num((lastCheckIn?.data_json as any)?.body_fat),
       adherenceRate: calculatedAdherenceRate,
       activeDays: (checkIns?.length || 0),

@@ -5,6 +5,11 @@ interface User {
   id: string;
   email: string;
   role: 'MANAGER' | 'CLIENT';
+  // For clients, the id of the manager who owns them. Used by Messages.tsx
+  // to set the conversation recipient and by other client views that scope
+  // requests to their own coach. The backend `/auth/login` and `/auth/me`
+  // already return it; this declaration just exposes it to consumers.
+  manager_id?: string | null;
 }
 
 interface AuthContextType {

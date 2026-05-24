@@ -33,10 +33,15 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
         setCheckIns(unwrapList(checkInsData));
 
         if (profileData?.manager_id) {
-          const conversation = await fetchWithAuth(`/messages/${profileData.manager_id}?limit=50`);
+          // Only the 3 most recent coach-authored messages are rendered, so
+          // fetch a small page and filter — was 50 round-tripped per dashboard
+          // visit, dominating the request for nothing.
+          const conversation = await fetchWithAuth(`/messages/${profileData.manager_id}?limit=15`);
           if (!mounted) return;
           const msgs = unwrapList<any>(conversation);
-          const coachMessages = msgs.filter((m: any) => m.sender_id === profileData.manager_id);
+          const coachMessages = msgs
+            .filter((m: any) => m.sender_id === profileData.manager_id)
+            .slice(0, 3);
           setMessages(coachMessages.reverse());
         }
       } catch (err) {

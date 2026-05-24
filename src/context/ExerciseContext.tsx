@@ -2,6 +2,18 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Exercise } from '../constants/exercises';
 import { supabase } from '../supabase';
 import { useLanguage } from './LanguageContext';
+import { useAuth } from './AuthContext';
+
+// Mutations on the global `exercises` catalog must NEVER fire from a client
+// session. The provider is mounted globally (managers and clients share the
+// same tree), so this guard lives at the context level. Server-side RLS
+// should also reject these writes — the front-end check is defense in depth
+// to keep the catalog clean even if RLS regresses.
+const assertManagerOrThrow = (role: string | undefined) => {
+  if (role !== 'MANAGER') {
+    throw new Error('Only managers can modify the exercise catalog.');
+  }
+};
 
 export type { Exercise };
 
@@ -20,6 +32,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { language } = useLanguage();
+  const { user } = useAuth();
 
   const fetchExercises = async () => {
     setIsLoading(true);
@@ -63,6 +76,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
   }, [language]);
 
   const addExercise = async (exercise: Omit<Exercise, 'id'>) => {
+    assertManagerOrThrow(user?.role);
     try {
       const { error } = await supabase
         .from('exercises')
@@ -94,6 +108,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteExercise = async (id: string) => {
+    assertManagerOrThrow(user?.role);
     try {
       const { error } = await supabase
         .from('exercises')
@@ -109,6 +124,7 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateExercise = async (id: string, updates: Partial<Exercise>) => {
+    assertManagerOrThrow(user?.role);
     try {
       const dbUpdates: any = {};
       if (updates.name) dbUpdates.name = updates.name;

@@ -7,8 +7,10 @@ import ClientCheckIns from './views/client/ClientCheckIns';
 import ClientNutrition from './views/client/ClientNutrition';
 import ClientTraining from './views/client/ClientTraining';
 import ClientRoadmap from './views/client/ClientRoadmap';
-// Settings (1663 LOC) lazy: rara vez se entra desde la app cliente.
-const Settings = lazy(() => import('./views/Settings'));
+// Client-scoped settings. The manager-side Settings page (1.7k LOC) calls
+// /manager/* endpoints that 403 for clients — we render a stripped-down,
+// client-safe view instead. Lazy to keep the entry bundle small.
+const ClientSettings = lazy(() => import('./views/client/ClientSettings'));
 import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
 import ActivityEditor from './views/ActivityEditor';
@@ -52,7 +54,7 @@ export default function ClientApp() {
       case 'dashboard':
         return <ClientDashboard onNavigate={(view) => setCurrentView(view as ClientView)} />;
       case 'settings':
-        return <Settings />;
+        return <ClientSettings />;
       case 'check-ins':
         return <ClientCheckIns />;
       case 'nutrition':

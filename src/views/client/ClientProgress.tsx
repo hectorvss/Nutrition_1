@@ -658,14 +658,24 @@ export default function ClientProgress() {
   );
 
   const renderPlanning = () => {
-    const goal = stats?.weight?.goal ?? null;
-    const current = stats?.weight?.current ?? null;
-    const start = stats?.weight?.start ?? null;
+    // Align with the actual `/client/profile-stats` shape — the previous
+    // version read `stats.weight.goal`, `stats.adherence.training`, etc.
+    // None of those exist in the response, so the Planning tab was always
+    // empty. See server/routes/client.ts for the real fields.
+    const goal = stats?.goalWeight ?? null;
+    const current = stats?.latestWeight ?? null;
+    const start = stats?.startWeight ?? null;
     const targetDelta = (goal != null && current != null) ? (Number(goal) - Number(current)) : null;
-    const nutritionAdh = stats?.adherence?.nutrition ?? stats?.nutrition?.adherenceRate ?? null;
-    const trainingAdh = stats?.adherence?.training ?? stats?.training?.adherenceRate ?? null;
-    const avgSteps = stats?.activity?.avgSteps ?? null;
-    const hasPlanningData = goal != null || current != null || nutritionAdh != null || trainingAdh != null;
+    // The server returns a single overall `adherenceRate` plus `macros` (calorie/
+    // macro adherence %s) and `training.workoutCount`. Use those as the closest
+    // approximations until a richer split is exposed.
+    const nutritionAdh = stats?.macros?.calories ?? stats?.adherenceRate ?? null;
+    const trainingAdh = stats?.training?.workoutCount != null
+      ? Math.min(100, Math.round((Number(stats.training.workoutCount) / 4) * 100))
+      : stats?.adherenceRate ?? null;
+    // Step tracking isn't wired yet — keep the slot but never claim a value.
+    const avgSteps = null;
+    const hasPlanningData = goal != null || current != null || start != null || nutritionAdh != null || trainingAdh != null;
 
     if (!hasPlanningData) {
       return (

@@ -40,9 +40,14 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const [saveError, setSaveError] = useState<string | null>(null);
   const { user } = useAuth();
   const locale = language === 'es' ? 'es-ES' : 'en-US';
+  // Drafts are scoped to the authenticated user. On first render `user?.id`
+  // can be undefined (AuthContext still resolving) — never read or write the
+  // `workout_draft_undefined` key, that would cross-pollute drafts between
+  // accounts on the same browser profile.
   const [allLogs, setAllLogs] = useState<Record<string, { exerciseLogs: ExerciseLogs; rpe: string; notes: string }>>(() => {
     try {
-      const saved = typeof window !== 'undefined' ? localStorage.getItem(`workout_draft_${user?.id}`) : null;
+      if (typeof window === 'undefined' || !user?.id) return {};
+      const saved = localStorage.getItem(`workout_draft_${user.id}`);
       return saved ? JSON.parse(saved) : {};
     } catch (e) {
       return {};
@@ -114,16 +119,29 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
         const history = unwrapList(await fetchWithAuth('/client/workout-logs?limit=200'));
         if (!mounted) return;
         if (Array.isArray(history)) {
+          // Compute how many ISO weeks back the log lives, so historic logs
+          // hydrate under the right `${weekOffset}-${day}` key instead of
+          // overwriting the current-week draft (previous behaviour clamped
+          // everything to weekOffset 0).
+          const startOfWeek = (d: Date) => {
+            const x = new Date(d); x.setHours(0, 0, 0, 0);
+            const day = x.getDay(); // 0=Sun ... 6=Sat — week starts on Monday
+            const diff = (day + 6) % 7;
+            x.setDate(x.getDate() - diff);
+            return x;
+          };
+          const nowWeek = startOfWeek(new Date()).getTime();
           setAllLogs(prev => {
             const newLogs = { ...prev };
             // history is newest-first; process oldest-first so the most recent
             // log for a given day wins.
             [...history].reverse().forEach(log => {
               if (!log.day_key) return;
-              // The component reads logs under `${weekOffset}-${day}`. The
-              // server always timestamps logs to "now", so a fetched log
-              // belongs to the current week => weekOffset 0.
-              const stateKey = `0-${log.day_key}`;
+              const logged = log.logged_at ? new Date(log.logged_at) : null;
+              const weekIdx = logged
+                ? Math.round((startOfWeek(logged).getTime() - nowWeek) / (7 * 24 * 60 * 60 * 1000))
+                : 0;
+              const stateKey = `${weekIdx}-${log.day_key}`;
 
               // Rebuild the per-exercise map. Saved logs preserve the
               // original block/exercise position via `ex.key` when available;
