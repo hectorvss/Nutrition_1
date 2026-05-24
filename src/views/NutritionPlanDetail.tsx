@@ -1214,8 +1214,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           </div>
         </div>
 
-        {/* Right Column: Stats & Library */}
-        <div className="w-full lg:w-[380px] flex flex-col gap-6 sticky top-6">
+        {/* Right Column: Stats & Library — sticky with its own scroll so the
+            macros card at the bottom stays reachable even when Plan Config +
+            library + macros together overflow the viewport. */}
+        <div className="w-full lg:w-[380px] flex flex-col gap-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
 
           {/* Plan Config Card (TK-44) */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

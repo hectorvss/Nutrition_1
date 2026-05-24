@@ -30,7 +30,14 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
     setIsLoading(true);
     fetchWithAuth('/manager/nutrition-templates?limit=200').then(unwrapList)
       .then((d) => setTemplates(Array.isArray(d) ? d : []))
-      .catch(() => {})
+      .catch((e) => {
+        // Don't silence the failure — leave the list empty and warn the user.
+        console.error('load nutrition templates failed', e);
+        setTemplates([]);
+        window.alert(t('nutrition_templates_load_failed', {
+          defaultValue: 'No se pudieron cargar las plantillas. Recarga la página o vuelve a intentarlo.',
+        }));
+      })
       .finally(() => setIsLoading(false));
   };
   useEffect(() => { load(); }, []);
@@ -59,7 +66,14 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
 
   const remove = async (tpl: Template) => {
     if (!window.confirm(t('confirm_delete_template', { defaultValue: `¿Borrar la plantilla "${tpl.name}"?` }))) return;
-    await fetchWithAuth(`/manager/nutrition-templates/${tpl.key || tpl.id}`, { method: 'DELETE' }).catch(() => {});
+    try {
+      await fetchWithAuth(`/manager/nutrition-templates/${tpl.key || tpl.id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error('delete nutrition template failed', e);
+      window.alert(t('nutrition_template_delete_failed', {
+        defaultValue: 'No se pudo borrar la plantilla. Inténtalo de nuevo.',
+      }));
+    }
     load();
   };
 

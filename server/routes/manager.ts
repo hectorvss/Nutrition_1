@@ -821,6 +821,14 @@ router.get('/clients/:id/nutrition-plan', async (req: any, res) => {
   const { id } = req.params;
   const managerId = req.user.id;
   try {
+    // Mirror the POST: verify the client belongs to this manager before
+    // returning anything. The `created_by` filter below would already prevent
+    // cross-manager reads, but this is defense-in-depth and returns a clear
+    // 403 instead of an ambiguous null.
+    const { data: clientOwner } = await supabaseAdmin
+      .from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const { data: plan, error } = await supabaseAdmin
       .from('nutrition_plans')
       .select('*')

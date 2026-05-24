@@ -322,20 +322,28 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       f3.fats * targetC * f2.protein
     );
 
+    // Cramer: det2 replaces column-2 (food 2) of A with the target vector.
+    // The original code had two terms with the wrong factor (mixing the
+    // replaced column back in), which made q2 nonsense for many realistic
+    // splits; q1/q2/q3 then failed the clamp and the function fell through
+    // to the proportional fallback — so the user's macro split was rarely
+    // honored. These are the correct signed terms of det(A2).
     const det2 = (
       f1.protein * targetC * f3.fats +
       targetP * f3.carbs * f1.fats +
       f3.protein * f1.carbs * targetF -
       f1.fats * targetC * f3.protein -
-      targetP * f3.carbs * f1.protein -
+      f1.protein * f3.carbs * targetF -
       f3.fats * f1.carbs * targetP
     );
 
+    // det3 replaces column-3 (food 3) of A with the target vector. Same fix:
+    // one term referenced f3.protein where it should be f1.fats.
     const det3 = (
       f1.protein * f2.carbs * targetF +
       f2.protein * targetC * f1.fats +
       targetP * f1.carbs * f2.fats -
-      targetP * f2.carbs * f3.protein -
+      targetP * f2.carbs * f1.fats -
       f2.fats * targetC * f1.protein -
       targetF * f1.carbs * f2.protein
     );

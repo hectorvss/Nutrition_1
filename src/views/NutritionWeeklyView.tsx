@@ -117,7 +117,12 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       });
       setHasChanges(false);
     } catch (e) {
+      // Surface the failure: until this fix, the spinner cleared and
+      // hasChanges flipped to false, silently faking a successful save.
       console.error('Error saving nutrition plan:', e);
+      window.alert(t('nutrition_save_failed', {
+        defaultValue: 'No se pudo guardar el plan de nutrición. Inténtalo de nuevo.',
+      }));
     } finally {
       setIsSaving(false);
     }
