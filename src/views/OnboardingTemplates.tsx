@@ -263,12 +263,28 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
                     onChange={(e) => setNewName(e.target.value)}
                     autoFocus
                     className="flex-1 px-3 py-1.5 rounded-lg border border-emerald-500 outline-none text-sm font-bold"
+                    onKeyDown={(e) => e.key === 'Enter' && handleRename(template.id)}
                   />
-                  <button onClick={() => handleRename(template.id)} className="p-1.5 bg-emerald-500 text-white rounded-lg"><Check className="w-4 h-4" /></button>
+                  <button onClick={() => handleRename(template.id)} className="p-1.5 bg-emerald-500 text-white rounded-lg">
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setRenamingId(null)} className="p-1.5 bg-slate-100 text-slate-500 rounded-lg">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">{localizeText(template.name, language)}</h3>
+                  <button
+                    onClick={() => {
+                      setRenamingId(template.id);
+                      setNewName(template.name);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-600 transition-all"
+                    title={t('rename', { defaultValue: 'Renombrar' })}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
 
