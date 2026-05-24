@@ -1,17 +1,43 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "motion/react";
-import { Search, Paperclip, ImageIcon, Play, X, Instagram, Linkedin, ChevronRight } from "lucide-react";
+import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
 import Pricing from "../components/Pricing";
 import { useLanguage } from "../context/LanguageContext";
+import HowItWorks from "./landing/HowItWorks";
+import IntegrationsSection from "./landing/IntegrationsSection";
+import TestimonialsSection from "./landing/TestimonialsSection";
+import FAQSection from "./landing/FAQSection";
+import DemoPage from "./landing/DemoPage";
+import LegalPage, { type LegalKind } from "./landing/LegalPage";
 
 interface LandingPageProps {
   onGetStarted?: () => void;
   onLogin?: () => void;
 }
 
+// URLs de redes sociales. Como aún no las hemos publicado, quedan como `#`
+// para no romper layouts; cuando estén disponibles, reemplazar aquí.
+const SOCIAL = {
+  x: '#',
+  instagram: '#',
+  linkedin: '#',
+};
+
+type LandingPageKind = 'home' | 'pricing' | 'demo' | LegalKind;
+
 export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps) {
-  const { t } = useLanguage();
-  const [currentPage, setCurrentPage] = useState<'home' | 'pricing'>('home');
+  const { t, language } = useLanguage();
+  const isEs = language === 'es';
+  const [currentPage, setCurrentPage] = useState<LandingPageKind>('home');
+
+  // Scroll a la sección de features (mockups). Si el usuario está en una
+  // sub-página, vuelve a home primero y luego hace scroll.
+  const scrollToFeatures = () => {
+    if (currentPage !== 'home') setCurrentPage('home');
+    requestAnimationFrame(() => {
+      document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  };
 
   return (
     <div className="bg-white min-h-screen font-sans text-black">
@@ -56,7 +82,14 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
         </div>
       </div>
 
-      {currentPage === 'home' ? (
+      {currentPage === 'demo' && <DemoPage onBack={() => setCurrentPage('home')} />}
+      {currentPage === 'privacy' && <LegalPage kind="privacy" onBack={() => setCurrentPage('home')} />}
+      {currentPage === 'terms' && <LegalPage kind="terms" onBack={() => setCurrentPage('home')} />}
+      {currentPage === 'security' && <LegalPage kind="security" onBack={() => setCurrentPage('home')} />}
+
+      {currentPage === 'pricing' && <Pricing onGetStarted={onGetStarted} />}
+
+      {currentPage === 'home' && (
         <>
           {/* Hero Section */}
           <header className="pt-32 pb-32 text-center px-4 relative">
@@ -93,7 +126,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               </p>
               
               <p className="text-sm text-gray-500 mt-2">
-                {t('landing_personalized_walkthrough')} <button type="button" onClick={() => setCurrentPage('pricing')} className="underline font-medium text-black bg-transparent border-none cursor-pointer p-0">{t('book_a_demo')}</button>
+                {t('landing_personalized_walkthrough')} <button type="button" onClick={() => setCurrentPage('demo')} className="underline font-medium text-black bg-transparent border-none cursor-pointer p-0">{t('book_a_demo')}</button>
               </p>
             </motion.div>
             
@@ -124,9 +157,14 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               </div>
             </motion.div>      
               
-            {/* Trailer Play Button */}
+            {/* Trailer Play Button — al pulsar lleva a la sección de features
+                (donde están los mockups del producto). Cuando dispongamos del
+                vídeo, sustituir por la apertura del player. */}
             <div className="mt-8 flex justify-center">
-              <button className="bg-white/80 backdrop-blur-md border border-gray-200 px-6 py-3 rounded-full flex items-center gap-3 shadow-lg hover:bg-white transition-all group cursor-pointer">
+              <button
+                onClick={scrollToFeatures}
+                className="bg-white/80 backdrop-blur-md border border-gray-200 px-6 py-3 rounded-full flex items-center gap-3 shadow-lg hover:bg-white transition-all group cursor-pointer"
+              >
                 <div className="bg-black text-white rounded-full p-1.5 group-hover:scale-110 transition-transform">
                   <Play className="w-4 h-4 fill-current" />
                 </div>
@@ -135,7 +173,12 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             </div>
           </header>
 
-          <main className="space-y-40 mb-40">
+          {/* "Cómo funciona" + integraciones aparecen antes del recorrido de
+              features para dar contexto del producto. */}
+          <HowItWorks />
+          <IntegrationsSection />
+
+          <main id="features" className="space-y-40 mb-40 scroll-mt-24">
             {/* 1. Client Management Sticky Sequence */}
             <FeatureSequenceSection 
               title={[t('landing_feature_intro'), t('client_management')]}
@@ -179,6 +222,11 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               gradientClass="gradient-bg-shopping"
               url="nutrifit.pro/alerts"
             />
+
+            {/* Prueba social y resolución de dudas frecuentes antes del CTA
+                final, donde el visitante ya tiene contexto suficiente. */}
+            <TestimonialsSection />
+            <FAQSection />
 
             {/* Bottom CTA */}
             <section className="py-40 text-center px-4">
@@ -227,23 +275,65 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-gray-400">{t('designed_for_professionals')}</p>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900 mb-6 font-black font-sans">NutriFit Systems Inc.</p>
                 <div className="flex gap-6 text-gray-400">
-                  <X className="w-4 h-4" />
-                  <Instagram className="w-4 h-4" />
-                  <Linkedin className="w-4 h-4" />
+                  <a
+                    href={SOCIAL.x}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="X / Twitter"
+                    className="hover:text-black transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </a>
+                  <a
+                    href={SOCIAL.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Instagram"
+                    className="hover:text-black transition-colors"
+                  >
+                    <Instagram className="w-4 h-4" />
+                  </a>
+                  <a
+                    href={SOCIAL.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="LinkedIn"
+                    className="hover:text-black transition-colors"
+                  >
+                    <Linkedin className="w-4 h-4" />
+                  </a>
                 </div>
               </div>
-              
+
               <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-gray-100 pt-8">
                 <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  <span>{t('privacy_policy')}</span>
-                  <span>{t('careers')}</span>
-                  <span>{t('security')}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage('privacy')}
+                    className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
+                  >
+                    {t('privacy_policy')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage('terms')}
+                    className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
+                  >
+                    {isEs ? 'Términos' : 'Terms'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage('security')}
+                    className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
+                  >
+                    {t('security')}
+                  </button>
                 </div>
                 <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                   <span className="flex items-center gap-2">
                     {t('platform_status')}: <span className="text-green-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> {t('all_systems_go')}</span>
                   </span>
-                  <span>v4.0.2</span>
+                  <span>v1.0</span>
                 </div>
               </div>
             </div>
@@ -252,8 +342,6 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             <div className="absolute bottom-0 left-0 w-full h-32 spectrum-footer blur-3xl opacity-50 pointer-events-none"></div>
           </footer>
         </>
-      ) : (
-        <Pricing onGetStarted={onGetStarted} />
       )}
     </div>
   );
@@ -283,7 +371,7 @@ function FeatureSequenceSection({ title, subtitle, highlight, description, modul
   });
 
   return (
-    <div ref={containerRef} className="relative h-[400vh]">
+    <div ref={containerRef} className="relative h-[250vh]">
       <div className="sticky top-0 min-h-screen flex flex-col justify-center py-12">
         <div className="w-full max-w-6xl mx-auto px-6 text-center">
           {/* Static Header Content - Title, Subtitle, and Description remain fixed */}
