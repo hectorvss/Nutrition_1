@@ -13,14 +13,14 @@ import {
   Check, 
   Video, 
   MapPin,
-  Zap,
-  Loader2
+  Zap
 } from 'lucide-react';
 import { useTask } from '../context/TaskContext';
 import { useCalendar, getEventPresentationInfo, EventType } from '../context/CalendarContext';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import { CheckCircle2 } from 'lucide-react';
+import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
 
 interface DashboardProps {
   onNavigate: (view: string, data?: { clientId?: string; checkInId?: string }) => void;
@@ -145,10 +145,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </div>
             <div className="divide-y divide-slate-100">
               {loading ? (
-                <div className="p-12 flex flex-col items-center justify-center gap-3">
-                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('loading_items')}</p>
-                </div>
+                <>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="p-4 flex items-center gap-4">
+                      <SkeletonCircle size={36} />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className="h-3 w-3/4" />
+                      </div>
+                    </div>
+                  ))}
+                </>
               ) : analyticsError ? (
                 <div className="p-8 flex flex-col items-center justify-center gap-3 text-center">
                   <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
@@ -270,15 +277,25 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-emerald-100 text-sm font-medium opacity-90">{t('active_clients')}</p>
-                  <h3 className="text-3xl font-bold mt-1">{activeCount}</h3>
+                  {loading ? (
+                    <div className="mt-3"><Skeleton className="h-7 w-24 bg-white/30 dark:bg-white/30" /></div>
+                  ) : (
+                    <h3 className="text-3xl font-bold mt-1">{activeCount}</h3>
+                  )}
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
                   <TrendingUp className="w-5 h-5" />
                 </div>
               </div>
               <div className="flex items-center gap-2 text-sm opacity-90">
-                <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold">+{newLeadsCount}</span>
-                <span>{t('since_last_month')}</span>
+                {loading ? (
+                  <Skeleton className="h-4 w-32 bg-white/30 dark:bg-white/30" />
+                ) : (
+                  <>
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs font-bold">+{newLeadsCount}</span>
+                    <span>{t('since_last_month')}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -287,10 +304,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">{t('latest_updates')}</h3>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 py-2 relative">
               {loading ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('fetching_updates')}</p>
-                </div>
+                <>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex gap-4 py-1">
+                      <SkeletonCircle size={36} />
+                      <div className="flex-1 min-w-0 space-y-2 pt-1">
+                        <Skeleton className="h-3 w-3/4" />
+                        <Skeleton className="h-2 w-1/3" />
+                      </div>
+                    </div>
+                  ))}
+                </>
               ) : (
                 <>
                   {activity.map((update, idx) => {

@@ -4,6 +4,7 @@ import { fetchWithAuth } from '../../api';
 import { unwrapList } from '../../api/unwrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { Skeleton, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
 
 interface ClientDashboardProps {
   onNavigate: (view: ClientView) => void;
@@ -50,8 +51,98 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#17cf54]"></div>
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Header skeleton */}
+        <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <SkeletonCircle size={40} />
+        </header>
+
+        {/* Quick actions skeleton */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-4 bg-white dark:bg-[#112116] border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+              <SkeletonCircle size={40} />
+              <Skeleton className="h-4 w-28" />
+            </div>
+          ))}
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left column */}
+          <div className="lg:col-span-7 space-y-8">
+            {/* Today's Plan skeleton */}
+            <div className="bg-white dark:bg-[#112116] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <SkeletonCircle size={32} />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                    <Skeleton className="h-3 w-10" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Meals skeleton */}
+            <div className="bg-white dark:bg-[#112116] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="p-4 flex items-center gap-3">
+                    <SkeletonCircle size={32} />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right column */}
+          <div className="lg:col-span-5 space-y-8">
+            {/* Adherence ring */}
+            <div className="bg-white dark:bg-[#112116] p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center gap-4">
+              <Skeleton className="h-4 w-40" />
+              <SkeletonCircle size={120} />
+              <Skeleton className="h-3 w-48" />
+            </div>
+
+            {/* Streak */}
+            <div className="bg-white dark:bg-[#112116] p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-6">
+              <SkeletonCircle size={80} />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-7 w-16" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+
+            {/* Coach Notes */}
+            <div className="bg-white dark:bg-[#112116] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                <Skeleton className="h-5 w-36" />
+              </div>
+              <div className="p-6">
+                <SkeletonText lines={3} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

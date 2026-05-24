@@ -19,26 +19,10 @@ export function useAnalyticsLoading(): boolean {
   return useContext(LoadingContext);
 }
 
-/** Skeleton primitivo — barra gris animada. Componer para formas más ricas. */
-export function Skeleton({ className = '' }: { className?: string }) {
-  return (
-    <div
-      className={`bg-slate-200/70 dark:bg-slate-700/40 animate-pulse rounded-md ${className}`}
-      aria-hidden="true"
-    />
-  );
-}
-
-/** Bloque de skeleton para áreas grandes (gráficas, tablas). */
-export function SkeletonBlock({ height = 240, className = '' }: { height?: number; className?: string }) {
-  return (
-    <div
-      className={`w-full bg-slate-200/70 dark:bg-slate-700/40 animate-pulse rounded-xl ${className}`}
-      style={{ height }}
-      aria-hidden="true"
-    />
-  );
-}
+// Re-export de los primitivos compartidos de toda la app — para que las
+// pestañas de Analytics no tengan que cambiar imports.
+export { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
+import { Skeleton, SkeletonBlock } from '../../components/ui/Skeleton';
 
 /* ============================================================================
  * Componentes compartidos de Analytics — sistema de diseño.

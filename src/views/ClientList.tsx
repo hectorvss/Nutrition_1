@@ -20,6 +20,7 @@ import {
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
+import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
 
 // We don't need the local Client interface or mock data anymore
 // The interface is now defined in ClientContext.tsx
@@ -178,9 +179,47 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
           )}
           
           {loading && (
-             <div className="bg-white p-12 rounded-2xl text-center text-slate-500 shadow-sm border border-slate-200">
-                {t('loading_clients')}
-             </div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 mb-6 overflow-hidden">
+              <div className="overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="text-left text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+                      <th className="p-4 font-bold">{t('client')}</th>
+                      <th className="p-4">{t('status')}</th>
+                      <th className="p-4">{t('plan')}</th>
+                      <th className="p-4">{t('last_checkin_label')}</th>
+                      <th className="p-4">{t('next_appointment_label')}</th>
+                      <th className="p-4">{t('progress')}</th>
+                      <th className="p-4 text-right">{t('actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50 text-sm">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <tr key={`sk-${i}`}>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <SkeletonCircle size={36} />
+                            <div className="space-y-2">
+                              <Skeleton className="h-3 w-32" />
+                              <Skeleton className="h-2 w-16" />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4"><Skeleton className="h-4 w-16 rounded-full" /></td>
+                        <td className="p-4"><Skeleton className="h-4 w-20 rounded-lg" /></td>
+                        <td className="p-4"><Skeleton className="h-3 w-20" /></td>
+                        <td className="p-4"><Skeleton className="h-3 w-24" /></td>
+                        <td className="p-4">
+                          <Skeleton className="h-1.5 w-24 rounded-full" />
+                          <Skeleton className="h-2 w-16 mt-2" />
+                        </td>
+                        <td className="p-4"></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
             {!loading && !error && (

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
 
 export default function ClientNutrition() {
   const { t, language } = useLanguage();
@@ -42,10 +43,67 @@ export default function ClientNutrition() {
     return () => { mounted = false; };
   }, []);
 
+  // Loading state: instead of a global spinner, render the layout with
+  // skeletons (day selector buttons, macro ring, and 4 meal cards) so the
+  // page does not jump when the real plan arrives.
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+      <div className="flex-1 flex flex-col min-h-screen bg-[#f6f8f6] dark:bg-[#112116]" aria-hidden="true">
+        <div className="p-6 pb-2">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-6">
+            <SkeletonCircle size={64} className="rounded-3xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+            <Skeleton className="h-12 w-24 rounded-2xl" />
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col p-6 pt-2">
+          {/* Day selector placeholders */}
+          <div className="flex gap-2 mb-8 overflow-x-auto">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-9 w-16 rounded-xl shrink-0" />
+            ))}
+          </div>
+          {/* Macro ring card */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8 shadow-sm mb-6">
+            <div className="flex items-center justify-between mb-8">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-6 w-24 rounded-xl" />
+            </div>
+            <div className="flex flex-col md:flex-row items-center gap-10">
+              <SkeletonCircle size={120} />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1 w-full">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 space-y-3">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-7 w-20" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {/* Meal card placeholders */}
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 space-y-6">
+            <Skeleton className="h-6 w-40" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="border border-slate-100 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+                <div className="flex items-center gap-5">
+                  <SkeletonCircle size={56} className="rounded-2xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-56" />
+                  </div>
+                  <Skeleton className="h-3 w-16" />
+                </div>
+                <div className="pl-[76px] space-y-2">
+                  <SkeletonText lines={3} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

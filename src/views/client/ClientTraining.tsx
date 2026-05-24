@@ -4,6 +4,7 @@ import { fetchWithAuth } from '../../api';
 import { unwrapList } from '../../api/unwrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
 
 interface ClientTrainingProps {
   onViewExercise?: (name: string) => void;
@@ -308,10 +309,79 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     }
   };
 
+  // Loading state: render the workout layout with placeholder blocks/exercise
+  // rows (3 blocks × 4 exercises with the log structure: name + 3 series of
+  // weight/reps/rir inputs) so the form does not appear empty while data loads.
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#17cf54]"></div>
+      <div className="flex-1 flex flex-col min-h-screen bg-[#f6f8f6] dark:bg-[#112116]" aria-hidden="true">
+        <div className="p-6 pb-2">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4 sm:gap-6">
+            <SkeletonCircle size={64} className="rounded-2xl" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="h-12 w-24 rounded-xl" />
+          </div>
+        </div>
+        <div className="flex-1 p-6 pt-2">
+          {/* Week selector + sync placeholder */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm mb-6">
+            <Skeleton className="h-10 w-56 rounded-xl" />
+            <Skeleton className="h-10 w-36 rounded-lg" />
+          </div>
+          {/* Day selector */}
+          <div className="flex gap-2 mb-6 overflow-x-auto">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-20 rounded-xl shrink-0" />
+            ))}
+          </div>
+          {/* Workout summary */}
+          <SkeletonBlock height={220} className="rounded-2xl mb-8" />
+          {/* Workout blocks: 3 blocks, 4 exercise rows each, each row with 3 set lines */}
+          <div className="flex flex-col gap-6">
+            {Array.from({ length: 3 }).map((_, bIdx) => (
+              <div key={bIdx} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+                  <SkeletonCircle size={40} className="rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {Array.from({ length: 4 }).map((_, eIdx) => (
+                    <div key={eIdx} className="p-4 space-y-3">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 space-y-1.5">
+                          <Skeleton className="h-4 w-48" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                        <div className="hidden md:grid grid-cols-5 gap-2 w-1/2">
+                          {Array.from({ length: 5 }).map((_, k) => (
+                            <Skeleton key={k} className="h-7 w-full" />
+                          ))}
+                        </div>
+                      </div>
+                      {/* 3 set rows (weight / reps / rir inputs) */}
+                      <div className="pl-0 md:pl-12 space-y-2">
+                        {Array.from({ length: 3 }).map((_, sIdx) => (
+                          <div key={sIdx} className="grid grid-cols-4 gap-2 items-center">
+                            <Skeleton className="h-4 w-8 mx-auto" />
+                            <Skeleton className="h-9 w-full rounded-xl" />
+                            <Skeleton className="h-9 w-full rounded-xl" />
+                            <Skeleton className="h-9 w-full rounded-xl" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

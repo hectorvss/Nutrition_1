@@ -26,6 +26,7 @@ import InsightsTab from './client/InsightsTab';
 import DeleteClientModal from './client/DeleteClientModal';
 import PasswordResetModal from './client/PasswordResetModal';
 import EditProfileModal from './client/EditProfileModal';
+import { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../components/ui/Skeleton';
 
 interface ClientDetailProps {
   clientId: string;
@@ -333,23 +334,85 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
           {activeTab === 'Information' && (
             <InformationTab clientId={clientId} t={t} />
           )}
+          {/* While profile-stats is loading, the Nutrition/Training/Mindset
+              tabs would internally show a full-content spinner that hides the
+              tab bar layout. Render a layout-matching skeleton instead so the
+              tabs stay visible and the page does not jump. */}
           {activeTab === 'Nutrition' && (
-            <NutritionTab stats={stats} isLoading={isLoading} t={t} />
+            isLoading ? (
+              <div className="space-y-6" aria-hidden="true">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                      <SkeletonCircle size={40} />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-5 w-16" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
+                    <Skeleton className="h-5 w-48" />
+                    <SkeletonBlock height={260} />
+                  </div>
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
+                    <Skeleton className="h-5 w-40" />
+                    <SkeletonText lines={4} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <NutritionTab stats={stats} isLoading={isLoading} t={t} />
+            )
           )}
           {activeTab === 'Training' && (
-            <TrainingTab
-              stats={stats}
-              isLoading={isLoading}
-              t={t}
-              clientId={clientId}
-              onUpdateWorkoutLog={handleUpdateWorkoutLog}
-            />
+            isLoading ? (
+              <div className="space-y-6" aria-hidden="true">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                      <SkeletonCircle size={40} />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-5 w-16" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
+                  <Skeleton className="h-5 w-56" />
+                  <SkeletonBlock height={260} />
+                </div>
+              </div>
+            ) : (
+              <TrainingTab
+                stats={stats}
+                isLoading={isLoading}
+                t={t}
+                clientId={clientId}
+                onUpdateWorkoutLog={handleUpdateWorkoutLog}
+              />
+            )
           )}
           {activeTab === 'Planning' && (
             <PlanningTab clientId={clientId} t={t} onNavigate={onNavigate} />
           )}
           {activeTab === 'Mindset' && (
-            <MindsetTab stats={stats} t={t} />
+            isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-8 w-24" />
+                    <SkeletonBlock height={64} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <MindsetTab stats={stats} t={t} />
+            )
           )}
 
           {/* Global Insights Section */}

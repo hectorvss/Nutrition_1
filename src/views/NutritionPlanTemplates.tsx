@@ -6,6 +6,7 @@ import {
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
+import { Skeleton } from '../components/ui/Skeleton';
 
 interface NutritionPlanTemplatesProps {
   onBack: () => void;
@@ -99,9 +100,30 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
 
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
-              <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-              <p className="text-sm font-medium">{t('loading_templates', { defaultValue: 'Cargando plantillas...' })}</p>
+            <div className={layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' : 'flex flex-col gap-2'}>
+              {Array.from({ length: layout === 'grid' ? 9 : 8 }).map((_, i) => (
+                layout === 'rows' ? (
+                  <div key={`sk-${i}`} className="flex items-center gap-4 p-4 border border-slate-200/70 rounded-xl">
+                    <Skeleton className="h-4 w-20 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2 mt-2" />
+                    </div>
+                    <Skeleton className="h-3 w-10 hidden md:block" />
+                  </div>
+                ) : (
+                  <div key={`sk-${i}`} className="bg-white border border-slate-200/70 rounded-2xl p-5 shadow-sm">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-3/4 mt-3" />
+                    <Skeleton className="h-3 w-1/2 mt-2" />
+                    <Skeleton className="h-2 w-full mt-4 rounded-full" />
+                    <div className="flex items-center gap-3 mt-3">
+                      <Skeleton className="h-2 w-20" />
+                      <Skeleton className="h-2 w-16" />
+                    </div>
+                  </div>
+                )
+              ))}
             </div>
           ) : templates.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">

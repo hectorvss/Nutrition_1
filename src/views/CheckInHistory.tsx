@@ -14,6 +14,7 @@ import {
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
 import { usePagination } from '../hooks/usePagination';
+import { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../components/ui/Skeleton';
 
 interface CheckInHistoryProps {
   clientId: string;
@@ -107,10 +108,57 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
     return map[v] ?? null;
   };
 
-  if (isLoading) {
+  // Loading state: render 6 skeleton check-in cards with the same layout and
+  // spacing as the real ones, so the screen does not jump when data arrives.
+  if (isLoading && pagesLoaded === 0) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
+      <div className={`w-full space-y-6 ${hideHeader ? '' : 'p-6 md:p-8'}`}>
+        {!hideHeader && (
+          <>
+            <div className="flex items-center justify-between text-sm text-slate-500 mb-2">
+              <Skeleton className="h-4 w-40" />
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-slate-200 flex items-center gap-4">
+              <SkeletonCircle size={64} className="rounded-2xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+          </>
+        )}
+        <div className="space-y-4" aria-hidden="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-6"
+            >
+              <div className="flex items-center gap-6 min-w-[180px] pl-2">
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </div>
+              <div className="flex items-center gap-8 flex-1 justify-between">
+                <div className="flex items-center gap-3">
+                  <SkeletonCircle size={40} />
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                </div>
+                <div className="flex-1 max-w-[180px] hidden lg:block space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-1.5 w-full" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-md" />
+              </div>
+              <div className="flex items-center justify-end gap-3 min-w-[160px]">
+                <Skeleton className="h-10 w-24 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

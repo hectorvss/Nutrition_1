@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
 
 interface CheckInListProps {
   onViewHistory: (clientId: string) => void;
@@ -174,8 +175,46 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+        <div className="space-y-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={`sk-${i}`}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+            >
+              <div className="p-5 flex flex-col md:flex-row items-center gap-6">
+                <div className="flex items-center gap-4 flex-1 w-full">
+                  <SkeletonCircle size={56} className="rounded-2xl" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Skeleton className="h-3 w-32" />
+                      <Skeleton className="h-4 w-20 rounded-full" />
+                      <Skeleton className="h-4 w-24 rounded-full ml-auto" />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex justify-between">
+                        <Skeleton className="h-2 w-24" />
+                        <Skeleton className="h-2 w-8" />
+                      </div>
+                      <Skeleton className="h-1.5 w-full rounded-full" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
+                  <div className="text-right hidden sm:block space-y-1">
+                    <Skeleton className="h-2 w-16" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-center min-w-[60px] space-y-1">
+                      <Skeleton className="h-4 w-12 mx-auto" />
+                      <Skeleton className="h-2 w-10 mx-auto" />
+                    </div>
+                    <SkeletonCircle size={32} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

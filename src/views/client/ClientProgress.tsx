@@ -47,6 +47,7 @@ import CheckInReview from '../CheckInReview';
 import Select from '../../components/ui/Select';
 import WorkoutLogItem from './progress/WorkoutLogItem';
 import EditProfileModal from './EditProfileModal';
+import { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
 
 type Tab = 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Check-ins';
 
@@ -239,9 +240,36 @@ export default function ClientProgress() {
   const renderNutrition = () => (
     <div className="space-y-6">
       {isLoading ? (
-        <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
-          <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium">{t('loading_statistics')}</p>
+        // Skeleton equivalent to the real layout: 4 compact stat cards on top,
+        // a tall weight-progress chart and a side column with macro adherence.
+        <div className="space-y-6" aria-hidden="true">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                <SkeletonCircle size={40} />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-3 w-14" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
+              <Skeleton className="h-5 w-48" />
+              <SkeletonBlock height={260} />
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-5">
+              <Skeleton className="h-5 w-40" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
       <>
@@ -355,9 +383,50 @@ export default function ClientProgress() {
   const renderTraining = () => (
     <div className="space-y-6">
       {isLoading ? (
-        <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
-          <div className="w-10 h-10 border-4 border-[#17cf54]/20 border-t-[#17cf54] rounded-full animate-spin"></div>
-          <p className="text-sm font-medium">{t('loading_training')}</p>
+        // Skeleton layout mirroring the real training view: 4 stat cards,
+        // strength-analysis chart, then two tables (PRs / recent workouts)
+        // with 4-5 placeholder rows each.
+        <div className="space-y-6" aria-hidden="true">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                <SkeletonCircle size={40} />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-3 w-14" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
+            <Skeleton className="h-5 w-56" />
+            <div className="flex gap-4 overflow-x-auto">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-48 rounded-2xl shrink-0" />
+              ))}
+            </div>
+            <SkeletonBlock height={260} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Array.from({ length: 2 }).map((_, col) => (
+              <div key={col} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
+                <Skeleton className="h-5 w-44" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                    <div className="flex items-center gap-3 flex-1">
+                      <SkeletonCircle size={32} className="rounded-lg" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-4 w-12" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
       <>

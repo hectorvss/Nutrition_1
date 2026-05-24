@@ -22,6 +22,7 @@ import { useTheme } from '../context/ThemeContext';
 import { DEFAULT_CHECKIN_TEMPLATE } from '../constants/defaultCheckInTemplate';
 import { localizeSchema, localizeText } from '../constants/templateI18n';
 import { useLanguage } from '../context/LanguageContext';
+import { Skeleton } from '../components/ui/Skeleton';
 
 interface CheckInTemplatesProps {
   onEdit?: (templateId: string) => void;
@@ -189,9 +190,25 @@ ${t('template_will_be_archived_if_has_submissions')}`;
 
       {/* Templates Grid/List */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm border-dashed">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-slate-500 font-medium">{t('loading_templates')}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div
+              key={`sk-${i}`}
+              className="bg-white rounded-2xl border border-slate-200/70 p-5 flex flex-col shadow-sm"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <Skeleton className="h-12 w-12 rounded-2xl" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2 mt-2" />
+              <Skeleton className="h-3 w-2/3 mt-2" />
+              <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
+                <Skeleton className="h-2 w-20" />
+                <Skeleton className="h-2 w-14" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div className="p-8 bg-red-50 rounded-3xl border border-red-100 text-center">
