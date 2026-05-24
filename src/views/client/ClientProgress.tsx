@@ -71,8 +71,19 @@ export default function ClientProgress() {
   const locale = language === 'es' ? 'es-ES' : 'en-US';
   const { user } = useAuth();
   // Tooltip de recharts adaptado al tema (antes estaba fijo a blanco y se veía
-  // ilegible en modo oscuro).
-  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  // ilegible en modo oscuro). `isDark` se reevalúa cuando se hace toggle del
+  // tema gracias al MutationObserver de abajo, en vez de quedar fijado al
+  // valor que tenía la primera vez que se montó el componente.
+  const [isDark, setIsDark] = useState<boolean>(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    const obs = new MutationObserver(() => setIsDark(root.classList.contains('dark')));
+    obs.observe(root, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
   const chartTooltipStyle = {
     borderRadius: '12px',
     border: 'none',
@@ -473,7 +484,7 @@ export default function ClientProgress() {
                   <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                     {(() => {
                       const { monday, sunday } = getWeekRange(strengthWeekOffset);
-                      return `${monday.toLocaleDateString([], { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString([], { day: 'numeric', month: 'short' })}`;
+                      return `${monday.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} - ${sunday.toLocaleDateString(locale, { day: 'numeric', month: 'short' })}`;
                     })()}
                   </span>
                 </div>
@@ -565,7 +576,7 @@ export default function ClientProgress() {
                 tickLine={false} 
                 tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}}
                 tickFormatter={(date) => {
-                  try { return new Date(date).toLocaleDateString([], { month: 'short', day: 'numeric' }); } catch { return date; }
+                  try { return new Date(date).toLocaleDateString(locale, { month: 'short', day: 'numeric' }); } catch { return date; }
                 }}
               />
               <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
@@ -573,7 +584,7 @@ export default function ClientProgress() {
                 contentStyle={chartTooltipStyle}
                 labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
                 labelFormatter={(label) => {
-                  try { return new Date(label).toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }); } catch { return label; }
+                  try { return new Date(label).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' }); } catch { return label; }
                 }}
               />
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '20px' }} />
@@ -625,7 +636,7 @@ export default function ClientProgress() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-bold text-slate-900 dark:text-white">{ex.pr}kg</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">{ex.latestDate ? new Date(ex.latestDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '--'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">{ex.latestDate ? new Date(ex.latestDate).toLocaleDateString(locale, { month: 'short', day: 'numeric' }) : '--'}</p>
                   </div>
                 </div>
               ))}
@@ -699,9 +710,9 @@ export default function ClientProgress() {
       <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: t('planning_target_delta'), value: targetDelta != null ? `${targetDelta > 0 ? '+' : ''}${targetDelta.toFixed(1)} kg` : '--', icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' },
-            { label: t('current_weight', { defaultValue: 'Current weight' }), value: current != null ? `${Number(current).toFixed(1)} kg` : '--', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { label: t('goal', { defaultValue: 'Goal' }), value: goal != null ? `${Number(goal).toFixed(1)} kg` : '--', icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+            { label: t('planning_target_delta'), value: targetDelta != null ? `${targetDelta > 0 ? '+' : ''}${targetDelta.toFixed(1)} kg` : '--', icon: Target, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/30' },
+            { label: t('current_weight', { defaultValue: 'Current weight' }), value: current != null ? `${Number(current).toFixed(1)} kg` : '--', icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/30' },
+            { label: t('goal', { defaultValue: 'Goal' }), value: goal != null ? `${Number(goal).toFixed(1)} kg` : '--', icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/30' },
           ].map((stat: any, idx) => (
             <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
               <div className={`w-10 h-10 rounded-full ${stat.bg} flex items-center justify-center ${stat.color}`}>

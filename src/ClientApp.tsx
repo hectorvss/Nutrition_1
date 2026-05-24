@@ -6,17 +6,17 @@ import ClientDashboard from './views/client/ClientDashboard';
 import ClientCheckIns from './views/client/ClientCheckIns';
 import ClientNutrition from './views/client/ClientNutrition';
 import ClientTraining from './views/client/ClientTraining';
-import ClientRoadmap from './views/client/ClientRoadmap';
-// Client-scoped settings. The manager-side Settings page (1.7k LOC) calls
-// /manager/* endpoints that 403 for clients — we render a stripped-down,
-// client-safe view instead. Lazy to keep the entry bundle small.
+// Heavy or rarely-visited views are lazy so they don't sit in the initial
+// client bundle. Progress imports recharts (~120 KB), Roadmap pulls motion
+// + animations, Settings is the client-scoped settings shell.
+const ClientRoadmap  = lazy(() => import('./views/client/ClientRoadmap'));
+const ClientProgress = lazy(() => import('./views/client/ClientProgress'));
 const ClientSettings = lazy(() => import('./views/client/ClientSettings'));
 import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
 import ActivityEditor from './views/ActivityEditor';
 import OnboardingPopup from './components/OnboardingPopup';
 import { fetchWithAuth } from './api';
-import ClientProgress from './views/client/ClientProgress';
 import WeeklyCheckinFlow from './views/client/WeeklyCheckinFlow';
 import ClientActionFAB from './components/client/ClientActionFAB';
 import { useLanguage } from './context/LanguageContext';

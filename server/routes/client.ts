@@ -305,23 +305,43 @@ router.get('/profile-stats', async (req: any, res) => {
   const now = new Date();
 
   try {
-    // 1. Fetch user profile — campos explícitos: NUNCA `clients_profiles(*)`
-    // porque incluiría `notes` (nota privada del coach) y `temp_password`.
-    const { data: client, error: clientErr } = await supabaseAdmin
-      .from('users')
-      .select('id, email, clients_profiles(weight, goal, goal_weight, height, gender, age, metadata)')
-      .eq('id', id)
-      .single();
+    // The four independent reads (profile, check-ins, recent messages,
+    // workout logs) used to serialize for ~4× the latency of the slowest
+    // one. They share no inputs other than `id`, so issue them in parallel.
+    // Field selects stay explicit — `clients_profiles(*)` would leak `notes`
+    // (coach's private note) and `temp_password`.
+    const [
+      { data: client, error: clientErr },
+      { data: checkIns },
+      { data: recentMsgs },
+      { data: allWorkoutLogs },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('users')
+        .select('id, email, clients_profiles(weight, goal, goal_weight, height, gender, age, metadata)')
+        .eq('id', id)
+        .single(),
+      supabaseAdmin
+        .from('check_ins')
+        .select('*')
+        .eq('client_id', id)
+        .order('date', { ascending: true })
+        .limit(365),
+      supabaseAdmin
+        .from('messages')
+        .select('created_at, content')
+        .or(`sender_id.eq.${id},receiver_id.eq.${id}`)
+        .order('created_at', { ascending: false })
+        .limit(3),
+      supabaseAdmin
+        .from('workout_logs')
+        .select('*')
+        .eq('client_id', id)
+        .order('logged_at', { ascending: false })
+        .limit(100),
+    ]);
 
     if (clientErr || !client) return res.status(404).json({ error: 'Profile not found' });
-
-    // 2. Fetch Check-ins — acotado para no escanear histórico ilimitado.
-    const { data: checkIns } = await supabaseAdmin
-      .from('check_ins')
-      .select('*')
-      .eq('client_id', id)
-      .order('date', { ascending: true })
-      .limit(365);
 
     // 3. Weight & Body Fat History
     const num = (v: any): number | null => {
@@ -389,14 +409,7 @@ router.get('/profile-stats', async (req: any, res) => {
       calculatedAdherenceRate = countAdh > 0 ? Math.round(totalAdh / countAdh) : 0;
     }
 
-    // 6. Recent Activity (Messages)
-    const { data: recentMsgs } = await supabaseAdmin
-      .from('messages')
-      .select('created_at, content')
-      .or(`sender_id.eq.${id},receiver_id.eq.${id}`)
-      .order('created_at', { ascending: false })
-      .limit(3);
-
+    // 6. Recent Activity (Messages) — fetched in parallel above.
     const activity = [
       ...(checkIns || []).slice(-3).map(ci => {
         const w = (ci.data_json as any)?.weight;
@@ -417,17 +430,9 @@ router.get('/profile-stats', async (req: any, res) => {
       }))
     ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
 
-    // 7. Training Stats — from workout_logs
+    // 7. Training Stats — workout_logs fetched in parallel above.
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - 7);
-
-    const { data: allWorkoutLogs } = await supabaseAdmin
-      .from('workout_logs')
-      .select('*')
-      .eq('client_id', id)
-      .order('logged_at', { ascending: false })
-      .limit(100);
-
     const workoutLogs = allWorkoutLogs || [];
     const weeklyLogs = workoutLogs.filter(w => new Date(w.logged_at) >= startOfWeek);
 

@@ -10,7 +10,8 @@ export interface WorkoutLogItemProps {
 }
 
 const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, onToggle, onUpdate }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
   const [exercises, setExercises] = useState(workout.exercises || []);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -51,7 +52,7 @@ const WorkoutLogItem: React.FC<WorkoutLogItemProps> = ({ workout, isExpanded, on
           </div>
           <div>
             <p className="text-sm text-slate-900 dark:text-white">{workout.name}</p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">{new Date(workout.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">{new Date(workout.date).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
           </div>
         </div>
         <div className="flex items-center gap-6">

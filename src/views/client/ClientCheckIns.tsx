@@ -239,7 +239,7 @@ export default function ClientCheckIns() {
                         <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                           <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(ci.created_at || ci.date).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
                           <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                          <span className="font-medium text-slate-700 dark:text-slate-300">{ci.data_json?.weight ? ci.data_json.weight + 'kg' : t('weekly_review')}</span>
+                          <span className="font-medium text-slate-700 dark:text-slate-300">{(ci.weight ?? ci.data_json?.weight) ? `${ci.weight ?? ci.data_json.weight}kg` : t('weekly_review')}</span>
                         </div>
                       </div>
                     </div>

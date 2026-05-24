@@ -10,6 +10,26 @@ const router = Router();
 
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
+// Canonical "weight" extraction so the UI doesn't have to guess between
+// legacy `data_json.weight` and the dynamic template's question keys. Dynamic
+// submissions store answers keyed by question id/slug, which varies per
+// template — we try the common slugs and then any field whose name contains
+// weight / peso. Used by both the manager and client check-in list endpoints.
+const extractCheckinWeight = (obj: any): number | null => {
+  if (!obj || typeof obj !== 'object') return null;
+  const direct = obj.weight ?? obj.Weight ?? obj.current_weight ?? obj['Current Weight']
+    ?? obj.currentWeight ?? obj.peso ?? obj.Peso ?? obj.pesoActual;
+  const n = direct == null ? NaN : Number(direct);
+  if (Number.isFinite(n) && n > 0) return n;
+  for (const [k, v] of Object.entries(obj)) {
+    if (/weight|peso/i.test(k)) {
+      const m = Number(v);
+      if (Number.isFinite(m) && m > 0) return m;
+    }
+  }
+  return null;
+};
+
 // Minimal shape of a check-in template question. Templates and answers son
 // JSON arbitrario en BD: el manager edita libremente y se reescribe con shape
 // nuevo cada vez que el editor añade un tipo. Mantenemos un index signature
@@ -508,7 +528,8 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
       type: 'legacy',
       reviewed_at: ci.reviewed_at || (ci.data_json?.reviewed_at) || null,
       coach_notes: ci.coach_notes || (ci.data_json?.coach_notes) || null,
-      next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
+      next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null,
+      weight: extractCheckinWeight(ci.data_json),
     }));
 
     const dynamicParsed: Record<string, any>[] = (dynamicData || []).map((ci: Record<string, any>) => ({
@@ -526,7 +547,8 @@ router.get('/client/check-ins', verifyClient, async (req: AuthedRequest, res) =>
       } : null,
       type: 'dynamic',
       coach_notes: ci.coach_notes || null,
-      next_week_focus: ci.next_week_focus || null
+      next_week_focus: ci.next_week_focus || null,
+      weight: extractCheckinWeight(ci.answers_json),
     }));
 
     // 4. Merge, dedupe y sort.
@@ -760,7 +782,8 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       type: 'legacy',
       reviewed_at: ci.reviewed_at || (ci.data_json?.reviewed_at) || null,
       coach_notes: ci.coach_notes || (ci.data_json?.coach_notes) || null,
-      next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null
+      next_week_focus: ci.next_week_focus || (ci.data_json?.next_week_focus) || null,
+      weight: extractCheckinWeight(ci.data_json),
     }));
 
     const dynamicParsed: Record<string, any>[] = (dynamicData || []).map((ci: Record<string, any>) => ({
@@ -778,7 +801,8 @@ router.get('/manager/clients/:id/check-ins', verifyManager, async (req: AuthedRe
       } : null,
       type: 'dynamic',
       coach_notes: ci.coach_notes || null,
-      next_week_focus: ci.next_week_focus || null
+      next_week_focus: ci.next_week_focus || null,
+      weight: extractCheckinWeight(ci.answers_json),
     }));
 
     // Merge + dedupe (por (type, id)) + sort estable.
