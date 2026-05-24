@@ -4,11 +4,14 @@ import { useLanguage } from '../../context/LanguageContext';
 
 interface ClientActionFABProps {
   onboardingData: any;
+  /** When true the weekend check-in FAB hides itself — the user already
+   *  submitted a check-in this ISO week. */
+  submittedThisWeek?: boolean;
   onOpenOnboarding: () => void;
   onOpenCheckIn: () => void;
 }
 
-export default function ClientActionFAB({ onboardingData, onOpenOnboarding, onOpenCheckIn }: ClientActionFABProps) {
+export default function ClientActionFAB({ onboardingData, submittedThisWeek, onOpenOnboarding, onOpenCheckIn }: ClientActionFABProps) {
   const { t } = useLanguage();
   const today = new Date().getDay();
   const isWeekend = today === 6 || today === 0; // Saturday=6, Sunday=0
@@ -40,8 +43,8 @@ export default function ClientActionFAB({ onboardingData, onOpenOnboarding, onOp
     );
   }
 
-  // Priority 2: Weekly Check-in (Sat/Sun)
-  if (isWeekend) {
+  // Priority 2: Weekly Check-in (Sat/Sun) — only if not already submitted.
+  if (isWeekend && !submittedThisWeek) {
     return (
       <motion.button
         initial={{ scale: 0, opacity: 0, y: 20 }}

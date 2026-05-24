@@ -32,9 +32,14 @@ export default function ClientApp() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [onboardingData, setOnboardingData] = useState<any>(null);
+  // True once the client has submitted a check-in within the current ISO
+  // week — the weekend FAB hides itself in that case so it doesn't keep
+  // asking for a check-in the user already completed on Friday.
+  const [submittedThisWeek, setSubmittedThisWeek] = useState(false);
 
   React.useEffect(() => {
     checkOnboarding();
+    checkRecentSubmission();
   }, []);
 
   const checkOnboarding = async () => {
@@ -46,6 +51,26 @@ export default function ClientApp() {
       }
     } catch (err) {
       console.error('Failed to check onboarding:', err);
+    }
+  };
+
+  const checkRecentSubmission = async () => {
+    try {
+      const data = await fetchWithAuth('/check-ins/client/check-ins?limit=1');
+      const list: any[] = Array.isArray(data) ? data : (data?.data || []);
+      if (!list.length) return;
+      const last = new Date(list[0].date || list[0].created_at);
+      const now = new Date();
+      // Start of the current ISO week (Monday).
+      const monday = new Date(now);
+      const d = monday.getDay();
+      const diff = (d + 6) % 7;
+      monday.setDate(monday.getDate() - diff);
+      monday.setHours(0, 0, 0, 0);
+      if (last.getTime() >= monday.getTime()) setSubmittedThisWeek(true);
+    } catch (err) {
+      // Non-blocking — worst case the FAB shows when it shouldn't.
+      console.error('Failed to check recent submission:', err);
     }
   };
 
@@ -107,8 +132,9 @@ export default function ClientApp() {
       {showOnboarding && <OnboardingPopup onComplete={() => { setShowOnboarding(false); setOnboardingData(null); }} />}
       {showCheckIn && <WeeklyCheckinFlow onComplete={() => setShowCheckIn(false)} onCancel={() => setShowCheckIn(false)} />}
       
-      <ClientActionFAB 
+      <ClientActionFAB
         onboardingData={onboardingData}
+        submittedThisWeek={submittedThisWeek}
         onOpenOnboarding={() => {
           setCurrentView('none');
           setShowOnboarding(true);
