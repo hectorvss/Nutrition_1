@@ -176,18 +176,23 @@ export default function ClientCheckIns() {
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                   <div>
                     <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('adherence')}</p>
-                    <p className="text-xs text-slate-400">{t('last_7_days')}</p>
+                    <p className="text-xs text-slate-400">{t('last_4_weeks', { defaultValue: 'Últimas 4 semanas' })}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-slate-900 dark:text-white">
                     {(() => {
-                      let count = 0;
-                      for (let i = 0; i < 7; i++) {
-                        const d = new Date(); d.setDate(d.getDate() - i);
-                        if (checkIns.some(c => (c.date || c.created_at || '').split('T')[0] === d.toISOString().split('T')[0])) count++;
-                      }
-                      return checkIns.length > 0 ? Math.round((count / 7) * 100) + '%' : '—';
+                      // Same formula as ClientDashboard: count check-ins in
+                      // the past 28 days divided by 4 (1 per week = 100%).
+                      // Was 7-day/7 which capped a perfect client at 14%.
+                      if (checkIns.length === 0) return '—';
+                      const fourWeeksAgo = new Date();
+                      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+                      const recent = checkIns.filter(c => {
+                        const raw = c.date || c.created_at;
+                        return raw && new Date(raw) >= fourWeeksAgo;
+                      }).length;
+                      return Math.min(100, Math.round((recent / 4) * 100)) + '%';
                     })()}
                   </p>
                   <p className="text-xs text-slate-400">{t('rate')}</p>

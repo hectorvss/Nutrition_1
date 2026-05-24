@@ -92,7 +92,31 @@ router.patch('/profile', async (req: any, res) => {
       .eq('user_id', id);
     if (error) throw error;
 
-    res.json({ ok: true });
+    // Return the freshly merged profile in the SAME shape `GET /profile`
+    // emits so the frontend can drop the response straight into its state
+    // and the edited values render immediately (no page reload required).
+    const { data: row } = await supabaseAdmin
+      .from('users')
+      .select(`
+        id,
+        email,
+        manager_id,
+        clients_profiles (weight, goal, gender, age, metadata)
+      `)
+      .eq('id', id)
+      .single();
+    const cp: any = row?.clients_profiles?.[0] || {};
+    res.json({
+      id: row?.id,
+      email: row?.email,
+      manager_id: (row as any)?.manager_id || null,
+      weight: cp.weight ?? null,
+      goal: cp.goal ?? null,
+      gender: cp.gender ?? null,
+      age: cp.age ?? null,
+      full_name: cp.metadata?.full_name ?? null,
+      phone: cp.metadata?.phone ?? null,
+    });
   } catch (error) {
     console.error('Error updating client profile:', error);
     res.status(500).json({ error: safeErr(error) });

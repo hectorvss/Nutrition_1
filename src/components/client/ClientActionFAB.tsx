@@ -1,5 +1,8 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+// Use the `motion` package the rest of the client portal uses. Was pinned
+// to `framer-motion`, which is only resolvable through a transitive copy
+// in node_modules — a future lockfile rebuild would break this FAB.
+import { motion } from 'motion/react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface ClientActionFABProps {

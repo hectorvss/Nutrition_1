@@ -660,10 +660,10 @@ export default function ClientProgress() {
           </div>
           <div className="h-[400px] flex flex-col">
             <div className="flex-1 overflow-y-auto pr-2 space-y-4 no-scrollbar">
-              {(stats?.training?.recentWorkouts || []).slice(0, visibleWorkouts).map((workout: any) => (
+              {(stats?.recentWorkouts || []).slice(0, visibleWorkouts).map((workout: any) => (
                 <WorkoutLogItem key={workout.id} workout={workout} isExpanded={expandedWorkoutId === workout.id} onToggle={setExpandedWorkoutId} onUpdate={handleUpdateWorkoutLog} />
               ))}
-              {(stats?.training?.recentWorkouts || []).length > visibleWorkouts && (
+              {(stats?.recentWorkouts || []).length > visibleWorkouts && (
                 <button onClick={() => setVisibleWorkouts(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 transition-colors uppercase tracking-widest mt-2">{t('load_more_activity')}</button>
               )}
             </div>

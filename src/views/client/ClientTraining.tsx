@@ -675,6 +675,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                         onUpdateNotes={(notes) => updateExerciseLog(key, 'notes', notes)}
                         explanation={ex.explanation}
                         setDetails={ex.setDetails}
+                        onViewExercise={onViewExercise}
                       />
                     );
                   })}
@@ -717,9 +718,12 @@ interface DetailedExerciseRowProps {
   onUpdateNotes: (notes: string) => void;
   explanation?: string;
   setDetails?: { set: number; reps: string; weight?: string; rir: string; intensity: string; rest: string }[];
+  /** Open the read-only `ClientActivityView` for this exercise. Was passed
+   *  in from ClientApp but never wired to a UI control. */
+  onViewExercise?: (name: string) => void;
 }
 
-const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes, explanation, setDetails }) => {
+const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, muscle_group, type, weight, sets, reps, rir, rest, logData, onInit, onUpdateSet, onAddSet, onUpdateNotes, explanation, setDetails, onViewExercise }) => {
   const { t, language } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
   const tt = (key: string, es: string, en: string) => t(key, { defaultValue: language === 'en' ? en : es });
@@ -738,7 +742,19 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
         <div className="md:col-span-4 flex items-center gap-4">
           <div className="min-w-0 flex flex-col gap-1 flex-1">
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{name}</h4>
+            {onViewExercise ? (
+              <button
+                type="button"
+                onClick={() => onViewExercise(name)}
+                className="text-left text-sm font-semibold text-slate-900 dark:text-white truncate hover:text-[#17cf54] dark:hover:text-[#17cf54] transition-colors inline-flex items-center gap-1.5 group/name"
+                title={t('exercise_view_details', { defaultValue: 'Ver detalles del ejercicio' })}
+              >
+                <span className="truncate">{name}</span>
+                <span className="material-symbols-outlined text-[14px] opacity-0 group-hover/name:opacity-100 transition-opacity">info</span>
+              </button>
+            ) : (
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{name}</h4>
+            )}
             <p className="text-xs text-slate-400 truncate">{type}</p>
           </div>
         </div>

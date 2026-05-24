@@ -352,7 +352,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('meals_today')}</h2>
                 {todayMeals.length > 0 && (
-                  <p className="text-sm text-slate-500 mt-0.5">{todayMeals.length} {t('view_meals')} • {Math.round(todayMeals.reduce((a: number, m: any) => a + (m.items || []).reduce((s: number, i: any) => s + ((i.calories || 0) * (i.quantity || 1)), 0), 0))} {t('kcal_total')}</p>
+                  <p className="text-sm text-slate-500 mt-0.5">{t('meal_count', { count: todayMeals.length, defaultValue: `${todayMeals.length} comidas` })} • {Math.round(todayMeals.reduce((a: number, m: any) => a + (m.items || []).reduce((s: number, i: any) => s + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0), 0))} {t('kcal_total')}</p>
                 )}
               </div>
               {todayMeals.length > 0 && (
@@ -365,8 +365,8 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
               <div className="divide-y divide-slate-100 dark:divide-slate-800">
                 {todayMeals.map((meal: any, idx: number) => {
                   const isNext = meal.name === nextMeal?.name && meal.time === nextMeal?.time;
-                  const mealKcal = Math.round((meal.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.quantity || 1)), 0));
-                  const mealProtein = Math.round((meal.items || []).reduce((a: number, i: any) => a + ((i.protein || 0) * (i.quantity || 1)), 0));
+                  const mealKcal = Math.round((meal.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0));
+                  const mealProtein = Math.round((meal.items || []).reduce((a: number, i: any) => a + ((i.protein || 0) * (i.multiplier || i.quantity || 1)), 0));
                   return (
                     <div key={idx} className={`p-4 ${isNext ? 'bg-[#17cf54]/5' : ''}`}>
                       <div className="flex items-center justify-between mb-2">
