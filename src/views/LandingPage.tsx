@@ -9,6 +9,15 @@ import TestimonialsSection from "./landing/TestimonialsSection";
 import FAQSection from "./landing/FAQSection";
 import DemoPage from "./landing/DemoPage";
 import LegalPage, { type LegalKind } from "./landing/LegalPage";
+import StatsSection from "./landing/StatsSection";
+import FeatureGrid from "./landing/FeatureGrid";
+import UseCasesSection from "./landing/UseCasesSection";
+import ComparisonSection from "./landing/ComparisonSection";
+import FeaturesPage from "./landing/FeaturesPage";
+import SolutionsPage from "./landing/SolutionsPage";
+import ResourcesPage from "./landing/ResourcesPage";
+import AboutPage from "./landing/AboutPage";
+import ChangelogPage from "./landing/ChangelogPage";
 
 interface LandingPageProps {
   onGetStarted?: () => void;
@@ -23,7 +32,16 @@ const SOCIAL = {
   linkedin: '#',
 };
 
-type LandingPageKind = 'home' | 'pricing' | 'demo' | LegalKind;
+type LandingPageKind =
+  | 'home'
+  | 'pricing'
+  | 'demo'
+  | 'features'
+  | 'solutions'
+  | 'resources'
+  | 'about'
+  | 'changelog'
+  | LegalKind;
 
 export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps) {
   const { t, language } = useLanguage();
@@ -44,24 +62,30 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
       {/* Floating Navigation Header */}
       <div className="fixed top-8 left-0 w-full px-8 flex justify-between items-center z-50 pointer-events-none">
         <div className="flex items-center pointer-events-auto">
-          <nav className="backdrop-blur-md bg-white/40 border border-white/20 pl-2 pr-8 py-2 rounded-full flex items-center gap-8 shadow-sm">
-            <button 
+          <nav className="backdrop-blur-md bg-white/40 border border-white/20 pl-2 pr-6 py-2 rounded-full flex items-center gap-6 shadow-sm">
+            <button
               onClick={() => setCurrentPage('home')}
+              aria-label="NutriFit"
               className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-lg cursor-pointer border-none"
             ></button>
-            <div className="flex gap-8">
-              <button 
-                onClick={() => setCurrentPage('home')}
-                className={`text-lg font-medium transition-colors cursor-pointer bg-transparent border-none outline-none ${currentPage === 'home' ? 'text-black' : 'text-gray-400 hover:text-black'}`}
-              >
-                {t('product')}
-              </button>
-              <button 
-                onClick={() => setCurrentPage('pricing')}
-                className={`text-lg font-medium transition-colors cursor-pointer bg-transparent border-none outline-none ${currentPage === 'pricing' ? 'text-black' : 'text-gray-400 hover:text-black'}`}
-              >
-                {t('pricing')}
-              </button>
+            <div className="flex gap-5 md:gap-6 text-[15px] md:text-base">
+              {[
+                { key: 'home' as const,       label: t('product') },
+                { key: 'features' as const,   label: isEs ? 'Funciones' : 'Features' },
+                { key: 'solutions' as const,  label: isEs ? 'Soluciones' : 'Solutions' },
+                { key: 'pricing' as const,    label: t('pricing') },
+                { key: 'resources' as const,  label: isEs ? 'Recursos' : 'Resources' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setCurrentPage(key)}
+                  className={`font-medium transition-colors cursor-pointer bg-transparent border-none outline-none whitespace-nowrap ${
+                    currentPage === key ? 'text-black' : 'text-gray-400 hover:text-black'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </nav>
         </div>
@@ -86,6 +110,21 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
       {currentPage === 'privacy' && <LegalPage kind="privacy" onBack={() => setCurrentPage('home')} />}
       {currentPage === 'terms' && <LegalPage kind="terms" onBack={() => setCurrentPage('home')} />}
       {currentPage === 'security' && <LegalPage kind="security" onBack={() => setCurrentPage('home')} />}
+      {currentPage === 'features' && (
+        <FeaturesPage onBack={() => setCurrentPage('home')} onDemo={() => setCurrentPage('demo')} />
+      )}
+      {currentPage === 'solutions' && (
+        <SolutionsPage
+          onBack={() => setCurrentPage('home')}
+          onDemo={() => setCurrentPage('demo')}
+          onStart={() => onGetStarted?.()}
+        />
+      )}
+      {currentPage === 'resources' && <ResourcesPage onBack={() => setCurrentPage('home')} />}
+      {currentPage === 'about' && (
+        <AboutPage onBack={() => setCurrentPage('home')} onDemo={() => setCurrentPage('demo')} />
+      )}
+      {currentPage === 'changelog' && <ChangelogPage onBack={() => setCurrentPage('home')} />}
 
       {currentPage === 'pricing' && <Pricing onGetStarted={onGetStarted} />}
 
@@ -173,9 +212,13 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             </div>
           </header>
 
-          {/* "Cómo funciona" + integraciones aparecen antes del recorrido de
-              features para dar contexto del producto. */}
+          {/* Cifras de prueba justo despues del hero. */}
+          <StatsSection />
+
+          {/* "Cómo funciona" + grid de features + integraciones dan contexto
+              del producto antes del recorrido animado. */}
           <HowItWorks />
+          <FeatureGrid />
           <IntegrationsSection />
 
           <main id="features" className="space-y-40 mb-40 scroll-mt-24">
@@ -222,6 +265,11 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               gradientClass="gradient-bg-shopping"
               url="nutrifit.pro/alerts"
             />
+
+            {/* "Para quién es" + comparativa vs stack improvisado, antes de
+                la prueba social. */}
+            <UseCasesSection />
+            <ComparisonSection />
 
             {/* Prueba social y resolución de dudas frecuentes antes del CTA
                 final, donde el visitante ya tiene contexto suficiente. */}
@@ -305,29 +353,25 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row justify-between items-center gap-8 border-t border-gray-100 pt-8">
-                <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage('privacy')}
-                    className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
-                  >
-                    {t('privacy_policy')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage('terms')}
-                    className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
-                  >
-                    {isEs ? 'Términos' : 'Terms'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage('security')}
-                    className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
-                  >
-                    {t('security')}
-                  </button>
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-t border-gray-100 pt-8">
+                <div className="flex flex-wrap justify-center gap-6 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  {[
+                    { key: 'about' as const,     label: isEs ? 'Sobre nosotros' : 'About' },
+                    { key: 'changelog' as const, label: 'Changelog' },
+                    { key: 'resources' as const, label: isEs ? 'Recursos' : 'Resources' },
+                    { key: 'privacy' as const,   label: t('privacy_policy') },
+                    { key: 'terms' as const,     label: isEs ? 'Términos' : 'Terms' },
+                    { key: 'security' as const,  label: t('security') },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setCurrentPage(key)}
+                      className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
                 <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                   <span className="flex items-center gap-2">
