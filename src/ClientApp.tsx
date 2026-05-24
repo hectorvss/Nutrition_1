@@ -8,10 +8,10 @@ import ClientNutrition from './views/client/ClientNutrition';
 import ClientTraining from './views/client/ClientTraining';
 // Heavy or rarely-visited views are lazy so they don't sit in the initial
 // client bundle. Progress imports recharts (~120 KB), Roadmap pulls motion
-// + animations, Settings is the client-scoped settings shell.
-const ClientRoadmap  = lazy(() => import('./views/client/ClientRoadmap'));
+// + animations, Settings is the shared settings shell (1.7k LOC).
+const ClientRoadmap = lazy(() => import('./views/client/ClientRoadmap'));
 const ClientProgress = lazy(() => import('./views/client/ClientProgress'));
-const ClientSettings = lazy(() => import('./views/client/ClientSettings'));
+const Settings = lazy(() => import('./views/Settings'));
 import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
 // Client-only read-only view of an exercise. Replaces the manager-side
@@ -82,7 +82,7 @@ export default function ClientApp() {
       case 'dashboard':
         return <ClientDashboard onNavigate={(view) => setCurrentView(view as ClientView)} />;
       case 'settings':
-        return <ClientSettings />;
+        return <Settings />;
       case 'check-ins':
         return <ClientCheckIns />;
       case 'nutrition':
