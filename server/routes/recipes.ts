@@ -6,6 +6,14 @@ import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 
 const router = Router();
 
+// Defensive: the auth middleware should always populate req.user.id with a
+// valid Supabase UUID, but we interpolate it into PostgREST `.or()` strings
+// below. Validate the shape before letting anything reach that path so a
+// malformed identity (e.g. if the auth layer ever changes) can't inject
+// filter syntax.
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const isUuid = (s: unknown): s is string => typeof s === 'string' && UUID_RE.test(s);
+
 // Campos que el cliente puede establecer al crear/editar una receta.
 // NUNCA se aceptan manager_id, is_global ni id desde el body.
 const RECIPE_FIELDS = [
@@ -38,6 +46,7 @@ const getManagerLanguage = async (managerId: string): Promise<string> => {
 // Paginadas DESC por created_at con keyset cursor.
 router.get('/', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
+  if (!isUuid(managerId)) return res.status(400).json({ error: 'Invalid user id' });
   const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
   try {
     const language = await getManagerLanguage(managerId);
@@ -79,6 +88,7 @@ router.get('/', verifyManager, async (req: any, res) => {
 // GET /:id — una receta (del manager o global)
 router.get('/:id', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
+  if (!isUuid(managerId)) return res.status(400).json({ error: 'Invalid user id' });
   try {
     const { data, error } = await supabaseAdmin
       .from('recipes')

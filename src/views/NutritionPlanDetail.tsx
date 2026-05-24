@@ -75,8 +75,10 @@ interface MealBlock {
   time: string;
   icon: React.ElementType;
   iconColor: string;
-  items: PlannedFoodItem[];     // used in example mode
-  categories: MacroCategory[];  // used in general mode
+  iconName?: string;            // persisted alongside icon, survives renames
+  items: PlannedFoodItem[];     // used in example mode (the only mode now)
+  categories?: MacroCategory[]; // legacy: only present on plans created
+                                // before this field stopped being seeded.
 }
 
 const MACRO_COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500'];
@@ -102,10 +104,16 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
     { id: 'f', label: t('healthy_fats'), example: 'e.g., Almond butter, Chia seeds', amount: 15, color: 'bg-amber-500' },
   ], [t]);
 
+  // Note: `mode` is hardcoded to 'example' now, so meals are always
+  // item-driven — we no longer seed `categories: defaultCategories()`. With
+  // categories present the macro recalc double-counted (categories' grams
+  // were added to totalP/C/F alongside items' macros), inflating totals
+  // and inflating the saved data_json on every write. Old plans that
+  // already carry `categories` keep working via the existing reader.
   const DEFAULT_MEALS: MealBlock[] = [
-    { id: 1, name: t('breakfast'), time: '08:00 AM', icon: Sunrise, iconColor: 'bg-orange-100 text-orange-600', items: [], categories: defaultCategories() },
-    { id: 2, name: t('lunch'), time: '12:30 PM', icon: Sun, iconColor: 'bg-yellow-100 text-yellow-600', items: [], categories: defaultCategories() },
-    { id: 3, name: t('dinner'), time: '07:30 PM', icon: Moon, iconColor: 'bg-blue-100 text-blue-600', items: [], categories: defaultCategories() }
+    { id: 1, name: t('breakfast'), time: '08:00 AM', icon: Sunrise, iconColor: 'bg-orange-100 text-orange-600', iconName: 'Sunrise', items: [] },
+    { id: 2, name: t('lunch'), time: '12:30 PM', icon: Sun, iconColor: 'bg-yellow-100 text-yellow-600', iconName: 'Sun', items: [] },
+    { id: 3, name: t('dinner'), time: '07:30 PM', icon: Moon, iconColor: 'bg-blue-100 text-blue-600', iconName: 'Moon', items: [] }
   ];
 
   const GENERAL_MACRO_ITEMS = [
@@ -344,7 +352,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         };
       });
 
-      let finalDataJson: any = { ...(fullPlanData || {}), mode, config: { ...(fullPlanData?.config || {}), targetCalories, macros: targetMacros } };
+      // `mode` was hardcoded and persisted on every save; we stop writing it
+      // explicitly. Plans loaded from DB that already carry `mode: 'example'`
+      // keep it (it's harmless), but new plans no longer carry the dead field.
+      let finalDataJson: any = { ...(fullPlanData || {}), config: { ...(fullPlanData?.config || {}), targetCalories, macros: targetMacros } };
 
       // A plan is "weekly" if a day is selected OR the existing plan already
       // has a weekly structure. In that case never write a root-level `meals`
@@ -579,6 +590,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
   const confirmAddMealBlock = () => {
     const icons = [Sunrise, Sun, Moon, Cookie];
+    // Parallel to `icons` so we can persist the chosen icon by name. Before
+    // this, new blocks had no `iconName`, so the save handler fell back to
+    // mapping the block's `name` (only "Desayuno/Breakfast/Almuerzo/..."
+    // were recognised) — any custom name like "Brunch" lost its icon.
+    const iconNames = ['Sunrise', 'Sun', 'Moon', 'Cookie'];
     const colors = [
       'bg-orange-100 text-orange-600',
       'bg-yellow-100 text-yellow-600',
@@ -586,18 +602,21 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       'bg-purple-100 text-purple-600'
     ];
     const id = Date.now();
-    setMeals(prev => [
-      ...prev,
-      {
-        id,
-        name: newBlockName.trim() || t('morning_snack'),
-        time: newBlockTime.trim() || '12:00 PM',
-        icon: icons[prev.length % icons.length],
-        iconColor: colors[prev.length % colors.length],
-        items: [],
-        categories: defaultCategories()
-      }
-    ]);
+    setMeals(prev => {
+      const idx = prev.length % icons.length;
+      return [
+        ...prev,
+        {
+          id,
+          name: newBlockName.trim() || t('morning_snack'),
+          time: newBlockTime.trim() || '12:00 PM',
+          icon: icons[idx],
+          iconColor: colors[idx],
+          iconName: iconNames[idx],
+          items: [],
+        },
+      ];
+    });
     setShowNewBlockModal(false);
   };
 
