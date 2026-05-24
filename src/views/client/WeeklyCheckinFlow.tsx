@@ -80,6 +80,19 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
     return () => { mounted = false; };
   }, []);
 
+  // Localize the schema live: toggling the app language re-localizes the
+  // whole template (titles, options, conditional values) with no re-fetch.
+  // Must run UNCONDITIONALLY on every render — putting this useMemo after
+  // the `if (isLoading) return ...` below changed the hook count between
+  // renders and crashed the whole client app with React error #310 when the
+  // fetch finished. Hook order must stay stable.
+  const steps = useMemo(
+    () => localizeSchema(template?.templateSchema || [], language),
+    [template, language]
+  );
+  const totalSteps = steps.length;
+  const hasSteps = totalSteps > 0;
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-10 bg-slate-50 dark:bg-slate-900">
@@ -87,15 +100,6 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
       </div>
     );
   }
-
-  // Localize the schema live: toggling the app language re-localizes the
-  // whole template (titles, options, conditional values) with no re-fetch.
-  const steps = useMemo(
-    () => localizeSchema(template?.templateSchema || [], language),
-    [template, language]
-  );
-  const totalSteps = steps.length;
-  const hasSteps = totalSteps > 0;
 
   const updateAnswer = async (key: string, value: any) => {
     if (value === 'pending_upload') {
