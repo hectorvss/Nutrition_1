@@ -47,6 +47,10 @@ import {
   EmptyChart,
   ProgressBar,
   CohortRow,
+  LoadingProvider,
+  SkeletonBlock,
+  Skeleton,
+  useAnalyticsLoading,
 } from './components';
 
 /* ============================================================================
@@ -80,8 +84,9 @@ function money(v: any): string {
   return n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n * 100) / 100}`;
 }
 
-export default function BusinessAnalytics({ data }: any) {
+export default function BusinessAnalytics({ data, loading }: any) {
   const { t, language } = useLanguage();
+  const isLoading = !!loading;
   const monthLabels = Array.from({ length: 12 }, (_, i) =>
     new Date(new Date().getFullYear(), i, 1).toLocaleString(
       language === 'es' ? 'es-ES' : 'en-US',
@@ -105,6 +110,7 @@ export default function BusinessAnalytics({ data }: any) {
   const clientStatus = data?.clientStatusDistribution || [];
 
   return (
+    <LoadingProvider value={!!loading}>
     <div className="space-y-5">
       {/* ============================ CLIENTES ============================ */}
       <SectionHeader
@@ -676,5 +682,6 @@ export default function BusinessAnalytics({ data }: any) {
         </ChartCard>
       </div>
     </div>
+    </LoadingProvider>
   );
 }

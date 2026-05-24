@@ -1,6 +1,44 @@
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus, Info } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+
+/* ============================================================================
+ * SkeletonLoader system.
+ * Las tarjetas (`StatCard`, `ChartCard`) detectan estado de carga vía un
+ * Context. Las pestañas envuelven su return en `<LoadingProvider value={isLoading}>`
+ * y todas las tarjetas dentro se renderizan como skeleton automáticamente —
+ * sin tener que pasar `loading` a cada call-site uno por uno.
+ *
+ * Para bloques inline (gráficas SVG a mano, tablas, listas) usa
+ * `<SkeletonBlock />` directamente o consume `useAnalyticsLoading()`.
+ * ========================================================================== */
+
+const LoadingContext = createContext<boolean>(false);
+export const LoadingProvider = LoadingContext.Provider;
+export function useAnalyticsLoading(): boolean {
+  return useContext(LoadingContext);
+}
+
+/** Skeleton primitivo — barra gris animada. Componer para formas más ricas. */
+export function Skeleton({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`bg-slate-200/70 dark:bg-slate-700/40 animate-pulse rounded-md ${className}`}
+      aria-hidden="true"
+    />
+  );
+}
+
+/** Bloque de skeleton para áreas grandes (gráficas, tablas). */
+export function SkeletonBlock({ height = 240, className = '' }: { height?: number; className?: string }) {
+  return (
+    <div
+      className={`w-full bg-slate-200/70 dark:bg-slate-700/40 animate-pulse rounded-xl ${className}`}
+      style={{ height }}
+      aria-hidden="true"
+    />
+  );
+}
 
 /* ============================================================================
  * Componentes compartidos de Analytics — sistema de diseño.
@@ -33,8 +71,31 @@ import { useLanguage } from '../../context/LanguageContext';
 export function StatCard({
   title, value, unit, change, isPositive, isNeutral,
   icon, iconColor = 'text-slate-400', changeLabel = '', hint,
+  loading: loadingProp,
 }: any) {
   const { t } = useLanguage();
+  const ctxLoading = useAnalyticsLoading();
+  const isLoading = loadingProp ?? ctxLoading;
+
+  // Estado de carga: misma forma de tarjeta, contenido sustituido por
+  // skeletons animados — para que la pantalla aparezca completa desde el
+  // primer instante en vez de mostrar un spinner global.
+  if (isLoading) {
+    return (
+      <div className="flex flex-col bg-white rounded-2xl border border-slate-200/70 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-5 w-5 rounded-md" />
+        </div>
+        <Skeleton className="mt-4 h-7 w-24" />
+        <div className="mt-3 flex items-center gap-2">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </div>
+    );
+  }
+
   const showDelta = change !== undefined && change !== null && change !== '';
   const DeltaIcon = isNeutral ? Minus : isPositive ? ArrowUpRight : ArrowDownRight;
   const deltaTone = isNeutral
@@ -89,6 +150,7 @@ export function StatCard({
  */
 export function ChartCard({
   title, subtitle, legend, action, children, className = '',
+  loading: loadingProp, skeletonHeight = 260,
 }: {
   title: string;
   subtitle?: string;
@@ -96,19 +158,35 @@ export function ChartCard({
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  loading?: boolean;
+  skeletonHeight?: number;
 }) {
+  const ctxLoading = useAnalyticsLoading();
+  const isLoading = loadingProp ?? ctxLoading;
+
   return (
     <div className={`flex flex-col bg-white rounded-2xl border border-slate-200/70 p-6 transition-all duration-200 hover:border-slate-300 ${className}`}>
       <div className="flex items-start justify-between gap-4 mb-5">
-        <div className="min-w-0">
-          <h3 className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</h3>
-          {subtitle && <p className="text-[13px] text-slate-500 mt-0.5">{subtitle}</p>}
-        </div>
-        {(legend || action) && (
-          <div className="flex items-center gap-3 shrink-0">{legend}{action}</div>
+        {isLoading ? (
+          <div className="space-y-2 flex-1 min-w-0">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-56" />
+          </div>
+        ) : (
+          <>
+            <div className="min-w-0">
+              <h3 className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</h3>
+              {subtitle && <p className="text-[13px] text-slate-500 mt-0.5">{subtitle}</p>}
+            </div>
+            {(legend || action) && (
+              <div className="flex items-center gap-3 shrink-0">{legend}{action}</div>
+            )}
+          </>
         )}
       </div>
-      <div className="flex-1 min-h-0">{children}</div>
+      <div className="flex-1 min-h-0">
+        {isLoading ? <SkeletonBlock height={skeletonHeight} /> : children}
+      </div>
     </div>
   );
 }

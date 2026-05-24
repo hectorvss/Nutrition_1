@@ -11,6 +11,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import {
   StatCard, ChartCard, SectionHeader, ChartLegend, EmptyChart,
   DistributionItem, FrequencyItem,
+  LoadingProvider, SkeletonBlock, Skeleton, useAnalyticsLoading,
 } from './components';
 
 /* ============================================================================
@@ -33,8 +34,9 @@ const AXIS_TICK = { fontSize: 12, fill: '#94a3b8' } as const;
 const GRID_PROPS = { strokeDasharray: '3 3', stroke: '#f1f5f9' } as const;
 const TOOLTIP_STYLE = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 } as const;
 
-export default function TrainingAnalytics({ data }: any) {
+export default function TrainingAnalytics({ data, loading }: any) {
   const { t } = useLanguage();
+  const isLoading = !!loading;
   // Escala dinámica del gráfico de volumen: se adapta al pico real de
   // volumen movido (con 15% de margen) en lugar de un tope fijo.
   const volMax = Math.max(
@@ -80,6 +82,7 @@ export default function TrainingAnalytics({ data }: any) {
   const noData = t('no_training_data', { defaultValue: 'Sin datos de entrenamiento' });
 
   return (
+    <LoadingProvider value={!!loading}>
     <div className="space-y-5">
       {/* ====================================================================
        * ACTIVIDAD
@@ -434,5 +437,6 @@ export default function TrainingAnalytics({ data }: any) {
         </ChartCard>
       </div>
     </div>
+    </LoadingProvider>
   );
 }

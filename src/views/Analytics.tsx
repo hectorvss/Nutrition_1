@@ -52,16 +52,9 @@ export default function Analytics() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
 
-  if (isLoading) {
-    return (
-      <div className="p-10 flex items-center justify-center min-h-[400px]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-500 font-medium">{t('loading_analytics')}</p>
-        </div>
-      </div>
-    );
-  }
+  // Ya no salimos con un spinner global: la pantalla se renderiza completa
+  // desde el primer instante, y cada tarjeta/gráfica muestra su skeleton
+  // (vía LoadingProvider en las pestañas) hasta que llega el dato real.
 
   if (loadError) {
     return (
@@ -150,9 +143,9 @@ export default function Analytics() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'business' && <BusinessAnalytics data={data?.business} />}
-            {activeTab === 'nutrition' && <NutritionAnalytics data={data?.nutrition} />}
-            {activeTab === 'training' && <TrainingAnalytics data={data?.training} />}
+            {activeTab === 'business' && <BusinessAnalytics data={data?.business} loading={isLoading} />}
+            {activeTab === 'nutrition' && <NutritionAnalytics data={data?.nutrition} loading={isLoading} />}
+            {activeTab === 'training' && <TrainingAnalytics data={data?.training} loading={isLoading} />}
           </motion.div>
         </AnimatePresence>
       </div>
