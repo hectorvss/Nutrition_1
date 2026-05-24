@@ -552,9 +552,14 @@ export default function ClientProgress() {
           })}
         </div>
 
+        {/* Cache the filtered slice ONCE per render — was being recomputed
+            twice (here and inside the IIFE below) on every state change. */}
+        {(() => {
+          const strengthData = getFilteredStrengthData();
+          return (
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={getFilteredStrengthData()}>
+            <AreaChart data={strengthData}>
               <defs>
                 {[
                   { id: 'colorStrength1', color: '#10b981' },
@@ -601,7 +606,7 @@ export default function ClientProgress() {
                   return key ? logs[key] : null;
                 };
                 const repCounts = new Set<string>();
-                getFilteredStrengthData().forEach((row: any) => {
+                strengthData.forEach((row: any) => {
                   const exData = findExData(row.logs);
                   if (exData && exData.repMaxes) Object.keys(exData.repMaxes).forEach(r => repCounts.add(r));
                 });
@@ -617,6 +622,8 @@ export default function ClientProgress() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+          );
+        })()}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
