@@ -17,6 +17,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
 import { categoryLabel } from '../constants/recipeMeta';
+import { matchFood } from '../lib/search';
 
 type Tab = 'recipes' | 'food' | 'supplements';
 
@@ -99,7 +100,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
 
   const matchesCat = (cat?: string) => !categoryFilter || cat === categoryFilter;
   const filteredRecipes = recipes.filter(
-    r => (!search || r.title.toLowerCase().includes(search.toLowerCase())) && matchesCat(r.category)
+    r => matchFood({ ...r, name: r.title }, search) && matchesCat(r.category)
   );
   // Categories available for the active tab's filter panel.
   const tabCategories = Array.from(new Set(
@@ -356,7 +357,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                   <p className="text-slate-500 font-bold text-lg">{t('loading_library')}</p>
                 </div>
               ) : foodItems
-                .filter(food => (!search || food.name.toLowerCase().includes(search.toLowerCase())) && matchesCat(food.category))
+                .filter(food => matchFood(food, search) && matchesCat(food.category))
                 .slice(0, visibleCount)
                 .map((food) => (
                 <div key={food.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-4 md:p-6">
@@ -408,7 +409,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 </div>
               )}
               
-              {!isCtxLoading && foodItems.filter(food => (!search || food.name.toLowerCase().includes(search.toLowerCase())) && matchesCat(food.category)).length > visibleCount && (
+              {!isCtxLoading && foodItems.filter(food => matchFood(food, search) && matchesCat(food.category)).length > visibleCount && (
                 <div ref={observerTarget} className="w-full h-8 flex items-center justify-center">
                   <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
@@ -446,7 +447,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               ) : (
               supplementsList
                 .filter(s => s.language === language)
-                .filter(s => (!search || s.name.toLowerCase().includes(search.toLowerCase())) && matchesCat(s.category))
+                .filter(s => matchFood(s, search) && matchesCat(s.category))
                 .map((supp) => (
                 <div key={supp.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-6">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">

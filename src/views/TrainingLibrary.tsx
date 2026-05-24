@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useExerciseContext } from '../context/ExerciseContext';
 import { Trash2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { matchExercise } from '../lib/search';
 
 type ExerciseCategory = 'Strength' | 'Mobility' | 'Warm-up' | 'Cardio' | 'Rehab';
 
@@ -20,8 +21,7 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
   }, []);
 
   const filteredExercises = exercises.filter(ex =>
-    ex.category === activeTab &&
-    (!search || ex.name.toLowerCase().includes(search.toLowerCase()) || ex.muscleGroups.some(m => m.toLowerCase().includes(search.toLowerCase())))
+    ex.category === activeTab && matchExercise(ex, search)
   );
 
   return (

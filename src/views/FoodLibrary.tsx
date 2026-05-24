@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useFoodContext } from '../context/FoodContext';
 import { useLanguage } from '../context/LanguageContext';
+import { matchFood } from '../lib/search';
 import FoodCreate from './FoodCreate';
 interface FoodLibraryProps {
   onBack: () => void;
@@ -107,7 +108,7 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide">
             {(() => {
               const visibleFoods = foods.filter(food => {
-                const matchSearch = !search || food.name.toLowerCase().includes(search.toLowerCase());
+                const matchSearch = matchFood(food, search);
                 const matchCat = activeCategory === 'all' || food.category === activeCategory;
                 return matchSearch && matchCat;
               });

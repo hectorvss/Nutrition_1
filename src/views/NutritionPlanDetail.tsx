@@ -35,6 +35,7 @@ import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
+import { matchFood } from '../lib/search';
 
 interface NutritionPlanDetailProps {
   client: any;
@@ -414,9 +415,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const [newBlockName, setNewBlockName] = useState('');
   const [newBlockTime, setNewBlockTime] = useState('12:00 PM');
 
-  const filteredLibraryFoods = foods.filter(f =>
-    !librarySearch || f.name.toLowerCase().includes(librarySearch.toLowerCase())
-  );
+  const filteredLibraryFoods = foods.filter(f => matchFood(f, librarySearch));
 
   // ─── General mode: update category amount ─────────────────────────────────
   const updateCategoryAmount = (mealId: number, catId: string, amount: number) => {

@@ -3,6 +3,7 @@ import { useClient } from '../context/ClientContext';
 import { useExerciseContext, Exercise } from '../context/ExerciseContext';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import { matchExercise } from '../lib/search';
 import { arrayMove } from '@dnd-kit/sortable';
 import { SortableList } from '../components/dnd/SortableList';
 import { SortableItem } from '../components/dnd/SortableItem';
@@ -395,7 +396,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   const [editingBlockName, setEditingBlockName] = useState('');
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
 
-  const filteredExercises = exercises.filter(ex => !searchQuery || ex.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredExercises = exercises.filter(ex => matchExercise(ex, searchQuery));
 
   // Drag from Library
   const handleDragStart = (ex: Exercise) => {
