@@ -1157,26 +1157,61 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
         })}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions — chip set switches by role. The existing chips were
+          written as MANAGER → client messages (e.g. "I've reviewed your
+          progress…"). Showing them to clients was confusing because the
+          labels read as a client request but the body was the coach's reply.
+          Clients now get chips that compose a CLIENT → coach message. */}
       <div className="px-6 py-2 flex space-x-2 overflow-x-auto no-scrollbar">
-        <button
-          type="button"
-          onClick={() => insertQuickMessage(t('quick_weekly_checkin_msg'))}
-          className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
-          <span>{t('quick_weekly_checkin')}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => insertQuickMessage(t('quick_ask_meal_msg'))}
-          className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
-          <span>{t('quick_ask_meal')}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => insertQuickMessage(t('quick_request_plan_change_msg'))}
-          className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
-          <span>{t('quick_request_plan_change')}</span>
-        </button>
+        {user?.role === 'CLIENT' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => insertQuickMessage(t('quick_client_book_checkin_msg'))}
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
+              <span>{t('quick_client_book_checkin')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => insertQuickMessage(t('quick_client_ask_meal_msg'))}
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
+              <span>{t('quick_client_ask_meal')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => insertQuickMessage(t('quick_client_request_change_msg'))}
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
+              <span>{t('quick_client_request_change')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => insertQuickMessage(t('quick_client_share_progress_msg'))}
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold hover:bg-emerald-100 transition-colors">
+              <span>{t('quick_client_share_progress')}</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => insertQuickMessage(t('quick_weekly_checkin_msg'))}
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
+              <span>{t('quick_weekly_checkin')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => insertQuickMessage(t('quick_ask_meal_msg'))}
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
+              <span>{t('quick_ask_meal')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => insertQuickMessage(t('quick_request_plan_change_msg'))}
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
+              <span>{t('quick_request_plan_change')}</span>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Multimedia Preview Area */}

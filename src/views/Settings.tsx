@@ -46,18 +46,35 @@ type SettingsTab = 'general' | 'profile' | 'security' | 'billing' | 'integration
 export default function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const { t } = useLanguage();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isClient = user?.role === 'CLIENT';
 
-  const tabs = [
-    { id: 'general', label: t('general'), icon: Smartphone },
-    { id: 'profile', label: t('profile_details'), icon: User },
-    { id: 'security', label: t('security'), icon: Lock },
-    { id: 'billing', label: t('billing'), icon: CreditCard },
-    { id: 'integrations', label: t('integrations'), icon: Share2 },
-    { id: 'appearance', label: t('appearance'), icon: Palette },
+  // Filter tabs by role. Manager-only panels (profile editor, billing,
+  // integrations, security/2FA/sessions) all hit /manager/* endpoints and
+  // 403 for clients; hide them instead of letting the client land on a
+  // broken screen. Clients keep the panels that genuinely apply to them:
+  // language preference and appearance (dark mode, theme color).
+  const allTabs = [
+    { id: 'general', label: t('general'), icon: Smartphone, clientSafe: true },
+    { id: 'profile', label: t('profile_details'), icon: User, clientSafe: false },
+    { id: 'security', label: t('security'), icon: Lock, clientSafe: false },
+    { id: 'billing', label: t('billing'), icon: CreditCard, clientSafe: false },
+    { id: 'integrations', label: t('integrations'), icon: Share2, clientSafe: false },
+    { id: 'appearance', label: t('appearance'), icon: Palette, clientSafe: true },
   ];
+  const tabs = isClient ? allTabs.filter(t => t.clientSafe) : allTabs;
+
+  // Defensive: if a deep-link or stale state lands us on a manager-only tab
+  // while logged in as a client, snap back to General.
+  useEffect(() => {
+    if (isClient && !tabs.some(t => t.id === activeTab)) setActiveTab('general');
+  }, [isClient, activeTab, tabs]);
 
   const renderTabContent = () => {
+    // Belt and braces — never instantiate manager-only panels for clients.
+    if (isClient && activeTab !== 'general' && activeTab !== 'appearance') {
+      return <GeneralSettings />;
+    }
     switch (activeTab) {
       case 'general':
         return <GeneralSettings />;
