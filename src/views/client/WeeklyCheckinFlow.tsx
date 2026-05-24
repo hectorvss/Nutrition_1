@@ -53,30 +53,46 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  // When the manager's real template fails to load we used to silently fall
+  // back to DEFAULT_CHECKIN_TEMPLATE. The user could fill it in but the
+  // server validates against the REAL template and would reject the submit
+  // with confusing IDs. Track the fallback so we can surface a clear error
+  // state and disable submission until the real template loads.
+  const [templateError, setTemplateError] = useState<string | null>(null);
+
+  const loadTemplate = async () => {
+    setIsLoading(true);
+    setTemplateError(null);
+    try {
+      const data = await fetchWithAuth('/check-ins/client/active-template');
+      if (data) {
+        setTemplate({
+          ...data,
+          templateSchema: data.template_schema || data.templateSchema || []
+        });
+      } else {
+        // No active template configured by the coach — fall back so the user
+        // still sees a useful form. Submission against the fallback is fine
+        // here because the server resolves to a default General template too.
+        setTemplate(DEFAULT_CHECKIN_TEMPLATE);
+      }
+    } catch (err: any) {
+      console.error('Error fetching template:', err);
+      setTemplate(null);
+      setTemplateError(err?.message || 'Failed to load check-in template');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
-    async function loadTemplate() {
-      setIsLoading(true);
-      try {
-        const data = await fetchWithAuth('/check-ins/client/active-template');
-        if (!mounted) return;
-        if (data) {
-          setTemplate({
-            ...data,
-            templateSchema: data.template_schema || data.templateSchema || []
-          });
-        } else {
-          setTemplate(DEFAULT_CHECKIN_TEMPLATE);
-        }
-      } catch (err) {
-        console.error('Error fetching template:', err);
-        if (mounted) setTemplate(DEFAULT_CHECKIN_TEMPLATE);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    }
-    loadTemplate();
+    (async () => {
+      await loadTemplate();
+      // Guard against unmount during await — no setState should fire after
+      // unmount in the line below.
+      if (!mounted) return;
+    })();
     return () => { mounted = false; };
   }, []);
 
@@ -97,6 +113,38 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
     return (
       <div className="flex-1 flex items-center justify-center p-10 bg-slate-50 dark:bg-slate-900">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#17cf54]"></div>
+      </div>
+    );
+  }
+
+  if (templateError || !template) {
+    return (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6 text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center">
+            <span className="material-symbols-outlined">error</span>
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+            {t('checkin_template_error_title', { defaultValue: 'No se pudo cargar el check-in' })}
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+            {t('checkin_template_error_desc', { defaultValue: 'Vuelve a intentarlo en unos segundos.' })}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={onCancel}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={() => { void loadTemplate(); }}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#17cf54] hover:bg-[#15b84a] text-white"
+            >
+              {t('retry', { defaultValue: 'Reintentar' })}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

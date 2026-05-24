@@ -24,6 +24,11 @@ interface ExerciseContextType {
   deleteExercise: (id: string) => Promise<void>;
   updateExercise: (id: string, updates: Partial<Exercise>) => Promise<void>;
   refreshExercises: () => Promise<void>;
+  /** Fetch the long-form fields (instructions, common_mistakes, tips,
+   *  description) for a single exercise. They are intentionally excluded
+   *  from the bulk list query — at ~660 rows the catalog would otherwise
+   *  ship ~600 KB on every login and every language switch. */
+  getExerciseFullDetails: (id: string) => Promise<Pick<Exercise, 'instructions' | 'commonMistakes' | 'tips' | 'description'> | null>;
 }
 
 const ExerciseContext = createContext<ExerciseContextType | undefined>(undefined);
@@ -37,9 +42,13 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
   const fetchExercises = async () => {
     setIsLoading(true);
     try {
+      // Bulk list query — explicit light column list. The heavy long-text
+      // fields (instructions / common_mistakes / tips / description) live
+      // on the detail view and are pulled on demand via
+      // `getExerciseFullDetails` to keep the global load under control.
       const { data, error } = await supabase
         .from('exercises')
-        .select('*')
+        .select('id,name,category,subcategory,video_url,type,muscle_groups,secondary_muscles,tools,difficulty_level,icon')
         .eq('language', language)
         .order('name');
 
@@ -51,16 +60,16 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
         category: item.category as any,
         subcategory: item.subcategory,
         video_url: item.video_url,
-        description: item.description,
+        description: undefined,
         type: item.type as any,
         muscleGroups: item.muscle_groups || [],
         secondaryMuscles: item.secondary_muscles || [],
         tools: item.tools || [],
         level: item.difficulty_level as any,
         icon: item.icon || 'fitness_center',
-        instructions: item.instructions || undefined,
-        commonMistakes: item.common_mistakes || undefined,
-        tips: item.tips || undefined
+        instructions: undefined,
+        commonMistakes: undefined,
+        tips: undefined,
       }));
 
       setExercises(mappedExercises);
@@ -68,6 +77,27 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error fetching exercises:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const getExerciseFullDetails = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('exercises')
+        .select('description,instructions,common_mistakes,tips')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        description: data.description || undefined,
+        instructions: data.instructions || undefined,
+        commonMistakes: data.common_mistakes || undefined,
+        tips: data.tips || undefined,
+      };
+    } catch (err) {
+      console.error('Error fetching exercise details:', err);
+      return null;
     }
   };
 
@@ -156,13 +186,14 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <ExerciseContext.Provider value={{ 
-      exercises, 
-      isLoading, 
-      addExercise, 
-      deleteExercise, 
+    <ExerciseContext.Provider value={{
+      exercises,
+      isLoading,
+      addExercise,
+      deleteExercise,
       updateExercise,
-      refreshExercises: fetchExercises 
+      refreshExercises: fetchExercises,
+      getExerciseFullDetails,
     }}>
       {children}
     </ExerciseContext.Provider>

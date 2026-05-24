@@ -16,6 +16,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
   const [plans, setPlans] = useState<any>(null);
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
         if (!mounted) return;
         setPlans(plansData);
         setCheckIns(unwrapList(checkInsData));
+        setProfile(profileData);
 
         if (profileData?.manager_id) {
           // Only the 3 most recent coach-authored messages are rendered, so
@@ -245,7 +247,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{t(greetingKey)}, {user?.email?.split('@')[0]}</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{t(greetingKey)}, {profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0]}</h1>
           <p className="text-slate-500 dark:text-slate-400 capitalize">{formattedDate}</p>
         </div>
         <div className="flex items-center gap-4">
@@ -370,7 +372,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                               {meal.name}
                               {isNext && <span className="text-[10px] bg-[#17cf54] text-white px-2 py-0.5 rounded-full uppercase tracking-tight font-bold">{t('next_up')}</span>}
                             </h4>
-                            <p className="text-[11px] text-slate-400">{meal.time} • {mealKcal} kcal • {mealProtein}g protein</p>
+                            <p className="text-[11px] text-slate-400">{meal.time} • {mealKcal} kcal • {mealProtein}{t('grams_protein_short', { defaultValue: 'g prot.' })}</p>
                           </div>
                         </div>
                       </div>

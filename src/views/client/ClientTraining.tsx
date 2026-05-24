@@ -92,7 +92,10 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
 
   useEffect(() => {
     let mounted = true;
-    refreshExercises();
+    // ExerciseContext already caches the full catalog at app start. Avoid
+    // the ~600 KB re-fetch on every visit to /training; only refresh if the
+    // context is genuinely empty (e.g. first navigation after login).
+    if (exercises.length === 0) refreshExercises();
     const fetchMyPlans = async () => {
       try {
         const data = await fetchWithAuth('/client/plans');

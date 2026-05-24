@@ -18,7 +18,7 @@ const parseItems = (txt?: string | null): string[] =>
 
 export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailProps) {
   const { t } = useLanguage();
-  const { exercises, updateExercise } = useExerciseContext();
+  const { exercises, updateExercise, getExerciseFullDetails } = useExerciseContext();
   const exercise = exercises.find(e => e.name === exerciseName);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -58,7 +58,9 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
     [exercises]
   );
 
-  // Initialize fields
+  // Initialize fields from the lightweight catalog row. The long-form
+  // fields (description, instructions, common_mistakes, tips) are NOT in
+  // the bulk list — fetch them on demand below.
   useEffect(() => {
     if (exercise) {
       setName(exercise.name);
@@ -70,14 +72,28 @@ export default function ExerciseDetail({ exerciseName, onBack }: ExerciseDetailP
       setSecondaryMuscles(exercise.secondaryMuscles || []);
       setEquipment(exercise.tools || []);
       setVideoUrl(exercise.video_url || "");
-      setNoteItems(parseItems(exercise.description));
-      setInstructionItems(parseItems(exercise.instructions));
-      setMistakeItems(parseItems(exercise.commonMistakes));
-      setTipItems(parseItems(exercise.tips));
     } else if (exerciseName) {
       setName(exerciseName);
     }
   }, [exercise, exerciseName, isEditing]);
+
+  // Lazy-load the long-form text fields the first time the detail mounts
+  // (and again on Cancel, so unsaved edits revert from the server). The
+  // bulk catalog query intentionally omits these to keep the global load
+  // small; see ExerciseContext.getExerciseFullDetails.
+  useEffect(() => {
+    if (!exercise?.id) return;
+    let mounted = true;
+    (async () => {
+      const full = await getExerciseFullDetails(exercise.id);
+      if (!mounted || !full) return;
+      setNoteItems(parseItems(full.description));
+      setInstructionItems(parseItems(full.instructions));
+      setMistakeItems(parseItems(full.commonMistakes));
+      setTipItems(parseItems(full.tips));
+    })();
+    return () => { mounted = false; };
+  }, [exercise?.id, isEditing]);
 
   const handleSave = async () => {
     if (!exercise) return;
