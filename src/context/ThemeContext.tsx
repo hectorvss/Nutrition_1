@@ -29,6 +29,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
         return;
       }
+      // /manager/settings is manager-only. Clients keep the default theme.
+      if (user.role !== 'MANAGER') {
+        setIsLoading(false);
+        return;
+      }
       try {
         const data = await fetchWithAuth('/manager/settings');
         if (data) {
@@ -63,7 +68,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const updated = { ...settings, ...newSettings };
     setSettings(updated);
     
-    if (user) {
+    if (user && user.role === 'MANAGER') {
       try {
         await fetchWithAuth('/manager/settings', {
           method: 'POST',

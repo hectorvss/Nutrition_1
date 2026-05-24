@@ -89,8 +89,11 @@ export const IntegrationsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    if (user) {
+    // Manager-only endpoints; CLIENT users must not call /manager/integrations.
+    if (user && user.role === 'MANAGER') {
       fetchIntegrations();
+    } else {
+      setIsLoading(false);
     }
   }, [user]);
 

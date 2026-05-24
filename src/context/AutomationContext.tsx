@@ -74,6 +74,12 @@ export const AutomationProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
+    // /automations is manager-only.
+    if (user.role !== 'MANAGER') {
+      setAutomations([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = unwrapList(await fetchWithAuth('/automations?limit=200'));

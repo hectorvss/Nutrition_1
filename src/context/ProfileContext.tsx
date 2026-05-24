@@ -28,6 +28,13 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
+    // Manager-only endpoint. CLIENT users mount this provider through the
+    // global tree but must not call /manager/* (the API returns 403 and the
+    // console fills with errors). Skip cleanly for them.
+    if (user.role !== 'MANAGER') {
+      setLoading(false);
+      return;
+    }
     try {
       const data = await fetchWithAuth('/manager/profile');
       if (data) {

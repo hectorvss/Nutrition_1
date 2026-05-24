@@ -22,6 +22,7 @@ router.get('/profile', async (req: any, res) => {
       .select(`
         id,
         email,
+        manager_id,
         clients_profiles (weight, goal, gender, age, metadata)
       `)
       .eq('id', req.user.id)
@@ -30,9 +31,15 @@ router.get('/profile', async (req: any, res) => {
     if (error || !profile) return res.status(404).json({ error: 'Not found' });
 
     const cp: any = profile.clients_profiles?.[0] || {};
+    // `manager_id` is exposed so the client portal can scope follow-up
+    // requests (e.g. fetching the coach's messages and onboarding flows) to
+    // its own coach. The reverse field `clients_profiles.notes` is the
+    // coach's private note about the client and intentionally stays out of
+    // this response.
     const formattedProfile = {
       id: profile.id,
       email: profile.email,
+      manager_id: (profile as any).manager_id || null,
       weight: cp.weight || null,
       goal: cp.goal || null,
       gender: cp.gender || null,

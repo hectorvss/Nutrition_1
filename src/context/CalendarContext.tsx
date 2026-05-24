@@ -150,6 +150,8 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
 
   const loadRange = async (from: string, to: string) => {
     if (!user) return;
+    // /manager/tasks is manager-only — clients have no calendar in this app.
+    if (user.role !== 'MANAGER') return;
     try {
       setIsLoading(true);
       const data = await fetchWithAuth(`/manager/tasks?from=${from}&to=${to}&limit=200`);
@@ -170,6 +172,11 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchTasks = async () => {
     if (!user) {
+      setEvents([]);
+      setIsLoading(false);
+      return;
+    }
+    if (user.role !== 'MANAGER') {
       setEvents([]);
       setIsLoading(false);
       return;

@@ -45,6 +45,7 @@ export const verifyManager = async (req: AuthedRequest, res: Response, next: Nex
       return res.status(403).json({ error: 'Forbidden: se requiere rol MANAGER' });
     }
 
+    (user as any).role = userData.role;
     req.user = user;
     next();
   } catch (err) {
@@ -62,7 +63,9 @@ export const verifyClient = async (req: AuthedRequest, res: Response, next: Next
   if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
   try {
-    const { data, error: authError } = await supabaseAdmin.auth.getUser(token);
+    // Validate the JWT through the anon client, same as verifyManager — using
+    // the service-role client here would be a footgun if env vars get crossed.
+    const { data, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !data?.user) {
       return res.status(401).json({ error: 'Invalid token' });
@@ -86,6 +89,7 @@ export const verifyClient = async (req: AuthedRequest, res: Response, next: Next
       return res.status(403).json({ error: 'Forbidden: se requiere rol CLIENT' });
     }
 
+    (user as any).role = userData.role;
     req.user = user;
     next();
   } catch (err) {
@@ -107,6 +111,16 @@ export const authenticate = async (req: AuthedRequest, res: Response, next: Next
     if (error || !data?.user) {
       return res.status(401).json({ error: 'Invalid token' });
     }
+    // Look up the app role from the users table so downstream handlers (e.g.
+    // enforceMonthlyMessages in /api/messages) can distinguish managers from
+    // clients. Without this, `req.user.role` is undefined and any check like
+    // `req.user.role === 'MANAGER'` silently treats every caller as a client.
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('role')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    (data.user as any).role = userData?.role || null;
     req.user = data.user;
     next();
   } catch (err) {

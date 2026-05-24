@@ -23,6 +23,12 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         setIsLoading(false);
         return;
       }
+      // /manager/profile is manager-only — clients keep the default language
+      // until /client/profile exposes a language preference of its own.
+      if (user.role !== 'MANAGER') {
+        setIsLoading(false);
+        return;
+      }
       try {
         const data = await fetchWithAuth('/manager/profile');
         if (data && data.language) {
@@ -39,7 +45,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
   const setLanguage = async (lang: Language) => {
     setLanguageState(lang);
-    if (user) {
+    if (user && user.role === 'MANAGER') {
       try {
         await fetchWithAuth('/manager/profile', {
           method: 'POST',

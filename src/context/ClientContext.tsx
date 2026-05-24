@@ -183,6 +183,12 @@ export const ClientProvider = ({ children }: { children: ReactNode }) => {
       setIsLoading(false);
       return;
     }
+    // /manager/clients is manager-only; clients keep an empty list.
+    if (user.role !== 'MANAGER') {
+      setClients([]);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setIsLoading(true);
