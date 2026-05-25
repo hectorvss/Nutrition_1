@@ -14,7 +14,16 @@ import { useLanguage } from '../context/LanguageContext';
 import { localizeSchema } from '../constants/templateI18n';
 
 interface OnboardingPopupProps {
+  /** Fired when the client successfully submits the onboarding. The
+   *  parent should clear the active assignment / hide the popup AND the
+   *  FAB. */
   onComplete: () => void;
+  /** Fired when the client dismisses the popup with the X button
+   *  WITHOUT submitting. The parent should hide the popup but KEEP the
+   *  assignment so the floating action button stays visible and lets the
+   *  client resume later. Falls back to onComplete when not provided so
+   *  existing callers (manager-side preview, tests) behave as before. */
+  onDismiss?: () => void;
 }
 
 const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<string> => {
@@ -51,7 +60,7 @@ const compressImage = (file: File, maxWidth = 1024, maxHeight = 1024): Promise<s
   });
 };
 
-export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
+export default function OnboardingPopup({ onComplete, onDismiss }: OnboardingPopupProps) {
   const { settings } = useTheme();
   const { t, language } = useLanguage();
   const [activeAssignment, setActiveAssignment] = useState<any>(null);
@@ -235,8 +244,8 @@ export default function OnboardingPopup({ onComplete }: OnboardingPopupProps) {
                   <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${((currentStepIndex + 1) / templateSchema.length) * 100}%` }} />
                </div>
             </div>
-            <button 
-              onClick={() => onComplete()} 
+            <button
+              onClick={() => (onDismiss ? onDismiss() : onComplete())}
               className="p-2 text-slate-400 hover:text-red-500 transition-colors"
             >
                <X className="w-6 h-6" />

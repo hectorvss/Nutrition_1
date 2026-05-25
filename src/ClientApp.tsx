@@ -43,6 +43,17 @@ export default function ClientApp() {
   React.useEffect(() => {
     checkOnboarding();
     checkRecentSubmission();
+    // The coach can assign / unassign an onboarding while the client has
+    // the app open — refetch on tab focus so the FAB and popup state
+    // reflect reality without a manual reload.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkOnboarding();
+        checkRecentSubmission();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
   }, []);
 
   const checkOnboarding = async () => {
@@ -50,7 +61,17 @@ export default function ClientApp() {
       const data = await fetchWithAuth('/onboarding/client/active');
       if (data && data.template) {
         setOnboardingData(data);
-        setShowOnboarding(true);
+        // Auto-open the popup ONLY on the very first sighting per session.
+        // After the user dismisses with the X we keep `onboardingData` set
+        // so the FAB stays visible, but we don't re-open the popup on every
+        // visibility refresh — that would be intrusive.
+        setShowOnboarding(prev => prev || !onboardingData);
+      } else {
+        // No active assignment any more — clear local state so the FAB
+        // disappears (e.g. the coach unassigned it, or the previous
+        // submission deactivated the assignment server-side).
+        setOnboardingData(null);
+        setShowOnboarding(false);
       }
     } catch (err) {
       console.error('Failed to check onboarding:', err);
@@ -132,7 +153,15 @@ export default function ClientApp() {
 
   return (
     <div className="flex min-h-screen bg-[#f6f8f6] dark:bg-[#112116] text-slate-900 dark:text-slate-100 font-sans selection:bg-[#17cf54]/20 selection:text-[#17cf54] overflow-hidden">
-      {showOnboarding && <OnboardingPopup onComplete={() => { setShowOnboarding(false); setOnboardingData(null); }} />}
+      {showOnboarding && (
+        <OnboardingPopup
+          // Submitted: clear everything — FAB disappears too.
+          onComplete={() => { setShowOnboarding(false); setOnboardingData(null); }}
+          // X button: just hide the popup; keep onboardingData set so the
+          // FAB stays visible and the client can reopen the flow any time.
+          onDismiss={() => setShowOnboarding(false)}
+        />
+      )}
       {showCheckIn && <WeeklyCheckinFlow onComplete={() => setShowCheckIn(false)} onCancel={() => setShowCheckIn(false)} />}
       
       <ClientActionFAB
