@@ -1,4 +1,5 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense } from 'react';
+import { lazyWithRetry } from './lazyWithRetry';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './context/AuthContext';
 import ClientSidebar from './components/client/ClientSidebar';
@@ -9,9 +10,15 @@ import ClientTraining from './views/client/ClientTraining';
 // Heavy or rarely-visited views are lazy so they don't sit in the initial
 // client bundle. Progress imports recharts (~120 KB), Roadmap pulls motion
 // + animations, Settings is the shared settings shell (1.7k LOC).
-const ClientRoadmap = lazy(() => import('./views/client/ClientRoadmap'));
-const ClientProgress = lazy(() => import('./views/client/ClientProgress'));
-const Settings = lazy(() => import('./views/Settings'));
+//
+// `lazyWithRetry` auto-recovers from the classic "Failed to fetch
+// dynamically imported module" crash that happens when a browser holds an
+// old index.html in memory and asks for a chunk hash that no longer
+// exists on Vercel. The helper triggers one reload to pick up the fresh
+// hashes — without it the whole client portal dies after every deploy.
+const ClientRoadmap = lazyWithRetry(() => import('./views/client/ClientRoadmap'));
+const ClientProgress = lazyWithRetry(() => import('./views/client/ClientProgress'));
+const Settings = lazyWithRetry(() => import('./views/Settings'));
 import { Menu } from 'lucide-react';
 import Messages from './views/Messages';
 // Client-only read-only view of an exercise. Replaces the manager-side
