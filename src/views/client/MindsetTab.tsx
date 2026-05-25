@@ -7,6 +7,12 @@ import {
   Moon,
   CheckCircle2,
   AlertTriangle,
+  Battery,
+  Utensils,
+  Droplet,
+  Wine,
+  Pill,
+  Footprints,
 } from 'lucide-react';
 import {
   LineChart,
@@ -34,6 +40,21 @@ const MindsetTab: React.FC<MindsetTabProps> = ({ stats, t }) => {
   // `mindset.sleep` carries `sleep_hours` (4-10 range); the score lives
   // in `sleepQuality` and matches the 1-10 scale of the other inputs.
   const sleep = num1to10('sleepQuality');
+  // Wellbeing scores newly surfaced by /profile-stats. Same 1-10 scale.
+  const fatigue = num1to10('fatigue');
+  const hunger  = num1to10('hunger');
+
+  const ls = stats?.lifestyle || {};
+  const lifestyleNum = (k: string): number | null => {
+    const v = Number((ls as any)[k]);
+    return Number.isFinite(v) && v > 0 ? v : null;
+  };
+  const lsSteps   = lifestyleNum('steps');
+  const lsWater   = lifestyleNum('waterScore');
+  const lsTrainI  = lifestyleNum('trainingIntensity');
+  const lsAlcohol = ls?.alcohol || null;
+  const lsSupp    = ls?.supplements || null;
+  const hasLifestyle = lsSteps != null || lsWater != null || lsTrainI != null || lsAlcohol || lsSupp;
 
   // Composite burnout risk: combines sustained stress, low sleep and low
   // motivation. Returns null when none of the inputs has data, so the card
@@ -63,6 +84,8 @@ const MindsetTab: React.FC<MindsetTabProps> = ({ stats, t }) => {
         { label: 'MOTIVATION', value: valueOrDash(motivation), status: statusOrDash(motivation, 'High', 'Low'), icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
         { label: 'ENERGY', value: valueOrDash(energy), status: statusOrDash(energy, 'High', 'Low'), icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
         { label: 'SLEEP', value: valueOrDash(sleep), status: statusOrDash(sleep, 'Good', 'Low'), icon: Moon, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'sleep' },
+        { label: t('fatigue_level', { defaultValue: 'FATIGUE' }).toUpperCase(), value: valueOrDash(fatigue), status: statusOrDash(fatigue, t('high', { defaultValue: 'High' }), t('normal', { defaultValue: 'Normal' })), icon: Battery, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'fatigue' },
+        { label: t('hunger_level', { defaultValue: 'HUNGER' }).toUpperCase(), value: valueOrDash(hunger), status: statusOrDash(hunger, t('high', { defaultValue: 'High' }), t('normal', { defaultValue: 'Normal' })), icon: Utensils, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'hunger' },
         { label: 'BURNOUT RISK', value: burnoutRisk ?? '--', status: '', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', dataKey: 'stress' },
       ].map((stat, idx) => (
         <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
@@ -129,6 +152,47 @@ const MindsetTab: React.FC<MindsetTabProps> = ({ stats, t }) => {
           </div>
         </div>
       </div>
+
+      {/* Lifestyle block — surfaces water/training-intensity scores + alcohol
+          + supplements + steps already exposed by /profile-stats. Hidden if
+          the client has no data yet. */}
+      {hasLifestyle && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{t('lifestyle', { defaultValue: 'Estilo de vida' })}</h3>
+          <div className="grid grid-cols-1 gap-3 text-xs">
+            {lsSteps != null && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Footprints className="w-4 h-4 text-sky-500" /> {t('steps', { defaultValue: 'Pasos' })}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{lsSteps.toLocaleString()}</span>
+              </div>
+            )}
+            {lsWater != null && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Droplet className="w-4 h-4 text-blue-500" /> {t('water_intake', { defaultValue: 'Hidratación' })}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{lsWater}/10</span>
+              </div>
+            )}
+            {lsTrainI != null && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-500" /> {t('training_intensity', { defaultValue: 'Intensidad de entreno' })}</span>
+                <span className="font-bold text-slate-900 dark:text-white">{lsTrainI}/10</span>
+              </div>
+            )}
+            {lsAlcohol && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Wine className="w-4 h-4 text-rose-500" /> {t('alcohol', { defaultValue: 'Alcohol' })}</span>
+                <span className="font-bold text-slate-900 dark:text-white capitalize">{String(lsAlcohol)}</span>
+              </div>
+            )}
+            {lsSupp && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2"><Pill className="w-4 h-4 text-violet-500" /> {t('supplements', { defaultValue: 'Suplementos' })}</span>
+                <span className="font-bold text-slate-900 dark:text-white capitalize">{String(lsSupp)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Injury & Pain Tracking — consume las preguntas pain_* del check-in
           (painLevel, affectedArea, painType, trainingImpact, painDuration,

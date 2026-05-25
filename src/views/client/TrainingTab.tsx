@@ -7,6 +7,8 @@ import {
   Target,
   ChevronLeft,
   ChevronRight,
+  Percent,
+  Flame,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -101,11 +103,18 @@ const TrainingTab: React.FC<TrainingTabProps> = ({ stats, isLoading, t, clientId
       ) : (
       <>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { label: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: t('avg_session_rpe'), value: stats?.training?.avgRPE || '--', unit: '/ 10', change: t('session_avg'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: t('workouts'), value: stats?.training?.workoutCount || '0', unit: t('sessions'), change: t('this_week'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          // Training adherence (self-reported 0-100, from training_adherence_score
+          // FIXED question × 10). Surfaced now that /profile-stats exposes it.
+          { label: t('training_adherence', { defaultValue: 'Adherencia entreno' }), value: stats?.training?.adherenceRate != null ? `${stats.training.adherenceRate}` : '--', unit: '%', change: '', icon: Percent, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          // Training intensity score (1-10). Sits alongside RPE: RPE is the
+          // session-level effort average, intensityScore is the wellbeing
+          // self-report from the latest check-in.
+          { label: t('training_intensity', { defaultValue: 'Intensidad' }), value: stats?.training?.intensityScore || '--', unit: '/ 10', change: '', icon: Flame, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
           { label: t('fatigue_level'), value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? t('high') : t('normal'), icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">

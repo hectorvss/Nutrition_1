@@ -4,6 +4,8 @@ import {
   TrendingDown,
   Calendar,
   X,
+  Ruler,
+  Pill,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -204,7 +206,54 @@ const NutritionTab: React.FC<NutritionTabProps> = ({ stats, isLoading, t }) => {
                 </div>
               );
             })()}
+            {/* Supplementation pulled from clients_profiles.metadata.supplementation
+                (set by onboarding). Mirrors the Allergies chip pattern. */}
+            {(() => {
+              const raw = stats?.supplementation;
+              const list: string[] = Array.isArray(raw) ? raw : (raw ? [String(raw)] : []);
+              if (!list.length) return null;
+              return (
+                <div className="mt-6">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1"><Pill className="w-3 h-3 text-violet-500" /> {t('supplementation', { defaultValue: 'Suplementación' })}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {list.map((s, idx) => (
+                      <span key={idx} className="px-3 py-1.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400 text-[10px] font-bold border border-violet-100 dark:border-violet-800/50">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
+
+          {/* Latest body measurements (cm) — fed by waist/hip/chest/arm_r/thigh_r
+              FIXED check-in questions. Hidden when the client has never logged. */}
+          {(() => {
+            const meas = stats?.measurements || {};
+            const rows: { label: string; v: any }[] = [
+              { label: t('waist', { defaultValue: 'Cintura' }), v: meas.waist },
+              { label: t('hip', { defaultValue: 'Cadera' }), v: meas.hip },
+              { label: t('chest', { defaultValue: 'Pecho' }), v: meas.chest },
+              { label: t('arm', { defaultValue: 'Brazo' }), v: meas.arm_r },
+              { label: t('thigh', { defaultValue: 'Muslo' }), v: meas.thigh_r },
+            ].filter(r => Number.isFinite(Number(r.v)) && Number(r.v) > 0);
+            if (!rows.length) return null;
+            return (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <Ruler className="w-5 h-5 text-emerald-500" />
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('latest_measurements', { defaultValue: 'Últimas mediciones' })}</h3>
+                </div>
+                <div className="space-y-3 text-xs">
+                  {rows.map((r, idx) => (
+                    <div key={idx} className="flex justify-between items-center">
+                      <span className="text-slate-500 dark:text-slate-400">{r.label}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{Number(r.v)} cm</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
       <div className="mt-6">
