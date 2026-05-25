@@ -391,6 +391,127 @@ router.patch('/workout-logs/:id', async (req: any, res) => {
 // ago (see server/routes/onboarding.ts and src/ClientApp.tsx), so those
 // routes were unreachable dead code. Removed to prevent future drift.
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Nutrition meal-tracking (powers daily adherence KPI). The client toggles
+// "comida hecha" on each meal of the day; we store one row per slot. Adherencia
+// del día = comidas marcadas / total comidas del plan.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /client/nutrition-logs?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get('/nutrition-logs', async (req: any, res) => {
+  try {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+    const fromRaw = typeof req.query.from === 'string' && ISO_DATE.test(req.query.from) ? req.query.from : null;
+    const toRaw   = typeof req.query.to   === 'string' && ISO_DATE.test(req.query.to)   ? req.query.to   : null;
+    const defaultFrom = new Date(today); defaultFrom.setDate(today.getDate() - 30);
+    const from = fromRaw || defaultFrom.toISOString().slice(0, 10);
+    const to   = toRaw   || today.toISOString().slice(0, 10);
+
+    const { data, error } = await supabaseAdmin
+      .from('nutrition_logs')
+      .select('id, plan_id, log_date, meal_index, kind, eaten, portion_multiplier, notes, logged_at')
+      .eq('client_id', req.user.id)
+      .gte('log_date', from)
+      .lte('log_date', to)
+      .order('log_date', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (error: any) {
+    console.error('Error fetching nutrition logs:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /client/nutrition-logs — upsert por (client, date, meal_index, kind).
+// Permite "marcar/desmarcar como comida" sin generar filas duplicadas; el
+// constraint UNIQUE garantiza una sola entrada por slot/día.
+router.post('/nutrition-logs', async (req: any, res) => {
+  try {
+    const { plan_id, log_date, meal_index, kind, eaten, portion_multiplier, notes } = req.body;
+
+    const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+    const safeDate = (typeof log_date === 'string' && ISO_DATE.test(log_date))
+      ? log_date
+      : new Date().toISOString().slice(0, 10);
+    const idx = Number(meal_index);
+    if (!Number.isInteger(idx) || idx < 0 || idx > 50) {
+      return res.status(400).json({ error: 'meal_index must be an integer 0..50' });
+    }
+    const safeKind = (kind === 'category') ? 'category' : 'meal';
+    const safeEaten = eaten === false ? false : true;
+    const pmRaw = Number(portion_multiplier);
+    const safePm = Number.isFinite(pmRaw) && pmRaw >= 0 && pmRaw <= 5 ? Number(pmRaw.toFixed(2)) : 1.0;
+    const safeNotes = typeof notes === 'string' ? notes.slice(0, 500) : null;
+
+    // Verifica que el plan, si se da, pertenece al cliente.
+    if (plan_id) {
+      const { data: planRow } = await supabaseAdmin
+        .from('nutrition_plans')
+        .select('id')
+        .eq('id', plan_id)
+        .eq('client_id', req.user.id)
+        .maybeSingle();
+      if (!planRow) {
+        return res.status(403).json({ error: 'Forbidden: plan does not belong to this client' });
+      }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('nutrition_logs')
+      .upsert(
+        {
+          client_id: req.user.id,
+          plan_id: plan_id || null,
+          log_date: safeDate,
+          meal_index: idx,
+          kind: safeKind,
+          eaten: safeEaten,
+          portion_multiplier: safePm,
+          notes: safeNotes,
+          logged_at: new Date().toISOString(),
+        },
+        { onConflict: 'client_id,log_date,meal_index,kind' }
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error saving nutrition log:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// DELETE /client/nutrition-logs?date=YYYY-MM-DD&meal_index=N&kind=meal
+// Equivalente a "desmarcar". Útil para corregir un toggle accidental sin tener
+// que recordar el id.
+router.delete('/nutrition-logs', async (req: any, res) => {
+  try {
+    const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+    const log_date = typeof req.query.date === 'string' && ISO_DATE.test(req.query.date) ? req.query.date : null;
+    const idx = Number(req.query.meal_index);
+    const safeKind = req.query.kind === 'category' ? 'category' : 'meal';
+    if (!log_date || !Number.isInteger(idx)) {
+      return res.status(400).json({ error: 'date and meal_index are required' });
+    }
+    const { error } = await supabaseAdmin
+      .from('nutrition_logs')
+      .delete()
+      .eq('client_id', req.user.id)
+      .eq('log_date', log_date)
+      .eq('meal_index', idx)
+      .eq('kind', safeKind);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error deleting nutrition log:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // Get my performance statistics (for Progress view)
 router.get('/profile-stats', async (req: any, res) => {
   const id = req.user.id;
@@ -405,12 +526,21 @@ router.get('/profile-stats', async (req: any, res) => {
     // one. They share no inputs other than `id`, so issue them in parallel.
     // Field selects stay explicit — `clients_profiles(*)` would leak `notes`
     // (coach's private note) and `temp_password`.
+    // Fecha umbral para adherencia diaria nutricional: 14 días atrás (ventana
+    // suficiente para calcular media móvil sin inflar el payload).
+    const fourteenDaysAgoISO = (() => {
+      const d = new Date(); d.setDate(d.getDate() - 14); d.setHours(0, 0, 0, 0);
+      return d.toISOString().slice(0, 10);
+    })();
+
     const [
       { data: client, error: clientErr },
       { data: checkIns },
       { data: dynamicCheckIns },
       { data: recentMsgs },
       { data: allWorkoutLogs },
+      { data: nutritionLogs },
+      { data: latestNutritionPlan },
     ] = await Promise.all([
       supabaseAdmin
         .from('users')
@@ -444,6 +574,22 @@ router.get('/profile-stats', async (req: any, res) => {
         .eq('client_id', id)
         .order('logged_at', { ascending: false })
         .limit(100),
+      supabaseAdmin
+        .from('nutrition_logs')
+        .select('log_date, meal_index, kind, eaten')
+        .eq('client_id', id)
+        .gte('log_date', fourteenDaysAgoISO)
+        .limit(500),
+      // El plan más reciente — necesitamos `meals.length` y `categories.length`
+      // para calcular el denominador "comidas planificadas / día".
+      supabaseAdmin
+        .from('nutrition_plans')
+        .select('id, data_json')
+        .eq('client_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data, error }) => ({ data: data ? [data] : null, error })),
     ]);
 
     if (clientErr || !client) return res.status(404).json({ error: 'Profile not found' });
@@ -795,6 +941,41 @@ router.get('/profile-stats', async (req: any, res) => {
       }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null)
     };
 
+    // Adherencia nutricional DIARIA (nuevo KPI real, alimentado por
+    // `nutrition_logs`). Antes este número se inventaba a partir de la
+    // pregunta semanal categórica. Ahora se calcula así:
+    //   - denominador del día = nº de meals planificados en el plan activo
+    //     (categories opcionales suman si están definidas)
+    //   - numerador del día = nº de meals (kind='meal') marcadas como
+    //     eaten=true para esa fecha
+    //   - adherencia diaria = numerador / denominador, en %
+    //   - serie de 7 puntos para el sparkline + media de los últimos 7 días.
+    const planRow: any = (latestNutritionPlan && Array.isArray(latestNutritionPlan)) ? latestNutritionPlan[0] : null;
+    const planData: any = planRow?.data_json || {};
+    const totalMealsPerDay = Array.isArray(planData.meals) ? planData.meals.length : 0;
+    const logsByDate: Record<string, number> = {};
+    for (const log of (nutritionLogs || []) as any[]) {
+      if (log.kind === 'meal' && log.eaten) {
+        const k = String(log.log_date);
+        logsByDate[k] = (logsByDate[k] || 0) + 1;
+      }
+    }
+    const dailyAdherenceSeries: { date: string; percent: number; eaten: number; planned: number }[] = [];
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(todayMidnight); d.setDate(todayMidnight.getDate() - i);
+      const k = d.toISOString().slice(0, 10);
+      const eaten = logsByDate[k] || 0;
+      const percent = totalMealsPerDay > 0 ? Math.min(100, Math.round((eaten / totalMealsPerDay) * 100)) : 0;
+      dailyAdherenceSeries.push({ date: k, percent, eaten, planned: totalMealsPerDay });
+    }
+    const dailyNutritionAdherence = dailyAdherenceSeries.length > 0
+      ? Math.round(dailyAdherenceSeries.reduce((s, p) => s + p.percent, 0) / dailyAdherenceSeries.length)
+      : null;
+    // Estadísticas de hoy para el "Heads-up" del dashboard.
+    const todayKey = todayMidnight.toISOString().slice(0, 10);
+    const mealsEatenToday = logsByDate[todayKey] || 0;
+
     const cProfile: any = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
     const allergies = cProfile?.metadata?.allergies || [];
 
@@ -806,6 +987,13 @@ router.get('/profile-stats', async (req: any, res) => {
       startWeight: weightHistory.length > 0 ? num(weightHistory[0]?.weight) : null,
       bodyFat: num(lastAnswers?.body_fat ?? lastAnswers?.bodyFat),
       adherenceRate: calculatedAdherenceRate,
+      // Nuevo: adherencia diaria real (basada en meal-tracking, no en el
+      // check-in semanal). Si no hay logs ni plan, devuelve null y la UI
+      // muestra "--" en vez de inventar un 0.
+      dailyNutritionAdherence,
+      dailyAdherenceSeries,
+      mealsEatenToday,
+      plannedMealsPerDay: totalMealsPerDay,
       trainingAdherenceRate,
       avgSteps,
       activeDays: allCheckInsCombined.length,

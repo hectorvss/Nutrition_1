@@ -169,6 +169,45 @@ router.post('/manager/templates', verifyManager, async (req: any, res) => {
 // snapshots stay tied to their original version and new submissions land
 // on the latest one. Without the bump, a manager could edit a flow
 // destructively while a client had the popup mid-flow.
+// Verifica que el manager no ha eliminado ni renombrado preguntas o steps
+// con `is_locked: true` / `locked: true`. Devuelve los IDs problemáticos para
+// que el cliente pueda mostrar un error útil. Las preguntas locked alimentan
+// KPIs canónicos (kpi_key) que el dashboard lee directamente — su id no puede
+// cambiar bajo riesgo de dejar gráficos vacíos en silencio.
+const collectLockedRefs = (schema: any[]): { stepIds: Set<string>; questionIds: Set<string>; questionKeys: Map<string, { kpi?: string; required?: boolean }> } => {
+  const stepIds = new Set<string>();
+  const questionIds = new Set<string>();
+  const questionKeys = new Map<string, { kpi?: string; required?: boolean }>();
+  for (const step of (Array.isArray(schema) ? schema : [])) {
+    if (step?.locked || step?.is_locked) stepIds.add(String(step.id));
+    for (const q of (step?.questions || [])) {
+      if (q?.locked || q?.is_locked) {
+        questionIds.add(String(q.id));
+        questionKeys.set(String(q.id), { kpi: q.kpi_key, required: !!q.required });
+      }
+    }
+  }
+  return { stepIds, questionIds, questionKeys };
+};
+const validateLockedPreserved = (
+  prevSchema: any[],
+  nextSchema: any[]
+): { ok: true } | { ok: false; removed: string[]; renamed: string[] } => {
+  const prev = collectLockedRefs(prevSchema || []);
+  const nextSteps = new Set<string>();
+  const nextQuestions = new Set<string>();
+  for (const step of (Array.isArray(nextSchema) ? nextSchema : [])) {
+    nextSteps.add(String(step?.id));
+    for (const q of (step?.questions || [])) nextQuestions.add(String(q?.id));
+  }
+  const removed: string[] = [];
+  prev.stepIds.forEach(s => { if (!nextSteps.has(s)) removed.push(`step:${s}`); });
+  prev.questionIds.forEach(q => { if (!nextQuestions.has(q)) removed.push(`question:${q}`); });
+  return removed.length > 0
+    ? { ok: false, removed, renamed: [] }
+    : { ok: true };
+};
+
 router.patch('/manager/templates/:id', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
@@ -185,6 +224,19 @@ router.patch('/manager/templates/:id', verifyManager, async (req: any, res) => {
         .eq('id', id)
         .eq('manager_id', managerId)
         .maybeSingle();
+
+      // Contrato KPI: las preguntas/steps locked NO se pueden eliminar ni
+      // renombrar. El frontend del editor ya bloquea estas acciones (UI),
+      // pero esta validación server-side cubre llamadas directas a la API.
+      const guard = validateLockedPreserved(existing?.template_schema || [], template_schema || []);
+      if (guard.ok === false) {
+        return res.status(400).json({
+          error: 'Locked questions cannot be removed or renamed',
+          locked_violations: guard.removed,
+          message: 'Algunas preguntas/steps están marcados como fijos porque alimentan KPIs del dashboard. No se pueden eliminar ni renombrar.'
+        });
+      }
+
       patch.template_schema = template_schema;
       const prevJson = JSON.stringify(existing?.template_schema ?? null);
       const nextJson = JSON.stringify(template_schema ?? null);

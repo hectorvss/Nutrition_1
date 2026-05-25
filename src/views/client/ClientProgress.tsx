@@ -684,14 +684,18 @@ export default function ClientProgress() {
     const current = stats?.latestWeight ?? null;
     const start = stats?.startWeight ?? null;
     const targetDelta = (goal != null && current != null) ? (Number(goal) - Number(current)) : null;
-    // El servidor expone:
-    //   - adherenceRate: % nutrición últimos 7 días (mapping del check-in)
-    //   - trainingAdherenceRate: % entrenamiento últimos 7 días (canónico)
-    //   - avgSteps: media de pasos/día (numérico o midpoint de stepRange)
+    // El servidor expone (en orden de prioridad para `nutritionAdh`):
+    //   - dailyNutritionAdherence: % real basado en `nutrition_logs` (comidas
+    //     marcadas como hechas / planificadas) — ESTE es el KPI verdadero,
+    //     alimentado por el toggle "Marcar como hecha" en ClientNutrition.
+    //   - adherenceRate: fallback al % derivado del check-in semanal
+    //     categórico cuando el cliente aún no ha registrado comidas.
+    //   - trainingAdherenceRate: % entrenamiento últimos 7 días (canónico).
+    //   - avgSteps: media de pasos/día (numérico o midpoint de stepRange).
     // Nada de sintéticos: si no hay dato, queda null y la UI muestra "--".
-    const nutritionAdh = stats?.adherenceRate != null && stats.adherenceRate > 0
-      ? stats.adherenceRate
-      : null;
+    const nutritionAdh = stats?.dailyNutritionAdherence != null && stats.dailyNutritionAdherence > 0
+      ? stats.dailyNutritionAdherence
+      : (stats?.adherenceRate != null && stats.adherenceRate > 0 ? stats.adherenceRate : null);
     const trainingAdh = stats?.trainingAdherenceRate ?? null;
     const avgSteps = stats?.avgSteps ?? null;
     const hasPlanningData = goal != null || current != null || start != null || nutritionAdh != null || trainingAdh != null;

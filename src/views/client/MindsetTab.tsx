@@ -6,6 +6,7 @@ import {
   Activity,
   Moon,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   LineChart,
@@ -125,6 +126,83 @@ const MindsetTab: React.FC<MindsetTabProps> = ({ stats, t }) => {
           </div>
         </div>
       </div>
+
+      {/* Injury & Pain Tracking — consume las preguntas pain_* del check-in
+          (painLevel, affectedArea, painType, trainingImpact, painDuration,
+          painProgression) que antes estaban huérfanas. */}
+      {(() => {
+        const painData = stats?.pain;
+        const hasAnyPain = painData && (painData.current || (painData.history && painData.history.length > 0));
+        return (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="w-5 h-5 text-rose-500" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('injury_pain_tracking', { defaultValue: 'Injury & Pain' })}</h3>
+            </div>
+            {!hasAnyPain ? (
+              <p className="text-xs text-slate-400">{t('no_pain_reported', { defaultValue: 'No pain reported in recent check-ins.' })}</p>
+            ) : (
+              <div className="space-y-4">
+                {painData.current?.level != null && (
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{t('pain_level', { defaultValue: 'Pain level' })}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{painData.current.level}/10</span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                      <div className={`h-2 rounded-full ${painData.current.level >= 7 ? 'bg-rose-500' : painData.current.level >= 4 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${painData.current.level * 10}%` }} />
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  {painData.current?.area && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">{t('pain_area', { defaultValue: 'Area' })}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{Array.isArray(painData.current.area) ? painData.current.area.join(', ') : painData.current.area}</span>
+                    </div>
+                  )}
+                  {painData.current?.type && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">{t('pain_type', { defaultValue: 'Type' })}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{painData.current.type}</span>
+                    </div>
+                  )}
+                  {painData.current?.impact && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">{t('pain_impact', { defaultValue: 'Training impact' })}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{painData.current.impact}</span>
+                    </div>
+                  )}
+                  {painData.current?.duration && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">{t('pain_duration', { defaultValue: 'Duration' })}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{painData.current.duration}</span>
+                    </div>
+                  )}
+                  {painData.current?.progression && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 dark:text-slate-400">{t('pain_progression', { defaultValue: 'Progression' })}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{painData.current.progression}</span>
+                    </div>
+                  )}
+                  {typeof painData.recentWeeksReported === 'number' && painData.recentWeeksReported > 0 && (
+                    <div className="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500 dark:text-slate-400">{t('pain_weeks_30d', { defaultValue: 'Weeks with pain (30d)' })}</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{painData.recentWeeksReported}</span>
+                    </div>
+                  )}
+                </div>
+                {painData.current?.notes && (
+                  <div className="mt-4 p-3 bg-rose-50/50 dark:bg-rose-900/10 rounded-lg border border-rose-100 dark:border-rose-900/30">
+                    <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">{t('notes', { defaultValue: 'Notes' })}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">{painData.current.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   </div>
   );

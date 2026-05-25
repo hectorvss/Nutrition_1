@@ -21,6 +21,68 @@ export default function ClientNutrition() {
   const { user } = useAuth();
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 
+  // ───────────────────────────────────────────────────────────────────────
+  // Meal tracking (alimenta el KPI "Adherencia diaria nutricional"). El
+  // cliente marca cada comida del día como hecha/no hecha; el set se persiste
+  // en `nutrition_logs` vía /client/nutrition-logs y se hidrata en cada carga
+  // de la vista. Trabajamos con la fecha de HOY — el plan es semanal/diario
+  // y la adherencia se mide por día calendario, no por slot del plan.
+  // ───────────────────────────────────────────────────────────────────────
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const [eatenToday, setEatenToday] = useState<Set<number>>(new Set());
+  const [savingMealIdx, setSavingMealIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const logs = await fetchWithAuth(`/client/nutrition-logs?from=${todayISO}&to=${todayISO}`);
+        if (cancelled) return;
+        const next = new Set<number>();
+        (Array.isArray(logs) ? logs : []).forEach((l: any) => {
+          if (l.kind === 'meal' && l.eaten) next.add(Number(l.meal_index));
+        });
+        setEatenToday(next);
+      } catch (e) {
+        // 401/403/red → no romper la UI; queda vacío y el cliente puede
+        // marcar comidas igualmente (POST creará el row).
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [todayISO, user?.id]);
+
+  const toggleMealEaten = async (idx: number, planId?: string | null) => {
+    setSavingMealIdx(idx);
+    const wasEaten = eatenToday.has(idx);
+    // Optimistic update — la red puede tardar 300 ms y queremos feedback
+    // inmediato. Se revierte si el servidor responde con error.
+    const next = new Set(eatenToday);
+    if (wasEaten) next.delete(idx); else next.add(idx);
+    setEatenToday(next);
+    try {
+      if (wasEaten) {
+        await fetchWithAuth(`/client/nutrition-logs?date=${todayISO}&meal_index=${idx}&kind=meal`, { method: 'DELETE' });
+      } else {
+        await fetchWithAuth('/client/nutrition-logs', {
+          method: 'POST',
+          body: JSON.stringify({
+            plan_id: planId || null,
+            log_date: todayISO,
+            meal_index: idx,
+            kind: 'meal',
+            eaten: true,
+          }),
+        });
+      }
+    } catch (e) {
+      // Revertir el optimistic en caso de fallo.
+      const revert = new Set(eatenToday);
+      setEatenToday(revert);
+    } finally {
+      setSavingMealIdx(null);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
     const fetchMyPlans = async (opts?: { silent?: boolean }) => {
@@ -493,23 +555,50 @@ export default function ClientNutrition() {
           </div>
         </div>
         <div className="p-8 space-y-6">
-          {meals.map((m: any, idx: number) => (
-            <MealBlock 
-              key={idx}
-              title={m.name} 
-              time={m.time} 
-              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
-              icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
-              iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
-              macros={(m.categories || []).map((c: any) => ({
-                label: c.label,
-                sub: c.example,
-                value: `${c.amount}g`,
-                color: c.color
-              }))}
-              viewDetailsLabel={t('view_details')}
-            />
-          ))}
+          {meals.map((m: any, idx: number) => {
+            const isEaten = eatenToday.has(idx);
+            const isSaving = savingMealIdx === idx;
+            return (
+              <div key={idx} className="relative">
+                <MealBlock
+                  title={m.name}
+                  time={m.time}
+                  kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
+                  icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
+                  iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
+                  macros={(m.categories || []).map((c: any) => ({
+                    label: c.label,
+                    sub: c.example,
+                    value: `${c.amount}g`,
+                    color: c.color
+                  }))}
+                  viewDetailsLabel={t('view_details')}
+                />
+                {/* Toggle "comida hecha hoy" — alimenta nutrition_logs y la
+                    adherencia diaria del KPI. Sólo se renderiza cuando el
+                    día seleccionado es hoy (no tiene sentido marcar comidas
+                    de mañana o de ayer). */}
+                {selectedDay === ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][new Date().getDay()] && (
+                  <button
+                    type="button"
+                    onClick={() => toggleMealEaten(idx, nutritionPlan?.id)}
+                    disabled={isSaving}
+                    aria-pressed={isEaten}
+                    className={`absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                      isEaten
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 hover:text-emerald-600'
+                    } ${isSaving ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">
+                      {isEaten ? 'check_circle' : 'radio_button_unchecked'}
+                    </span>
+                    {isEaten ? t('meal_done', { defaultValue: 'Hecha' }) : t('meal_mark_done', { defaultValue: 'Marcar como hecha' })}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

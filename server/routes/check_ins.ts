@@ -1255,6 +1255,39 @@ router.patch('/manager/checkin-templates/:id', verifyManager, async (req: Authed
   for (const key of ALLOWED) {
     if (key in req.body) updates[key] = req.body[key];
   }
+  // Contrato KPI: si el editor envía un schema en el que faltan los step IDs
+  // canónicos de FIXED_CHECKIN_QUESTIONS, ha eliminado o renombrado preguntas
+  // fijas. La UI del editor ya bloquea estas acciones, pero validamos también
+  // server-side para llamadas directas a la API.
+  if (Array.isArray(updates.template_schema)) {
+    const incomingStepIds = new Set<string>(
+      updates.template_schema.map((s: any) => String(s?.id))
+    );
+    const incomingQuestionIds = new Set<string>(
+      updates.template_schema.flatMap((s: any) => (s?.questions || []).map((q: any) => String(q?.id)))
+    );
+    const lockedStepViolations: string[] = [];
+    const lockedQuestionViolations: string[] = [];
+    for (const fixedStep of FIXED_CHECKIN_QUESTIONS) {
+      const stepInIncoming = incomingStepIds.has(fixedStep.id);
+      const allQuestionsInIncoming = (fixedStep.questions || [])
+        .every((q: any) => incomingQuestionIds.has(q.id));
+      if (!stepInIncoming && !allQuestionsInIncoming) {
+        lockedStepViolations.push(`step:${fixedStep.id}`);
+      } else if (stepInIncoming) {
+        for (const fq of (fixedStep.questions || [])) {
+          if (!incomingQuestionIds.has(fq.id)) lockedQuestionViolations.push(`question:${fq.id}`);
+        }
+      }
+    }
+    if (lockedStepViolations.length > 0 || lockedQuestionViolations.length > 0) {
+      return res.status(400).json({
+        error: 'Locked questions cannot be removed or renamed',
+        locked_violations: [...lockedStepViolations, ...lockedQuestionViolations],
+        message: 'Algunas preguntas/steps son fijos porque alimentan KPIs del dashboard. No se pueden eliminar ni renombrar.'
+      });
+    }
+  }
   // No persistir los pasos fijos de KPI: son la fuente de verdad de
   // FIXED_CHECKIN_QUESTIONS y se reinyectan al leer. Esto también hace que la
   // comparación de versión de abajo sea correcta (schema limpio vs. limpio).

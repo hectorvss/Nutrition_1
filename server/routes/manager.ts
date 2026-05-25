@@ -3354,6 +3354,33 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null || h.sleep !== null || h.sleepQuality !== null || h.steps !== null)
     };
 
+    // 10.b Injury & Pain Tracking — agrega las preguntas pain_* del check-in
+    // que hasta ahora estaban huérfanas (el cliente las rellenaba pero
+    // ningún KPI las leía). Mantenemos historial + último estado y nº de
+    // semanas con dolor reportado en los últimos 30 días.
+    const painExtract = (d: any) => {
+      const lvl = num(d?.painLevel ?? d?.pain_level);
+      const area = d?.affectedArea ?? d?.painArea ?? d?.pain_area ?? null;
+      const type = d?.painType ?? d?.pain_type ?? null;
+      const impact = d?.trainingImpact ?? d?.painImpact ?? d?.pain_impact ?? null;
+      const duration = d?.painDuration ?? d?.pain_duration ?? null;
+      const progression = d?.painProgression ?? d?.pain_progression ?? null;
+      const notes = d?.painNotes ?? d?.pain_notes ?? null;
+      const hasAny = lvl !== null || (area && area !== 'None' && area !== 'Ninguno') || !!type || !!impact || !!duration || !!progression || !!notes;
+      return hasAny ? { level: lvl, area, type, impact, duration, progression, notes } : null;
+    };
+    const painHistory = allCheckInsCombined
+      .map(ci => ({ date: ci.date, ...(painExtract(ci.answers as any) || {}) }))
+      .filter(p => (p as any).level !== undefined);
+    const lastPain = painHistory.length > 0 ? painHistory[painHistory.length - 1] : null;
+    const thirtyDaysAgo = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
+    const recentPainWeeks = painHistory.filter(p => new Date(p.date) >= thirtyDaysAgo).length;
+    const pain = {
+      current: lastPain || null,
+      history: painHistory,
+      recentWeeksReported: recentPainWeeks,
+    };
+
     // 11. Documents (Filtered real data from messages and submissions)
     const { data: messageAttachments } = await supabaseAdmin
       .from('messages')
@@ -3534,6 +3561,7 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         sensations
       },
       mindset,
+      pain,
       measurements: finalMeasurements,
       activity,
       documents,
