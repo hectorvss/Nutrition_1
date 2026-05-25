@@ -222,7 +222,9 @@ export default function ClientApp() {
         onOpenOnboarding={() => setShowOnboarding(true)}
       />
       
-      <main className="flex-1 lg:ml-64 flex flex-col h-screen overflow-hidden">
+      {/* No `lg:ml-64` — the new sidebar is a flex item that pushes content
+          and animates its width on collapse/expand (no fixed positioning). */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         {/* Mobile Header Toggle */}
         <div className="lg:hidden p-4 bg-white dark:bg-[#112116] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           {/* Mobile header: brand wordmark and the initial-circle were

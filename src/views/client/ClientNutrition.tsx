@@ -9,6 +9,11 @@ export default function ClientNutrition() {
   const { t, language } = useLanguage();
   const [mode, setMode] = useState<'general' | 'example'>('general');
   const [viewState, setViewState] = useState<'weekly' | 'daily'>('weekly');
+  // Toggles the "Semanal" vs "Mensual" view at the top — mirrors the
+  // manager's NutritionWeeklyView. Semanal shows the current week (the
+  // existing behaviour); Mensual stacks weeks 1–4 with their respective
+  // overrides so the client can see the whole monthly cycle.
+  const [cadenceView, setCadenceView] = useState<'weekly' | 'monthly'>('weekly');
   const [selectedDay, setSelectedDay] = useState<string>('monday');
   const [nutritionPlan, setNutritionPlan] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,6 +194,90 @@ export default function ClientNutrition() {
     { id: 'saturday', name: t('saturday') },
     { id: 'sunday', name: t('sunday') },
   ];
+
+  // Monthly view: 4 collapsed week sections. For each ISO week the client
+  // sees the 7 days with macros, picking any per-week override the coach
+  // configured (data_json.weekOverrides[week]) and falling back to the
+  // base week (data_json.days) otherwise.
+  const renderMonthlyView = () => {
+    const WEEKS = [1, 2, 3, 4] as const;
+    const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const baseDays = nutritionPlan?.data_json?.days || {};
+    const overrides = nutritionPlan?.data_json?.weekOverrides || {};
+    return (
+      <div className="flex flex-col gap-5">
+        {WEEKS.map(week => {
+          const weekDays = (week > 1 && overrides[week]) ? overrides[week] : baseDays;
+          const isOverride = week > 1 && !!overrides[week];
+          return (
+            <div key={`week-${week}`} className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center font-black text-sm">{week}</div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm leading-tight">{t('week', { defaultValue: 'Semana' })} {week}</h3>
+                    <span className={`text-[10px] font-bold uppercase tracking-wide ${week === 1 ? 'text-emerald-600' : isOverride ? 'text-amber-600' : 'text-slate-400'}`}>
+                      {week === 1
+                        ? t('planning_base_week', { defaultValue: 'Semana base' })
+                        : isOverride
+                          ? t('planning_custom_week', { defaultValue: 'Personalizada' })
+                          : t('planning_same_as_base', { defaultValue: 'Igual que la base' })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                {daysOrder.map(dayId => {
+                  const dayData = weekDays[dayId];
+                  const dMeals = dayData?.meals || [];
+                  let dCals = 0, dP = 0, dC = 0, dF = 0;
+                  dMeals.forEach((m: any) => {
+                    (m.items || []).forEach((i: any) => {
+                      const qty = i.multiplier || i.quantity || 1;
+                      dCals += (i.calories || 0) * qty;
+                      dP += (i.protein || 0) * qty;
+                      dC += (i.carbs || 0) * qty;
+                      dF += (i.fats || 0) * qty;
+                    });
+                    if (m.categories) {
+                      m.categories.forEach((cat: any) => {
+                        if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) dP += cat.amount || 0;
+                        else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) dC += cat.amount || 0;
+                        else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) dF += cat.amount || 0;
+                      });
+                    }
+                  });
+                  if (dCals === 0 && (dP > 0 || dC > 0 || dF > 0)) dCals = (dP * 4) + (dC * 4) + (dF * 9);
+                  const dayCfg = daysConfig.find((d: any) => d.id === dayId);
+                  const totalMacros = (dP * 4) + (dC * 4) + (dF * 9) || 1;
+                  const pPct = Math.round((dP * 4 / totalMacros) * 100);
+                  const cPct = Math.round((dC * 4 / totalMacros) * 100);
+                  return (
+                    <div key={dayId} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">{dayCfg?.name || dayId}</span>
+                        <span className={`text-xs font-bold ${dCals === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
+                          {Math.round(dCals).toLocaleString(locale)} kcal
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden flex">
+                        <div className="bg-blue-500 h-full" style={{ width: `${pPct}%` }} />
+                        <div className="bg-emerald-500 h-full" style={{ width: `${cPct}%` }} />
+                        <div className="bg-amber-500 h-full" style={{ width: `${Math.max(0, 100 - pPct - cPct)}%` }} />
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">
+                        {dMeals.length} {t('intakes', { defaultValue: 'comidas' })}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const renderWeeklyView = () => (
     <div className="flex flex-col gap-4">
@@ -583,25 +672,26 @@ export default function ClientNutrition() {
       <div className="flex-1 flex flex-col p-6 pt-2">
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-2 border border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-sm mb-8">
           <div className="flex bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 relative">
-            <button 
-              onClick={() => setMode('general')}
-              className={`relative px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10 ${mode === 'general' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+            <button
+              onClick={() => { setCadenceView('weekly'); setViewState('weekly'); }}
+              className={`relative px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10 ${cadenceView === 'weekly' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
             >
-              {t('general_mode')}
+              {t('weekly_view_btn', { defaultValue: 'Semanal' })}
             </button>
-            <button 
-              onClick={() => setMode('example')}
-              className={`relative px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10 ${mode === 'example' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
+            <button
+              onClick={() => { setCadenceView('monthly'); setViewState('weekly'); }}
+              className={`relative px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all z-10 ${cadenceView === 'monthly' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}
             >
-              {t('example_mode')}
+              {t('month_view_btn', { defaultValue: 'Mensual' })}
             </button>
           </div>
-          {/* Print button removed — the SPA layout has no @media print styles
-              so the output was unusable. Re-add only when a real print view
-              (export to PDF) is implemented. */}
         </div>
 
-        {viewState === 'weekly' ? renderWeeklyView() : (
+        {cadenceView === 'monthly' && isWeekly ? (
+          renderMonthlyView()
+        ) : viewState === 'weekly' ? (
+          renderWeeklyView()
+        ) : (
           <>
             {renderDaySelector()}
             {mode === 'general' ? renderGeneralMode() : renderExampleMode()}

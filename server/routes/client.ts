@@ -239,7 +239,7 @@ router.get('/roadmap', async (req: any, res) => {
 // Save a completed workout session
 router.post('/workout-logs', async (req: any, res) => {
   try {
-    const { plan_id, workout_name, day_key, exercises, notes, session_rpe } = req.body;
+    const { plan_id, workout_name, day_key, exercises, notes, session_rpe, started_at, duration_seconds } = req.body;
 
     // Cap exercises array to prevent DoS via huge payloads
     const safeExercises = Array.isArray(exercises) ? exercises.slice(0, 100) : [];
@@ -251,6 +251,20 @@ router.post('/workout-logs', async (req: any, res) => {
       : null;
     const rpeNum = Number(session_rpe);
     const safeRpe = (Number.isFinite(rpeNum) && rpeNum >= 1 && rpeNum <= 10) ? rpeNum : null;
+
+    // Marca de inicio y duración: el cliente las envía cuando pulsa
+    // "Completar entrenamiento". Se ignoran si vienen fuera de rango.
+    let safeStartedAt: string | null = null;
+    if (typeof started_at === 'string') {
+      const d = new Date(started_at);
+      if (!Number.isNaN(d.getTime()) && d.getTime() < Date.now() + 60_000) {
+        safeStartedAt = d.toISOString();
+      }
+    }
+    const durNum = Number(duration_seconds);
+    const safeDuration = Number.isFinite(durNum) && durNum >= 0 && durNum <= 24 * 60 * 60
+      ? Math.round(durNum)
+      : null;
 
     // If a plan_id is given, ensure it belongs to this client (prevents tagging logs to other clients' plans)
     if (plan_id) {
@@ -275,6 +289,8 @@ router.post('/workout-logs', async (req: any, res) => {
         exercises: safeExercises,
         notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
         session_rpe: safeRpe,
+        started_at: safeStartedAt,
+        duration_seconds: safeDuration,
         // Always server-side timestamp — client cannot backdate logs.
         logged_at: new Date().toISOString()
       })

@@ -38,6 +38,55 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Marca de inicio por día/semana (clave = weekOffset-day). Persiste en
+  // localStorage como el resto del borrador para que cerrar la pestaña
+  // no haga perder el cronómetro a mitad de entrenamiento.
+  const [sessionStarts, setSessionStarts] = useState<Record<string, string>>(() => {
+    try {
+      if (typeof window === 'undefined' || !user?.id) return {};
+      const saved = localStorage.getItem(`workout_session_starts_${user.id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  useEffect(() => {
+    if (user?.id) localStorage.setItem(`workout_session_starts_${user.id}`, JSON.stringify(sessionStarts));
+  }, [sessionStarts, user?.id]);
+
+  // Tick una vez por segundo para que el contador del entrenamiento se vea en
+  // vivo cuando hay una sesión iniciada. Si no hay sesión activa, no hace
+  // nada.
+  const [now, setNow] = useState(() => Date.now());
+  const activeSessionKey = `${weekOffset}-${selectedDay}`;
+  const sessionStartedAt = sessionStarts[activeSessionKey] || null;
+  useEffect(() => {
+    if (!sessionStartedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [sessionStartedAt]);
+
+  const elapsedSeconds = sessionStartedAt
+    ? Math.max(0, Math.floor((now - new Date(sessionStartedAt).getTime()) / 1000))
+    : 0;
+  const formatElapsed = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const ss = s % 60;
+    const mm = m.toString().padStart(2, '0');
+    const sss = ss.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${mm}:${sss}` : `${mm}:${sss}`;
+  };
+
+  const startSession = () => {
+    setSessionStarts(prev => ({ ...prev, [activeSessionKey]: new Date().toISOString() }));
+  };
+  const clearSessionStart = () => {
+    setSessionStarts(prev => {
+      const next = { ...prev };
+      delete next[activeSessionKey];
+      return next;
+    });
+  };
   const { user } = useAuth();
   const locale = language === 'es' ? 'es-ES' : 'en-US';
   // Drafts are scoped to the authenticated user. On first render `user?.id`
@@ -199,15 +248,34 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     });
   }, [selectedDay, weekOffset]);
 
-  const initExerciseLog = useCallback((key: string, name: string, muscle_group: string, defaultSets: any) => {
+  const initExerciseLog = useCallback((
+    key: string,
+    name: string,
+    muscle_group: string,
+    defaultSets: any,
+    prescribed?: { weight?: string; reps?: string; rir?: string },
+    setDetails?: { weight?: string; reps?: string; rir?: string }[],
+  ) => {
     setAllLogs(prev => {
       const activeLogKey = `${weekOffset}-${selectedDay}`;
       const dayData = prev[activeLogKey] || { exerciseLogs: {}, rpe: '', notes: '' };
       if (dayData.exerciseLogs[key]) return prev;
-      
-      const numSets = Math.max(1, parseInt(String(defaultSets), 10) || 1);
-      const sets_logged: SetLog[] = Array.from({ length: numSets }, () => ({ reps: '', weight: '', rir: '' }));
-      
+
+      const detailCount = Array.isArray(setDetails) ? setDetails.length : 0;
+      const numSets = Math.max(1, detailCount || parseInt(String(defaultSets), 10) || 1);
+      // Prefilled = lo que ha prescrito el coach. Si hay setDetails, cada
+      // serie hereda su propio peso/reps/rir. Si no, todas heredan el valor
+      // plano del ejercicio. Sirve a la vez como valor inicial del input y
+      // como "fantasma" gris cuando el cliente no lo cambia.
+      const sets_logged: SetLog[] = Array.from({ length: numSets }, (_, i) => {
+        const d = setDetails?.[i] || {};
+        return {
+          weight: String(d.weight ?? prescribed?.weight ?? ''),
+          reps:   String(d.reps   ?? prescribed?.reps   ?? ''),
+          rir:    String(d.rir    ?? prescribed?.rir    ?? ''),
+        };
+      });
+
       return {
         ...prev,
         [activeLogKey]: {
@@ -292,19 +360,35 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     setIsSaving(true);
     setSaveSuccess(false);
     try {
-      // Keep the block/exercise position (`key`) so a fetched log can be
-      // re-mapped onto the right exercise row after a reload.
+      // Las series ya vienen autocompletadas con lo prescrito, así que basta
+      // con persistir lo que hay (sea el valor del coach o el que el cliente
+      // haya retocado). Aun así, si por cualquier motivo un campo está vacío,
+      // se rellena al vuelo con el prescrito antes de enviar.
       const exercisesToSave = (Object.entries(exerciseLogs) as [string, ExerciseLog][])
-        .filter(([, ex]) => ex.sets_logged.some(s => s.weight || s.reps))
-        .map(([key, ex]) => ({ ...ex, key }));
+        .filter(([, ex]) => ex.sets_logged.length > 0)
+        .map(([key, ex]) => {
+          const sets_logged = (ex.sets_logged || []).map((s) => ({
+            // Backup defensivo por si en algun caso el set llega vacio.
+            weight: s.weight ?? '',
+            reps:   s.reps   ?? '',
+            rir:    s.rir    ?? '',
+          }));
+          return { ...ex, sets_logged, key };
+        });
 
       if (exercisesToSave.length === 0) {
-        // No es un fallo de red: simplemente no hay series registradas.
         setSaveError(t('nothing_to_save', { defaultValue: 'No hay series registradas para guardar.' }));
         setTimeout(() => setSaveError(null), 6000);
         setIsSaving(false);
         return;
       }
+
+      // Si hay sesión iniciada, calculamos la duración real para que el coach
+      // sepa cuánto ha tardado el cliente. Sin start, duration queda en null.
+      const startedAt = sessionStartedAt;
+      const durationSeconds = startedAt
+        ? Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
+        : null;
 
       await fetchWithAuth('/client/workout-logs', {
         method: 'POST',
@@ -314,12 +398,16 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           day_key: selectedDay,
           exercises: exercisesToSave,
           notes: sessionNotes,
-          session_rpe: sessionRPE ? Number(sessionRPE) : null
+          session_rpe: sessionRPE ? Number(sessionRPE) : null,
+          started_at: startedAt,
+          duration_seconds: durationSeconds,
         })
       });
       setSaveSuccess(true);
       setSaveError(null);
-      // Removed clearing draft so data remains visible to user
+      // Sesión completada: limpiamos la marca de inicio para que la próxima
+      // vez vuelva a aparecer "Iniciar entrenamiento".
+      clearSessionStart();
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err: any) {
       console.error('Error saving workout log:', err);
@@ -545,7 +633,8 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
           <div className="flex items-center gap-3 pr-2 w-full sm:w-auto overflow-x-auto justify-center scrollbar-hide">
             {saveSuccess && (
               <span className="text-xs font-bold text-[#17cf54] flex items-center gap-1 animate-pulse whitespace-nowrap">
-                <span className="material-symbols-outlined text-[16px]">cloud_done</span> {t('synced')}
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                {t('workout_completed', { defaultValue: '¡Entrenamiento completado!' })}
               </span>
             )}
             {saveError && (
@@ -553,16 +642,43 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 <span className="material-symbols-outlined text-[16px]">error</span> {saveError}
               </span>
             )}
-            <button
-              onClick={handleSaveSession}
-              disabled={isSaving || blocks.length === 0}
-              className="bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
-            >
-              {isSaving
-                ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> {t('syncing')}</>
-                : <><span className="material-symbols-outlined text-[18px]">cloud_upload</span> {t('sync_session')}</>
-              }
-            </button>
+
+            {/* Cronómetro en vivo (mm:ss / hh:mm:ss) cuando la sesión está
+                en marcha. Sirve también al coach: el `duration_seconds` que
+                se envía con la sesión es exactamente este tiempo. */}
+            {sessionStartedAt && !saveSuccess && (
+              <span className="text-xs font-bold text-[#17cf54] flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#17cf54]/10 border border-[#17cf54]/20 tabular-nums whitespace-nowrap">
+                <span className="material-symbols-outlined text-[16px]">timer</span>
+                {formatElapsed(elapsedSeconds)}
+              </span>
+            )}
+
+            {/* State machine del entrenamiento:
+                — Sin iniciar: "Iniciar entrenamiento" (arranca cronómetro).
+                — En marcha:    "Completar entrenamiento" (guarda y resetea).
+                — Guardando:    spinner.
+                Bloqueado si no hay plan / ejercicios. */}
+            {!sessionStartedAt ? (
+              <button
+                onClick={startSession}
+                disabled={blocks.length === 0}
+                className="bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                {t('start_workout', { defaultValue: 'Iniciar entrenamiento' })}
+              </button>
+            ) : (
+              <button
+                onClick={handleSaveSession}
+                disabled={isSaving}
+                className="bg-black hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
+              >
+                {isSaving
+                  ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> {t('saving', { defaultValue: 'Guardando…' })}</>
+                  : <><span className="material-symbols-outlined text-[18px]">check_circle</span> {t('complete_workout', { defaultValue: 'Completar entrenamiento' })}</>
+                }
+              </button>
+            )}
           </div>
         </div>
 
@@ -700,7 +816,14 @@ interface DetailedExerciseRowProps {
   rir?: string;
   rest?: string;
   logData?: { name: string; muscle_group?: string; sets_logged: { reps: string; weight: string; rir: string }[]; notes: string };
-  onInit: (key: string, name: string, muscle_group: string, defaultSets: number) => void;
+  onInit: (
+    key: string,
+    name: string,
+    muscle_group: string,
+    defaultSets: number,
+    prescribed?: { weight?: string; reps?: string; rir?: string },
+    setDetails?: { weight?: string; reps?: string; rir?: string }[],
+  ) => void;
   onUpdateSet: (key: string, setIdx: number, field: 'reps' | 'weight' | 'rir', value: string) => void;
   onAddSet: (key: string) => void;
   onUpdateNotes: (notes: string) => void;
@@ -718,11 +841,39 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
 
   useEffect(() => {
     if (!logData) {
-      onInit(exKey, name, muscle_group || '', Number(sets) || 1);
+      // Pasamos los valores prescritos por el coach (planos + por serie) para
+      // que cada input arranque autocompletado en lugar de vacío.
+      onInit(
+        exKey,
+        name,
+        muscle_group || '',
+        Number(sets) || 1,
+        { weight: String(weight ?? ''), reps: String(reps ?? ''), rir: String(rir ?? '') },
+        Array.isArray(setDetails)
+          ? setDetails.map((d) => ({
+              weight: d?.weight != null ? String(d.weight) : undefined,
+              reps:   d?.reps   != null ? String(d.reps)   : undefined,
+              rir:    d?.rir    != null ? String(d.rir)    : undefined,
+            }))
+          : undefined,
+      );
     }
-  }, [exKey, logData, onInit, name, muscle_group, sets]);
+  }, [exKey, logData, onInit, name, muscle_group, sets, weight, reps, rir, setDetails]);
 
   const setsLogged = logData?.sets_logged || [];
+
+  // Valores que el coach prescribe para cada serie. Si setDetails los define
+  // por serie, se usan; si no, todas las series heredan el valor plano del
+  // ejercicio. Sirven a la vez como "fantasma" del input y como fallback al
+  // guardar (si el cliente deja un input vacío, se guarda el prescrito).
+  const prescribedFor = (i: number) => {
+    const d = setDetails?.[i] || {};
+    return {
+      weight: d.weight != null ? String(d.weight) : String(weight ?? ''),
+      reps:   d.reps   != null ? String(d.reps)   : String(reps   ?? ''),
+      rir:    d.rir    != null ? String(d.rir)    : String(rir    ?? ''),
+    };
+  };
 
   return (
     <div className="flex flex-col border-b border-transparent hover:border-slate-100 dark:hover:border-slate-800 transition-colors">
@@ -809,42 +960,79 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
               </span>
             </div>
             <div className="md:col-span-8 flex flex-col gap-3">
-              {/* Set headers */}
-              <div className="grid grid-cols-4 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center pb-1">
-                <div>{t('set_label')}</div><div>{t('weight_kg')}</div><div>{t('reps_label')}</div><div>{t('rir_label')}</div>
+              {/* Cabecera del bloque de inputs: ya no hay tabla, cada serie
+                  pinta su propia tarjeta con dos bloques (Coach / Tú). */}
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pb-1">
+                {t('your_log', { defaultValue: 'Tu registro · autocompletado con lo prescrito' })}
               </div>
-              {/* Set rows */}
-              {setsLogged.map((s, i) => (
-                <div key={i} className="grid grid-cols-4 gap-2 items-center">
-                  <div className="text-center text-xs font-bold text-slate-400">#{i + 1}</div>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    placeholder={typeof weight === 'string' ? weight : '—'}
-                    value={s.weight}
-                    onChange={e => onUpdateSet(exKey, i, 'weight', e.target.value)}
-                    className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder={typeof reps === 'string' ? reps : '—'}
-                    value={s.reps}
-                    onChange={e => onUpdateSet(exKey, i, 'reps', e.target.value)}
-                    className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300"
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    max="5"
-                    placeholder={typeof rir === 'string' ? rir : '—'}
-                    value={s.rir}
-                    onChange={e => onUpdateSet(exKey, i, 'rir', e.target.value)}
-                    className="w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-all placeholder:text-slate-300"
-                  />
-                </div>
-              ))}
+              {/* Filas por serie: dos bloques: Coach (gris, solo lectura) + Tú
+                  (inputs editables). Cada input arranca con el valor prescrito;
+                  si el cliente no lo cambia, se queda gris claro (modo
+                  fantasma) y al guardar se persiste tal cual. Al cambiarlo, el
+                  texto vira a negro y se nota que es un dato propio. */}
+              {setsLogged.map((s, i) => {
+                const p = prescribedFor(i);
+                const isGhost = (cur: string, pres: string) => !cur || cur === pres;
+                const inputCls = (cur: string, pres: string) =>
+                  `w-full text-center text-sm p-2 rounded-xl border border-[#17cf54]/30 bg-white dark:bg-slate-950 font-semibold focus:outline-none focus:ring-2 focus:ring-[#17cf54]/30 focus:border-[#17cf54] transition-colors placeholder:text-slate-300 ${
+                    isGhost(cur, pres)
+                      ? 'text-slate-400 dark:text-slate-500'
+                      : 'text-slate-900 dark:text-white'
+                  }`;
+                return (
+                  <div
+                    key={i}
+                    className="grid grid-cols-1 md:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] gap-3 items-center p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40"
+                  >
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-300 md:w-10 md:text-center">
+                      #{i + 1}
+                    </div>
+                    {/* Bloque 1 — lo prescrito por el coach (solo lectura) */}
+                    <div className="px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                      <div className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">
+                        {t('coach_prescribed', { defaultValue: 'Coach' })}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+                        <div>{p.weight || '—'}<span className="text-[10px] text-slate-400 font-medium ml-0.5">kg</span></div>
+                        <div>{p.reps   || '—'}<span className="text-[10px] text-slate-400 font-medium ml-0.5">rps</span></div>
+                        <div>RIR {p.rir || '—'}</div>
+                      </div>
+                    </div>
+                    {/* Bloque 2 — lo que de verdad ha hecho el cliente */}
+                    <div className="px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-[#17cf54]/30">
+                      <div className="text-[9px] font-bold uppercase tracking-widest text-[#17cf54] mb-1">
+                        {t('your_value', { defaultValue: 'Tú' })}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="number" min="0" step="0.5"
+                          placeholder={p.weight || '—'}
+                          value={s.weight}
+                          onChange={e => onUpdateSet(exKey, i, 'weight', e.target.value)}
+                          aria-label={t('weight_kg')}
+                          className={inputCls(s.weight, p.weight)}
+                        />
+                        <input
+                          type="number" min="0"
+                          placeholder={p.reps || '—'}
+                          value={s.reps}
+                          onChange={e => onUpdateSet(exKey, i, 'reps', e.target.value)}
+                          aria-label={t('reps_label')}
+                          className={inputCls(s.reps, p.reps)}
+                        />
+                        <input
+                          type="number" min="0" max="5"
+                          placeholder={p.rir || '—'}
+                          value={s.rir}
+                          onChange={e => onUpdateSet(exKey, i, 'rir', e.target.value)}
+                          aria-label={t('rir_label')}
+                          className={inputCls(s.rir, p.rir)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
               {/* Add set button */}
               <button
                 onClick={() => onAddSet(exKey)}
