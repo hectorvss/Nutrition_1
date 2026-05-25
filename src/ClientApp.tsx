@@ -41,6 +41,11 @@ export default function ClientApp() {
   // begins. If the client misses the weekend, the pending check-in
   // remains visible through the week instead of disappearing on Monday.
   const [submittedThisWeek, setSubmittedThisWeek] = useState(false);
+  // Bumped after the WeeklyCheckinFlow modal (opened by the floating
+  // action button) submits successfully. Used as a `key` on ClientCheckIns
+  // so the view remounts and refetches — otherwise the page would keep
+  // showing the stale "0 entries" list it loaded before the modal opened.
+  const [checkinsRefreshKey, setCheckinsRefreshKey] = useState(0);
 
   React.useEffect(() => {
     checkOnboarding();
@@ -111,7 +116,7 @@ export default function ClientApp() {
       case 'settings':
         return <Settings />;
       case 'check-ins':
-        return <ClientCheckIns />;
+        return <ClientCheckIns key={checkinsRefreshKey} />;
       case 'nutrition':
         return <ClientNutrition />;
       case 'training':
@@ -168,7 +173,20 @@ export default function ClientApp() {
           onDismiss={() => setShowOnboarding(false)}
         />
       )}
-      {showCheckIn && <WeeklyCheckinFlow onComplete={() => setShowCheckIn(false)} onCancel={() => setShowCheckIn(false)} />}
+      {showCheckIn && (
+        <WeeklyCheckinFlow
+          onComplete={() => {
+            // Close the modal, hide the FAB (cycle satisfied) AND force
+            // ClientCheckIns to remount so the freshly-submitted check-in
+            // shows up in the list. Without the key bump the page that
+            // mounted *before* the modal kept its stale 0-entries state.
+            setShowCheckIn(false);
+            setSubmittedThisWeek(true);
+            setCheckinsRefreshKey(k => k + 1);
+          }}
+          onCancel={() => setShowCheckIn(false)}
+        />
+      )}
       
       <ClientActionFAB
         onboardingData={onboardingData}
