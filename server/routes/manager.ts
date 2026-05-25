@@ -3422,10 +3422,13 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    // Dynamic Allergies from Recent Onboarding or Metadata
+    // Dynamic Allergies from Recent Onboarding or Metadata. Lee también el
+    // `template_snapshot_json` para resolver qids genéricos (q1..q31): si la
+    // pregunta tiene `kpi_key: 'allergies'` o un título reconocible, se
+    // mapea su respuesta a la clave canónica antes de extraer.
     const { data: latestOnboarding } = await supabaseAdmin
       .from('client_onboarding_submissions')
-      .select('answers_json')
+      .select('answers_json, template_snapshot_json')
       .eq('client_id', id)
       .order('submitted_at', { ascending: false })
       .limit(1)
@@ -3435,7 +3438,47 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     let supplementation = (client.clients_profiles as any)?.metadata?.supplementation || [];
     let dietaryStyle: string[] = (client.clients_profiles as any)?.metadata?.dietary_style || [];
     if (latestOnboarding?.answers_json) {
-      const answers = latestOnboarding.answers_json as any;
+      const rawAnswers = latestOnboarding.answers_json as any;
+      const snapshot: any = latestOnboarding.template_snapshot_json || {};
+      const snapshotSchema: any[] = snapshot?.template_schema || snapshot?.templateSchema || [];
+
+      // qid → canonical: si una pregunta declara kpi_key, o si su título
+      // contiene términos identificables (allergies, supplements, diet, age,
+      // gender, goal, height, weight), copiamos answers[qid] a la canónica.
+      const canonical: any = { ...rawAnswers };
+      const titleHints: Array<{ canonical: string; rx: RegExp }> = [
+        { canonical: 'allergies',      rx: /allerg|alergi/i },
+        { canonical: 'supplementation', rx: /supplement|suplement/i },
+        { canonical: 'dietary_style',   rx: /diet(ary)?\s*(style|preference)?|preferencia\s+aliment|tipo\s+de\s+dieta/i },
+        { canonical: 'age',             rx: /\bage\b|edad/i },
+        { canonical: 'gender',          rx: /gender|sex|g[ée]nero|sexo/i },
+        { canonical: 'goal',            rx: /goal|objetivo/i },
+        { canonical: 'goal_weight',     rx: /goal\s*weight|target\s*weight|peso\s*objetivo/i },
+        { canonical: 'height',          rx: /height|altura/i },
+        { canonical: 'weight',          rx: /current\s*weight|^\s*weight\b|peso\s*actual/i },
+      ];
+      try {
+        for (const step of snapshotSchema) {
+          for (const q of (step?.questions || [])) {
+            if (!q?.id) continue;
+            const explicit = q.kpi_key || q.metric_key || q.canonical_id;
+            if (explicit && canonical[q.id] !== undefined && canonical[explicit] === undefined) {
+              canonical[explicit] = canonical[q.id];
+              continue;
+            }
+            const titleText = String(q.title || q.label || '');
+            if (!titleText) continue;
+            for (const hint of titleHints) {
+              if (hint.rx.test(titleText) && canonical[q.id] !== undefined && canonical[hint.canonical] === undefined) {
+                canonical[hint.canonical] = canonical[q.id];
+                break;
+              }
+            }
+          }
+        }
+      } catch { /* snapshot puede ser null en submissions antiguas */ }
+
+      const answers = canonical;
       const onboardingAllergies = answers.allergies || answers.Allergies || answers['Do you have any allergies?'];
       if (onboardingAllergies) {
          allergies = Array.isArray(onboardingAllergies) ? onboardingAllergies : [onboardingAllergies];

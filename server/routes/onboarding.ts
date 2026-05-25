@@ -589,15 +589,34 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
 
     // --- Sync Fixed Questions to Profile ---
     try {
-      const answers = answers_json as any;
+      // Las plantillas onboarding antiguas usan qids genéricos (q1..q31) en
+      // lugar de las claves canónicas. Para no perder esos datos, primero
+      // construimos un mapa qid → kpi_key leyendo el snapshot, y rellenamos
+      // las claves canónicas que falten.
+      const canonical: any = { ...(answers_json as any) };
+      try {
+        for (const step of (injectedSchema || []) as any[]) {
+          for (const q of (step?.questions || []) as any[]) {
+            const kpi = q?.kpi_key || q?.metric_key || q?.canonical_id;
+            if (kpi && canonical[q.id] !== undefined && canonical[kpi] === undefined) {
+              canonical[kpi] = canonical[q.id];
+            }
+          }
+        }
+      } catch { /* snapshot puede ser legacy/null; ignorar errores defensivamente */ }
+
+      const answers = canonical;
       const updates: any = {};
-      
+
       // Look for weight/goal
       const weight = answers.weight || answers.Weight || answers['Current Weight'];
       const goal = answers.goal || answers.Goal || answers['Primary Goal'];
       const supplementation = answers.supplementation || answers.Supplementation || answers['Are you taking any supplements?'];
       const height = answers.height || answers.Height || answers['Current Height'];
       const allergies = answers.allergies || answers.Allergies || answers['Do you have any allergies?'];
+      const age = answers.age || answers.Age;
+      const gender = answers.gender || answers.Gender || answers.sex;
+      const goalWeight = answers.goal_weight || answers['Goal Weight'] || answers.target_weight || answers['Target Weight'];
 
       const targetWeight = answers.target_weight || answers['Target Weight'];
       const bodyFat = answers.body_fat || answers['Body Fat %'];
@@ -606,15 +625,26 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
       if (weight) updates.weight = Number(weight) || 0;
       if (goal) updates.goal = goal;
       if (height) updates.height = Number(height) || 0;
+      if (age) { const n = Number(age); if (Number.isFinite(n) && n > 0) updates.age = Math.round(n); }
+      if (gender) updates.gender = String(gender);
+      if (goalWeight) { const n = Number(goalWeight); if (Number.isFinite(n) && n > 0) updates.goal_weight = n; }
       
-      if (allergies || supplementation) {
+      // Las metadatas (allergies/supplementation/diet/measurements/targetWeight/
+      // bodyFat) viven todas en `metadata jsonb`. Antes el bloque sólo
+      // disparaba si llegaban allergies o supplementation, lo que dejaba
+      // huérfanos `diet`, `target_weight`, `body_fat` y las medidas iniciales.
+      // Ahora se dispara si cualquiera de los campos relevantes está presente.
+      const hasMetadataField = !!(allergies || supplementation || diet || targetWeight || bodyFat ||
+        answers.waist || answers.hip || answers.thigh_r || answers.arm_r ||
+        answers.Waist || answers.Hip || answers.Thigh || answers.Arm);
+      if (hasMetadataField) {
         // Fetch current metadata to avoid overwriting other fields
         const { data: profile } = await supabaseAdmin
           .from('clients_profiles')
           .select('metadata')
           .eq('user_id', clientId)
           .single();
-        
+
         const newMetadata = { ...(profile?.metadata || {}) };
         if (allergies) newMetadata.allergies = Array.isArray(allergies) ? allergies : [allergies];
         if (supplementation) newMetadata.supplementation = Array.isArray(supplementation) ? supplementation : [supplementation];
