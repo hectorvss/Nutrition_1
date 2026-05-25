@@ -3369,9 +3369,16 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       const hasAny = lvl !== null || (area && area !== 'None' && area !== 'Ninguno') || !!type || !!impact || !!duration || !!progression || !!notes;
       return hasAny ? { level: lvl, area, type, impact, duration, progression, notes } : null;
     };
+    // Conservar entries con dolor categórico aunque no haya escala numérica
+    // (e.g. cliente reportó área + tipo pero no painLevel). El filtro previo
+    // (`level !== undefined`) descartaba estos casos, perdiendo historial
+    // válido. Ahora exigimos al menos un campo de dolor presente.
     const painHistory = allCheckInsCombined
-      .map(ci => ({ date: ci.date, ...(painExtract(ci.answers as any) || {}) }))
-      .filter(p => (p as any).level !== undefined);
+      .map(ci => {
+        const ex = painExtract(ci.answers as any);
+        return ex ? { date: ci.date, ...ex } : null;
+      })
+      .filter((p): p is { date: string; level: number | null; area: any; type: any; impact: any; duration: any; progression: any; notes: any } => p !== null);
     const lastPain = painHistory.length > 0 ? painHistory[painHistory.length - 1] : null;
     const thirtyDaysAgo = (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
     const recentPainWeeks = painHistory.filter(p => new Date(p.date) >= thirtyDaysAgo).length;
