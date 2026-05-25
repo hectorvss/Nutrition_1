@@ -532,6 +532,73 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     
   const totalExercises = blocks.reduce((acc: number, b: any) => acc + (b.exercises?.length || 0), 0);
 
+  // Estadísticas reales de la sesión para el Resumen del Entrenamiento.
+  // Antes el donut renderizaba 50/25/25 hardcoded (mock visible); ahora
+  // refleja la distribución real por grupo muscular y rellenamos el hueco
+  // visual del centro de la tarjeta con métricas concretas (sets totales,
+  // volumen prescrito, tiempo estimado y top grupos musculares).
+  const sessionStats = (() => {
+    const muscleCounts: Record<string, number> = {};
+    let totalSets = 0;
+    let prescribedVolume = 0;
+    let estimatedRestSeconds = 0;
+    for (const block of blocks) {
+      for (const ex of (block.exercises || [])) {
+        const mg = String(ex.muscle_group || 'Other').trim() || 'Other';
+        const setsCount = Array.isArray(ex.setDetails) && ex.setDetails.length > 0
+          ? ex.setDetails.length
+          : parseInt(String(ex.sets || ex.sets_count || 0), 10) || 0;
+        muscleCounts[mg] = (muscleCounts[mg] || 0) + Math.max(setsCount, 1);
+        totalSets += setsCount;
+        // Volumen prescrito = Σ(weight × reps) sobre setDetails si está; si
+        // no, sets × reps × weight planos. 0 cuando el coach no ha puesto
+        // pesos (plan a banda libre).
+        if (Array.isArray(ex.setDetails) && ex.setDetails.length > 0) {
+          for (const d of ex.setDetails) {
+            prescribedVolume += (Number(d.weight) || 0) * (Number(d.reps) || 0);
+            estimatedRestSeconds += Number(d.rest) || 0;
+          }
+        } else {
+          prescribedVolume += (Number(ex.weight) || 0) * (Number(ex.reps) || 0) * setsCount;
+          estimatedRestSeconds += (Number(ex.rest) || 0) * setsCount;
+        }
+      }
+    }
+    // ~3s por rep + descanso entre sets. Estimación aproximada para mostrar
+    // al cliente un orden de magnitud ("~45 min"), no un cronómetro real.
+    const estimatedMinutes = totalSets > 0
+      ? Math.max(15, Math.round((totalSets * 35 + estimatedRestSeconds) / 60))
+      : 0;
+    const sorted = Object.entries(muscleCounts).sort(([, a], [, b]) => b - a);
+    const totalForPct = sorted.reduce((s, [, n]) => s + n, 0) || 1;
+    // Paleta del donut — mantiene los colores anteriores (azul/morado/naranja)
+    // y añade verde como 4º slot para sesiones con más variedad muscular.
+    const palette = [
+      { stroke: 'text-blue-500',   dot: 'bg-blue-500'   },
+      { stroke: 'text-purple-500', dot: 'bg-purple-500' },
+      { stroke: 'text-orange-500', dot: 'bg-orange-500' },
+      { stroke: 'text-emerald-500', dot: 'bg-emerald-500' },
+    ];
+    const top = sorted.slice(0, 3).map(([name, n], i) => ({
+      name,
+      count: n,
+      pct: Math.round((n / totalForPct) * 100),
+      ...palette[i],
+    }));
+    const otherCount = sorted.slice(3).reduce((s, [, n]) => s + n, 0);
+    if (otherCount > 0) {
+      top.push({ name: t('other_muscle_groups', { defaultValue: 'Otros' }), count: otherCount, pct: Math.round((otherCount / totalForPct) * 100), ...palette[3] });
+    }
+    // Segmentos del SVG donut: dasharray a partir de los % de top[].
+    let cursor = 0;
+    const segments = top.map(seg => {
+      const segDef = { stroke: seg.stroke, dash: `${seg.pct}, 100`, offset: -cursor };
+      cursor += seg.pct;
+      return segDef;
+    });
+    return { totalSets, prescribedVolume: Math.round(prescribedVolume), estimatedMinutes, top, segments };
+  })();
+
   const renderDaySelector = () => {
     if (!isWeekly) return null;
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -704,29 +771,84 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
                 {isWeekly && <p className="text-sm text-[#17cf54] font-medium mt-1">{currentWorkoutName}</p>}
               </div>
             </div>
-            <div className="flex flex-col md:flex-row items-center justify-center gap-10">
-              <div className="relative w-48 h-48 flex-shrink-0">
+            {/* Layout 3 columnas en >= md: donut (izquierda) | métricas
+                (centro) | RPE + notas (derecha). En móvil apila vertical. */}
+            <div className="grid grid-cols-1 md:grid-cols-[auto,1fr,auto] gap-8 lg:gap-12 items-center">
+              {/* IZQ — donut con distribución real por grupo muscular */}
+              <div className="relative w-44 h-44 lg:w-48 lg:h-48 flex-shrink-0 justify-self-start mx-auto md:mx-0">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   <path className="text-slate-100 dark:text-slate-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.8"></path>
-                  <path className="text-blue-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831" fill="none" stroke="currentColor" strokeDasharray="50, 100" strokeWidth="3.8"></path>
-                  <path className="text-purple-500" d="M18 33.9155 a 15.9155 15.9155 0 0 1 -15.9155 -15.9155" fill="none" stroke="currentColor" strokeDasharray="25, 100" strokeWidth="3.8"></path>
-                  <path className="text-orange-500" d="M2.0845 18 a 15.9155 15.9155 0 0 1 15.9155 -15.9155" fill="none" stroke="currentColor" strokeDasharray="25, 100" strokeWidth="3.8"></path>
+                  {sessionStats.segments.length > 0 ? (
+                    sessionStats.segments.map((seg, i) => (
+                      <path
+                        key={i}
+                        className={seg.stroke}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeDasharray={seg.dash}
+                        strokeDashoffset={seg.offset}
+                        strokeWidth="3.8"
+                      />
+                    ))
+                  ) : (
+                    <path className="text-slate-300 dark:text-slate-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="100, 100" strokeWidth="3.8" strokeLinecap="round"></path>
+                  )}
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center flex-col">
                   <span className="text-4xl font-bold text-slate-900 dark:text-white">{totalExercises}</span>
                   <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold mt-1">{t('exercises')}</span>
                 </div>
               </div>
-              {/* Session RPE input */}
-              <div className="flex flex-col gap-4 w-full max-w-xs">
+
+              {/* CENTRO — métricas reales de la sesión + leyenda de grupos */}
+              <div className="flex flex-col gap-4 min-w-0">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('total_sets', { defaultValue: 'Sets' })}</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white">{sessionStats.totalSets || '--'}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('prescribed_volume', { defaultValue: 'Volumen' })}</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white">
+                      {sessionStats.prescribedVolume > 0 ? `${sessionStats.prescribedVolume.toLocaleString(locale)}` : '--'}
+                      {sessionStats.prescribedVolume > 0 && <span className="text-[10px] text-slate-400 font-semibold ml-1">kg</span>}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('est_duration', { defaultValue: 'Duración' })}</p>
+                    <p className="text-xl font-bold text-slate-900 dark:text-white">
+                      {sessionStats.estimatedMinutes > 0 ? `${sessionStats.estimatedMinutes}` : '--'}
+                      {sessionStats.estimatedMinutes > 0 && <span className="text-[10px] text-slate-400 font-semibold ml-1">min</span>}
+                    </p>
+                  </div>
+                </div>
+                {sessionStats.top.length > 0 && (
+                  <div className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-3 border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('muscle_focus', { defaultValue: 'Foco muscular' })}</p>
+                    <div className="space-y-1.5">
+                      {sessionStats.top.map((seg, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full ${seg.dot} flex-shrink-0`}></span>
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate flex-1 capitalize">{seg.name}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">{seg.pct}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* DER — RPE + notas */}
+              <div className="flex flex-col gap-4 w-full md:w-72 lg:w-80 justify-self-end">
                 <div>
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 block">{t('session_rpe')}</label>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-1.5 flex-wrap">
                     {[1,2,3,4,5,6,7,8,9,10].map(n => (
                       <button
                         key={n}
                         onClick={() => setDayData(selectedDay, { rpe: String(n) })}
-                        className={`w-9 h-9 rounded-full text-sm font-bold border transition-all ${
+                        className={`w-8 h-8 rounded-full text-xs font-bold border transition-all ${
                           sessionRPE === String(n)
                             ? 'bg-[#17cf54] border-[#17cf54] text-white shadow'
                             : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[#17cf54]/50'
