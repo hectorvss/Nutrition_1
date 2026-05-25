@@ -1,29 +1,45 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
+import { motion } from 'motion/react';
+import {
   PlayCircle as PlayIcon,
   Map as MapIcon,
-  Calendar,
   Utensils as NutritionIcon,
   Dumbbell as TrainingIcon,
   Brain as MindsetIcon,
-  History as HistoryIcon,
-  AlertTriangle as WarningIcon,
-  TrendingUp as GrowthIcon,
   Scale as ScaleIcon,
   Sparkles,
-  Zap as ZapIcon,
-  Sticker,
-  Moon,
-  Footprints,
-  Droplets,
-  Activity,
-  ChevronRight as ChevronIcon
+  Target as TargetIcon,
+  CheckCircle2 as CheckIcon,
+  StickyNote as NoteIcon,
+  Activity as ActivityIcon,
 } from 'lucide-react';
 import { fetchWithAuth } from '../../api';
 import { useLanguage } from '../../context/LanguageContext';
 
 // --- TYPES ---
+
+interface BlockStrat {
+  summary?: string;
+  primaryObjective?: string;
+  secondaryObjectives?: string[];
+  kpis?: string[];
+  successCriteria?: string[];
+  coachNotes?: string;
+  risksAndConstraints?: string[];
+  // Nutrition
+  kcal?: string;
+  macros?: string;
+  freq?: string;
+  water?: string;
+  // Training
+  trainingFocus?: string;
+  trainingVolume?: string;
+  trainingIntensity?: string;
+  cardio?: string;
+  sessions?: string;
+  deload?: string;
+  intensityTargets?: string[];
+}
 
 interface RoadmapBlock {
   id: string;
@@ -32,22 +48,14 @@ interface RoadmapBlock {
   endWeek: number;
   type: 'nutrition' | 'training';
   color: string;
-  // Nutrition specific
+  strat: BlockStrat;
+  // Flat fields kept for backward compatibility with the timeline pill.
   kcal?: string;
   macros?: string;
-  deficit?: string;
   water?: string;
-  rationale?: string;
-  timing?: string[];
-  micros?: { label: string; value: string }[];
-  // Training specific
   focus?: string;
   sessions?: string;
   intensity?: string;
-  tempo?: string;
-  loading?: string;
-  scope?: string;
-  recovery?: string;
 }
 
 interface Goal {
@@ -95,7 +103,27 @@ const getEmptyData = (): RoadmapData => ({
 // different shape (`color`, `intensity`, `tempo`, `timing`, `micros`, ...).
 // Normalize both schemas here so whatever the coach saved is actually shown.
 const normalizeBlock = (b: any): RoadmapBlock => {
-  const strat = b.stratData || {};
+  const s = b.stratData || {};
+  const strat: BlockStrat = {
+    summary: s.summary ?? b.rationale ?? '',
+    primaryObjective: s.primaryObjective ?? b.scope ?? '',
+    secondaryObjectives: Array.isArray(s.secondaryObjectives) ? s.secondaryObjectives : (Array.isArray(b.timing) ? b.timing : []),
+    kpis: Array.isArray(s.kpis) ? s.kpis : [],
+    successCriteria: Array.isArray(s.successCriteria) ? s.successCriteria : [],
+    coachNotes: s.coachNotes ?? '',
+    risksAndConstraints: Array.isArray(s.risksAndConstraints) ? s.risksAndConstraints : [],
+    kcal: s.kcal ?? b.kcal,
+    macros: s.macros ?? b.macros,
+    freq: s.freq ?? b.freq,
+    water: s.water ?? b.water,
+    trainingFocus: s.trainingFocus ?? b.focus,
+    trainingVolume: s.trainingVolume ?? b.loading,
+    trainingIntensity: s.trainingIntensity ?? b.intensity,
+    cardio: s.cardio,
+    sessions: s.sessions ?? b.sessions,
+    deload: s.deload,
+    intensityTargets: Array.isArray(s.intensityTargets) ? s.intensityTargets : [],
+  };
   return {
     id: b.id,
     title: b.title || '',
@@ -103,22 +131,13 @@ const normalizeBlock = (b: any): RoadmapBlock => {
     endWeek: b.endWeek ?? 1,
     type: b.type,
     color: b.color || b.colorToken || 'bg-slate-50 border-slate-100 text-slate-600',
-    // Nutrition
-    kcal: b.kcal ?? strat.kcal,
-    macros: b.macros ?? strat.macros,
-    deficit: b.deficit ?? strat.deficit,
-    water: b.water ?? strat.water,
-    rationale: b.rationale ?? strat.summary,
-    timing: Array.isArray(b.timing) ? b.timing : (Array.isArray(strat.secondaryObjectives) ? strat.secondaryObjectives : []),
-    micros: Array.isArray(b.micros) ? b.micros : [],
-    // Training
-    focus: b.focus ?? strat.trainingFocus,
-    sessions: b.sessions ?? strat.sessions,
-    intensity: b.intensity ?? strat.trainingIntensity ?? (Array.isArray(strat.intensityTargets) ? strat.intensityTargets.join(', ') : undefined),
-    tempo: b.tempo ?? strat.tempo,
-    loading: b.loading ?? strat.trainingVolume,
-    scope: b.scope ?? strat.primaryObjective,
-    recovery: b.recovery ?? strat.cardio ?? strat.coachNotes,
+    strat,
+    kcal: strat.kcal,
+    macros: strat.macros,
+    water: strat.water,
+    focus: strat.trainingFocus,
+    sessions: strat.sessions,
+    intensity: strat.trainingIntensity,
   };
 };
 
@@ -371,159 +390,15 @@ export default function ClientRoadmap() {
             </div>
           </div>
 
-          {/* Combined Board - CLIENT VIEW */}
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-            <div className="bg-slate-50/50 dark:bg-slate-800/40 px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54]">
-                  <MindsetIcon className="w-6 h-6" />
-                </div>
-                <div>
-                   <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-widest">{t('the_intelligence_board')}</h3>
-                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.1em] mt-1">{t('multi_strategy_clinical_optimization')}</p>
-                </div>
-              </div>
-              <span className="px-4 py-1.5 rounded-full text-[10px] font-bold bg-[#17cf54]/10 text-[#17cf54] border border-[#17cf54]/20 uppercase tracking-widest">{t('active_strategy_view')}</span>
-            </div>
+          {/* Active block detail — mirrors the manager's BlockStrategyEditor cards
+              but read-only and stripped of "AI-templated" copy. */}
+          <BlockDetailCard
+            nutrition={activeNutrition}
+            training={activeTraining}
+            currentWeek={safeCurrentWeek}
+            t={t}
+          />
 
-            <div className="p-8 space-y-12">
-               {/* Nutrition */}
-              <section className="space-y-8">
-                <div className="flex items-center gap-3 text-amber-600">
-                  <NutritionIcon className="w-5 h-5" />
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">{t('nutrition_strategy')}: {activeNutrition?.title}</h4>
-                  <div className="flex-1 h-px bg-amber-100 dark:bg-amber-900/30"></div>
-                </div>
-
-                {activeNutrition ? (
-                  <div className="space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('daily_intake')}</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeNutrition.kcal} <span className="text-[10px] text-slate-400 font-bold tracking-widest">KCAL</span></p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('macros')}</p>
-                    <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeNutrition.macros}</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-amber-500/20 group/card">
-                    <p className="text-[10px] font-bold text-amber-600/60 uppercase tracking-widest mb-1 font-semibold italic">{t('deficit')}</p>
-                    <p className="text-xl font-bold text-amber-600 tracking-tight leading-none">{activeNutrition.deficit} <span className="text-[10px] text-amber-500/50 font-bold tracking-widest">{t('roadmap_kcal_per_day')}</span></p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-blue-500/20 group/card">
-                    <p className="text-[10px] font-bold text-blue-600/60 uppercase tracking-widest mb-1 font-semibold italic">{t('water')}</p>
-                    <p className="text-xl font-bold text-blue-500 tracking-tight leading-none">{activeNutrition.water} <span className="text-[10px] text-blue-400/50 font-bold tracking-widest">{t('liters')}</span></p>
-                  </div>
-                </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                      <div className="space-y-8">
-                        <div>
-                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                             {t('metabolic_rationale')}
-                          </h5>
-                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 italic">
-                             "{activeNutrition.rationale}"
-                          </p>
-                        </div>
-                        <div>
-                          <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">
-                              {t('nutrient_timing_matrix')}
-                          </h5>
-                           <ul className="space-y-3">
-                            {activeNutrition.timing?.map((item: string, i: number) => (
-                              <li key={i} className="flex items-center gap-3 text-sm text-slate-500 font-medium">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#17cf54] shadow-md shadow-emerald-500/20" />
-                                {item}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                      <div>
-                        <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">
-                           {t('micronutrient_optimization')}
-                        </h5>
-                        <div className="grid grid-cols-2 gap-4">
-                          {activeNutrition.micros?.map((m: { label: string; value: string }, i: number) => (
-                            <div key={i} className="p-4 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 italic">{m.label}</p>
-                              <p className="text-sm font-bold text-slate-900 dark:text-white font-semibold">{m.value}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                   <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest italic">{t('nutrition_phase_data_pending')}</div>
-                )}
-              </section>
-
-              <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
-
-              {/* Training */}
-              <section className="space-y-8">
-                  <div className="flex items-center gap-3 text-purple-600">
-                  <TrainingIcon className="w-5 h-5" />
-                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em]">{t('training_strategy')}: {activeTraining?.title}</h4>
-                  <div className="flex-1 h-px bg-purple-100 dark:bg-purple-900/30"></div>
-                </div>
-
-                {activeTraining ? (
-                   <div className="space-y-8">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('block_focus')}</p>
-                          <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeTraining.focus}</p>
-                        </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('sessions_per_week')}</p>
-                          <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-none">{activeTraining.sessions}</p>
-                        </div>
-                        <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/20 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-purple-500/20 group/card">
-                          <p className="text-[10px] font-bold text-purple-600/60 uppercase tracking-widest mb-1 font-semibold italic">{t('intensity')}</p>
-                          <p className="text-xl font-bold text-purple-600 tracking-tight leading-none">{activeTraining.intensity}</p>
-                        </div>
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-center relative overflow-hidden transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-emerald-500/20 group/card">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-semibold italic">{t('tempo_protocol')}</p>
-                          <p className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight font-mono leading-none">{activeTraining.tempo}</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
-                          <h5 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                             {t('loading_strategy')}
-                          </h5>
-                          <p className="text-sm text-slate-500 font-medium italic">
-                            "{activeTraining.loading}"
-                          </p>
-                        </div>
-                        <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
-                          <h5 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                             {t('anatomical_context')}
-                          </h5>
-                          <p className="text-sm text-slate-500 font-medium italic">
-                            "{activeTraining.scope}"
-                          </p>
-                        </div>
-                        <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-3">
-                          <h5 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest flex items-center gap-2">
-                             {t('recovery_protocol')}
-                          </h5>
-                          <p className="text-sm text-slate-500 font-medium italic">
-                            "{activeTraining.recovery}"
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                ) : (
-                  <div className="p-8 text-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl uppercase text-[10px] font-bold tracking-widest italic">{t('training_block_data_pending')}</div>
-                )}
-              </section>
-            </div>
-          </div>
 
           {/* Goals */}
           {roadmap.goals.length > 0 && (
@@ -556,5 +431,235 @@ export default function ClientRoadmap() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Block detail — read-only mirror of the manager's BlockStrategyEditor card.
+// Two columns (Nutrición | Entrenamiento), each with primary objective, key
+// prescription chips, success criteria bullets and coach notes. Empty rows
+// are omitted instead of rendering "—" placeholders.
+// ---------------------------------------------------------------------------
+
+interface BlockDetailCardProps {
+  nutrition?: RoadmapBlock;
+  training?: RoadmapBlock;
+  currentWeek: number;
+  t: (key: string, vars?: any) => string;
+}
+
+const hasText = (v?: string | null) => !!(v && String(v).trim().length > 0);
+const hasList = (v?: string[] | null) => Array.isArray(v) && v.some(x => hasText(x));
+
+function BlockDetailCard({ nutrition, training, currentWeek, t }: BlockDetailCardProps) {
+  if (!nutrition && !training) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-10 text-center text-sm text-slate-400">
+        {t('client_roadmap_no_active_block', { defaultValue: 'No hay un bloque activo en esta semana.' })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+      {/* Header */}
+      <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 px-6 py-4 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+            <ActivityIcon className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              {t('client_roadmap_current_phase', { defaultValue: 'Fase actual' })}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('planning_week_number', { week: currentWeek, defaultValue: `Semana ${currentWeek}` })}
+            </p>
+          </div>
+        </div>
+        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 uppercase tracking-widest">
+          {t('planning_active_phase', { defaultValue: 'Activa' })}
+        </span>
+      </div>
+
+      <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <BlockPanel
+          accent="amber"
+          icon={<NutritionIcon className="w-4 h-4" />}
+          sectionLabel={t('nutrition', { defaultValue: 'Nutrición' })}
+          block={nutrition}
+          emptyLabel={t('client_roadmap_no_nutrition_block', { defaultValue: 'Sin bloque de nutrición asignado.' })}
+          t={t}
+        />
+        <BlockPanel
+          accent="purple"
+          icon={<TrainingIcon className="w-4 h-4" />}
+          sectionLabel={t('training', { defaultValue: 'Entrenamiento' })}
+          block={training}
+          emptyLabel={t('client_roadmap_no_training_block', { defaultValue: 'Sin bloque de entrenamiento asignado.' })}
+          t={t}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface BlockPanelProps {
+  accent: 'amber' | 'purple';
+  icon: React.ReactNode;
+  sectionLabel: string;
+  block?: RoadmapBlock;
+  emptyLabel: string;
+  t: (key: string, vars?: any) => string;
+}
+
+function BlockPanel({ accent, icon, sectionLabel, block, emptyLabel, t }: BlockPanelProps) {
+  const accentText = accent === 'amber' ? 'text-amber-600 dark:text-amber-400' : 'text-purple-600 dark:text-purple-400';
+  const accentSoftBg = accent === 'amber' ? 'bg-amber-50/60 dark:bg-amber-900/10' : 'bg-purple-50/60 dark:bg-purple-900/10';
+  const accentBorder = accent === 'amber' ? 'border-amber-100 dark:border-amber-900/30' : 'border-purple-100 dark:border-purple-900/30';
+  const accentDot = accent === 'amber' ? 'bg-amber-500' : 'bg-purple-500';
+
+  if (!block) {
+    return (
+      <div className={`rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2`}>
+        <div className={accentText}>{icon}</div>
+        <span className="font-semibold uppercase tracking-widest">{sectionLabel}</span>
+        <p className="text-[11px] text-slate-400 normal-case tracking-normal">{emptyLabel}</p>
+      </div>
+    );
+  }
+
+  const s = block.strat;
+  const isNutrition = block.type === 'nutrition';
+
+  // Build the prescription chips — only those with real values.
+  const chips: { label: string; value: string }[] = [];
+  if (isNutrition) {
+    if (hasText(s.kcal)) chips.push({ label: 'kcal', value: `${s.kcal}` });
+    if (hasText(s.macros)) chips.push({ label: t('macros', { defaultValue: 'Macros' }), value: `${s.macros}` });
+    if (hasText(s.freq)) chips.push({ label: t('planning_meal_freq', { defaultValue: 'Comidas' }), value: `${s.freq}` });
+    if (hasText(s.water)) chips.push({ label: t('water', { defaultValue: 'Agua' }), value: `${s.water}` });
+  } else {
+    if (hasText(s.trainingFocus)) chips.push({ label: t('block_focus', { defaultValue: 'Foco' }), value: `${s.trainingFocus}` });
+    if (hasText(s.trainingVolume)) chips.push({ label: t('planning_volume_sets', { defaultValue: 'Volumen' }), value: `${s.trainingVolume}` });
+    if (hasText(s.trainingIntensity)) chips.push({ label: t('intensity', { defaultValue: 'Intensidad' }), value: `${s.trainingIntensity}` });
+    if (hasText(s.sessions)) chips.push({ label: t('sessions_per_week', { defaultValue: 'Sesiones' }), value: `${s.sessions}` });
+    else if (hasText(s.cardio)) chips.push({ label: t('planning_cardio', { defaultValue: 'Cardio' }), value: `${s.cardio}` });
+  }
+
+  return (
+    <motion.div
+      key={block.id}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden flex flex-col"
+    >
+      {/* Sub-header */}
+      <div className={`px-5 py-4 border-b border-slate-200 dark:border-slate-800 ${accentSoftBg} flex items-center justify-between gap-3`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={accentText}>{icon}</span>
+          <span className={`text-[10px] font-bold uppercase tracking-widest ${accentText}`}>{sectionLabel}</span>
+        </div>
+        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">
+          {t('planning_week_range_short', { start: block.startWeek, end: block.endWeek, defaultValue: `S${block.startWeek}–S${block.endWeek}` })}
+        </span>
+      </div>
+
+      <div className="p-5 flex flex-col gap-5">
+        {/* Title */}
+        <div>
+          <h4 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">{block.title}</h4>
+          {hasText(s.summary) && (
+            <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{s.summary}</p>
+          )}
+        </div>
+
+        {/* Prescription chips */}
+        {chips.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {chips.map((c, i) => (
+              <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3 py-2.5">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{c.label}</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{c.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Primary objective */}
+        {hasText(s.primaryObjective) && (
+          <div>
+            <h5 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest flex items-center gap-1.5">
+              <TargetIcon className="w-3.5 h-3.5" />
+              {t('planning_primary_objective', { defaultValue: 'Objetivo principal' })}
+            </h5>
+            <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{s.primaryObjective}</p>
+          </div>
+        )}
+
+        {/* KPIs */}
+        {hasList(s.kpis) && (
+          <div>
+            <h5 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest">
+              {t('planning_kpis_short', { defaultValue: 'KPIs' })}
+            </h5>
+            <div className="flex flex-wrap gap-1.5">
+              {s.kpis!.filter(hasText).map((k, i) => (
+                <span key={i} className="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900/40">
+                  {k}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Success criteria */}
+        {hasList(s.successCriteria) && (
+          <div>
+            <h5 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest flex items-center gap-1.5">
+              <CheckIcon className="w-3.5 h-3.5" />
+              {t('planning_success_criteria', { defaultValue: 'Criterios de éxito' })}
+            </h5>
+            <ul className="space-y-1.5">
+              {s.successCriteria!.filter(hasText).map((c, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <span className={`mt-2 w-1.5 h-1.5 rounded-full shrink-0 ${accentDot}`} />
+                  <span className="leading-snug">{c}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Secondary objectives */}
+        {hasList(s.secondaryObjectives) && (
+          <div>
+            <h5 className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest">
+              {t('planning_secondary_objectives', { defaultValue: 'Objetivos secundarios' })}
+            </h5>
+            <ul className="space-y-1.5">
+              {s.secondaryObjectives!.filter(hasText).map((c, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                  <span className={`mt-2 w-1.5 h-1.5 rounded-full shrink-0 ${accentDot} opacity-70`} />
+                  <span className="leading-snug">{c}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Coach notes */}
+        {hasText(s.coachNotes) && (
+          <div className={`rounded-xl border ${accentBorder} ${accentSoftBg} px-4 py-3`}>
+            <h5 className={`text-[10px] font-bold mb-1 uppercase tracking-widest flex items-center gap-1.5 ${accentText}`}>
+              <NoteIcon className="w-3.5 h-3.5" />
+              {t('client_roadmap_coach_notes', { defaultValue: 'Notas del coach' })}
+            </h5>
+            <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{s.coachNotes}</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
