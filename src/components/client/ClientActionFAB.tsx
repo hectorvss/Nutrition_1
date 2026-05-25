@@ -16,8 +16,9 @@ interface ClientActionFABProps {
 
 export default function ClientActionFAB({ onboardingData, submittedThisWeek, onOpenOnboarding, onOpenCheckIn }: ClientActionFABProps) {
   const { t } = useLanguage();
-  const today = new Date().getDay();
-  const isWeekend = today === 6 || today === 0; // Saturday=6, Sunday=0
+  // Check-in cycle runs Saturday → Friday and ClientApp resolves
+  // `submittedThisWeek` against that cycle. Any day the cycle is still
+  // pending the FAB should show — no extra day-of-week gate here.
 
   // Priority 1: Onboarding
   if (onboardingData) {
@@ -46,8 +47,9 @@ export default function ClientActionFAB({ onboardingData, submittedThisWeek, onO
     );
   }
 
-  // Priority 2: Weekly Check-in (Sat/Sun) — only if not already submitted.
-  if (isWeekend && !submittedThisWeek) {
+  // Priority 2: Weekly Check-in. Visible from Saturday until the client
+  // submits. Reappears next Saturday for the new cycle.
+  if (!submittedThisWeek) {
     return (
       <motion.button
         initial={{ scale: 0, opacity: 0, y: 20 }}

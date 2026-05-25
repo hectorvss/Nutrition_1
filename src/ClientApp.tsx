@@ -35,9 +35,11 @@ export default function ClientApp() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [onboardingData, setOnboardingData] = useState<any>(null);
-  // True once the client has submitted a check-in within the current ISO
-  // week — the weekend FAB hides itself in that case so it doesn't keep
-  // asking for a check-in the user already completed on Friday.
+  // True once the client has submitted a check-in within the current
+  // check-in cycle (Saturday → Friday). The FAB hides as soon as the
+  // submission lands and reappears next Saturday when a fresh cycle
+  // begins. If the client misses the weekend, the pending check-in
+  // remains visible through the week instead of disappearing on Monday.
   const [submittedThisWeek, setSubmittedThisWeek] = useState(false);
 
   React.useEffect(() => {
@@ -82,16 +84,20 @@ export default function ClientApp() {
     try {
       const data = await fetchWithAuth('/check-ins/client/check-ins?limit=1');
       const list: any[] = Array.isArray(data) ? data : (data?.data || []);
-      if (!list.length) return;
+      if (!list.length) { setSubmittedThisWeek(false); return; }
       const last = new Date(list[0].date || list[0].created_at);
       const now = new Date();
-      // Start of the current ISO week (Monday).
-      const monday = new Date(now);
-      const d = monday.getDay();
-      const diff = (d + 6) % 7;
-      monday.setDate(monday.getDate() - diff);
-      monday.setHours(0, 0, 0, 0);
-      if (last.getTime() >= monday.getTime()) setSubmittedThisWeek(true);
+      // Start of the current check-in cycle = most recent Saturday at
+      // 00:00. JS getDay() returns 0=Sun..6=Sat, so days back from today
+      // to last Saturday = (dow + 1) % 7. Examples:
+      //   Sat (6) → 0 days back (today is the start)
+      //   Sun (0) → 1 day back
+      //   Mon (1) → 2 days back, ..., Fri (5) → 6 days back.
+      const cycleStart = new Date(now);
+      const daysBack = (cycleStart.getDay() + 1) % 7;
+      cycleStart.setDate(cycleStart.getDate() - daysBack);
+      cycleStart.setHours(0, 0, 0, 0);
+      setSubmittedThisWeek(last.getTime() >= cycleStart.getTime());
     } catch (err) {
       // Non-blocking — worst case the FAB shows when it shouldn't.
       console.error('Failed to check recent submission:', err);
