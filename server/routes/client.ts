@@ -541,6 +541,7 @@ router.get('/profile-stats', async (req: any, res) => {
       { data: allWorkoutLogs },
       { data: nutritionLogs },
       { data: latestNutritionPlan },
+      { data: latestTrainingPlan },
     ] = await Promise.all([
       supabaseAdmin
         .from('users')
@@ -584,6 +585,15 @@ router.get('/profile-stats', async (req: any, res) => {
       // para calcular el denominador "comidas planificadas / día".
       supabaseAdmin
         .from('nutrition_plans')
+        .select('id, data_json')
+        .eq('client_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data, error }) => ({ data: data ? [data] : null, error })),
+      // Latest training program for the Planning tab on the client portal.
+      supabaseAdmin
+        .from('training_programs')
         .select('id, data_json')
         .eq('client_id', id)
         .order('created_at', { ascending: false })
@@ -924,21 +934,81 @@ router.get('/profile-stats', async (req: any, res) => {
     const lastStress     = pickScore(lastAnswers, 'stress_level', 'stress');
     const lastMood       = pickScore(lastAnswers, 'mood_score', 'mood');
     const lastMotivation = pickScore(lastAnswers, 'motivation_level', 'motivation');
+    // Newly canonical KPIs — exposed on the client portal so the
+    // wellbeing / pain / lifestyle blocks aren't orphan data.
+    const lastFatigue       = pickScore(lastAnswers, 'fatigue', 'fatigueLevel');
+    const lastSleepHours    = num(lastAnswers?.sleep_hours ?? lastAnswers?.sleepHours ?? lastAnswers?.sleepQuantity);
+    const lastSleepQuality  = pickScore(lastAnswers, 'sleep_quality_score', 'sleepQualityScore');
+    const lastHunger        = pickScore(lastAnswers, 'hunger_score', 'hunger');
+    const lastWaterScore    = pickScore(lastAnswers, 'water_intake_score', 'waterIntakeScore');
+    const lastTrainingInt   = pickScore(lastAnswers, 'training_intensity_score', 'trainingIntensityScore');
+    const lastAlcohol       = (lastAnswers?.alcohol_intake ?? lastAnswers?.alcoholIntake) || null;
+    const lastSupplements   = (lastAnswers?.supplements_taken ?? lastAnswers?.supplementsTaken) || null;
+    const lastPainLevel     = pickScore(lastAnswers, 'pain_level', 'painLevel');
+    const lastPainArea      = (lastAnswers?.pain_area ?? lastAnswers?.painArea ?? lastAnswers?.affectedArea) || null;
+    const lastPainType      = (lastAnswers?.pain_type ?? lastAnswers?.painType) || null;
+    const lastPainImpact    = pickScore(lastAnswers, 'pain_impact', 'painImpact', 'trainingImpact');
     const mindset = {
-      energy:     lastEnergy     !== null ? lastEnergy     : '--',
-      stress:     lastStress     !== null ? lastStress     : '--',
-      mood:       lastMood       !== null ? lastMood       : '--',
-      motivation: lastMotivation !== null ? lastMotivation : '--',
+      energy:       lastEnergy       !== null ? lastEnergy       : '--',
+      stress:       lastStress       !== null ? lastStress       : '--',
+      mood:         lastMood         !== null ? lastMood         : '--',
+      motivation:   lastMotivation   !== null ? lastMotivation   : '--',
+      fatigue:      lastFatigue      !== null ? lastFatigue      : '--',
+      hunger:       lastHunger       !== null ? lastHunger       : '--',
+      sleep:        lastSleepHours   !== null ? lastSleepHours   : '--',
+      sleepQuality: lastSleepQuality !== null ? lastSleepQuality : '--',
       history: allCheckInsCombined.map(ci => {
         const d = ci.answers || {};
         return {
           date: ci.date,
-          energy:     pickScore(d, 'energy_level', 'energy'),
-          stress:     pickScore(d, 'stress_level', 'stress'),
-          mood:       pickScore(d, 'mood_score', 'mood'),
-          motivation: pickScore(d, 'motivation_level', 'motivation'),
+          energy:       pickScore(d, 'energy_level', 'energy'),
+          stress:       pickScore(d, 'stress_level', 'stress'),
+          mood:         pickScore(d, 'mood_score', 'mood'),
+          motivation:   pickScore(d, 'motivation_level', 'motivation'),
+          fatigue:      pickScore(d, 'fatigue', 'fatigueLevel'),
+          hunger:       pickScore(d, 'hunger_score', 'hunger'),
+          sleepQuality: pickScore(d, 'sleep_quality_score', 'sleepQualityScore'),
         };
-      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null)
+      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null || h.fatigue !== null || h.hunger !== null || h.sleepQuality !== null)
+    };
+
+    // Lifestyle / activity block — steps + hydration + alcohol + supplements
+    // + training intensity. Manager dashboard already aggregates these; now
+    // the client portal sees the same.
+    const lifestyle = {
+      steps:             num(lastAnswers?.steps),
+      waterScore:        lastWaterScore,
+      trainingIntensity: lastTrainingInt,
+      alcohol:           lastAlcohol,
+      supplements:       lastSupplements,
+    };
+
+    // Pain block — canonical per-week pain reading. `current` snapshots
+    // the latest check-in; `history` lets the client see the trend.
+    const pain = {
+      current: {
+        level: lastPainLevel,
+        area: lastPainArea,
+        type: lastPainType,
+        impact: lastPainImpact,
+      },
+      history: allCheckInsCombined.map(ci => ({
+        date: ci.date,
+        level:  pickScore(ci.answers || {}, 'pain_level', 'painLevel'),
+        impact: pickScore(ci.answers || {}, 'pain_impact', 'painImpact', 'trainingImpact'),
+        area:   (ci.answers?.pain_area ?? ci.answers?.painArea ?? ci.answers?.affectedArea) || null,
+      })).filter(h => h.level !== null || h.area)
+    };
+
+    // Latest body measurements (cm) snapshot — from the most recent
+    // check-in that carried any of the canonical keys. Mirrors what the
+    // manager view already shows in InsightsTab.
+    const measurements = {
+      waist:   num(lastAnswers?.waist),
+      hip:     num(lastAnswers?.hip),
+      chest:   num(lastAnswers?.chest),
+      arm_r:   num(lastAnswers?.arm_r ?? lastAnswers?.armR),
+      thigh_r: num(lastAnswers?.thigh_r ?? lastAnswers?.thighR),
     };
 
     // Adherencia nutricional DIARIA (nuevo KPI real, alimentado por
@@ -978,6 +1048,23 @@ router.get('/profile-stats', async (req: any, res) => {
 
     const cProfile: any = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
     const allergies = cProfile?.metadata?.allergies || [];
+    const dietaryStyle = (() => {
+      const raw = cProfile?.metadata?.dietary_style;
+      if (Array.isArray(raw)) return raw.filter(Boolean);
+      if (typeof raw === 'string' && raw.trim()) return [raw];
+      return [];
+    })();
+    const supplementation = (() => {
+      const raw = cProfile?.metadata?.supplementation;
+      if (Array.isArray(raw)) return raw.filter(Boolean);
+      if (typeof raw === 'string' && raw.trim()) return [raw];
+      return [];
+    })();
+
+    // Lightweight assigned-plan snapshot so the client portal can render
+    // the same Planning tab the manager sees, without an extra request.
+    const trainingPlan = (latestTrainingPlan && Array.isArray(latestTrainingPlan) && latestTrainingPlan[0]) || null;
+    const nutritionPlan = planRow || null;
 
     res.json({
       latestWeight: num(lastAnswers?.weight) ?? num(cProfile?.weight),
@@ -986,6 +1073,12 @@ router.get('/profile-stats', async (req: any, res) => {
       // The first check-in weight gives a stable "starting point" baseline.
       startWeight: weightHistory.length > 0 ? num(weightHistory[0]?.weight) : null,
       bodyFat: num(lastAnswers?.body_fat ?? lastAnswers?.bodyFat),
+      // Static profile fields (filled from onboarding) — surfaced so the
+      // client portal can show its own demographics without 403-ing on a
+      // manager-only endpoint.
+      age: num(cProfile?.age),
+      gender: cProfile?.gender || null,
+      height: num(cProfile?.height),
       adherenceRate: calculatedAdherenceRate,
       // Nuevo: adherencia diaria real (basada en meal-tracking, no en el
       // check-in semanal). Si no hay logs ni plan, devuelve null y la UI
@@ -998,12 +1091,18 @@ router.get('/profile-stats', async (req: any, res) => {
       avgSteps,
       activeDays: allCheckInsCombined.length,
       allergies: allergies.length > 0 ? allergies : [],
+      dietaryStyle,
+      supplementation,
       weightHistory,
+      measurements,
       macros: {
           protein: avgProteinAdherence,
           carbs: avgCarbsAdherence,
           fats: avgFatsAdherence,
-          calories: dailyCaloricAvg
+          calories: dailyCaloricAvg,
+          // Same 0-100 self-reported adherence the manager block surfaces
+          // — used by the macros progress ring on the client portal.
+          adherenceScore: calculatedAdherenceRate,
       },
       activity,
       training: {
@@ -1012,10 +1111,19 @@ router.get('/profile-stats', async (req: any, res) => {
           workoutCount,
           fatigue,
           allExercises,
-          strengthHistory
+          strengthHistory,
+          // Mirror the wellbeing-block training KPIs into the training
+          // namespace too, so any consumer that reads stats.training.*
+          // finds them without a fallback.
+          adherenceRate: trainingAdherenceRate,
+          intensityScore: lastTrainingInt,
       },
       recentWorkouts,
-      mindset
+      mindset,
+      lifestyle,
+      pain,
+      trainingPlan,
+      nutritionPlan,
     });
   } catch (error: any) {
     console.error('Error fetching profile stats:', error);

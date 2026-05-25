@@ -502,6 +502,21 @@ const normalizeCanonicalAnswers = (answers: Record<string, any>): Record<string,
     setIfMissing('supplements_taken', ['All', 'Most', 'Some', 'None'].includes(answers.supplements) ? answers.supplements : 'Most');
   }
 
+  // Hunger — legacy templates use "hunger" or "Hunger Level"; canonical
+  // is `hunger_score`. Accept both numeric and text scale.
+  const hungerV = mapText(answers.hunger ?? answers['Hunger Level']);
+  if (hungerV !== null) setIfMissing('hunger_score', hungerV);
+
+  // Pain block — legacy templates may use painLevel / affectedArea /
+  // painType / trainingImpact. Promote into the new canonical keys so
+  // the manager + client aggregators read a single shape.
+  const painLevelN = mapText(answers.painLevel ?? answers.pain_level);
+  if (painLevelN !== null) setIfMissing('pain_level', painLevelN);
+  if (answers.affectedArea && !answers.pain_area) setIfMissing('pain_area', answers.affectedArea);
+  if (answers.painType && !answers.pain_type) setIfMissing('pain_type', answers.painType);
+  const painImpactN = mapText(answers.trainingImpact ?? answers.painImpact ?? answers.pain_impact);
+  if (painImpactN !== null) setIfMissing('pain_impact', painImpactN);
+
   return out;
 };
 
@@ -1725,12 +1740,25 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
       // Look for weight & macros
       const weight = answers.weight || answers.Weight || answers['Current Weight'];
       if (weight) updates.weight = Number(weight) || 0;
+      // Body fat is a canonical KPI. `clients_profiles` has no dedicated
+      // column for it, so persist into metadata.body_fat — the manager
+      // and client aggregators already fall back to the latest check-in
+      // answer when the metadata value is missing.
+      const bodyFatRaw = answers.body_fat ?? answers.bodyFat ?? answers['Body Fat %'];
+      const bodyFatNum = (() => {
+        if (bodyFatRaw === undefined || bodyFatRaw === null || bodyFatRaw === '') return null;
+        const bf = Number(bodyFatRaw);
+        return Number.isFinite(bf) && bf >= 0 && bf <= 80 ? bf : null;
+      })();
 
-      // Extract Measurements
+      // Extract Measurements (cm). Chest was missing before — added so the
+      // canonical FIXED measurement_group lands in profile metadata in
+      // full.
       const measurements = {
         weight: answers.weight || answers.Weight,
         waist: answers.waist || answers.Waist || answers['Waist (cm)'],
         hip: answers.hip || answers.Hip || answers['Hip (cm)'],
+        chest: answers.chest || answers.Chest || answers['Chest (cm)'],
         thigh_r: answers.thigh_r || answers.Thigh || answers['Right Thigh (cm)'],
         arm_r: answers.arm_r || answers.Arm || answers['Right Arm (cm)']
       };
@@ -1762,19 +1790,29 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
           // Update profile
           await supabaseAdmin
             .from('clients_profiles')
-            .update({ 
-               ...updates, 
-               metadata: { 
-                 ...currentMetadata, 
+            .update({
+               ...updates,
+               metadata: {
+                 ...currentMetadata,
                  measurements: { ...prevMeasurements, ...measurements },
-                 macros: { ...(currentMetadata.macros || {}), ...macros } 
-               } 
+                 macros: { ...(currentMetadata.macros || {}), ...macros },
+                 ...(bodyFatNum !== null ? { body_fat: bodyFatNum } : {}),
+               }
             })
             .eq('user_id', clientId);
-      } else if (Object.keys(updates).length > 0) {
+      } else if (Object.keys(updates).length > 0 || bodyFatNum !== null) {
+        const { data: profileRow } = await supabaseAdmin
+          .from('clients_profiles')
+          .select('metadata')
+          .eq('user_id', clientId)
+          .maybeSingle();
+        const meta = (profileRow as any)?.metadata || {};
         await supabaseAdmin
           .from('clients_profiles')
-          .update(updates)
+          .update({
+            ...updates,
+            ...(bodyFatNum !== null ? { metadata: { ...meta, body_fat: bodyFatNum } } : {}),
+          })
           .eq('user_id', clientId);
       }
     } catch (syncErr) {
