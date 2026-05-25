@@ -3330,12 +3330,18 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
     const mSleep = (d: any) => num(d?.sleep_hours ?? d?.sleep ?? d?.sleepQuantity);
     const mSleepQuality = (d: any) => num(d?.sleep_quality_score ?? d?.sleepQuality);
     const mSteps = (d: any) => num(d?.steps ?? d?.stepCount);
+    // Canonical wellbeing extras — exposed so the manager dashboard
+    // doesn't ignore the answers the client gave in the FIXED step.
+    const mFatigue = (d: any) => num(d?.fatigue ?? d?.fatigueLevel);
+    const mHunger = (d: any) => num(d?.hunger_score ?? d?.hunger);
 
     const mindset = {
       energy: mEnergy(latestData) ?? '--',
       stress: mStress(latestData) ?? '--',
       mood: mMood(latestData) ?? '--',
       motivation: mMotivation(latestData) ?? '--',
+      fatigue: mFatigue(latestData) ?? '--',
+      hunger: mHunger(latestData) ?? '--',
       sleep: mSleep(latestData) ?? '--',
       sleepQuality: mSleepQuality(latestData) ?? '--',
       steps: mSteps(latestData) ?? '--',
@@ -3347,11 +3353,26 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
           stress: mStress(d),
           mood: mMood(d),
           motivation: mMotivation(d),
+          fatigue: mFatigue(d),
+          hunger: mHunger(d),
           sleep: mSleep(d),
           sleepQuality: mSleepQuality(d),
           steps: mSteps(d)
         };
-      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null || h.sleep !== null || h.sleepQuality !== null || h.steps !== null)
+      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null || h.fatigue !== null || h.hunger !== null || h.sleep !== null || h.sleepQuality !== null || h.steps !== null)
+    };
+
+    // Lifestyle (hydration, alcohol, supplements, training intensity).
+    // Same canonical reads the client portal uses — surfaced here so the
+    // manager InsightsTab can render them without an extra request.
+    const mWater = (d: any) => num(d?.water_intake_score ?? d?.waterIntakeScore);
+    const mTrainingInt = (d: any) => num(d?.training_intensity_score ?? d?.trainingIntensityScore);
+    const lifestyle = {
+      steps:             mSteps(latestData),
+      waterScore:        mWater(latestData),
+      trainingIntensity: mTrainingInt(latestData),
+      alcohol:           (latestData?.alcohol_intake ?? latestData?.alcoholIntake) || null,
+      supplements:       (latestData?.supplements_taken ?? latestData?.supplementsTaken) || null,
     };
 
     // 10.b Injury & Pain Tracking — agrega las preguntas pain_* del check-in
@@ -3565,9 +3586,18 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
         strengthHistory,
         allExercises,
         recentWorkouts,
-        sensations
+        sensations,
+        // Mirror the per-check-in canonical KPIs into the training
+        // namespace too, so any consumer that reads stats.training.*
+        // finds them without falling back to the wellbeing block.
+        adherenceRate: (() => {
+          const v = num(latestData?.training_adherence_score);
+          return v !== null ? Math.round(v * 10) : null;
+        })(),
+        intensityScore: mTrainingInt(latestData),
       },
       mindset,
+      lifestyle,
       pain,
       measurements: finalMeasurements,
       activity,

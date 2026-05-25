@@ -30,7 +30,10 @@ const MindsetTab: React.FC<MindsetTabProps> = ({ stats, t }) => {
   const stress = num1to10('stress');
   const motivation = num1to10('motivation');
   const energy = num1to10('energy');
-  const sleep = num1to10('sleep');
+  // Burnout heuristic uses a 1-10 quality score, not raw hours of sleep.
+  // `mindset.sleep` carries `sleep_hours` (4-10 range); the score lives
+  // in `sleepQuality` and matches the 1-10 scale of the other inputs.
+  const sleep = num1to10('sleepQuality');
 
   // Composite burnout risk: combines sustained stress, low sleep and low
   // motivation. Returns null when none of the inputs has data, so the card
