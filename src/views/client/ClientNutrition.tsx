@@ -23,7 +23,8 @@ export default function ClientNutrition() {
 
   useEffect(() => {
     let mounted = true;
-    const fetchMyPlans = async () => {
+    const fetchMyPlans = async (opts?: { silent?: boolean }) => {
+      if (!opts?.silent) setIsLoading(true);
       try {
         const data = await fetchWithAuth('/client/plans');
         if (!mounted) return;
@@ -33,20 +34,33 @@ export default function ClientNutrition() {
           if (plan.data_json?.mode) setMode(plan.data_json.mode);
           // If it's a weekly plan, start in weekly view
           if (plan.data_json?.type === 'weekly') {
-            setViewState('weekly');
+            setViewState(prev => prev === 'daily' ? 'daily' : 'weekly');
           } else {
             setViewState('daily');
           }
+        } else {
+          setNutritionPlan(null);
         }
       } catch (err: any) {
         console.error('Error fetching client plans:', err);
-        if (mounted) setLoadError(err?.message || t('error_loading_data'));
+        if (mounted && !opts?.silent) setLoadError(err?.message || t('error_loading_data'));
       } finally {
         if (mounted) setIsLoading(false);
       }
     };
     fetchMyPlans();
-    return () => { mounted = false; };
+    // Coach edits (e.g. customising week 3 overrides) only land in the
+    // client view after a refetch. Re-run when the tab regains focus —
+    // silently, so the page doesn't flash a skeleton over a working
+    // plan if the network blips.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchMyPlans({ silent: true });
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      mounted = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   // Loading state: instead of a global spinner, render the layout with
