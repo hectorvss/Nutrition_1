@@ -269,10 +269,13 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       // como "fantasma" gris cuando el cliente no lo cambia.
       const sets_logged: SetLog[] = Array.from({ length: numSets }, (_, i) => {
         const d = setDetails?.[i] || {};
+        // Use `||` (not `??`) so empty strings in setDetails — common in
+        // templates that don't carry per-set weight — fall back to the
+        // exercise-level prescription instead of leaving the input blank.
         return {
-          weight: String(d.weight ?? prescribed?.weight ?? ''),
-          reps:   String(d.reps   ?? prescribed?.reps   ?? ''),
-          rir:    String(d.rir    ?? prescribed?.rir    ?? ''),
+          weight: String(d.weight || prescribed?.weight || ''),
+          reps:   String(d.reps   || prescribed?.reps   || ''),
+          rir:    String(d.rir    || prescribed?.rir    || ''),
         };
       });
 
@@ -868,10 +871,12 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
   // guardar (si el cliente deja un input vacío, se guarda el prescrito).
   const prescribedFor = (i: number) => {
     const d = setDetails?.[i] || {};
+    // Empty strings in setDetails should fall through to the exercise's
+    // flat prescription instead of being shown as "—".
     return {
-      weight: d.weight != null ? String(d.weight) : String(weight ?? ''),
-      reps:   d.reps   != null ? String(d.reps)   : String(reps   ?? ''),
-      rir:    d.rir    != null ? String(d.rir)    : String(rir    ?? ''),
+      weight: (d.weight && String(d.weight)) || String(weight ?? ''),
+      reps:   (d.reps   && String(d.reps))   || String(reps   ?? ''),
+      rir:    (d.rir    && String(d.rir))    || String(rir    ?? ''),
     };
   };
 
