@@ -86,10 +86,10 @@ export default function CheckInDetailView({ checkIn: initialCheckIn, onBack }: C
             className="flex items-center gap-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all group"
           >
             <span className="material-symbols-outlined group-hover:-translate-x-1 transition-transform">arrow_back</span>
-            <span className="font-bold text-sm">{t('back_to_history')}</span>
+            <span className="font-bold text-sm">{t('back_to_history', { defaultValue: 'Volver al historial' })}</span>
           </button>
           <div className="px-5 py-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center">
-            <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.2em] mb-1">{t('submitted_on')}</p>
+            <p className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-[0.2em] mb-1">{t('submitted_on_label')}</p>
             <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
               {new Date(checkIn.created_at || checkIn.date).toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' })}
             </p>
