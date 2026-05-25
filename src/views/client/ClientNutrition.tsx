@@ -209,28 +209,116 @@ export default function ClientNutrition() {
     { id: 'sunday', name: t('sunday') },
   ];
 
-  // Monthly view: 4 collapsed week sections. For each ISO week the client
-  // sees the 7 days with macros, picking any per-week override the coach
-  // configured (data_json.weekOverrides[week]) and falling back to the
-  // base week (data_json.days) otherwise.
+  // Shared per-day card used by both the Semanal view and each of the 4
+  // weeks of the Mensual view. Computes totals from `daysMap[day.id]`
+  // and renders the same layout as renderWeeklyView's loop. Clicking a
+  // day jumps into the Daily view of that day, switching the cadence
+  // back to Semanal so the day selector and macro panel render against
+  // the right week's data.
+  const renderDayCard = (day: any, daysMap: any) => {
+    const dayData = daysMap?.[day.id];
+    const dMeals = dayData?.meals || [];
+    let dCals = 0, dP = 0, dC = 0, dF = 0;
+    dMeals.forEach((m: any) => {
+      (m.items || []).forEach((i: any) => {
+        const qty = i.multiplier || i.quantity || 1;
+        dCals += (i.calories || 0) * qty;
+        dP += (i.protein || 0) * qty;
+        dC += (i.carbs || 0) * qty;
+        dF += (i.fats || 0) * qty;
+      });
+      if (m.categories) {
+        m.categories.forEach((cat: any) => {
+          if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) dP += cat.amount || 0;
+          else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) dC += cat.amount || 0;
+          else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) dF += cat.amount || 0;
+        });
+      }
+    });
+    if (dCals === 0 && (dP > 0 || dC > 0 || dF > 0)) {
+      dCals = (dP * 4) + (dC * 4) + (dF * 9);
+    }
+    const totalMacros = (dP * 4) + (dC * 4) + (dF * 9) || 1;
+    const pPct = Math.round((dP * 4 / totalMacros) * 100);
+    const cPct = Math.round((dC * 4 / totalMacros) * 100);
+    const fPct = Math.round((dF * 9 / totalMacros) * 100);
+    return (
+      <button
+        key={day.id}
+        onClick={() => {
+          setSelectedDay(day.id);
+          setCadenceView('weekly');
+          setViewState('daily');
+        }}
+        className="group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all flex flex-col sm:flex-row items-center gap-6 p-6"
+      >
+        <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
+          </div>
+          <div className={`flex items-center gap-1.5 font-black text-2xl ${dCals === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
+            <span className="material-symbols-outlined text-lg">{dCals === 0 ? 'bedtime' : 'local_fire_department'}</span>
+            {Math.round(dCals).toLocaleString(locale)} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
+          </div>
+        </div>
+        <div className="flex-1 w-full space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="bg-slate-50 dark:bg-slate-800 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border border-slate-100 dark:border-slate-700">
+              {dayData?.tag || (dCals === 0 ? t('rest_day') : t('active_plan'))}
+            </span>
+            <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{pPct}% P</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20"></div>{cPct}% C</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20"></div>{fPct}% F</span>
+            </div>
+          </div>
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
+            <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${pPct}%` }}></div>
+            <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${cPct}%` }}></div>
+            <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${fPct}%` }}></div>
+          </div>
+        </div>
+        <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
+          <div>
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('nutrition')}</div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
+                {dMeals.length}
+              </div>
+              <span className="text-xs font-bold text-slate-500 uppercase">{t('intakes')}</span>
+            </div>
+          </div>
+          <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
+        </div>
+      </button>
+    );
+  };
+
+  // Mensual view: same layout as the Semanal view repeated 4 times, one
+  // section per week of the month. Each week reads from
+  // data_json.weekOverrides[week] when the coach customised it, falling
+  // back to the base week otherwise. The header chip tells the client
+  // whether they're looking at the base week, a custom override or the
+  // base mirrored.
   const renderMonthlyView = () => {
     const WEEKS = [1, 2, 3, 4] as const;
-    const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const baseDays = nutritionPlan?.data_json?.days || {};
     const overrides = nutritionPlan?.data_json?.weekOverrides || {};
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6">
         {WEEKS.map(week => {
           const weekDays = (week > 1 && overrides[week]) ? overrides[week] : baseDays;
           const isOverride = week > 1 && !!overrides[week];
           return (
-            <div key={`week-${week}`} className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700">
+            <div key={`week-${week}`} className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-900/40 overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center font-black text-sm">{week}</div>
+                  <div className="w-10 h-10 rounded-xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center font-black">{week}</div>
                   <div>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-sm leading-tight">{t('week', { defaultValue: 'Semana' })} {week}</h3>
-                    <span className={`text-[10px] font-bold uppercase tracking-wide ${week === 1 ? 'text-emerald-600' : isOverride ? 'text-amber-600' : 'text-slate-400'}`}>
+                    <h3 className="font-bold text-slate-900 dark:text-white leading-tight">
+                      {t('week', { defaultValue: 'Semana' })} {week}
+                    </h3>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${week === 1 ? 'text-emerald-600' : isOverride ? 'text-amber-600' : 'text-slate-400'}`}>
                       {week === 1
                         ? t('planning_base_week', { defaultValue: 'Semana base' })
                         : isOverride
@@ -240,51 +328,8 @@ export default function ClientNutrition() {
                   </div>
                 </div>
               </div>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                {daysOrder.map(dayId => {
-                  const dayData = weekDays[dayId];
-                  const dMeals = dayData?.meals || [];
-                  let dCals = 0, dP = 0, dC = 0, dF = 0;
-                  dMeals.forEach((m: any) => {
-                    (m.items || []).forEach((i: any) => {
-                      const qty = i.multiplier || i.quantity || 1;
-                      dCals += (i.calories || 0) * qty;
-                      dP += (i.protein || 0) * qty;
-                      dC += (i.carbs || 0) * qty;
-                      dF += (i.fats || 0) * qty;
-                    });
-                    if (m.categories) {
-                      m.categories.forEach((cat: any) => {
-                        if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) dP += cat.amount || 0;
-                        else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) dC += cat.amount || 0;
-                        else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) dF += cat.amount || 0;
-                      });
-                    }
-                  });
-                  if (dCals === 0 && (dP > 0 || dC > 0 || dF > 0)) dCals = (dP * 4) + (dC * 4) + (dF * 9);
-                  const dayCfg = daysConfig.find((d: any) => d.id === dayId);
-                  const totalMacros = (dP * 4) + (dC * 4) + (dF * 9) || 1;
-                  const pPct = Math.round((dP * 4 / totalMacros) * 100);
-                  const cPct = Math.round((dC * 4 / totalMacros) * 100);
-                  return (
-                    <div key={dayId} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 px-4 py-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">{dayCfg?.name || dayId}</span>
-                        <span className={`text-xs font-bold ${dCals === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
-                          {Math.round(dCals).toLocaleString(locale)} kcal
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden flex">
-                        <div className="bg-blue-500 h-full" style={{ width: `${pPct}%` }} />
-                        <div className="bg-emerald-500 h-full" style={{ width: `${cPct}%` }} />
-                        <div className="bg-amber-500 h-full" style={{ width: `${Math.max(0, 100 - pPct - cPct)}%` }} />
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">
-                        {dMeals.length} {t('intakes', { defaultValue: 'comidas' })}
-                      </p>
-                    </div>
-                  );
-                })}
+              <div className="p-4 grid grid-cols-1 gap-4">
+                {daysConfig.map((day: any) => renderDayCard(day, weekDays))}
               </div>
             </div>
           );
@@ -308,91 +353,7 @@ export default function ClientNutrition() {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {daysConfig.map((day, idx) => {
-          const dayData = planDays[day.id];
-          const dMeals = dayData?.meals || [];
-          let dCals = 0, dP = 0, dC = 0, dF = 0;
-          
-          dMeals.forEach((m: any) => {
-            (m.items || []).forEach((i: any) => {
-              // Misma fórmula que en la vista diaria (multiplier || quantity)
-              // para que las kcal de la tarjeta semanal y del día coincidan.
-              const qty = i.multiplier || i.quantity || 1;
-              dCals += (i.calories || 0) * qty;
-              dP += (i.protein || 0) * qty;
-              dC += (i.carbs || 0) * qty;
-              dF += (i.fats || 0) * qty;
-            });
-            if (m.categories) {
-              m.categories.forEach((cat: any) => {
-                if (cat.id === 'p' || cat.label?.toLowerCase().includes('protein')) dP += cat.amount || 0;
-                else if (cat.id === 'c' || cat.label?.toLowerCase().includes('carb')) dC += cat.amount || 0;
-                else if (cat.id === 'f' || cat.label?.toLowerCase().includes('fat')) dF += cat.amount || 0;
-              });
-            }
-          });
-
-          if (dCals === 0 && (dP > 0 || dC > 0 || dF > 0)) {
-            dCals = (dP * 4) + (dC * 4) + (dF * 9);
-          }
-
-          const totalMacros = (dP * 4) + (dC * 4) + (dF * 9) || 1;
-          const pPct = Math.round((dP * 4 / totalMacros) * 100);
-          const cPct = Math.round((dC * 4 / totalMacros) * 100);
-          const fPct = Math.round((dF * 9 / totalMacros) * 100);
-
-          return (
-            <button
-              key={day.id}
-              onClick={() => {
-                setSelectedDay(day.id);
-                setViewState('daily');
-              }}
-              className="group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all flex flex-col sm:flex-row items-center gap-6 p-6"
-            >
-              <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight uppercase tracking-tighter">{day.name}</h3>
-                </div>
-                <div className={`flex items-center gap-1.5 font-black text-2xl ${dCals === 0 ? 'text-slate-300' : 'text-orange-500'}`}>
-                  <span className="material-symbols-outlined text-lg">{dCals === 0 ? 'bedtime' : 'local_fire_department'}</span>
-                  {Math.round(dCals).toLocaleString(locale)} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">kcal</span>
-                </div>
-              </div>
-
-              <div className="flex-1 w-full space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="bg-slate-50 dark:bg-slate-800 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider border border-slate-100 dark:border-slate-700">
-                    {dayData?.tag || (dCals === 0 ? t('rest_day') : t('active_plan'))}
-                  </span>
-                  <div className="flex gap-3 text-[10px] text-slate-500 font-black tracking-widest uppercase">
-                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-500/20"></div>{pPct}% P</span>
-                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/20"></div>{cPct}% C</span>
-                    <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/20"></div>{fPct}% F</span>
-                  </div>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden flex shadow-inner">
-                  <div className="bg-blue-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${pPct}%` }}></div>
-                  <div className="bg-emerald-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${cPct}%` }}></div>
-                  <div className="bg-amber-500 h-full transition-all duration-500 group-hover:scale-x-105 origin-left" style={{ width: `${fPct}%` }}></div>
-                </div>
-              </div>
-
-              <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-6 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center">
-                <div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('nutrition')}</div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-800 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 text-xs">
-                      {dMeals.length}
-                    </div>
-                    <span className="text-xs font-bold text-slate-500 uppercase">{t('intakes')}</span>
-                  </div>
-                </div>
-                <span className="material-symbols-outlined text-slate-300 transition-transform group-hover:translate-x-1 group-hover:text-emerald-500">arrow_forward</span>
-              </div>
-            </button>
-          );
-        })}
+        {daysConfig.map((day: any) => renderDayCard(day, planDays))}
       </div>
     </div>
   );
