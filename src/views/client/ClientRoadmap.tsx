@@ -170,12 +170,22 @@ export default function ClientRoadmap() {
         : null;
 
       const empty = getEmptyData();
+      // Fall back to the row's created_at / updated_at as the roadmap
+      // "start date" when the manager hasn't set one explicitly inside
+      // data_json. Without this, safeCurrentWeek had no anchor and the
+      // progress marker stayed frozen at week 1 forever — the manager
+      // would have had to manually update `currentWeek` for the bar to
+      // move. Now the marker auto-progresses one week per real week.
+      const rowStartFallback = data?.created_at || data?.updated_at || null;
       const roadmapData: RoadmapData = rawJson
         ? {
             ...empty,
             ...rawJson,
             // Record-level status overrides any stale status inside data_json.
             status: data?.status || rawJson.status || empty.status,
+            // Preserve the manager-set start date when available; otherwise
+            // use when the roadmap row was first saved on the server.
+            startDate: rawJson.startDate || rawJson.start_date || rawJson.activatedAt || rawJson.activated_at || rowStartFallback,
             nutrition: Array.isArray(rawJson.nutrition) ? rawJson.nutrition.map(normalizeBlock) : [],
             training: Array.isArray(rawJson.training) ? rawJson.training.map(normalizeBlock) : [],
             goals: Array.isArray(rawJson.goals) ? rawJson.goals.map(normalizeGoal) : [],

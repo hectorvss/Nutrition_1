@@ -241,7 +241,18 @@ export default function ClientCheckIns() {
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900 dark:text-white text-lg">
-                          {t('checkin')}: {(ci.date || ci.created_at) ? new Date(ci.date || ci.created_at).toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' }) : '—'}
+                          {/* "Check-in del lunes 25 de mayo" / "Check-in for Monday, 25 May".
+                              Title-cased manually because toLocaleDateString returns
+                              the weekday/month in lower case in es-ES. */}
+                          {(() => {
+                            const raw = ci.date || ci.created_at;
+                            if (!raw) return t('checkin', { defaultValue: 'Check-in' });
+                            const d = new Date(raw);
+                            const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+                            const weekday = cap(d.toLocaleDateString(locale, { weekday: 'long' }));
+                            const dayMonth = d.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
+                            return `Check-in · ${weekday} ${dayMonth}`;
+                          })()}
                         </h3>
                         <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
                           <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">schedule</span> {new Date(ci.created_at || ci.date).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
