@@ -926,32 +926,10 @@ const DetailedExerciseRow: React.FC<DetailedExerciseRowProps> = ({ exKey, name, 
               </p>
             </div>
           )}
-          {setDetails && setDetails.length > 0 && (
-            <div className="mb-6 mx-2 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-[18px] text-[#17cf54]">view_list</span>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
-                  {tt('per_set_distribution', 'Distribución por serie', 'Per-set distribution')}
-                </span>
-              </div>
-              <div className="grid grid-cols-5 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center pb-2 border-b border-slate-100 dark:border-slate-800">
-                <div>{t('set_label')}</div>
-                <div>{t('reps_label')}</div>
-                <div>{tt('intensity_label', 'Intensidad', 'Intensity')}</div>
-                <div>{t('rir_label')}</div>
-                <div>{t('rest')}</div>
-              </div>
-              {setDetails.map((s, i) => (
-                <div key={i} className="grid grid-cols-5 gap-2 text-center text-sm text-slate-700 dark:text-slate-300 py-1.5 border-b border-slate-50 dark:border-slate-800/50 last:border-0">
-                  <div className="font-bold text-slate-400">#{s.set}</div>
-                  <div>{s.reps || '—'}</div>
-                  <div>{s.intensity || '—'}</div>
-                  <div>{s.rir || '—'}</div>
-                  <div>{s.rest || '—'}</div>
-                </div>
-              ))}
-            </div>
-          )}
+          {/* The "Distribución por serie" summary card was removed: the
+              prescription it showed is already embedded per-set in the
+              "Tu registro · autocompletado con lo prescrito" block below,
+              so showing it twice felt redundant. */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-4 flex items-center justify-end md:justify-start">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center gap-2">
