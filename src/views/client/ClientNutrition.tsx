@@ -242,6 +242,12 @@ export default function ClientNutrition() {
     const pPct = Math.round((dP * 4 / totalMacros) * 100);
     const cPct = Math.round((dC * 4 / totalMacros) * 100);
     const fPct = Math.round((dF * 9 / totalMacros) * 100);
+    // Highlight today's card with a brand-coloured ring so the client
+    // spots "where they are" at a glance. Manager-configured theme
+    // colour drives the ring via --brand-primary.
+    const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const todayName = daysOrder[(new Date().getDay() + 6) % 7];
+    const isToday = day.id === todayName;
     return (
       <button
         key={day.id}
@@ -250,6 +256,7 @@ export default function ClientNutrition() {
           setCadenceView('weekly');
           setViewState('daily');
         }}
+        style={isToday ? { boxShadow: '0 0 0 2px var(--brand-primary)' } : undefined}
         className="group w-full text-left bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all flex flex-col sm:flex-row items-center gap-6 p-6"
       >
         <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
@@ -361,9 +368,11 @@ export default function ClientNutrition() {
   const renderDaySelector = () => {
     if (!isWeekly) return null;
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    // Map JS Date.getDay() (0=Sun..6=Sat) to our days[] order (Mon-first).
+    const todayName = days[(new Date().getDay() + 6) % 7];
     return (
       <div className="flex items-center justify-between mb-6">
-        <button 
+        <button
           onClick={() => setViewState('weekly')}
           className="flex items-center gap-2 text-sm font-black text-slate-500 hover:text-emerald-500 transition-colors uppercase tracking-widest"
         >
@@ -371,19 +380,27 @@ export default function ClientNutrition() {
           {t('week_view')}
         </button>
         <div className="flex overflow-x-auto scrollbar-hide gap-2 pb-2">
-          {days.map(d => (
-            <button
-              key={d}
-              onClick={() => setSelectedDay(d)}
-              className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all uppercase tracking-tighter ${
-                selectedDay === d 
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                  : 'bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
-              }`}
-            >
-              {t(d).slice(0, 3)}
-            </button>
-          ))}
+          {days.map(d => {
+            const isToday = d === todayName;
+            const isSelected = selectedDay === d;
+            return (
+              <button
+                key={d}
+                onClick={() => setSelectedDay(d)}
+                // The current day of the week gets a 2px ring in the
+                // manager's brand colour so the client knows where they
+                // are without having to count weekdays.
+                style={isToday && !isSelected ? { boxShadow: '0 0 0 2px var(--brand-primary)' } : undefined}
+                className={`px-4 py-2 rounded-xl text-xs font-black whitespace-nowrap transition-all uppercase tracking-tighter ${
+                  isSelected
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                    : 'bg-white dark:bg-slate-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
+                }`}
+              >
+                {t(d).slice(0, 3)}
+              </button>
+            );
+          })}
         </div>
       </div>
     );

@@ -535,19 +535,27 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const renderDaySelector = () => {
     if (!isWeekly) return null;
     const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    // Mon-first reordering of Date.getDay() (0=Sun..6=Sat).
+    const todayName = days[(new Date().getDay() + 6) % 7];
     return (
       <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-6 pb-2">
         {days.map(d => {
           const wId = activeSchedule[d];
           const hasWorkout = !!wId;
           const isSelected = selectedDay === d;
+          const isToday = d === todayName;
           return (
             <button
               key={d}
               onClick={() => setSelectedDay(d)}
+              // Today's button gets a 2-px ring in the manager's brand
+              // colour (CSS var) so the client can see where they stand
+              // in the week. Only kicks in when the day isn't already the
+              // selected one — selection styles already make it obvious.
+              style={isToday && !isSelected ? { boxShadow: '0 0 0 2px var(--brand-primary)' } : undefined}
               className={`px-4 py-2 flex flex-col items-center justify-center rounded-xl text-sm font-bold whitespace-nowrap transition-all border ${
-                isSelected 
-                  ? 'bg-[#17cf54] text-white border-[#17cf54] shadow-md shadow-[#17cf54]/20' 
+                isSelected
+                  ? 'bg-[#17cf54] text-white border-[#17cf54] shadow-md shadow-[#17cf54]/20'
                   : 'bg-white dark:bg-slate-800 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 border-slate-200 dark:border-slate-700'
               }`}
             >
