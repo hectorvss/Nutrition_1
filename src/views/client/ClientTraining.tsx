@@ -38,6 +38,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   // Marca de inicio por día/semana (clave = weekOffset-day). Persiste en
   // localStorage como el resto del borrador para que cerrar la pestaña
@@ -87,7 +88,6 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
       return next;
     });
   };
-  const { user } = useAuth();
   const locale = language === 'es' ? 'es-ES' : 'en-US';
   // Drafts are scoped to the authenticated user. On first render `user?.id`
   // can be undefined (AuthContext still resolving) — never read or write the
