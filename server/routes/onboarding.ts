@@ -434,6 +434,51 @@ router.get('/manager/submissions/:id', verifyManager, async (req: any, res) => {
   }
 });
 
+// Coach review of an onboarding submission. Mirrors the check-in review
+// path: stamp reviewed_at + reviewed_by + coach_notes so the client portal
+// can render the feedback. The submission must belong to one of this
+// manager's own clients (ownership re-checked here).
+router.post('/manager/submissions/:id/review', verifyManager, async (req: any, res) => {
+  const managerId = req.user.id;
+  const { id } = req.params;
+  const { coach_notes } = req.body || {};
+  if (typeof coach_notes !== 'string' && coach_notes != null) {
+    return res.status(400).json({ error: 'coach_notes must be a string' });
+  }
+  try {
+    const { data: existing } = await supabaseAdmin
+      .from('client_onboarding_submissions')
+      .select('id, client_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (!existing) return res.status(404).json({ error: 'Submission not found' });
+
+    const { data: owner } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', existing.client_id)
+      .eq('manager_id', managerId)
+      .maybeSingle();
+    if (!owner) return res.status(404).json({ error: 'Submission not found or access denied' });
+
+    const { data, error } = await supabaseAdmin
+      .from('client_onboarding_submissions')
+      .update({
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: managerId,
+        coach_notes: (coach_notes || '').slice(0, 4000) || null,
+      })
+      .eq('id', id)
+      .select('*, client:profiles!client_id(full_name, avatar_url), template:onboarding_templates(id, name, template_schema)')
+      .single();
+    if (error) throw error;
+    res.json({ ...data, template: data.template_snapshot_json || data.template });
+  } catch (error: any) {
+    console.error('Error reviewing onboarding submission:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // --- Client Endpoints ---
 
 router.get('/client/active', verifyClient, async (req: any, res) => {
@@ -453,6 +498,29 @@ router.get('/client/active', verifyClient, async (req: any, res) => {
     res.json(data);
   } catch (error: any) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Latest onboarding submission FOR THE AUTHENTICATED CLIENT, including the
+// coach's review fields (reviewed_at + coach_notes). The client portal
+// reads this to surface the coach's feedback after submitting onboarding —
+// symmetric with check-in review.
+router.get('/client/latest', verifyClient, async (req: any, res) => {
+  const clientId = req.user.id;
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('client_onboarding_submissions')
+      .select('id, submitted_at, reviewed_at, coach_notes, answers_json, template_id, template_snapshot_json, template:onboarding_templates(id, name, template_schema)')
+      .eq('client_id', clientId)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.json(null);
+    res.json({ ...data, template: (data as any).template_snapshot_json || (data as any).template });
+  } catch (error: any) {
+    console.error('Error fetching latest onboarding submission:', error);
+    res.status(500).json({ error: safeErr(error) });
   }
 });
 

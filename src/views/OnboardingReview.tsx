@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, 
-  ChevronRight, 
-  Clock, 
+import {
+  ChevronRight,
+  Clock,
   CheckCircle2,
-  FileText
+  MessageSquare,
+  Loader2,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -23,6 +23,11 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
   const { t, language } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Review state (coach feedback). Initialised from the loaded submission
+  // so reopening the screen surfaces the previous note.
+  const [reviewNote, setReviewNote] = useState('');
+  const [isSavingReview, setIsSavingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSubmission = async () => {
@@ -38,6 +43,7 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
         }
         // `data` stays null when nothing matched, which renders the "not found" state.
         setData(submission);
+        setReviewNote(submission?.coach_notes || '');
       } catch (err) {
         console.error('Error loading onboarding review:', err);
       } finally {
@@ -114,21 +120,71 @@ export default function OnboardingReview({ clientId, submissionId, onBack }: Onb
 
       <div className="w-full">
          {template && template.template_schema ? (
-           <CheckInReviewRenderer 
+           <CheckInReviewRenderer
              template={{
                id: template?.id || '',
                name: template?.name || t('onboarding'),
                templateSchema: template?.template_schema || [],
                key: template?.id || '',
                version: 1
-             }} 
-             answers={dj} 
+             }}
+             answers={dj}
            />
          ) : (
            <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-200 text-slate-400">
               {t('no_schema_found_for_template')}
            </div>
          )}
+      </div>
+
+      {/* Coach feedback — symmetric with check-in review. Setting a note
+          stamps `reviewed_at` and `reviewed_by` server-side and the client
+          sees the feedback on next /onboarding/client/latest fetch. */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-emerald-500" />
+            {t('coach_feedback', { defaultValue: 'Feedback del coach' })}
+          </h2>
+          {data?.reviewed_at && (
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs font-bold uppercase tracking-wide">
+              {t('reviewed_on', { defaultValue: 'Revisado el' })} {new Date(data.reviewed_at).toLocaleDateString(locale)}
+            </span>
+          )}
+        </div>
+        <textarea
+          value={reviewNote}
+          onChange={(e) => setReviewNote(e.target.value)}
+          rows={5}
+          placeholder={t('onboarding_review_placeholder', { defaultValue: 'Escribe un mensaje para el cliente sobre su onboarding…' })}
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-y"
+        />
+        {reviewError && <p className="text-xs text-red-500 font-medium">{reviewError}</p>}
+        <div className="flex justify-end">
+          <button
+            disabled={isSavingReview}
+            onClick={async () => {
+              setIsSavingReview(true);
+              setReviewError(null);
+              try {
+                const updated = await fetchWithAuth(`/onboarding/manager/submissions/${submissionId}/review`, {
+                  method: 'POST',
+                  body: JSON.stringify({ coach_notes: reviewNote }),
+                });
+                setData(updated);
+                setReviewNote(updated?.coach_notes || '');
+              } catch (err: any) {
+                setReviewError(err?.message || t('error_loading_data'));
+              } finally {
+                setIsSavingReview(false);
+              }
+            }}
+            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm flex items-center gap-2 disabled:opacity-50"
+          >
+            {isSavingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {data?.reviewed_at ? t('update_feedback', { defaultValue: 'Actualizar feedback' }) : t('mark_reviewed', { defaultValue: 'Marcar revisado' })}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -17,22 +17,30 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
   const [checkIns, setCheckIns] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
+  const [onboardingFeedback, setOnboardingFeedback] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
     const fetchData = async () => {
       try {
-        const [plansData, checkInsData, profileData] = await Promise.all([
+        const [plansData, checkInsData, profileData, onboardingLatest] = await Promise.all([
           fetchWithAuth('/client/plans'),
           fetchWithAuth('/check-ins/client/check-ins?limit=50'),
-          fetchWithAuth('/client/profile')
+          fetchWithAuth('/client/profile'),
+          // Surfaces the coach's feedback on the client's most recent
+          // onboarding submission. `null` when there is no submission yet
+          // or the coach hasn't reviewed it.
+          fetchWithAuth('/onboarding/client/latest').catch(() => null),
         ]);
 
         if (!mounted) return;
         setPlans(plansData);
         setCheckIns(unwrapList(checkInsData));
         setProfile(profileData);
+        if (onboardingLatest?.reviewed_at && onboardingLatest?.coach_notes) {
+          setOnboardingFeedback(onboardingLatest);
+        }
 
         if (profileData?.manager_id) {
           // Only the 3 most recent coach-authored messages are rendered, so
@@ -462,6 +470,28 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
               <p className="text-xs text-slate-400 mt-1">{streak > 0 ? t('keep_it_up') : t('start_journey_today')}</p>
             </div>
           </div>
+
+          {/* Onboarding feedback — only renders when the coach has
+              reviewed the most recent onboarding submission and left
+              a note. Disappears once read/acknowledged-on-server-side. */}
+          {onboardingFeedback && (
+            <div className="bg-[#17cf54]/5 dark:bg-emerald-900/20 rounded-xl border border-[#17cf54]/30 dark:border-emerald-800/40 p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[#17cf54] flex items-center justify-center text-white shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">rate_review</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('onboarding_feedback_title', { defaultValue: 'Tu coach ha revisado tu onboarding' })}</h3>
+                  <p className="text-[10px] uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-bold mt-0.5">
+                    {new Date(onboardingFeedback.reviewed_at).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="mt-3 text-sm text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
+                    {onboardingFeedback.coach_notes}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Coach Notes */}
           <div className="bg-white dark:bg-[#112116] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
