@@ -915,7 +915,10 @@ export default function ClientProgress() {
           {activeTab === 'Planning' && renderPlanning()}
           {activeTab === 'Mindset' && renderMindset()}
           {activeTab === 'Check-ins' && (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[600px]">
+            // CheckInHistory drops its own padding when hideHeader=true (so a
+            // parent can fully control the chrome). Apply it here so the
+            // cards aren't flush against the white card's edges.
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[600px] p-6 md:p-8">
               {innerView === 'review' && selectedCheckInId ? (
                 <CheckInReview 
                   clientId={user?.id || ''} 
