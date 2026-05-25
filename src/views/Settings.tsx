@@ -235,7 +235,18 @@ function ProfileSettings() {
     linkedin_url: '',
     twitter_url: '',
     instagram_url: '',
-    avatar_url: ''
+    avatar_url: '',
+    // Extended public-profile fields surfaced to clients via the
+    // "Ver perfil del coach" modal in the chat header.
+    years_experience: '',
+    specialties: '',
+    certifications: '',
+    education: '',
+    languages_spoken: '',
+    philosophy: '',
+    website_url: '',
+    achievements: '',
+    services_offered: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -247,6 +258,9 @@ function ProfileSettings() {
       try {
         const data = await fetchWithAuth('/manager/profile');
         if (data) {
+          // Array fields come back as string[] from the API; turn them
+          // into comma-separated strings for the textarea-style inputs.
+          const arrToStr = (v: any) => Array.isArray(v) ? v.join(', ') : (v || '');
           setProfile((prev: any) => ({
             ...prev,
             ...data,
@@ -259,7 +273,16 @@ function ProfileSettings() {
             twitter_url: data.twitter_url || '',
             instagram_url: data.instagram_url || '',
             avatar_url: data.avatar_url || '',
-            language: data.language || 'es'
+            language: data.language || 'es',
+            years_experience: data.years_experience ?? '',
+            specialties: arrToStr(data.specialties),
+            certifications: arrToStr(data.certifications),
+            education: data.education || '',
+            languages_spoken: arrToStr(data.languages_spoken),
+            philosophy: data.philosophy || '',
+            website_url: data.website_url || '',
+            achievements: arrToStr(data.achievements),
+            services_offered: arrToStr(data.services_offered),
           }));
         }
       } catch (err: any) {
@@ -577,15 +600,131 @@ function ProfileSettings() {
               <span className="font-bold text-pink-600 text-lg">ig</span>
             </div>
             <div className="flex-1">
-              <input 
+              <input
                 name="instagram_url"
                 value={profile.instagram_url}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
-                placeholder={t('instagram_placeholder')} 
-                type="text" 
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+                placeholder={t('instagram_placeholder')}
+                type="text"
               />
             </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <span className="material-symbols-outlined text-emerald-600">language</span>
+            </div>
+            <div className="flex-1">
+              <input
+                name="website_url"
+                value={profile.website_url}
+                onChange={handleChange}
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+                placeholder="https://tu-web.com"
+                type="text"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Public coach profile — surfaced to your clients via the
+          "Ver perfil del coach" modal in the chat. */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-slate-900">{t('public_profile_title', { defaultValue: 'Perfil público' })}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t('public_profile_desc', { defaultValue: 'Lo que tus clientes verán en su portal. Cuanto más completes, mejor te conocerán.' })}</p>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('years_experience', { defaultValue: 'Años de experiencia' })}</label>
+            <input
+              name="years_experience"
+              type="number"
+              min={0}
+              max={99}
+              value={profile.years_experience}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              placeholder="5"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('specialties', { defaultValue: 'Especialidades' })}</label>
+            <input
+              name="specialties"
+              value={profile.specialties}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              placeholder={t('specialties_placeholder', { defaultValue: 'Pérdida de peso, hipertrofia, deporte de resistencia…' })}
+            />
+            <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('services_offered', { defaultValue: 'Servicios que ofreces' })}</label>
+            <input
+              name="services_offered"
+              value={profile.services_offered}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              placeholder={t('services_placeholder', { defaultValue: 'Planes de nutrición, seguimiento semanal, asesoría online…' })}
+            />
+            <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('certifications', { defaultValue: 'Certificaciones' })}</label>
+            <input
+              name="certifications"
+              value={profile.certifications}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              placeholder={t('certifications_placeholder', { defaultValue: 'CSCS, ISAK Nivel 1, Precision Nutrition…' })}
+            />
+            <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('education', { defaultValue: 'Formación' })}</label>
+            <textarea
+              name="education"
+              value={profile.education}
+              onChange={handleChange}
+              rows={3}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow resize-y"
+              placeholder={t('education_placeholder', { defaultValue: 'Grado en CCAFD, Universidad X (2020). Máster en Nutrición Deportiva, Universidad Y (2022).' })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('achievements', { defaultValue: 'Logros' })}</label>
+            <input
+              name="achievements"
+              value={profile.achievements}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              placeholder={t('achievements_placeholder', { defaultValue: 'Coach del año 2024, ponente en X congreso…' })}
+            />
+            <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('languages_spoken', { defaultValue: 'Idiomas que hablas' })}</label>
+            <input
+              name="languages_spoken"
+              value={profile.languages_spoken}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              placeholder={t('languages_placeholder', { defaultValue: 'Español, Inglés, Catalán' })}
+            />
+            <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('philosophy', { defaultValue: 'Filosofía / Enfoque' })}</label>
+            <textarea
+              name="philosophy"
+              value={profile.philosophy}
+              onChange={handleChange}
+              rows={4}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow resize-y"
+              placeholder={t('philosophy_placeholder', { defaultValue: 'Mi enfoque combina la evidencia científica con un acompañamiento humano para hacer sostenibles los cambios.' })}
+            />
           </div>
         </div>
       </div>

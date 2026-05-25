@@ -123,6 +123,61 @@ router.patch('/profile', async (req: any, res) => {
   }
 });
 
+// Public profile of the client's coach. Only the fields the coach has
+// chosen to expose (display info, bio, experience, certifications…).
+// NEVER includes private/business info (e.g. integrations, Stripe keys,
+// internal notes). The relationship is enforced via users.manager_id —
+// a client can only fetch the profile of the manager that owns them.
+router.get('/coach-profile', async (req: any, res) => {
+  try {
+    const { data: clientRow } = await supabaseAdmin
+      .from('users')
+      .select('manager_id')
+      .eq('id', req.user.id)
+      .maybeSingle();
+    const managerId = clientRow?.manager_id;
+    if (!managerId) return res.json(null);
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select(`
+        user_id,
+        full_name,
+        professional_title,
+        bio,
+        avatar_url,
+        years_experience,
+        specialties,
+        certifications,
+        education,
+        languages_spoken,
+        philosophy,
+        website_url,
+        achievements,
+        services_offered,
+        linkedin_url,
+        twitter_url,
+        instagram_url
+      `)
+      .eq('user_id', managerId)
+      .maybeSingle();
+
+    const { data: userRow } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .eq('id', managerId)
+      .maybeSingle();
+
+    res.json({
+      ...(profile || { user_id: managerId }),
+      email: userRow?.email || null,
+    });
+  } catch (error) {
+    console.error('Error fetching coach profile:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get my plans — scoped to current manager so stale plans from previous managers don't leak
 router.get('/plans', async (req: any, res) => {
   try {

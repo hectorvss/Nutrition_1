@@ -36,6 +36,7 @@ import { fetchWithAuth, getAuthToken } from '../api';
 import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
+import CoachProfileModal from './client/CoachProfileModal';
 
 interface Message {
   id: string;
@@ -104,6 +105,8 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   
   const [selectedClientId, setSelectedClientId] = useState<string | null>(initialClientId || null);
   const [activeRecipient, setActiveRecipient] = useState<any>(null);
+  // Toggles the "Ver perfil del coach" modal shown to clients.
+  const [coachProfileOpen, setCoachProfileOpen] = useState(false);
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 
   // When opened from another screen (e.g. the "Message" button on a client
@@ -680,6 +683,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
 
   return (
     <div className="flex-1 h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden p-6 md:p-8 lg:p-10">
+      <CoachProfileModal open={coachProfileOpen} onClose={() => setCoachProfileOpen(false)} />
       <main className="w-full h-full flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         {/* Hidden file pickers — mounted unconditionally so the buttons work in
             both the conversation view and the new-message composer. */}
@@ -957,16 +961,14 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
         <div className="flex items-center space-x-3">
            {user?.role === 'CLIENT' ? (
              <>
-               <button className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center space-x-2">
+               <button
+                 onClick={() => setCoachProfileOpen(true)}
+                 className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center space-x-2">
                  <User className="w-4 h-4" />
                  <span>{t('view_coach_profile')}</span>
                </button>
-               <button
-                 onClick={() => onNavigate?.('check-ins')}
-                 className="px-4 py-2 bg-[#F0FDF4] text-[#22C55E] rounded-xl text-sm font-bold hover:bg-[#DCFCE7] transition-colors flex items-center space-x-2">
-                 <Calendar className="w-4 h-4" />
-                 <span>{t('book_checkin')}</span>
-               </button>
+               {/* "Reservar check-in" removed — the action lives in the
+                   client portal's Check-ins tab and the FAB. */}
              </>
            ) : (
              <button

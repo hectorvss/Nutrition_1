@@ -119,42 +119,53 @@ router.post('/profile', async (req: any, res) => {
       .eq('user_id', userId)
       .maybeSingle();
 
+    // Coerce text-array fields: accept either an array of strings or a
+    // comma-separated string (which the form may pass through). Anything
+    // empty becomes [] so the column never holds a malformed value.
+    const toArr = (v: any): string[] => {
+      if (Array.isArray(v)) return v.map(s => String(s).trim()).filter(Boolean);
+      if (typeof v === 'string') return v.split(',').map(s => s.trim()).filter(Boolean);
+      return [];
+    };
+    const patch: Record<string, any> = {
+      full_name: profileData.full_name,
+      professional_title: profileData.professional_title,
+      bio: profileData.bio,
+      phone_number: profileData.phone_number,
+      address: profileData.address,
+      linkedin_url: profileData.linkedin_url,
+      twitter_url: profileData.twitter_url,
+      instagram_url: profileData.instagram_url,
+      avatar_url: profileData.avatar_url,
+      language: profileData.language || 'es',
+      // Extended public profile — surfaced to the client portal via the
+      // "Ver perfil del coach" modal.
+      years_experience: profileData.years_experience != null && profileData.years_experience !== ''
+        ? Math.max(0, Math.min(99, Math.round(Number(profileData.years_experience)) || 0))
+        : null,
+      specialties: toArr(profileData.specialties),
+      certifications: toArr(profileData.certifications),
+      education: profileData.education ?? null,
+      languages_spoken: toArr(profileData.languages_spoken),
+      philosophy: profileData.philosophy ?? null,
+      website_url: profileData.website_url ?? null,
+      achievements: toArr(profileData.achievements),
+      services_offered: toArr(profileData.services_offered),
+      timezone: profileData.timezone ?? null,
+    };
+
     let result;
     if (existing) {
       result = await supabaseAdmin
         .from('profiles')
-        .update({
-          full_name: profileData.full_name,
-          professional_title: profileData.professional_title,
-          bio: profileData.bio,
-          phone_number: profileData.phone_number,
-          address: profileData.address,
-          linkedin_url: profileData.linkedin_url,
-          twitter_url: profileData.twitter_url,
-          instagram_url: profileData.instagram_url,
-          avatar_url: profileData.avatar_url,
-          language: profileData.language || 'es',
-          updated_at: new Date().toISOString()
-        })
+        .update({ ...patch, updated_at: new Date().toISOString() })
         .eq('user_id', userId)
         .select()
         .single();
     } else {
       result = await supabaseAdmin
         .from('profiles')
-        .insert({
-          user_id: userId,
-          full_name: profileData.full_name,
-          professional_title: profileData.professional_title,
-          bio: profileData.bio,
-          phone_number: profileData.phone_number,
-          address: profileData.address,
-          linkedin_url: profileData.linkedin_url,
-          twitter_url: profileData.twitter_url,
-          instagram_url: profileData.instagram_url,
-          avatar_url: profileData.avatar_url,
-          language: profileData.language || 'es'
-        })
+        .insert({ user_id: userId, ...patch })
         .select()
         .single();
     }
