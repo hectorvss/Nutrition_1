@@ -400,6 +400,97 @@ const findMissingRequired = (schema: CheckInSchemaStep[], answers: CheckInAnswer
   return missing;
 };
 
+// Deriva las claves canónicas de KPI a partir de respuestas categóricas/legacy
+// presentes en la submission. Plantillas antiguas hacen preguntas como
+// `nutritionAdherence: "Mostly (>80%)"`, pero los KPIs (analytics y
+// profile-stats) leen `nutrition_adherence_score: 8`. Esta normalización
+// rellena las claves canónicas que falten ANTES de persistir la submission, de
+// forma no-destructiva (nunca sobreescribe lo que el cliente respondió).
+const normalizeCanonicalAnswers = (answers: Record<string, any>): Record<string, any> => {
+  if (!answers || typeof answers !== 'object') return {};
+  const out: Record<string, any> = { ...answers };
+  const setIfMissing = (key: string, value: any) => {
+    if (value === undefined || value === null || value === '') return;
+    if (out[key] === undefined || out[key] === null || out[key] === '') out[key] = value;
+  };
+
+  // Adherencia nutricional: texto del rango → punto medio 1-10.
+  const nutritionMap: Record<string, number> = {
+    'Perfect (>95%)': 10, 'Mostly (>80%)': 9, 'Somewhat (50-80%)': 6, 'Little (<50%)': 3, 'None': 1,
+    '>95%': 10, '80-95%': 9, '50-80%': 6, '<50%': 3,
+  };
+  if (typeof answers.nutritionAdherence === 'string' && nutritionMap[answers.nutritionAdherence] !== undefined) {
+    setIfMissing('nutrition_adherence_score', nutritionMap[answers.nutritionAdherence]);
+  }
+
+  // Adherencia de entrenamiento.
+  const trainingMap: Record<string, number> = {
+    'All sessions': 10, 'Missed 1': 8, 'Missed 2-3': 5, 'None done': 0,
+  };
+  if (typeof answers.trainingAdherence === 'string' && trainingMap[answers.trainingAdherence] !== undefined) {
+    setIfMissing('training_adherence_score', trainingMap[answers.trainingAdherence]);
+  }
+
+  // Intensidad del entrenamiento.
+  const intensityMap: Record<string, number> = {
+    'Very High': 10, 'High': 8, 'Moderate': 6, 'Low': 3, 'Very Low': 1, 'Excellent': 10, 'Good': 8, 'Okay': 5, 'Struggling': 3, 'Poor': 2,
+  };
+  if (typeof answers.trainingIntensity === 'string' && intensityMap[answers.trainingIntensity] !== undefined) {
+    setIfMissing('training_intensity_score', intensityMap[answers.trainingIntensity]);
+  }
+
+  // Hidratación.
+  const hydrationMap: Record<string, number> = {
+    'Met goal': 10, 'Most days': 8, 'Some days': 5, 'Rarely': 2, 'Never': 1,
+    'Perfect': 10, 'Good': 8, 'Okay': 5, 'Poor': 2,
+  };
+  if (typeof answers.waterIntake === 'string' && hydrationMap[answers.waterIntake] !== undefined) {
+    setIfMissing('water_intake_score', hydrationMap[answers.waterIntake]);
+  }
+
+  // Mindset / wellbeing — texto a 1-10.
+  const scaleMap: Record<string, number> = {
+    'Very low': 1, 'Very Low': 1, 'Low': 3, 'Below average': 4, 'Average': 5, 'Okay': 5, 'Moderate': 5,
+    'Above average': 7, 'Good': 7, 'High': 8, 'Very high': 9, 'Very High': 9, 'Excellent': 9, 'Perfect': 10,
+  };
+  const mapText = (v: any): number | null => {
+    if (v === undefined || v === null || v === '') return null;
+    const n = Number(v); if (!isNaN(n)) return n;
+    return scaleMap[String(v).trim()] ?? null;
+  };
+  const energy     = mapText(answers.energy);     if (energy     !== null) setIfMissing('energy_level',     energy);
+  const stress     = mapText(answers.stress);     if (stress     !== null) setIfMissing('stress_level',     stress);
+  const mood       = mapText(answers.mood);       if (mood       !== null) setIfMissing('mood_score',       mood);
+  const motivation = mapText(answers.motivation); if (motivation !== null) setIfMissing('motivation_level', motivation);
+  const sleepQ     = mapText(answers.sleepQuality); if (sleepQ   !== null) setIfMissing('sleep_quality_score', sleepQ);
+  const fatigueV   = mapText(answers.generalFatigue ?? answers.Fatigue); if (fatigueV !== null) setIfMissing('fatigue', fatigueV);
+
+  // Horas de sueño: "7-9 hours" / "5-7 hours" / etc. → punto medio.
+  const sleepHoursMap: Record<string, number> = {
+    '<5 hours': 4, '5-7 hours': 6, '7-9 hours': 8, '>9 hours': 10,
+  };
+  if (typeof answers.sleepQuantity === 'string' && sleepHoursMap[answers.sleepQuantity] !== undefined) {
+    setIfMissing('sleep_hours', sleepHoursMap[answers.sleepQuantity]);
+  }
+
+  // Pasos diarios: "<4k" / "4k-6k" / ... → punto medio.
+  const stepRangeMap: Record<string, number> = {
+    '<4k': 3000, '4k-6k': 5000, '6k-8k': 7000, '8k-10k': 9000, '>10k': 11000,
+  };
+  if (typeof answers.stepRange === 'string' && stepRangeMap[answers.stepRange] !== undefined) {
+    setIfMissing('steps', stepRangeMap[answers.stepRange]);
+  }
+
+  // Alcohol / suplementos: las opciones legacy usan el mismo dominio que las
+  // canónicas, sólo cambia la clave.
+  if (answers.alcoholIntake) setIfMissing('alcohol_intake', answers.alcoholIntake);
+  if (answers.supplements && answers.supplements !== 'None') {
+    setIfMissing('supplements_taken', ['All', 'Most', 'Some', 'None'].includes(answers.supplements) ? answers.supplements : 'Most');
+  }
+
+  return out;
+};
+
 // Finds the manager's "General Check-in" template, creating it if it doesn't
 // exist. Guarantees the caller always gets a template backed by a real DB row
 // (with a valid UUID id) so client submissions never fail with "Template not found".
@@ -1536,10 +1627,17 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
     //    submission matches exactly what the client filled.
     const injectedSchema = injectFixedQuestions(template.template_schema);
 
-    // 3a. Server-side guard: every required question must be answered. This
+    // 3a. Normaliza claves legacy → canónicas (no-destructivo). Si la
+    //     plantilla pregunta `nutritionAdherence: "Mostly (>80%)"` pero los
+    //     KPIs leen `nutrition_adherence_score: 9`, esto cierra el hueco antes
+    //     de validar y persistir, así los gráficos del manager/cliente se
+    //     hidratan aunque la plantilla siga usando IDs viejos.
+    const normalizedAnswers = normalizeCanonicalAnswers(answers_json);
+
+    // 3b. Server-side guard: every required question must be answered. This
     //     backs up the UI validation so a check-in can never be submitted
     //     (even via a direct API call) without the mandatory KPI variables.
-    const missingRequired = findMissingRequired(injectedSchema, answers_json);
+    const missingRequired = findMissingRequired(injectedSchema, normalizedAnswers);
     if (missingRequired.length > 0) {
       return res.status(400).json({
         error: 'Missing required answers',
@@ -1559,7 +1657,7 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
           template_schema: injectedSchema,
           templateSchema: injectedSchema
         },
-        answers_json,
+        answers_json: normalizedAnswers,
         submitted_at: new Date().toISOString()
       })
       .select()
@@ -1569,7 +1667,7 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
 
     // --- Sync Fixed Questions to Profile ---
     try {
-      const answers = answers_json as Record<string, any>;
+      const answers = normalizedAnswers as Record<string, any>;
       const updates: Record<string, any> = {};
       
       // Look for weight & macros

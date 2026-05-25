@@ -1536,13 +1536,19 @@ router.post('/clients/:id/apply-master-plan', async (req: any, res) => {
     }
 
     // 2. Map to nutrition_plans.data_json structure
+    // IDs derivados de crypto.randomUUID (estable, sin colisiones a 1/1M
+    // como `Math.random*1000000`) — son IDs temporales que viven sólo en el
+    // jsonb del plan, no se persisten como FK.
+    const tempId = () => (typeof crypto !== 'undefined' && (crypto as any).randomUUID)
+      ? (crypto as any).randomUUID()
+      : `tmp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 11)}`;
     const meals = masterPlan.nutrition_master_plan_meals.map((m: any) => ({
-      id: Math.floor(Math.random() * 1000000), // temp id for frontend
+      id: tempId(),
       name: m.name,
       time: m.time,
       iconName: m.icon_name,
       items: (m.nutrition_master_plan_meal_foods || []).map((f: any) => ({
-        id: Math.random().toString(36).substr(2, 9),
+        id: tempId(),
         foodId: f.food_id,
         name: f.name,
         calories: Number(f.calories),
@@ -1553,7 +1559,7 @@ router.post('/clients/:id/apply-master-plan', async (req: any, res) => {
         quantity: Number(f.quantity)
       })),
       categories: (m.nutrition_master_plan_general_blocks || []).map((b: any) => ({
-        id: Math.random().toString(36).substr(2, 9),
+        id: tempId(),
         label: b.label,
         example: b.example,
         amount: Number(b.amount),
@@ -3047,13 +3053,23 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       .limit(3);
 
     const activity = [
-      ...(checkIns || []).slice(-3).map(ci => ({
-        type: 'CHECK_IN',
-        title: 'Morning Check-in',
-        sub: `Logged weight (${(ci.data_json as any).weight}kg)`,
-        time: ci.date,
-        color: 'bg-emerald-100 text-emerald-600'
-      })),
+      ...(checkIns || []).slice(-3).map(ci => {
+        // Evita imprimir "Logged weight (undefinedkg)" cuando la pregunta
+        // canónica `weight` no está en la submission (plantillas legacy o
+        // pendientes de inyectar los FIXED_CHECKIN_QUESTIONS).
+        const wRaw = (ci.data_json as any)?.weight;
+        const wNum = wRaw == null ? NaN : Number(wRaw);
+        const sub = Number.isFinite(wNum) && wNum > 0
+          ? `Logged weight (${wNum}kg)`
+          : 'Check-in submitted';
+        return {
+          type: 'CHECK_IN',
+          title: 'Morning Check-in',
+          sub,
+          time: ci.date,
+          color: 'bg-emerald-100 text-emerald-600'
+        };
+      }),
       ...(recentMsgs || []).map(m => ({
         type: 'MESSAGE',
         title: 'Message Received',
@@ -3103,19 +3119,52 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       ? Number((logsWithRPE.reduce((s, l) => s + Number(l.session_rpe), 0) / logsWithRPE.length).toFixed(1))
       : 0;
 
-    // Fatigue: Pull from latest check-in if possible, otherwise use session RPE as fallback
+    // Fatigue: del último check-in si la pregunta canónica está presente; si
+    // no, RPE de la última sesión. NUNCA un default sintético (`5`) que
+    // antes ocultaba clientes sin datos como si tuvieran fatiga media.
     const latestAnyCheckIn = allCheckInsCombined.length > 0 ? allCheckInsCombined[allCheckInsCombined.length - 1] : null;
-    let fatigue = 5; // Default middle
+    // Mismo mapping categórico que /client/profile-stats — mantenerlos en
+    // sync evita que el coach vea valores distintos al cliente.
+    const fatigueScaleMap: Record<string, number> = {
+      'Very low': 1, 'Very Low': 1, 'Muy bajo': 1, 'Muy baja': 1,
+      'Low': 3, 'Bajo': 3, 'Baja': 3, 'Poor': 2,
+      'Below average': 4, 'Below Average': 4,
+      'Average': 5, 'Medio': 5, 'Media': 5, 'Okay': 5, 'Moderate': 5,
+      'Above average': 7, 'Above Average': 7, 'Good': 7,
+      'High': 8, 'Alto': 8, 'Alta': 8,
+      'Very high': 9, 'Very High': 9, 'Muy alto': 9, 'Muy alta': 9,
+      'Excellent': 9, 'Excelente': 9,
+      'Perfect': 10, 'Perfecto': 10,
+    };
+    const toFatigueScore = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      if (!isNaN(n)) return n;
+      const k = String(v).trim();
+      return fatigueScaleMap[k] ?? null;
+    };
+    let fatigue: number | null = null;
     if (latestAnyCheckIn) {
-      const a = latestAnyCheckIn.answers;
-      const fatigueVal = a.fatigue || a.Fatigue || a['Fatigue Level'] || a.energy_level || a.stress_level;
-      if (fatigueVal) {
-        // If it's a number (1-10), use it. If it's energy_level (high = low fatigue), invert it if needed.
-        // For simplicity, we try to parse it.
-        const parsed = parseInt(fatigueVal);
-        if (!isNaN(parsed)) fatigue = parsed;
+      const a = latestAnyCheckIn.answers || {};
+      const directFatigue = toFatigueScore(a.fatigue ?? a.Fatigue ?? a['Fatigue Level'] ?? a.generalFatigue);
+      if (directFatigue !== null) {
+        fatigue = directFatigue;
+      } else {
+        // Energía alta = fatiga baja, estrés alto = fatiga alta. Si los dos
+        // están disponibles, hacemos una composición simple; si solo uno,
+        // se usa él.
+        const energy = toFatigueScore(a.energy_level ?? a.energy);
+        const stress = toFatigueScore(a.stress_level ?? a.stress);
+        if (energy !== null && stress !== null) {
+          fatigue = Math.max(1, Math.min(10, Math.round(((10 - energy) + stress) / 2)));
+        } else if (energy !== null) {
+          fatigue = Math.max(1, Math.min(10, 10 - energy));
+        } else if (stress !== null) {
+          fatigue = stress;
+        }
       }
-    } else if (logsWithRPE.length > 0) {
+    }
+    if (fatigue === null && logsWithRPE.length > 0) {
       fatigue = Number(logsWithRPE[0].session_rpe);
     }
 

@@ -215,7 +215,7 @@ export default function ClientNutrition() {
   // day jumps into the Daily view of that day, switching the cadence
   // back to Semanal so the day selector and macro panel render against
   // the right week's data.
-  const renderDayCard = (day: any, daysMap: any) => {
+  const renderDayCard = (day: any, daysMap: any, isCurrentWeek: boolean = true) => {
     const dayData = daysMap?.[day.id];
     const dMeals = dayData?.meals || [];
     let dCals = 0, dP = 0, dC = 0, dF = 0;
@@ -242,12 +242,14 @@ export default function ClientNutrition() {
     const pPct = Math.round((dP * 4 / totalMacros) * 100);
     const cPct = Math.round((dC * 4 / totalMacros) * 100);
     const fPct = Math.round((dF * 9 / totalMacros) * 100);
-    // Highlight today's card with a brand-coloured ring so the client
-    // spots "where they are" at a glance. Manager-configured theme
-    // colour drives the ring via --brand-primary.
+    // Highlight today's card with a brand-coloured ring — only when the
+    // week the card belongs to is the week the client is currently in
+    // (so the Mensual view doesn't decorate Monday of every single
+    // week). `isCurrentWeek` defaults to true so the Semanal view (which
+    // only renders the current week) still gets the ring.
     const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const todayName = daysOrder[(new Date().getDay() + 6) % 7];
-    const isToday = day.id === todayName;
+    const isToday = isCurrentWeek && day.id === todayName;
     return (
       <button
         key={day.id}
@@ -316,8 +318,16 @@ export default function ClientNutrition() {
         {WEEKS.map(week => {
           const weekDays = (week > 1 && overrides[week]) ? overrides[week] : baseDays;
           const isOverride = week > 1 && !!overrides[week];
+          const isCurrentWeek = week === weekOfMonth;
           return (
-            <div key={`week-${week}`} className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-900/40 overflow-hidden">
+            <div
+              key={`week-${week}`}
+              // Brand-coloured outline on the section that corresponds to
+              // the week the client is currently in — same accent the day
+              // card inside it uses, so they reinforce each other.
+              style={isCurrentWeek ? { boxShadow: '0 0 0 2px var(--brand-primary)' } : undefined}
+              className="rounded-3xl border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-900/40 overflow-hidden"
+            >
               <div className="flex items-center justify-between gap-3 px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[#17cf54]/10 text-[#17cf54] flex items-center justify-center font-black">{week}</div>
@@ -334,9 +344,17 @@ export default function ClientNutrition() {
                     </span>
                   </div>
                 </div>
+                {isCurrentWeek && (
+                  <span
+                    className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full text-white"
+                    style={{ backgroundColor: 'var(--brand-primary)' }}
+                  >
+                    {t('current_week_badge', { defaultValue: 'Esta semana' })}
+                  </span>
+                )}
               </div>
               <div className="p-4 grid grid-cols-1 gap-4">
-                {daysConfig.map((day: any) => renderDayCard(day, weekDays))}
+                {daysConfig.map((day: any) => renderDayCard(day, weekDays, isCurrentWeek))}
               </div>
             </div>
           );

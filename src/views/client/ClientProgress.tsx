@@ -684,15 +684,16 @@ export default function ClientProgress() {
     const current = stats?.latestWeight ?? null;
     const start = stats?.startWeight ?? null;
     const targetDelta = (goal != null && current != null) ? (Number(goal) - Number(current)) : null;
-    // The server returns a single overall `adherenceRate` plus `macros` (calorie/
-    // macro adherence %s) and `training.workoutCount`. Use those as the closest
-    // approximations until a richer split is exposed.
-    const nutritionAdh = stats?.macros?.calories ?? stats?.adherenceRate ?? null;
-    const trainingAdh = stats?.training?.workoutCount != null
-      ? Math.min(100, Math.round((Number(stats.training.workoutCount) / 4) * 100))
-      : stats?.adherenceRate ?? null;
-    // Step tracking isn't wired yet — keep the slot but never claim a value.
-    const avgSteps = null;
+    // El servidor expone:
+    //   - adherenceRate: % nutrición últimos 7 días (mapping del check-in)
+    //   - trainingAdherenceRate: % entrenamiento últimos 7 días (canónico)
+    //   - avgSteps: media de pasos/día (numérico o midpoint de stepRange)
+    // Nada de sintéticos: si no hay dato, queda null y la UI muestra "--".
+    const nutritionAdh = stats?.adherenceRate != null && stats.adherenceRate > 0
+      ? stats.adherenceRate
+      : null;
+    const trainingAdh = stats?.trainingAdherenceRate ?? null;
+    const avgSteps = stats?.avgSteps ?? null;
     const hasPlanningData = goal != null || current != null || start != null || nutritionAdh != null || trainingAdh != null;
 
     if (!hasPlanningData) {

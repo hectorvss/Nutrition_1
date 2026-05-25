@@ -408,6 +408,7 @@ router.get('/profile-stats', async (req: any, res) => {
     const [
       { data: client, error: clientErr },
       { data: checkIns },
+      { data: dynamicCheckIns },
       { data: recentMsgs },
       { data: allWorkoutLogs },
     ] = await Promise.all([
@@ -421,6 +422,15 @@ router.get('/profile-stats', async (req: any, res) => {
         .select('*')
         .eq('client_id', id)
         .order('date', { ascending: true })
+        .limit(365),
+      // The new check-in pipeline writes to client_checkin_submissions; the
+      // legacy table receives no new rows (POST /client/check-ins returns 410).
+      // Read both so KPIs hydrate regardless of which table holds the data.
+      supabaseAdmin
+        .from('client_checkin_submissions')
+        .select('id, submitted_at, answers_json, status')
+        .eq('client_id', id)
+        .order('submitted_at', { ascending: true })
         .limit(365),
       supabaseAdmin
         .from('messages')
@@ -444,20 +454,69 @@ router.get('/profile-stats', async (req: any, res) => {
       const n = Number(v);
       return isNaN(n) ? null : n;
     };
-    const weightHistory = (checkIns || []).map(ci => ({
+
+    // Categorical → numeric helpers (1-10 scale). Plantillas reales preguntan
+    // con opciones tipo "Very low / Low / Average / High / Excellent" pero los
+    // KPIs derivados esperan número. Mantener ambos prefijos (canónico `_score`
+    // y suffix legacy sin él) cubre el periodo de transición.
+    const scaleMap: Record<string, number> = {
+      'Very low': 1, 'Very Low': 1, 'Muy bajo': 1, 'Muy baja': 1,
+      'Low': 3, 'Bajo': 3, 'Baja': 3, 'Poor': 2,
+      'Below average': 4, 'Below Average': 4,
+      'Average': 5, 'Medio': 5, 'Media': 5, 'Okay': 5, 'Moderate': 5,
+      'Above average': 7, 'Above Average': 7, 'Good': 7,
+      'High': 8, 'Alto': 8, 'Alta': 8,
+      'Very high': 9, 'Very High': 9, 'Muy alto': 9, 'Muy alta': 9,
+      'Excellent': 9, 'Excelente': 9,
+      'Perfect': 10, 'Perfecto': 10,
+    };
+    const toScore = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      if (!isNaN(n)) return n;
+      const k = String(v).trim();
+      if (k in scaleMap) return scaleMap[k];
+      return null;
+    };
+    // "<4k" / "4k-6k" / "6k-8k" / "8k-10k" / ">10k" → punto medio en pasos/día.
+    const stepRangeMap: Record<string, number> = {
+      '<4k': 3000, '4k-6k': 5000, '6k-8k': 7000, '8k-10k': 9000, '>10k': 11000,
+    };
+    const toSteps = (v: any): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = Number(v);
+      if (!isNaN(n)) return n;
+      const k = String(v).trim();
+      return stepRangeMap[k] ?? null;
+    };
+
+    // Normalize both legacy `check_ins` and new `client_checkin_submissions`
+    // rows to `{ date, answers }`. Submissions only count when they were
+    // actually sent (status='submitted'); drafts shouldn't move KPIs.
+    const allCheckInsCombined: { date: string; answers: any }[] = [
+      ...((checkIns || []) as any[]).map(ci => ({ date: ci.date, answers: ci.data_json || {} })),
+      ...((dynamicCheckIns || []) as any[])
+        .filter(ci => ci.status === 'submitted' || ci.status === 'reviewed')
+        .map(ci => ({ date: ci.submitted_at, answers: ci.answers_json || {} })),
+    ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const weightHistory = allCheckInsCombined.map(ci => ({
       date: ci.date,
-      weight: num((ci.data_json as any)?.weight),
-      bodyFat: num((ci.data_json as any)?.body_fat)
+      weight: num(ci.answers?.weight),
+      bodyFat: num(ci.answers?.body_fat ?? ci.answers?.bodyFat)
     })).filter(w => w.weight !== null);
 
     // 4. Latest Measurements
-    const lastCheckIn = checkIns && checkIns.length > 0 ? checkIns[checkIns.length - 1] : null;
+    const lastCheckIn = allCheckInsCombined.length > 0
+      ? allCheckInsCombined[allCheckInsCombined.length - 1]
+      : null;
+    const lastAnswers: any = lastCheckIn?.answers || {};
 
     // 5. Macro Adherence (Last 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentCheckIns = (checkIns || []).filter(ci => new Date(ci.date) >= sevenDaysAgo);
-    
+    const recentCheckIns = allCheckInsCombined.filter(ci => new Date(ci.date) >= sevenDaysAgo);
+
     let avgProteinAdherence = 0;
     let avgCarbsAdherence = 0;
     let avgFatsAdherence = 0;
@@ -468,7 +527,7 @@ router.get('/profile-stats', async (req: any, res) => {
       let countP = 0, countC = 0, countF = 0, countKcal = 0;
 
       recentCheckIns.forEach(ci => {
-        const d = (ci.data_json as any) || {};
+        const d = ci.answers || {};
         // Canonical fixed check-in keys: absolute average daily intake.
         const p = num(d.protein); if (p !== null) { totalP += p; countP++; }
         const c = num(d.carbs); if (c !== null) { totalC += c; countC++; }
@@ -487,7 +546,7 @@ router.get('/profile-stats', async (req: any, res) => {
       let totalAdh = 0;
       let countAdh = 0;
       recentCheckIns.forEach(ci => {
-        const d = (ci.data_json as any) || {};
+        const d = ci.answers || {};
         const val = d.nutrition_adherence_score !== undefined ? Number(d.nutrition_adherence_score) * 10 :
                     (d.adherence_score !== undefined ? Number(d.adherence_score) * 10 : null);
         if (val !== null) {
@@ -504,14 +563,49 @@ router.get('/profile-stats', async (req: any, res) => {
       calculatedAdherenceRate = countAdh > 0 ? Math.round(totalAdh / countAdh) : 0;
     }
 
+    // 5.b Training adherence (last 7 days). Uses the canonical
+    // `training_adherence_score` (1-10) when present, falls back to the
+    // legacy single-choice mapping. Returned as a percentage so the client UI
+    // doesn't have to invent a synthetic value from workoutCount.
+    let trainingAdherenceRate: number | null = null;
+    if (recentCheckIns.length > 0) {
+      const trainingMap: Record<string, number> = {
+        'All sessions': 100, 'Missed 1': 85, 'Missed 2-3': 60, 'None done': 0,
+      };
+      let totalT = 0, countT = 0;
+      recentCheckIns.forEach(ci => {
+        const d = ci.answers || {};
+        const score = num(d.training_adherence_score);
+        if (score != null && score > 0) {
+          totalT += score * 10; countT++;
+        } else if (typeof d.trainingAdherence === 'string' && d.trainingAdherence in trainingMap) {
+          totalT += trainingMap[d.trainingAdherence]; countT++;
+        }
+      });
+      if (countT > 0) trainingAdherenceRate = Math.round(totalT / countT);
+    }
+
+    // 5.c Average daily steps (last 7 days). Numeric `steps` wins; falls back
+    // to the categorical `stepRange` bucket midpoint when only that exists.
+    let avgSteps: number | null = null;
+    if (recentCheckIns.length > 0) {
+      let totalS = 0, countS = 0;
+      recentCheckIns.forEach(ci => {
+        const d = ci.answers || {};
+        const s = toSteps(d.steps ?? d.stepRange);
+        if (s != null) { totalS += s; countS++; }
+      });
+      if (countS > 0) avgSteps = Math.round(totalS / countS);
+    }
+
     // 6. Recent Activity (Messages) — fetched in parallel above.
     // Carry canonical type + raw values so the client side translates the
     // labels per the active language (was hardcoded English on the server).
     const activity = [
-      ...(checkIns || []).slice(-3).map(ci => ({
+      ...allCheckInsCombined.slice(-3).map(ci => ({
         type: 'CHECK_IN',
         weight: ((): number | null => {
-          const w = (ci.data_json as any)?.weight;
+          const w = ci.answers?.weight;
           const n = w == null ? NaN : Number(w);
           return Number.isFinite(n) && n > 0 ? n : null;
         })(),
@@ -557,7 +651,9 @@ router.get('/profile-stats', async (req: any, res) => {
       ? Number((logsWithRPE.reduce((s, l) => s + Number(l.session_rpe), 0) / logsWithRPE.length).toFixed(1))
       : 0;
 
-    const fatigue = logsWithRPE.length > 0 ? Number(logsWithRPE[0].session_rpe) : 5;
+    // No inventar fatiga "5" cuando no hay logs: devolver null y que la UI
+    // muestre "--". Un default sintético engaña al cliente.
+    const fatigue = logsWithRPE.length > 0 ? Number(logsWithRPE[0].session_rpe) : null;
 
     // 8. Strength PRs & History
     const allExercisesMap: Record<string, { pr: number, latest: number, latestDate: string }> = {};
@@ -668,35 +764,51 @@ router.get('/profile-stats', async (req: any, res) => {
       exercises: log.exercises || []
     }));
 
+    // Mindset / sleep — extractor que cubre ambos sufijos (canónico `_score`/
+    // `_level` y legacy sin él) y traduce las opciones categóricas
+    // ("Very low / Low / Average / High / Excellent") a un escalar 1-10.
+    const pickScore = (a: any, ...keys: string[]): number | null => {
+      for (const k of keys) {
+        const v = toScore(a?.[k]);
+        if (v !== null) return v;
+      }
+      return null;
+    };
+    const lastEnergy     = pickScore(lastAnswers, 'energy_level', 'energy');
+    const lastStress     = pickScore(lastAnswers, 'stress_level', 'stress');
+    const lastMood       = pickScore(lastAnswers, 'mood_score', 'mood');
+    const lastMotivation = pickScore(lastAnswers, 'motivation_level', 'motivation');
     const mindset = {
-      energy: (lastCheckIn?.data_json as any)?.energy_level || '--',
-      stress: (lastCheckIn?.data_json as any)?.stress_level || '--',
-      mood: (lastCheckIn?.data_json as any)?.mood_score || '--',
-      motivation: (lastCheckIn?.data_json as any)?.motivation_level || '--',
-      history: (checkIns || []).map(ci => {
-        const d = (ci.data_json as any) || {};
+      energy:     lastEnergy     !== null ? lastEnergy     : '--',
+      stress:     lastStress     !== null ? lastStress     : '--',
+      mood:       lastMood       !== null ? lastMood       : '--',
+      motivation: lastMotivation !== null ? lastMotivation : '--',
+      history: allCheckInsCombined.map(ci => {
+        const d = ci.answers || {};
         return {
           date: ci.date,
-          energy: num(d.energy_level),
-          stress: num(d.stress_level),
-          mood: num(d.mood_score),
-          motivation: num(d.motivation_level)
+          energy:     pickScore(d, 'energy_level', 'energy'),
+          stress:     pickScore(d, 'stress_level', 'stress'),
+          mood:       pickScore(d, 'mood_score', 'mood'),
+          motivation: pickScore(d, 'motivation_level', 'motivation'),
         };
-      }).filter(h => h.energy || h.stress || h.mood || h.motivation)
+      }).filter(h => h.energy !== null || h.stress !== null || h.mood !== null || h.motivation !== null)
     };
 
     const cProfile: any = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
     const allergies = cProfile?.metadata?.allergies || [];
 
     res.json({
-      latestWeight: num((lastCheckIn?.data_json as any)?.weight),
+      latestWeight: num(lastAnswers?.weight) ?? num(cProfile?.weight),
       goal: cProfile?.goal || null,
       goalWeight: num(cProfile?.goal_weight),
       // The first check-in weight gives a stable "starting point" baseline.
       startWeight: weightHistory.length > 0 ? num(weightHistory[0]?.weight) : null,
-      bodyFat: num((lastCheckIn?.data_json as any)?.body_fat),
+      bodyFat: num(lastAnswers?.body_fat ?? lastAnswers?.bodyFat),
       adherenceRate: calculatedAdherenceRate,
-      activeDays: (checkIns?.length || 0),
+      trainingAdherenceRate,
+      avgSteps,
+      activeDays: allCheckInsCombined.length,
       allergies: allergies.length > 0 ? allergies : [],
       weightHistory,
       macros: {
