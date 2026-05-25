@@ -225,13 +225,11 @@ export default function ClientApp() {
       <main className="flex-1 lg:ml-64 flex flex-col h-screen overflow-hidden">
         {/* Mobile Header Toggle */}
         <div className="lg:hidden p-4 bg-white dark:bg-[#112116] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#17cf54] flex items-center justify-center text-white font-bold text-xs">
-              {user?.email?.charAt(0).toUpperCase() || 'C'}
-            </div>
-            <span className="font-bold text-slate-900 dark:text-white text-sm">Lumina</span>
-          </div>
-          <button 
+          {/* Mobile header: brand wordmark and the initial-circle were
+              removed at the client's request. Spacer keeps the menu
+              button right-aligned. */}
+          <div className="flex items-center gap-2" />
+          <button
             onClick={() => setIsSidebarOpen(true)}
             className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >

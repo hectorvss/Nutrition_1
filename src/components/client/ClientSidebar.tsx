@@ -62,10 +62,11 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
       >
         <div className="p-6 flex items-center justify-between lg:justify-start gap-3">
           <div className="flex items-center gap-3">
+            {/* Brand mark only — the "Lumina" wordmark was removed so the
+                sidebar stays neutral while the brand is still finalised. */}
             <div className="w-10 h-10 rounded-full bg-[#17cf54]/10 flex items-center justify-center text-[#17cf54]">
               <span className="material-symbols-outlined font-bold">spa</span>
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">Lumina</span>
           </div>
           <button 
             className="lg:hidden text-slate-500 hover:bg-slate-100 p-2 rounded-lg"

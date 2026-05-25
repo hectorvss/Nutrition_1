@@ -258,18 +258,8 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-1">{t(greetingKey)}, {profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0]}</h1>
           <p className="text-slate-500 dark:text-slate-400 capitalize">{formattedDate}</p>
         </div>
-        <div className="flex items-center gap-4">
-          {/* The avatar shape implied a clickable account target — make that
-              real and route to settings instead of being a dead affordance. */}
-          <button
-            type="button"
-            onClick={() => onNavigate('settings')}
-            aria-label={t('settings')}
-            className="h-10 w-10 rounded-full bg-[#17cf54]/10 border-2 border-[#17cf54]/20 flex items-center justify-center text-[#17cf54] font-bold uppercase hover:bg-[#17cf54]/20 transition-colors"
-          >
-            {(profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'C').toUpperCase()}
-          </button>
-        </div>
+        {/* The initial-circle avatar was removed at the client's request.
+            Settings is still reachable from the sidebar. */}
       </header>
 
       {/* Quick Actions */}
