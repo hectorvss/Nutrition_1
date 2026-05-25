@@ -185,16 +185,25 @@ const NutritionTab: React.FC<NutritionTabProps> = ({ stats, isLoading, t }) => {
                 </span>
               ))}
             </div>
-            {stats?.dietaryStyle?.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('dietary_style')}</p>
-                <div className="flex flex-wrap gap-2">
-                  {stats.dietaryStyle.map((style: string, idx: number) => (
-                    <span key={idx} className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{style}</span>
-                  ))}
+            {/* `dietaryStyle` can land as a string (legacy onboarding saved
+                a single_choice value directly) — defensively normalize to an
+                array. The `.length > 0` guard was passing for non-empty
+                strings and then .map() crashed the whole client app. */}
+            {(() => {
+              const raw = stats?.dietaryStyle;
+              const list: string[] = Array.isArray(raw) ? raw : (raw ? [String(raw)] : []);
+              if (!list.length) return null;
+              return (
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{t('dietary_style')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {list.map((style, idx) => (
+                      <span key={idx} className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-800/50">{style}</span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       </div>

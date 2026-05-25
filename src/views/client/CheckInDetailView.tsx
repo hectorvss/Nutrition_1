@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
+import { fetchWithAuth } from '../../api';
 import CheckInReviewRenderer from '../../components/checkin/CheckInReviewRenderer';
 
 interface CheckInDetailViewProps {
@@ -7,8 +8,28 @@ interface CheckInDetailViewProps {
   onBack: () => void;
 }
 
-export default function CheckInDetailView({ checkIn, onBack }: CheckInDetailViewProps) {
+export default function CheckInDetailView({ checkIn: initialCheckIn, onBack }: CheckInDetailViewProps) {
   const { t, language } = useLanguage();
+  // Local state so a fresh detail fetch can overwrite the stale list row.
+  // The list endpoint was the source of truth before — if the coach
+  // reviewed in another tab while the client opened the detail, the
+  // coach feedback section never appeared.
+  const [checkIn, setCheckIn] = useState<any>(initialCheckIn);
+  useEffect(() => {
+    let mounted = true;
+    if (initialCheckIn?.id) {
+      fetchWithAuth(`/check-ins/client/check-ins/${initialCheckIn.id}`)
+        .then((res: any) => {
+          if (!mounted) return;
+          // The detail endpoint returns { client, check_in } — fall back
+          // to the bare row shape if a future version drops the wrapper.
+          const fresh = res?.check_in || res;
+          if (fresh) setCheckIn((prev: any) => ({ ...prev, ...fresh }));
+        })
+        .catch((err) => console.error('check-in detail refresh failed', err));
+    }
+    return () => { mounted = false; };
+  }, [initialCheckIn?.id]);
   const dj = checkIn.data_json || {};
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 

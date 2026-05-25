@@ -50,7 +50,17 @@ export default function ClientCheckIns() {
       }
     };
     load();
-    return () => { mounted = false; };
+    // Re-fetch when the tab regains focus so that reviews the coach
+    // published while the client had the app in the background show up
+    // without a manual reload.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadCheckIns();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      mounted = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   if (isLoading) {
@@ -66,7 +76,15 @@ export default function ClientCheckIns() {
   }
 
   if (selectedCheckIn) {
-    return <CheckInDetailView checkIn={selectedCheckIn} onBack={() => setSelectedCheckIn(null)} />;
+    return (
+      <CheckInDetailView
+        checkIn={selectedCheckIn}
+        // Closing the detail view refreshes the list so the row's
+        // "pending review" / "reviewed" badge reflects whatever the
+        // coach did while the detail was open.
+        onBack={() => { setSelectedCheckIn(null); loadCheckIns(); }}
+      />
+    );
   }
 
   const locale = language === 'es' ? 'es-ES' : 'en-US';

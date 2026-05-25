@@ -164,7 +164,11 @@ router.post('/manager/templates', verifyManager, async (req: any, res) => {
   }
 });
 
-// Update a template
+// Update a template. Mirrors the check-in template PATCH: if the schema
+// actually changes, bump `version` so already-submitted onboarding
+// snapshots stay tied to their original version and new submissions land
+// on the latest one. Without the bump, a manager could edit a flow
+// destructively while a client had the popup mid-flow.
 router.patch('/manager/templates/:id', verifyManager, async (req: any, res) => {
   const managerId = req.user.id;
   const { id } = req.params;
@@ -172,9 +176,22 @@ router.patch('/manager/templates/:id', verifyManager, async (req: any, res) => {
   const patch: Record<string, any> = { updated_at: new Date().toISOString() };
   if (name !== undefined) patch.name = name;
   if (description !== undefined) patch.description = description;
-  if (template_schema !== undefined) patch.template_schema = template_schema;
   if (is_default !== undefined) patch.is_default = !!is_default;
   try {
+    if (template_schema !== undefined) {
+      const { data: existing } = await supabaseAdmin
+        .from('onboarding_templates')
+        .select('template_schema, version')
+        .eq('id', id)
+        .eq('manager_id', managerId)
+        .maybeSingle();
+      patch.template_schema = template_schema;
+      const prevJson = JSON.stringify(existing?.template_schema ?? null);
+      const nextJson = JSON.stringify(template_schema ?? null);
+      if (prevJson !== nextJson) {
+        patch.version = (Number(existing?.version) || 1) + 1;
+      }
+    }
     const { data, error } = await supabaseAdmin
       .from('onboarding_templates')
       .update(patch)
@@ -535,7 +552,12 @@ router.post('/client/submit', verifyClient, async (req: any, res) => {
         if (supplementation) newMetadata.supplementation = Array.isArray(supplementation) ? supplementation : [supplementation];
         if (targetWeight) newMetadata.target_weight = targetWeight;
         if (bodyFat) newMetadata.body_fat = bodyFat;
-        if (diet) newMetadata.dietary_style = diet;
+        // Mirror the array-coercion already applied above for allergies /
+        // supplementation. `diet` can arrive from a single_choice question
+        // (string) or a multi-select (array); store as a uniform string[]
+        // so downstream consumers (manager.ts, NutritionTab) can safely
+        // `.map()` over it without a runtime crash.
+        if (diet) newMetadata.dietary_style = Array.isArray(diet) ? diet : [diet];
         
         // Initial Measurements
         const m = {

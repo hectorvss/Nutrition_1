@@ -30,36 +30,46 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
   // Track the in-progress assignment per client id so other rows stay enabled.
   const [assigningClientId, setAssigningClientId] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadAssignments() {
-      setIsAssignmentsLoading(true);
-      try {
-        const [assignResp, subsResp] = await Promise.all([
-          fetchWithAuth('/onboarding/manager/assignments?limit=500'),
-          fetchWithAuth('/onboarding/manager/submissions?limit=200').catch(() => [])
-        ]);
-        const data = unwrapList<any>(assignResp);
-        const submissions = unwrapList<any>(subsResp);
-        const map: Record<string, string> = {};
-        data.forEach((a: any) => {
-          map[a.client_id] = a.template?.name || t('assigned');
-        });
-        setAssignments(map);
+  const loadAssignments = React.useCallback(async () => {
+    setIsAssignmentsLoading(true);
+    try {
+      const [assignResp, subsResp] = await Promise.all([
+        fetchWithAuth('/onboarding/manager/assignments?limit=500'),
+        fetchWithAuth('/onboarding/manager/submissions?limit=200').catch(() => [])
+      ]);
+      const data = unwrapList<any>(assignResp);
+      const submissions = unwrapList<any>(subsResp);
+      const map: Record<string, string> = {};
+      data.forEach((a: any) => {
+        map[a.client_id] = a.template?.name || t('assigned');
+      });
+      setAssignments(map);
 
-        const completed = new Set<string>();
-        (submissions || []).forEach((s: any) => {
-          const cid = s.client_id || s.client?.id;
-          if (cid) completed.add(cid);
-        });
-        setCompletedClientIds(completed);
-      } catch (err) {
-        console.error('Error loading onboarding assignments:', err);
-      } finally {
-        setIsAssignmentsLoading(false);
-      }
+      const completed = new Set<string>();
+      (submissions || []).forEach((s: any) => {
+        const cid = s.client_id || s.client?.id;
+        if (cid) completed.add(cid);
+      });
+      setCompletedClientIds(completed);
+    } catch (err) {
+      console.error('Error loading onboarding assignments:', err);
+    } finally {
+      setIsAssignmentsLoading(false);
     }
-    loadAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    loadAssignments();
+    // Refresh when the tab regains focus so submissions that landed
+    // while the manager was elsewhere update the row badges without a
+    // manual reload.
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadAssignments();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [loadAssignments]);
 
   const handleOpenAssign = async (e: React.MouseEvent, client: any) => {
     e.stopPropagation();
