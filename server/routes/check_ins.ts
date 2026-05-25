@@ -132,7 +132,21 @@ const FIXED_CHECKIN_QUESTIONS = [
       { id: 'motivation_level', title: 'Motivation (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
       { id: 'fatigue', title: 'Fatigue Level (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
       { id: 'sleep_hours', title: 'Avg. Sleep per Night (hours)', type: 'number', unit: 'h', required: true, is_fixed: true, locked: true },
-      { id: 'sleep_quality_score', title: 'Sleep Quality (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META }
+      { id: 'sleep_quality_score', title: 'Sleep Quality (1-10)', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META },
+      { id: 'hunger_score', title: 'Hunger Level (1-10)', subtitle: 'Average across the week', type: 'slider', required: true, is_fixed: true, locked: true, meta: SCALE_META }
+    ]
+  },
+  {
+    id: 'pain_step',
+    title: 'Pain & Injuries',
+    subtitle: 'Lock down any discomfort affecting your training',
+    meta: { icon: 'healing' },
+    locked: true,
+    questions: [
+      { id: 'pain_level', title: 'Pain Level (0 = none, 10 = severe)', type: 'slider', required: true, is_fixed: true, locked: true, meta: { min: 0, max: 10, step: 1 } },
+      { id: 'pain_area', title: 'Affected Area', type: 'single_choice', options: ['None', 'Shoulder', 'Back', 'Knee', 'Hip', 'Wrist', 'Ankle', 'Elbow', 'Neck', 'Other'], required: true, is_fixed: true, locked: true },
+      { id: 'pain_type', title: 'Pain Type', type: 'single_choice', options: ['N/A', 'Acute', 'Chronic', 'Dull', 'Sharp', 'Pulling'], required: true, is_fixed: true, locked: true },
+      { id: 'pain_impact', title: 'Impact on Training (0 = none, 10 = stopped me)', type: 'slider', required: true, is_fixed: true, locked: true, meta: { min: 0, max: 10, step: 1 } }
     ]
   },
   {
@@ -1691,7 +1705,12 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
           templateSchema: injectedSchema
         },
         answers_json: normalizedAnswers,
-        submitted_at: new Date().toISOString()
+        submitted_at: new Date().toISOString(),
+        // Persist as 'submitted' (not 'pending') so /client/profile-stats
+        // surfaces the row to the client immediately. The previous default
+        // left the row in 'pending' and the client saw zero progress on
+        // their own portal until the coach manually reviewed.
+        status: 'submitted',
       })
       .select()
       .single();
