@@ -5,6 +5,7 @@ import { unwrapList } from '../../api/unwrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Skeleton, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
+import { formatPortion } from '../../lib/portionDisplay';
 
 interface ClientDashboardProps {
   onNavigate: (view: ClientView) => void;
@@ -389,7 +390,7 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
                               <div className={`w-1.5 h-5 rounded-full ${isNext ? 'bg-[#17cf54]' : 'bg-emerald-400'}`}></div>
                               <span className="text-xs text-slate-600 dark:text-slate-300">{item.name}</span>
                             </div>
-                            <span className="text-[10px] font-bold text-slate-400">{Math.round((item.quantity || 1) * 100) / 100} {t('units')}</span>
+                            <span className="text-[10px] font-bold text-slate-400">{formatPortion(item.quantity || 1, item.servingSize)}</span>
                           </div>
                         ))}
                         {(meal.items || []).length > 3 && (

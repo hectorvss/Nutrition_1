@@ -3,6 +3,7 @@ import { fetchWithAuth } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
+import { formatPortion } from '../../lib/portionDisplay';
 
 export default function ClientNutrition() {
   const { t, language } = useLanguage();
@@ -515,11 +516,15 @@ export default function ClientNutrition() {
               iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
               items={(m.items || []).map((i: any) => {
                 const qty = i.multiplier || i.quantity || 1;
+                // Mostrar la porción en gramos reales (ej. "80 g") en lugar
+                // del multiplicador × tamaño base ("100g × 0.8"), que es
+                // confuso para el cliente.
+                const portion = formatPortion(qty, i.servingSize);
                 return {
                   name: i.name,
-                  sub: `${i.servingSize || ''} × ${qty}`.trim(),
+                  sub: portion,
                   kcal: Math.round((i.calories || 0) * qty),
-                  amount: `${Math.round(qty * 100) / 100} ${t('units')}`,
+                  amount: portion,
                 };
               })}
               servingLabel={t('serving')}

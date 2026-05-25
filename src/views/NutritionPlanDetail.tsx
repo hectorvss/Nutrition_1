@@ -36,6 +36,7 @@ import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import { matchFood } from '../lib/search';
+import { formatPortion, quantityToGrams, gramsToQuantity } from '../lib/portionDisplay';
 
 interface NutritionPlanDetailProps {
   client: any;
@@ -558,21 +559,28 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   };
 
   // ─── Quantity editing ──────────────────────────────────────────────────────
+  // El usuario edita en GRAMOS (lo natural), no en multiplicador. Internamente
+  // sigue siendo un multiplicador sobre la porción base (`servingSize`) — los
+  // cálculos de macros no cambian. Si el servingSize no es en gramos
+  // (raro: ej. "1 cup") el input cae al multiplicador como antes.
   const startEditQty = (mealId: number, item: PlannedFoodItem) => {
     setEditingItem({ mealId, itemId: item.id });
-    setEditingQty(String(item.quantity));
+    const grams = quantityToGrams(item.quantity, item.servingSize);
+    setEditingQty(grams != null ? String(grams) : String(item.quantity));
   };
 
   const commitEditQty = () => {
     if (!editingItem) return;
-    const qty = parseFloat(editingQty);
-    if (!isNaN(qty) && qty > 0) {
+    const typed = parseFloat(editingQty);
+    if (!isNaN(typed) && typed > 0) {
       setMeals(prev => prev.map(m =>
         m.id === editingItem.mealId
           ? {
               ...m,
               items: m.items.map(i =>
-                i.id === editingItem.itemId ? { ...i, quantity: qty } : i
+                i.id === editingItem.itemId
+                  ? { ...i, quantity: gramsToQuantity(typed, i.servingSize) }
+                  : i
               )
             }
           : m
@@ -1079,7 +1087,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                                     onKeyDown={e => { if (e.key === 'Enter') commitEditQty(); }}
                                     className="w-16 px-2 py-1 text-sm font-bold text-center border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                                   />
-                                  <span className="text-xs text-slate-500">×</span>
+                                  <span className="text-xs text-slate-500">g</span>
                                   <button onClick={commitEditQty} className="p-1 bg-emerald-500 text-white rounded-md">
                                     <Check className="w-3.5 h-3.5" />
                                   </button>
@@ -1089,7 +1097,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                                   onClick={() => startEditQty(meal.id, item)}
                                   className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:border-emerald-400 hover:text-emerald-600 transition-all"
                                 >
-                                  ×{item.quantity} <span className="text-[10px] text-slate-400">{item.servingSize}</span>
+                                  {formatPortion(item.quantity, item.servingSize)}
                                 </button>
                               )}
                             </div>
