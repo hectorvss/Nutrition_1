@@ -754,6 +754,7 @@ function SecuritySettings() {
   const { logout } = useAuth();
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [updating, setUpdating] = useState(false);
@@ -891,6 +892,10 @@ function SecuritySettings() {
   };
 
   const handleUpdatePassword = async () => {
+    if (!currentPassword) {
+      setError(t('current_password_required', { defaultValue: 'Introduce tu contraseña actual' }));
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError(t('passwords_dont_match', { defaultValue: 'Las contraseñas no coinciden' }));
       return;
@@ -899,14 +904,19 @@ function SecuritySettings() {
       setError(t('password_min_length', { defaultValue: 'La contraseña debe tener al menos 8 caracteres' }));
       return;
     }
+    if (currentPassword === newPassword) {
+      setError(t('password_must_differ', { defaultValue: 'La nueva contraseña debe ser distinta' }));
+      return;
+    }
     setUpdating(true);
     setError(null);
     try {
       await fetchWithAuth('/manager/update-password', {
         method: 'POST',
-        body: JSON.stringify({ newPassword })
+        body: JSON.stringify({ currentPassword, newPassword })
       });
       setSuccess(true);
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setTimeout(() => setSuccess(false), 3000);
@@ -961,6 +971,26 @@ function SecuritySettings() {
           <p className="text-sm text-slate-500 mt-1">{t('security_desc')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">{t('current_password', { defaultValue: 'Contraseña actual' })}</label>
+            <div className="relative">
+              <input
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                placeholder="••••••••"
+                type={showCurrentPass ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+              <button
+                onClick={() => setShowCurrentPass(!showCurrentPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                type="button"
+              >
+                {showCurrentPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">{t('new_password')}</label>
             <div className="relative">

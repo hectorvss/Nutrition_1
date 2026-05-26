@@ -1094,32 +1094,22 @@ router.post('/manager/clients/:id/check-ins/:checkInId/review', verifyManager, a
 
     if (legacyUpdateError) {
       // 4. If columns are missing (42703), fallback to storing in data_json
+      //    via an atomic JSONB-merge RPC. The previous SELECT → spread →
+      //    UPDATE pattern raced when two reviews landed concurrently on
+      //    the same legacy row (the second write wiped the first's keys).
       if (legacyUpdateError.code === '42703') {
-        const { data: current } = await supabaseAdmin
-          .from('check_ins')
-          .select('data_json')
-          .eq('id', checkInId)
-          .eq('client_id', id)
-          .single();
-
-        if (!current) {
+        const { data: ok, error: fallbackError } = await supabaseAdmin.rpc(
+          'merge_legacy_checkin_review',
+          {
+            p_checkin_id: checkInId,
+            p_client_id: id,
+            p_patch: { coach_notes, next_week_focus, reviewed_at: reviewedAt },
+          }
+        );
+        if (fallbackError) throw fallbackError;
+        if (!ok) {
           return res.status(404).json({ error: 'Check-in not found for this client' });
         }
-
-        const new_dj = {
-          ...(current.data_json || {}),
-          coach_notes,
-          next_week_focus,
-          reviewed_at: reviewedAt
-        };
-
-        const { error: fallbackError } = await supabaseAdmin
-          .from('check_ins')
-          .update({ data_json: new_dj })
-          .eq('id', checkInId)
-          .eq('client_id', id);
-        
-        if (fallbackError) throw fallbackError;
         return res.json({ success: true, method: 'data_json' });
       }
       throw legacyUpdateError;
@@ -1733,87 +1723,73 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
     if (error) throw error;
 
     // --- Sync Fixed Questions to Profile ---
+    // Atomic merge via apply_checkin_profile_sync RPC. The previous
+    // SELECT metadata → spread → UPDATE pattern raced when two submits
+    // landed concurrently: each read the same baseline and the second
+    // write silently overwrote the first one's keys.
     try {
       const answers = normalizedAnswers as Record<string, any>;
-      const updates: Record<string, any> = {};
-      
-      // Look for weight & macros
-      const weight = answers.weight || answers.Weight || answers['Current Weight'];
-      if (weight) updates.weight = Number(weight) || 0;
-      // Body fat is a canonical KPI. `clients_profiles` has no dedicated
-      // column for it, so persist into metadata.body_fat — the manager
-      // and client aggregators already fall back to the latest check-in
-      // answer when the metadata value is missing.
-      const bodyFatRaw = answers.body_fat ?? answers.bodyFat ?? answers['Body Fat %'];
-      const bodyFatNum = (() => {
-        if (bodyFatRaw === undefined || bodyFatRaw === null || bodyFatRaw === '') return null;
-        const bf = Number(bodyFatRaw);
-        return Number.isFinite(bf) && bf >= 0 && bf <= 80 ? bf : null;
-      })();
 
-      // Extract Measurements (cm). Chest was missing before — added so the
-      // canonical FIXED measurement_group lands in profile metadata in
-      // full.
-      const measurements = {
-        weight: answers.weight || answers.Weight,
-        waist: answers.waist || answers.Waist || answers['Waist (cm)'],
-        hip: answers.hip || answers.Hip || answers['Hip (cm)'],
-        chest: answers.chest || answers.Chest || answers['Chest (cm)'],
-        thigh_r: answers.thigh_r || answers.Thigh || answers['Right Thigh (cm)'],
-        arm_r: answers.arm_r || answers.Arm || answers['Right Arm (cm)']
-      };
-      
-      const macros = {
-        protein: answers.protein || answers.Protein,
-        carbs: answers.carbs || answers.Carbs,
-        fats: answers.fats || answers.Fats,
-        calories: answers.calories || answers.Calories,
-        adherence_score: (answers.nutrition_adherence_score !== undefined || answers.adherence_score !== undefined)
-          ? Number(answers.nutrition_adherence_score ?? answers.adherence_score) * 10 
-          : (answers['Plan Adherence'] || 0),
-        fatigue: answers.fatigue || answers.Fatigue
+      const clampNum = (v: any, lo: number, hi: number): number | null => {
+        if (v === undefined || v === null || v === '') return null;
+        const n = Number(v);
+        return Number.isFinite(n) && n >= lo && n <= hi ? n : null;
       };
 
-      const hasMeasurements = Object.values(measurements).some(v => v !== undefined && v !== null);
-      
-      if (hasMeasurements) {
-          // Get current metadata
-          const { data: profile } = await supabaseAdmin
-            .from('clients_profiles')
-            .select('metadata')
-            .eq('user_id', clientId)
-            .single();
-          
-          const currentMetadata = (profile as Record<string, any> | null)?.metadata || {};
-          const prevMeasurements = currentMetadata.measurements || {};
+      const weightNum = clampNum(
+        answers.weight ?? answers.Weight ?? answers['Current Weight'],
+        20, 400
+      );
+      const bodyFatNum = clampNum(
+        answers.body_fat ?? answers.bodyFat ?? answers['Body Fat %'],
+        0, 80
+      );
 
-          // Update profile
-          await supabaseAdmin
-            .from('clients_profiles')
-            .update({
-               ...updates,
-               metadata: {
-                 ...currentMetadata,
-                 measurements: { ...prevMeasurements, ...measurements },
-                 macros: { ...(currentMetadata.macros || {}), ...macros },
-                 ...(bodyFatNum !== null ? { body_fat: bodyFatNum } : {}),
-               }
-            })
-            .eq('user_id', clientId);
-      } else if (Object.keys(updates).length > 0 || bodyFatNum !== null) {
-        const { data: profileRow } = await supabaseAdmin
-          .from('clients_profiles')
-          .select('metadata')
-          .eq('user_id', clientId)
-          .maybeSingle();
-        const meta = (profileRow as any)?.metadata || {};
-        await supabaseAdmin
-          .from('clients_profiles')
-          .update({
-            ...updates,
-            ...(bodyFatNum !== null ? { metadata: { ...meta, body_fat: bodyFatNum } } : {}),
-          })
-          .eq('user_id', clientId);
+      const measurementsRaw: Record<string, any> = {
+        weight: weightNum,
+        waist:   clampNum(answers.waist   ?? answers.Waist   ?? answers['Waist (cm)'],        20, 300),
+        hip:     clampNum(answers.hip     ?? answers.Hip     ?? answers['Hip (cm)'],          20, 300),
+        chest:   clampNum(answers.chest   ?? answers.Chest   ?? answers['Chest (cm)'],        20, 300),
+        thigh_r: clampNum(answers.thigh_r ?? answers.Thigh   ?? answers['Right Thigh (cm)'],  10, 200),
+        arm_r:   clampNum(answers.arm_r   ?? answers.Arm     ?? answers['Right Arm (cm)'],    10, 200),
+      };
+      // Strip nulls so we only patch what the client actually answered.
+      const measurements: Record<string, number> = Object.fromEntries(
+        Object.entries(measurementsRaw).filter(([, v]) => v !== null)
+      ) as Record<string, number>;
+
+      const macrosRaw: Record<string, any> = {
+        protein:  clampNum(answers.protein  ?? answers.Protein,  0, 1000),
+        carbs:    clampNum(answers.carbs    ?? answers.Carbs,    0, 2000),
+        fats:     clampNum(answers.fats     ?? answers.Fats,     0, 1000),
+        calories: clampNum(answers.calories ?? answers.Calories, 0, 10000),
+        adherence_score: (() => {
+          if (answers.nutrition_adherence_score !== undefined || answers.adherence_score !== undefined) {
+            const raw = Number(answers.nutrition_adherence_score ?? answers.adherence_score);
+            if (Number.isFinite(raw)) return Math.min(100, Math.max(0, Math.round(raw * 10)));
+          }
+          return clampNum(answers['Plan Adherence'], 0, 100);
+        })(),
+        fatigue:  clampNum(answers.fatigue  ?? answers.Fatigue,  1, 10),
+      };
+      const macros: Record<string, number> = Object.fromEntries(
+        Object.entries(macrosRaw).filter(([, v]) => v !== null)
+      ) as Record<string, number>;
+
+      const hasAnything = weightNum !== null
+        || bodyFatNum !== null
+        || Object.keys(measurements).length > 0
+        || Object.keys(macros).length > 0;
+
+      if (hasAnything) {
+        const { error: syncRpcErr } = await supabaseAdmin.rpc('apply_checkin_profile_sync', {
+          p_user_id: clientId,
+          p_weight: weightNum,
+          p_measurements: Object.keys(measurements).length ? measurements : null,
+          p_macros: Object.keys(macros).length ? macros : null,
+          p_body_fat: bodyFatNum,
+        });
+        if (syncRpcErr) throw syncRpcErr;
       }
     } catch (syncErr) {
       console.error('Error syncing check-in data to profile:', syncErr);

@@ -1,10 +1,13 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, Suspense } from 'react';
 import OnboardingList from './OnboardingList';
 import OnboardingHistory from './OnboardingHistory';
 import OnboardingReview from './OnboardingReview';
 import OnboardingTemplates from './OnboardingTemplates';
-// Editor visual de flujos de onboarding — pesado, lazy.
-const OnboardingFlowEditor = lazy(() => import('./OnboardingFlowEditor'));
+import { lazyWithRetry } from '../lazyWithRetry';
+// Editor visual de flujos de onboarding — pesado, lazy. lazyWithRetry
+// re-intenta tras un deploy que renombra los chunks, en vez de
+// crashear con ChunkLoadError en pestañas abiertas.
+const OnboardingFlowEditor = lazyWithRetry(() => import('./OnboardingFlowEditor'));
 import { useLanguage } from '../context/LanguageContext';
 
 export type OnboardingViewMode = 'list' | 'history' | 'review' | 'templates' | 'editor';

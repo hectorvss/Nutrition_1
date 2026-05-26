@@ -29,6 +29,7 @@ router.get('/profile', async (req: any, res) => {
         id,
         email,
         manager_id,
+        profiles (full_name, phone_number),
         clients_profiles (weight, goal, gender, age, metadata)
       `)
       .eq('id', req.user.id)
@@ -37,11 +38,17 @@ router.get('/profile', async (req: any, res) => {
     if (error || !profile) return res.status(404).json({ error: 'Not found' });
 
     const cp: any = profile.clients_profiles?.[0] || {};
+    const pr: any = (profile as any).profiles?.[0] || (profile as any).profiles || {};
     // `manager_id` is exposed so the client portal can scope follow-up
     // requests (e.g. fetching the coach's messages and onboarding flows) to
     // its own coach. The reverse field `clients_profiles.notes` is the
     // coach's private note about the client and intentionally stays out of
     // this response.
+    //
+    // Phone/name canonical source = `profiles.*` (same column the manager
+    // edits via PATCH /clients/:id). Fallback to legacy
+    // `clients_profiles.metadata.{full_name,phone}` so accounts that only
+    // ever wrote from the client side still render.
     const formattedProfile = {
       id: profile.id,
       email: profile.email,
@@ -50,8 +57,8 @@ router.get('/profile', async (req: any, res) => {
       goal: cp.goal || null,
       gender: cp.gender || null,
       age: cp.age || null,
-      full_name: cp.metadata?.full_name || null,
-      phone: cp.metadata?.phone || null,
+      full_name: pr.full_name || cp.metadata?.full_name || null,
+      phone: pr.phone_number || cp.metadata?.phone || null,
     };
 
     res.json(formattedProfile);
@@ -68,17 +75,21 @@ router.patch('/profile', async (req: any, res) => {
   try {
     const { full_name, phone, gender, age, goal } = req.body || {};
 
-    // metadata es JSONB: merge para no pisar otras claves ya guardadas.
-    const { data: existing } = await supabaseAdmin
-      .from('clients_profiles')
-      .select('metadata')
-      .eq('user_id', id)
-      .maybeSingle();
-    const metadata: Record<string, any> = { ...(existing?.metadata || {}) };
-    if (typeof full_name === 'string') metadata.full_name = full_name.trim().slice(0, 120);
-    if (typeof phone === 'string') metadata.phone = phone.trim().slice(0, 40);
+    // `full_name` / `phone` are canonical in `profiles.*` (same column
+    // the manager writes via PATCH /clients/:id). Mirror them there so
+    // the manager-side view stays in sync; legacy `metadata.{full_name,phone}`
+    // writes are gone — both sides converge on a single source.
+    const profilePatch: Record<string, any> = {};
+    if (typeof full_name === 'string') profilePatch.full_name = full_name.trim().slice(0, 120);
+    if (typeof phone === 'string') profilePatch.phone_number = phone.trim().slice(0, 40) || null;
+    if (Object.keys(profilePatch).length > 0) {
+      const { error: pErr } = await supabaseAdmin
+        .from('profiles')
+        .upsert({ user_id: id, ...profilePatch }, { onConflict: 'user_id' });
+      if (pErr) throw pErr;
+    }
 
-    const update: Record<string, any> = { metadata, updated_at: new Date().toISOString() };
+    const update: Record<string, any> = { updated_at: new Date().toISOString() };
     if (typeof gender === 'string') update.gender = gender.trim().slice(0, 40) || null;
     if (typeof goal === 'string') update.goal = goal.trim().slice(0, 200) || null;
     if (age !== undefined && age !== null && age !== '') {
@@ -86,11 +97,13 @@ router.patch('/profile', async (req: any, res) => {
       update.age = Number.isFinite(n) && n > 0 && n < 130 ? Math.round(n) : null;
     }
 
-    const { error } = await supabaseAdmin
-      .from('clients_profiles')
-      .update(update)
-      .eq('user_id', id);
-    if (error) throw error;
+    if (Object.keys(update).length > 1) { // more than just updated_at
+      const { error } = await supabaseAdmin
+        .from('clients_profiles')
+        .update(update)
+        .eq('user_id', id);
+      if (error) throw error;
+    }
 
     // Return the freshly merged profile in the SAME shape `GET /profile`
     // emits so the frontend can drop the response straight into its state
@@ -101,11 +114,13 @@ router.patch('/profile', async (req: any, res) => {
         id,
         email,
         manager_id,
+        profiles (full_name, phone_number),
         clients_profiles (weight, goal, gender, age, metadata)
       `)
       .eq('id', id)
       .single();
     const cp: any = row?.clients_profiles?.[0] || {};
+    const pr: any = (row as any)?.profiles?.[0] || (row as any)?.profiles || {};
     res.json({
       id: row?.id,
       email: row?.email,
@@ -114,8 +129,8 @@ router.patch('/profile', async (req: any, res) => {
       goal: cp.goal ?? null,
       gender: cp.gender ?? null,
       age: cp.age ?? null,
-      full_name: cp.metadata?.full_name ?? null,
-      phone: cp.metadata?.phone ?? null,
+      full_name: pr.full_name ?? cp.metadata?.full_name ?? null,
+      phone: pr.phone_number ?? cp.metadata?.phone ?? null,
     });
   } catch (error) {
     console.error('Error updating client profile:', error);

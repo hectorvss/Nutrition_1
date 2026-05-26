@@ -54,6 +54,20 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
     if (user?.id) localStorage.setItem(`workout_session_starts_${user.id}`, JSON.stringify(sessionStarts));
   }, [sessionStarts, user?.id]);
 
+  // Rehydrate when `user.id` arrives late (AuthContext resolves async).
+  // The lazy `useState` only ran on the first render; if `user` was still
+  // null then, the timer state stayed empty and an in-progress workout
+  // appeared to "lose" its start time after a page refresh.
+  useEffect(() => {
+    if (!user?.id) return;
+    try {
+      const saved = localStorage.getItem(`workout_session_starts_${user.id}`);
+      if (saved) setSessionStarts(JSON.parse(saved));
+    } catch (e) {
+      console.error('Error loading session starts:', e);
+    }
+  }, [user?.id]);
+
   // Tick una vez por segundo para que el contador del entrenamiento se vea en
   // vivo cuando hay una sesión iniciada. Si no hay sesión activa, no hace
   // nada.

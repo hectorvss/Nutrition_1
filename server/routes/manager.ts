@@ -652,7 +652,21 @@ router.patch('/clients/:id', async (req: any, res) => {
     if (gender !== undefined || age !== undefined || goal !== undefined) {
       const cpPatch: any = {};
       if (gender !== undefined) cpPatch.gender = gender || null;
-      if (age !== undefined) cpPatch.age = (age === '' || age === null) ? null : Number(age);
+      if (age !== undefined) {
+        // Validate age before sending to Postgres. The old `Number(age)`
+        // turned "abc" into NaN, which Postgres rejected and broke the
+        // whole upsert (the rest of the patch was lost). Return 400 for
+        // bad input, persist null for explicit clears.
+        if (age === '' || age === null) {
+          cpPatch.age = null;
+        } else {
+          const n = Number(age);
+          if (!Number.isFinite(n) || n <= 0 || n > 130) {
+            return res.status(400).json({ error: 'Invalid age (must be between 1 and 130).' });
+          }
+          cpPatch.age = Math.round(n);
+        }
+      }
       if (goal !== undefined) cpPatch.goal = goal || null;
       const { error: cpErr } = await supabaseAdmin
         .from('clients_profiles')
@@ -803,6 +817,10 @@ router.delete('/clients/:id', async (req: any, res) => {
   const managerId = req.user.id;
 
   try {
+    if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid client id format' });
+    }
+
     // Verify the client belongs to this manager before deleting
     const { data: clientData, error: fetchError } = await supabaseAdmin
       .from('users')
@@ -816,26 +834,26 @@ router.delete('/clients/:id', async (req: any, res) => {
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
 
-    // Delete dependent rows that do NOT cascade on user deletion.
-    // (check_ins, messages, nutrition_plans, training_programs, workout_logs,
-    //  clients_profiles, profiles, integrations cascade automatically; these don't.)
-    await supabaseAdmin.from('client_checkin_submissions').delete().eq('client_id', id);
-    await supabaseAdmin.from('client_checkin_assignments').delete().eq('client_id', id);
-    await supabaseAdmin.from('client_onboarding_submissions').delete().eq('client_id', id);
-    await supabaseAdmin.from('client_onboarding_assignments').delete().eq('client_id', id);
+    // Atomic cascade. The previous flow issued 5 sequential deletes; a
+    // network blip between two of them left the client in a half-deleted
+    // state (submissions gone but user row still present, etc.).
+    // `delete_client_cascade` wraps the non-cascading rows + the user
+    // row in a single tx with FOR UPDATE on the ownership check.
+    const { data: deletedId, error: cascadeErr } = await supabaseAdmin.rpc('delete_client_cascade', {
+      p_client_id: id,
+      p_manager_id: managerId,
+    });
+    if (cascadeErr) throw cascadeErr;
+    if (!deletedId) {
+      return res.status(404).json({ error: 'Client not found or access denied' });
+    }
 
-    // Delete client profile (defensive — also cascades)
-    await supabaseAdmin.from('clients_profiles').delete().eq('user_id', id);
-
-    // Remove the user record (cascades check_ins, messages, plans, etc.)
-    const { error: userDeleteError } = await supabaseAdmin.from('users').delete().eq('id', id);
-    if (userDeleteError) throw userDeleteError;
-
-    // Delete from Supabase Auth (removes authentication access)
+    // Delete from Supabase Auth (removes authentication access).
+    // Non-fatal: the DB rows are already gone; if this fails the auth
+    // record is orphaned but cannot log in (no users row → middleware 404).
     const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
     if (authDeleteError) {
       console.error('Error deleting client from auth:', authDeleteError);
-      // Non-fatal: user record is already removed from our DB
     }
 
     res.json({ success: true });
@@ -920,6 +938,16 @@ router.get('/clients/:id/training-program', async (req: any, res) => {
   const { id } = req.params;
   const managerId = req.user.id;
   try {
+    if (!UUID_RE.test(id)) {
+      return res.status(400).json({ error: 'Invalid client id format' });
+    }
+    // Defense-in-depth ownership check, mirroring the nutrition-plan GET.
+    // The `created_by` filter below already blocks cross-manager reads,
+    // but a 403 is clearer than an ambiguous `null` for non-owned clients.
+    const { data: clientOwner } = await supabaseAdmin
+      .from('users').select('id').eq('id', id).eq('manager_id', managerId).maybeSingle();
+    if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
+
     const { data: program, error } = await supabaseAdmin
       .from('training_programs')
       .select('*')
@@ -2110,18 +2138,54 @@ router.post('/supplements', async (req: any, res) => {
 });
 
 // Update manager password
+// Requires re-authentication with `currentPassword` to prevent silent
+// account-takeover via stolen access tokens. Anyone holding a valid
+// session was previously able to rotate the password without knowing
+// the existing one, locking the legitimate user out.
 router.post('/update-password', async (req: any, res) => {
   try {
-    const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 8) {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || typeof currentPassword !== 'string') {
+      return res.status(400).json({ error: 'Current password is required.' });
+    }
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
     }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ error: 'New password must be different.' });
+    }
 
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+    // Resolve the caller's email so we can verify the current password.
+    const { data: userInfo, error: getUserErr } = await supabaseAdmin.auth.admin.getUserById(req.user.id);
+    const email = userInfo?.user?.email;
+    if (getUserErr || !email) {
+      return res.status(500).json({ error: 'Could not load account.' });
+    }
+
+    // Verify currentPassword via the anon client. A failure here means
+    // the caller can't prove ownership of the account even though their
+    // access token is valid — we refuse the rotation and log it.
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: currentPassword,
+    });
+    if (signInErr) {
+      try {
+        await supabaseAdmin.from('login_history').insert({
+          user_id: req.user.id,
+          event: 'Password change attempt',
+          status: 'Failed: bad current password',
+          device: req.headers['user-agent'],
+          ip_address: req.ip,
+        });
+      } catch { /* logging is best-effort */ }
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(
       req.user.id,
       { password: newPassword }
     );
-
     if (error) throw error;
 
     // Log the event
@@ -4368,21 +4432,52 @@ router.post('/clients/:id/workout-logs', async (req: any, res) => {
   const clientId = req.params.id;
   const managerId = req.user.id;
   try {
+    if (!UUID_RE.test(clientId)) {
+      return res.status(400).json({ error: 'Invalid client id format' });
+    }
     const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', clientId).eq('manager_id', managerId).maybeSingle();
     if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
 
     const { plan_id, workout_name, day_key, exercises, notes, session_rpe, logged_at } = req.body;
+    // Apply the same validations the client portal uses so a manager
+    // payload can't bypass DoS / type guards.
+    const safeExercises = Array.isArray(exercises) ? exercises.slice(0, 100) : [];
+    const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const safeDayKey = (typeof day_key === 'string' && VALID_DAYS.includes(day_key.toLowerCase()))
+      ? day_key.toLowerCase()
+      : null;
+    const rpeNum = Number(session_rpe);
+    const safeRpe = (Number.isFinite(rpeNum) && rpeNum >= 1 && rpeNum <= 10) ? rpeNum : null;
+    let safeLoggedAt = new Date().toISOString();
+    if (typeof logged_at === 'string') {
+      const d = new Date(logged_at);
+      // Accept past timestamps (manager can backfill) but reject far-future.
+      if (!Number.isNaN(d.getTime()) && d.getTime() < Date.now() + 60_000) {
+        safeLoggedAt = d.toISOString();
+      }
+    }
+    if (plan_id) {
+      const { data: planRow } = await supabaseAdmin
+        .from('training_programs')
+        .select('id')
+        .eq('id', plan_id)
+        .eq('client_id', clientId)
+        .maybeSingle();
+      if (!planRow) {
+        return res.status(403).json({ error: 'Forbidden: plan does not belong to this client' });
+      }
+    }
     const { data, error } = await supabaseAdmin
       .from('workout_logs')
       .insert({
         client_id: clientId,
         plan_id: plan_id || null,
-        workout_name: workout_name || 'Workout Session',
-        day_key: day_key || null,
-        exercises: exercises || [],
-        notes: notes || null,
-        session_rpe: session_rpe || null,
-        logged_at: logged_at || new Date().toISOString()
+        workout_name: typeof workout_name === 'string' ? workout_name.slice(0, 200) : 'Workout Session',
+        day_key: safeDayKey,
+        exercises: safeExercises,
+        notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
+        session_rpe: safeRpe,
+        logged_at: safeLoggedAt,
       })
       .select()
       .single();
@@ -4405,17 +4500,32 @@ router.patch('/clients/:id/workout-logs/:logId', async (req: any, res) => {
   const { id: clientId, logId } = req.params;
   const managerId = req.user.id;
   try {
+    if (!UUID_RE.test(clientId) || !UUID_RE.test(logId)) {
+      return res.status(400).json({ error: 'Invalid id format' });
+    }
     const { data: clientOwner } = await supabaseAdmin.from('users').select('id').eq('id', clientId).eq('manager_id', managerId).maybeSingle();
     if (!clientOwner) return res.status(403).json({ error: 'Forbidden: client does not belong to this manager' });
 
     const { exercises, notes, session_rpe } = req.body;
+    // Apply the same partial-update validation the client-side PATCH uses
+    // so an arbitrary RPE string can't land in the DB.
+    const updates: any = {};
+    if (exercises !== undefined) {
+      updates.exercises = Array.isArray(exercises) ? exercises.slice(0, 100) : [];
+    }
+    if (notes !== undefined) {
+      updates.notes = typeof notes === 'string' ? notes.slice(0, 2000) : null;
+    }
+    if (session_rpe !== undefined) {
+      const rpeNum = Number(session_rpe);
+      updates.session_rpe = (Number.isFinite(rpeNum) && rpeNum >= 1 && rpeNum <= 10) ? rpeNum : null;
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'Nothing to update' });
+    }
     const { data, error } = await supabaseAdmin
       .from('workout_logs')
-      .update({
-        exercises: exercises || [],
-        notes: notes || null,
-        session_rpe: session_rpe || null
-      })
+      .update(updates)
       .eq('id', logId)
       .eq('client_id', clientId)
       .select()
