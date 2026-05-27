@@ -185,6 +185,9 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               transition={{ delay: 0.6, duration: 0.8 }}
               className="mt-20 max-w-5xl mx-auto relative px-4"
             >
+              {/* Mockup del hero — captura real del dashboard del manager.
+                  Generada con scripts/capture-landing-screenshots.mjs. Si
+                  hay que regenerar, basta con re-correr ese script. */}
               <div className="bg-white/80 backdrop-blur-xl rounded-[32px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border border-white/20 w-full aspect-video overflow-hidden flex flex-col">
                 <div className="bg-white/50 border-b border-gray-100/20 px-6 py-4 flex items-center gap-2">
                   <div className="flex gap-2">
@@ -194,13 +197,16 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                   </div>
                   <div className="mx-auto bg-gray-100/50 rounded-xl px-4 py-1.5 text-xs text-gray-400 font-medium flex items-center gap-2 w-1/3">
                     <Search className="w-3 h-3" />
-                    nutrifit.pro/app
+                    nutrifit.pro/dashboard
                   </div>
                 </div>
-                <div className="flex-1 flex items-center justify-center bg-gray-50/10">
-                  <div className="w-20 h-20 bg-black/5 rounded-full flex items-center justify-center">
-                    <Play className="w-8 h-8 text-black/10" />
-                  </div>
+                <div className="flex-1 relative overflow-hidden bg-gray-50/10">
+                  <img
+                    src="/landing/feature-dashboard.png"
+                    alt="Dashboard del manager: tareas pendientes, clientes activos y actualizaciones del día"
+                    className="absolute inset-0 w-full h-full object-cover object-top"
+                    loading="eager"
+                  />
                 </div>
               </div>
             </motion.div>      
@@ -245,7 +251,9 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_client_management_highlight')}
               description={t('landing_client_management_description')}
               gradientClass="gradient-bg-writing"
-              url="nutrifit.pro/dashboard"
+              url="nutrifit.pro/clients"
+              imageSrc="/landing/feature-clients.png"
+              imageAlt="Lista de clientes del manager con plan, adherencia y próxima cita"
             />
 
             <FeatureSequenceSection
@@ -254,7 +262,9 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_nutrition_planning_highlight')}
               description={t('landing_nutrition_planning_description')}
               gradientClass="gradient-bg-learning"
-              url="nutrifit.pro/plans"
+              url="nutrifit.pro/nutrition"
+              imageSrc="/landing/feature-nutrition.png"
+              imageAlt="Planes de nutrición por cliente con objetivo, macros y kcal"
               reverse
             />
 
@@ -264,7 +274,9 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_progress_tracking_highlight')}
               description={t('landing_progress_tracking_description')}
               gradientClass="gradient-bg-planning"
-              url="nutrifit.pro/tracking"
+              url="nutrifit.pro/check-ins"
+              imageSrc="/landing/feature-checkins.png"
+              imageAlt="Panel de check-ins semanales con adherencia y peso por cliente"
             />
 
             <FeatureSequenceSection
@@ -273,7 +285,9 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_proactive_followup_highlight')}
               description={t('landing_proactive_followup_description')}
               gradientClass="gradient-bg-shopping"
-              url="nutrifit.pro/alerts"
+              url="nutrifit.pro/automations"
+              imageSrc="/landing/feature-automations.png"
+              imageAlt="Workflows de automatización: renovación de plan, check-in semanal, alertas de churn"
               reverse
             />
 
