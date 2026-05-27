@@ -356,8 +356,6 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
         </motion.div>
       </div>
 
-      {/* Spectrum at very bottom */}
-      <div className="absolute bottom-0 left-0 w-full h-40 spectrum-footer blur-3xl opacity-20 pointer-events-none" />
     </div>
   );
 }

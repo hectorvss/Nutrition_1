@@ -274,15 +274,15 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
         </p>
         <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-5 leading-tight">
           {isEs ? (
-            <>Pensada para coaches <br className="hidden md:block" /> que trabajan solos.</>
+            <>Más clientes, mejores resultados, <br className="hidden md:block" /> las mismas horas.</>
           ) : (
-            <>Built for coaches <br className="hidden md:block" /> who work alone.</>
+            <>More clients, better results, <br className="hidden md:block" /> same hours.</>
           )}
         </h1>
         <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-6">
           {isEs
-            ? 'Un sistema, no una hoja de cálculo. Sin equipos, sin gimnasios, sin clínica regulada.'
-            : 'A system, not a spreadsheet. No teams, no gyms, no regulated clinical practice.'}
+            ? 'El sistema que convierte tu coaching en un servicio profesional, sin dejar a nadie atrás.'
+            : 'The system that turns your coaching into a professional service, without leaving anyone behind.'}
         </p>
 
         {/* Chips de scope — version compacta del disclaimer largo */}
@@ -324,7 +324,7 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
               return (
                 <div key={idx} className={`grid grid-cols-12 text-sm ${idx > 0 ? 'border-t border-gray-100' : ''}`}>
                   <div className="col-span-3 md:col-span-2 px-5 py-4 font-medium text-gray-900">{r.time}</div>
-                  <div className="col-span-9 md:col-span-5 px-5 py-4 text-gray-500 line-through decoration-gray-300">{r.a}</div>
+                  <div className="col-span-9 md:col-span-5 px-5 py-4 text-gray-400">{r.a}</div>
                   <div className="col-span-12 md:col-span-5 px-5 pb-4 md:pt-4 md:pb-4 text-gray-800 md:border-l border-gray-100">{r.b}</div>
                 </div>
               );
@@ -340,67 +340,63 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
           {isEs ? 'Siete fricciones diarias, resueltas.' : 'Seven daily frictions, solved.'}
         </h2>
 
-        {/* Tarjetas problema — 1 por fila a ancho completo. Mas
-            respiro, texto mas grande, "Antes" en gris (sin tachado). */}
-        <div className="space-y-6 text-left">
+        {/* 7 fricciones — mismo lenguaje visual que la tabla "antes y
+            después". Una sola tabla con 7 filas, columnas Fricción /
+            Sin NutriFit / Con NutriFit. Sin tachado, sin "En el producto".
+            "Sin NutriFit" en gris claro, "Con NutriFit" en negro con check. */}
+        <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden text-left">
+          <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 bg-gray-50/50 border-b border-gray-100">
+            <div className="col-span-12 md:col-span-3 px-6 py-4">
+              {isEs ? 'Fricción' : 'Friction'}
+            </div>
+            <div className="col-span-6 md:col-span-4 px-6 py-4 flex items-center gap-2">
+              <XCircle className="w-3.5 h-3.5 text-gray-300" />
+              {isEs ? 'Sin NutriFit' : 'Without NutriFit'}
+            </div>
+            <div className="col-span-6 md:col-span-5 px-6 py-4 flex items-center gap-2 border-l border-gray-100">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              {isEs ? 'Con NutriFit' : 'With NutriFit'}
+            </div>
+          </div>
           {problems.map(({ Icon, es, en }, i) => {
             const p = isEs ? es : en;
             return (
               <div
                 key={i}
-                className="bg-white border border-gray-100 rounded-3xl p-8 md:p-10 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10 items-start"
+                className={`grid grid-cols-12 ${i > 0 ? 'border-t border-gray-100' : ''}`}
               >
-                {/* Columna izquierda: numero + icono + titulo */}
-                <div className="md:col-span-3 flex md:block items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-black/5 flex items-center justify-center shrink-0 md:mb-5">
-                    <Icon className="w-6 h-6 text-black" />
+                {/* Columna 1: icono + título de la fricción */}
+                <div className="col-span-12 md:col-span-3 px-6 py-6 flex items-center gap-3 md:border-r border-gray-100">
+                  <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5 text-black" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-1">
-                      {`0${i + 1}`}
-                    </p>
-                    <h3 className="text-xl md:text-2xl font-medium tracking-tight leading-snug">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-0.5">{`0${i + 1}`}</p>
+                    <h3 className="text-base md:text-lg font-medium tracking-tight leading-snug">
                       {p.title}
                     </h3>
                   </div>
                 </div>
 
-                {/* Centro: Antes (texto gris, sin tachado) */}
-                <div className="md:col-span-4">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4 flex items-center gap-1.5">
-                    <XCircle className="w-3 h-3 text-gray-300" />
-                    {isEs ? 'Antes' : 'Before'}
-                  </p>
-                  <ul className="space-y-3">
+                {/* Columna 2: Antes (gris claro, sin tachado) */}
+                <div className="col-span-12 md:col-span-4 px-6 py-6 text-[14px] text-gray-400">
+                  <ul className="space-y-1.5">
                     {p.before.map((b, j) => (
-                      <li key={j} className="text-[15px] text-gray-400 leading-relaxed flex items-start gap-2.5">
-                        <span className="text-gray-300 mt-1.5 shrink-0">·</span>
-                        <span>{b}</span>
-                      </li>
+                      <li key={j}>{b}</li>
                     ))}
                   </ul>
                 </div>
 
-                {/* Derecha: Con NutriFit (checks verdes) */}
-                <div className="md:col-span-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 mb-4 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    {isEs ? 'Con NutriFit' : 'With NutriFit'}
-                  </p>
-                  <ul className="space-y-3">
+                {/* Columna 3: Con NutriFit (texto en negro, sin "En el producto") */}
+                <div className="col-span-12 md:col-span-5 px-6 py-6 text-[14px] text-gray-900 md:border-l border-gray-100">
+                  <ul className="space-y-1.5">
                     {p.after.map((a, j) => (
-                      <li key={j} className="text-[15px] text-gray-900 leading-relaxed flex items-start gap-2.5">
+                      <li key={j} className="flex items-start gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                         <span>{a}</span>
                       </li>
                     ))}
                   </ul>
-                  <p className="text-[12px] text-gray-400 leading-relaxed border-t border-gray-100 pt-4 mt-5">
-                    <span className="font-bold uppercase tracking-widest text-gray-400 mr-2">
-                      {isEs ? 'En el producto' : 'In the product'}
-                    </span>
-                    {p.proof}
-                  </p>
                 </div>
               </div>
             );

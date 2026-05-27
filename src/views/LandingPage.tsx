@@ -59,11 +59,22 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
     });
   };
 
-  // Fondo en gradiente suave (modo de prueba): va de un toque índigo
-  // arriba-izquierda al blanco central y a rosa abajo-derecha. Los
-  // componentes con `bg-white` siguen destacando por contraste.
+  // Fondo en gradiente vertical: BLANCO arriba → ROSA abajo. La
+  // transicion es uniforme y notoria a lo largo de toda la pagina, sin
+  // bandas blancas intermedias ni espectros multicolor. Mismo tratamiento
+  // para home y subpaginas (Features, Soluciones, etc.) porque el `div`
+  // es el wrapper de todo el componente LandingPage.
   return (
-    <div className="bg-gradient-to-br from-indigo-50 via-white to-rose-50 min-h-screen font-sans text-black">
+    <div
+      className="min-h-screen font-sans text-black"
+      style={{
+        // Gradiente vertical, blanco arriba → coral-naranja abajo, con
+        // paso intermedio por rose/pink para que la transicion sea
+        // notoria pero armonica. Sin bandas blancas ni rainbow.
+        background:
+          'linear-gradient(180deg, #ffffff 0%, #fff1f2 25%, #fbcfe8 55%, #fed7aa 85%, #fdba74 100%)',
+      }}
+    >
       {/* Floating Navigation Header */}
       <div className="fixed top-8 left-0 w-full px-8 flex justify-between items-center z-50 pointer-events-none">
         <div className="flex items-center pointer-events-auto">
@@ -200,11 +211,11 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                     nutrifit.pro/dashboard
                   </div>
                 </div>
-                <div className="flex-1 relative overflow-hidden bg-gray-50/10">
+                <div className="flex-1 relative overflow-hidden bg-white">
                   <img
                     src="/landing/feature-dashboard.png"
                     alt="Dashboard del manager: tareas pendientes, clientes activos y actualizaciones del día"
-                    className="absolute inset-0 w-full h-full object-cover object-top"
+                    className="absolute inset-0 w-full h-full object-contain object-top"
                     loading="eager"
                   />
                 </div>
@@ -496,12 +507,12 @@ function FeatureSequenceSection({
                   {url}
                 </div>
               </div>
-              <div className="flex-1 flex items-center justify-center bg-gray-50/10 relative">
+              <div className="flex-1 flex items-center justify-center bg-white relative">
                 {imageSrc ? (
                   <img
                     src={imageSrc}
                     alt={imageAlt || ''}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-contain object-top"
                     loading="lazy"
                   />
                 ) : (
