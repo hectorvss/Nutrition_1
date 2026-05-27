@@ -51,6 +51,7 @@ import { useLanguage } from './context/LanguageContext';
 import { useBilling } from './context/BillingContext';
 import TrialBanner from './components/TrialBanner';
 import Paywall from './components/Paywall';
+import PaywallLimitModal from './components/PaywallLimitModal';
 
 type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'planning-template-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions';
 
@@ -426,6 +427,11 @@ export default function App() {
           </AnimatePresence>
         </div>
       </main>
+      {/* Modal global de upsell. Escucha el evento `billing:limit` (lanzado
+          por api.ts ante un 402) y abre un popup con CTA al checkout. Asi
+          el viejo mensaje rojo inline en cada formulario queda secundario
+          y la conversion se centraliza en una sola pieza. */}
+      <PaywallLimitModal />
     </div>
   );
 }
