@@ -62,101 +62,6 @@ export default function ROISection() {
 
   const fmt = (n: number) => n.toLocaleString(isEs ? 'es-ES' : 'en-US');
 
-  // Slider re-usable, totalmente customizado.
-  //
-  // El `<input type=range>` por defecto tiene un track muy fino y un
-  // thumb pequeno — dificil de agarrar, no parece "deslizable". Aqui
-  // forzamos:
-  //   - track de 10px con relleno verde en vivo (linear-gradient
-  //     calculado segun el porcentaje del valor, sin JS extra).
-  //   - thumb de 26px circular esmeralda con borde blanco + sombra y
-  //     leve scale-up al hover/active. Encaja con el resto del card.
-  //   - estilos para Chromium (`::-webkit-slider-thumb`) y Firefox
-  //     (`::-moz-range-thumb`) via arbitrary-variants de Tailwind.
-  const Slider = ({
-    id,
-    label,
-    value,
-    min,
-    max,
-    step,
-    suffix,
-    onChange,
-  }: {
-    id: string;
-    label: string;
-    value: number;
-    min: number;
-    max: number;
-    step?: number;
-    suffix?: string;
-    onChange: (n: number) => void;
-  }) => {
-    const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
-    const fillStyle: React.CSSProperties = {
-      background: `linear-gradient(to right, #10b981 0%, #10b981 ${pct}%, #e5e7eb ${pct}%, #e5e7eb 100%)`,
-    };
-    return (
-      <div>
-        <div className="flex items-baseline justify-between mb-4">
-          <label htmlFor={id} className="text-xs font-bold uppercase tracking-widest text-gray-500">
-            {label}
-          </label>
-          <span className="text-3xl md:text-4xl font-medium tabular-nums text-gray-900">
-            {value}
-            {suffix}
-          </span>
-        </div>
-        <input
-          id={id}
-          type="range"
-          min={min}
-          max={max}
-          step={step || 1}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          style={fillStyle}
-          className={[
-            'w-full h-2.5 rounded-full appearance-none cursor-pointer outline-none transition-shadow',
-            'focus-visible:ring-4 focus-visible:ring-emerald-500/20',
-            // Chromium / WebKit
-            '[&::-webkit-slider-runnable-track]:rounded-full',
-            '[&::-webkit-slider-runnable-track]:h-2.5',
-            '[&::-webkit-slider-thumb]:appearance-none',
-            '[&::-webkit-slider-thumb]:w-7',
-            '[&::-webkit-slider-thumb]:h-7',
-            '[&::-webkit-slider-thumb]:rounded-full',
-            '[&::-webkit-slider-thumb]:bg-emerald-500',
-            '[&::-webkit-slider-thumb]:border-[3px]',
-            '[&::-webkit-slider-thumb]:border-white',
-            '[&::-webkit-slider-thumb]:shadow-[0_4px_12px_rgba(16,185,129,0.35)]',
-            '[&::-webkit-slider-thumb]:transition-transform',
-            '[&::-webkit-slider-thumb]:-mt-[9px]',
-            'hover:[&::-webkit-slider-thumb]:scale-110',
-            'active:[&::-webkit-slider-thumb]:scale-105',
-            // Firefox
-            '[&::-moz-range-track]:h-2.5',
-            '[&::-moz-range-track]:rounded-full',
-            '[&::-moz-range-track]:bg-transparent',
-            '[&::-moz-range-thumb]:appearance-none',
-            '[&::-moz-range-thumb]:w-7',
-            '[&::-moz-range-thumb]:h-7',
-            '[&::-moz-range-thumb]:rounded-full',
-            '[&::-moz-range-thumb]:bg-emerald-500',
-            '[&::-moz-range-thumb]:border-[3px]',
-            '[&::-moz-range-thumb]:border-white',
-            '[&::-moz-range-thumb]:shadow-[0_4px_12px_rgba(16,185,129,0.35)]',
-            'hover:[&::-moz-range-thumb]:scale-110',
-          ].join(' ')}
-        />
-        <div className="flex justify-between text-[11px] text-gray-400 mt-3 tabular-nums font-medium">
-          <span>{min}{suffix}</span>
-          <span>{max}{suffix}</span>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <section className="px-4 py-32">
       <div className="max-w-6xl mx-auto bg-white border border-gray-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.08)]">
@@ -312,6 +217,107 @@ function OutputCard({
       <p className={`text-xs leading-relaxed ${highlight ? 'text-emerald-700/70' : 'text-gray-400'}`}>
         {note}
       </p>
+    </div>
+  );
+}
+
+/**
+ * Deslizador re-usable de la calculadora.
+ *
+ * CRITICO: este componente se declara fuera de `ROISection`. Si vive
+ * dentro del componente padre, cada keystroke/drag dispara un re-render
+ * que recrea la funcion `Slider`, lo que hace que React desmonte y
+ * remonte el <input>; en consecuencia el thumb pierde el foco a mitad
+ * de drag y la interaccion se siente "rota" (era exactamente lo que
+ * pasaba en la version anterior — el usuario podia clicar pero no
+ * arrastrar la bolita con fluidez).
+ *
+ * El track tiene 10px y se rellena en verde hasta el porcentaje del
+ * valor via linear-gradient inline. El thumb es 28px (w-7 h-7) con
+ * borde blanco y sombra esmeralda — facil de agarrar y arrastrar.
+ */
+function Slider({
+  id,
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  suffix?: string;
+  onChange: (n: number) => void;
+}) {
+  const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+  const fillStyle: React.CSSProperties = {
+    background: `linear-gradient(to right, #10b981 0%, #10b981 ${pct}%, #e5e7eb ${pct}%, #e5e7eb 100%)`,
+  };
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-4">
+        <label htmlFor={id} className="text-xs font-bold uppercase tracking-widest text-gray-500">
+          {label}
+        </label>
+        <span className="text-3xl md:text-4xl font-medium tabular-nums text-gray-900">
+          {value}
+          {suffix}
+        </span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        min={min}
+        max={max}
+        step={step || 1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={fillStyle}
+        className={[
+          'w-full h-2.5 rounded-full appearance-none cursor-pointer outline-none transition-shadow',
+          'focus-visible:ring-4 focus-visible:ring-emerald-500/20',
+          // Chromium / WebKit — el thumb necesita -mt para centrarse
+          // sobre un track de 10px una vez que appearance:none oculta el
+          // track nativo.
+          '[&::-webkit-slider-runnable-track]:rounded-full',
+          '[&::-webkit-slider-runnable-track]:h-2.5',
+          '[&::-webkit-slider-thumb]:appearance-none',
+          '[&::-webkit-slider-thumb]:w-7',
+          '[&::-webkit-slider-thumb]:h-7',
+          '[&::-webkit-slider-thumb]:rounded-full',
+          '[&::-webkit-slider-thumb]:bg-emerald-500',
+          '[&::-webkit-slider-thumb]:border-[3px]',
+          '[&::-webkit-slider-thumb]:border-white',
+          '[&::-webkit-slider-thumb]:shadow-[0_4px_12px_rgba(16,185,129,0.35)]',
+          '[&::-webkit-slider-thumb]:transition-transform',
+          '[&::-webkit-slider-thumb]:-mt-[9px]',
+          'hover:[&::-webkit-slider-thumb]:scale-110',
+          'active:[&::-webkit-slider-thumb]:scale-105',
+          // Firefox
+          '[&::-moz-range-track]:h-2.5',
+          '[&::-moz-range-track]:rounded-full',
+          '[&::-moz-range-track]:bg-transparent',
+          '[&::-moz-range-thumb]:appearance-none',
+          '[&::-moz-range-thumb]:w-7',
+          '[&::-moz-range-thumb]:h-7',
+          '[&::-moz-range-thumb]:rounded-full',
+          '[&::-moz-range-thumb]:bg-emerald-500',
+          '[&::-moz-range-thumb]:border-[3px]',
+          '[&::-moz-range-thumb]:border-white',
+          '[&::-moz-range-thumb]:shadow-[0_4px_12px_rgba(16,185,129,0.35)]',
+          'hover:[&::-moz-range-thumb]:scale-110',
+        ].join(' ')}
+      />
+      <div className="flex justify-between text-[11px] text-gray-400 mt-3 tabular-nums font-medium">
+        <span>{min}{suffix}</span>
+        <span>{max}{suffix}</span>
+      </div>
     </div>
   );
 }
