@@ -1,4 +1,3 @@
-import { ChevronLeft } from 'lucide-react';
 import FeatureGrid from './FeatureGrid';
 import IntegrationsSection from './IntegrationsSection';
 import { useLanguage } from '../../context/LanguageContext';
@@ -53,22 +52,14 @@ export default function FeaturesPage({ onBack, onDemo }: FeaturesPageProps) {
 
   return (
     <div className="pt-32 pb-20">
-      <div className="px-4 max-w-6xl mx-auto">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors mb-10"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {isEs ? 'Volver a inicio' : 'Back to home'}
-        </button>
-
+      <div className="px-4 max-w-6xl mx-auto text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
           {isEs ? 'Capacidades' : 'Capabilities'}
         </p>
         <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-6 leading-tight">
           {isEs ? 'Todo lo que NutriFit hace por ti.' : 'Everything NutriFit does for you.'}
         </h1>
-        <p className="text-gray-500 text-lg max-w-2xl mb-16">
+        <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-16">
           {isEs
             ? 'Una vista detallada de cada bloque del producto. Si dudas si una capacidad está cubierta, probablemente sí.'
             : 'A detailed view of every product block. If you’re unsure whether a capability is covered, it probably is.'}
@@ -79,14 +70,14 @@ export default function FeaturesPage({ onBack, onDemo }: FeaturesPageProps) {
       <FeatureGrid />
 
       {/* Detalle por bloque */}
-      <section className="px-4 max-w-5xl mx-auto py-20 space-y-6">
+      <section className="px-4 max-w-5xl mx-auto py-20 space-y-6 text-center">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2">
           {isEs ? 'En detalle' : 'In detail'}
         </p>
         <h2 className="text-3xl md:text-4xl font-medium tracking-tight mb-10">
           {isEs ? 'Cada capacidad, sin letra pequeña.' : 'Every capability, no small print.'}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
           {detailedFeatures.map((f, i) => (
             <div key={i} className="bg-white border border-gray-100 rounded-2xl p-7">
               <h3 className="text-lg font-medium mb-2 tracking-tight">{isEs ? f.es[0] : f.en[0]}</h3>

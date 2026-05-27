@@ -1,4 +1,3 @@
-import { ChevronLeft } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 export type LegalKind = 'privacy' | 'terms' | 'security';
@@ -173,15 +172,7 @@ export default function LegalPage({ kind, onBack }: LegalPageProps) {
   const title = titles[kind][isEs ? 'es' : 'en'];
 
   return (
-    <div className="pt-32 pb-20 px-4 max-w-3xl mx-auto">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors mb-10"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        {isEs ? 'Volver a inicio' : 'Back to home'}
-      </button>
-
+    <div className="pt-32 pb-20 px-4 max-w-3xl mx-auto text-center">
       <div className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-3 mb-10 text-xs text-amber-800">
         {isEs
           ? 'Documento en versión borrador. Pendiente de revisión legal antes de su publicación oficial.'
@@ -193,11 +184,11 @@ export default function LegalPage({ kind, onBack }: LegalPageProps) {
         {isEs ? 'Última actualización' : 'Last updated'}: 2026-05
       </p>
 
-      <div className="space-y-10">
+      <div className="space-y-10 text-center">
         {sections.map((sec, i) => (
           <section key={i}>
             <h2 className="text-xl font-medium mb-3">{sec.heading}</h2>
-            <p className="text-gray-600 leading-relaxed text-sm">{sec.body}</p>
+            <p className="text-gray-600 leading-relaxed text-sm max-w-2xl mx-auto">{sec.body}</p>
           </section>
         ))}
       </div>

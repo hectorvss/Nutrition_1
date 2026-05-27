@@ -1,4 +1,4 @@
-import { ChevronLeft, Sparkles, Wrench, ShieldCheck, Plus } from 'lucide-react';
+import { Sparkles, Wrench, ShieldCheck, Plus } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface ChangelogPageProps {
@@ -47,26 +47,18 @@ export default function ChangelogPage({ onBack }: ChangelogPageProps) {
   const isEs = language === 'es';
 
   return (
-    <div className="pt-32 pb-20 px-4 max-w-3xl mx-auto">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors mb-10"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        {isEs ? 'Volver a inicio' : 'Back to home'}
-      </button>
-
+    <div className="pt-32 pb-20 px-4 max-w-3xl mx-auto text-center">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">Changelog</p>
       <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-6 leading-tight">
         {isEs ? 'Lo último que hemos enviado.' : 'What we shipped lately.'}
       </h1>
-      <p className="text-gray-500 text-lg max-w-2xl mb-16">
+      <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-16">
         {isEs
           ? 'Actualizamos NutriFit casi cada semana. Aquí va el rastro público de lo que cambia.'
           : 'We ship NutriFit almost weekly. This is the public trail of what changes.'}
       </p>
 
-      <div className="space-y-12">
+      <div className="space-y-12 text-center">
         {entries.map((entry) => (
           <div key={entry.date}>
             <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400 mb-5">{entry.date}</h2>
@@ -75,8 +67,8 @@ export default function ChangelogPage({ onBack }: ChangelogPageProps) {
                 const meta = TYPE_META[it.type];
                 const Icon = meta.Icon;
                 return (
-                  <div key={j} className="bg-white border border-gray-100 rounded-2xl p-5 flex items-start gap-4">
-                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border rounded-full px-2.5 py-1 ${meta.color} shrink-0`}>
+                  <div key={j} className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col items-center gap-3">
+                    <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border rounded-full px-2.5 py-1 ${meta.color}`}>
                       <Icon className="w-3 h-3" />
                       {isEs ? meta.labelEs : meta.labelEn}
                     </span>

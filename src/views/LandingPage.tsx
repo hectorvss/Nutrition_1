@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "motion/react";
+import { useState } from "react";
+import { motion } from "motion/react";
 import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
 import Pricing from "../components/Pricing";
 import { useLanguage } from "../context/LanguageContext";
@@ -234,49 +234,47 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
           <FeatureGrid />
           <IntegrationsSection />
 
-          <main id="features" className="space-y-40 mb-40 scroll-mt-24">
-            {/* 1. Client Management Sticky Sequence */}
-            <FeatureSequenceSection 
+          <main id="features" className="space-y-28 md:space-y-36 mb-40 scroll-mt-24">
+            {/* 4 secciones de producto, 2 columnas (texto + mockup),
+                un único frame por sección. Cuando lleguen las capturas
+                reales, pasar `imageSrc` a cada `FeatureSequenceSection`
+                con la ruta correspondiente (e.g. `/landing/feature-clients.png`). */}
+            <FeatureSequenceSection
               title={[t('landing_feature_intro'), t('client_management')]}
               subtitle={t('landing_client_management_subtitle')}
               highlight={t('landing_client_management_highlight')}
               description={t('landing_client_management_description')}
-              moduleLabel={t('module')}
               gradientClass="gradient-bg-writing"
               url="nutrifit.pro/dashboard"
             />
 
-            {/* 2. Nutrition Planning Sticky Sequence */}
-            <FeatureSequenceSection 
+            <FeatureSequenceSection
               title={[t('landing_feature_intro'), t('nutrition_planning')]}
               subtitle={t('landing_nutrition_planning_subtitle')}
               highlight={t('landing_nutrition_planning_highlight')}
               description={t('landing_nutrition_planning_description')}
-              moduleLabel={t('module')}
               gradientClass="gradient-bg-learning"
               url="nutrifit.pro/plans"
+              reverse
             />
 
-            {/* 3. Progress Tracking Sticky Sequence */}
-            <FeatureSequenceSection 
+            <FeatureSequenceSection
               title={[t('landing_feature_intro'), t('progress_tracking')]}
               subtitle={t('landing_progress_tracking_subtitle')}
               highlight={t('landing_progress_tracking_highlight')}
               description={t('landing_progress_tracking_description')}
-              moduleLabel={t('module')}
               gradientClass="gradient-bg-planning"
               url="nutrifit.pro/tracking"
             />
 
-            {/* 4. Proactive Follow-Up Sticky Sequence */}
-            <FeatureSequenceSection 
+            <FeatureSequenceSection
               title={[t('landing_feature_intro'), t('proactive_follow_up')]}
               subtitle={t('landing_proactive_followup_subtitle')}
               highlight={t('landing_proactive_followup_highlight')}
               description={t('landing_proactive_followup_description')}
-              moduleLabel={t('module')}
               gradientClass="gradient-bg-shopping"
               url="nutrifit.pro/alerts"
+              reverse
             />
 
             {/* "Para quién es" + comparativa de 4 columnas + calculadora de
@@ -406,95 +404,104 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
   );
 }
 
-function FeatureSequenceSection({ title, subtitle, highlight, description, moduleLabel, gradientClass, url }: { 
-  title: string[], 
-  subtitle: string, 
-  highlight: string,
-  description: string, 
-  moduleLabel: string,
-  gradientClass: string,
-  url: string
+/**
+ * FeatureSequenceSection — rediseñada (mayo 2026).
+ *
+ * La versión anterior era `h-[250vh]` con scroll sticky y 4 "screens"
+ * placeholder por sección. Resultado: 16 frames vacíos con etiqueta
+ * "Module N" y, sobre todo, **el contenido no cabía en una pantalla a
+ * 100% de zoom** — el título se cortaba bajo el nav flotante y el
+ * mockup quedaba debajo del fold.
+ *
+ * Esta versión:
+ *  - Un único mockup por sección (no rotación de placeholders).
+ *  - Layout en 2 columnas (texto izquierda + imagen derecha) en md+,
+ *    apilado en móvil. Cabe en una pantalla a 100% sin recortes.
+ *  - `imageSrc` opcional: cuando aún no hay captura, se muestra el
+ *    chrome del navegador con un Play discreto. Cuando llegue la
+ *    imagen real, pasa la URL por `imageSrc` y reemplaza el placeholder.
+ */
+function FeatureSequenceSection({
+  title,
+  subtitle,
+  highlight,
+  description,
+  gradientClass,
+  url,
+  imageSrc,
+  imageAlt,
+  reverse = false,
+}: {
+  title: string[];
+  subtitle: string;
+  highlight: string;
+  description: string;
+  gradientClass: string;
+  url: string;
+  imageSrc?: string;
+  imageAlt?: string;
+  reverse?: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"]
-  });
-
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    // 4 screens per section
-    const index = Math.min(Math.floor(latest * 4), 3);
-    setActiveIndex(index);
-  });
-
   return (
-    <div ref={containerRef} className="relative h-[250vh]">
-      <div className="sticky top-0 min-h-screen flex flex-col justify-center py-12">
-        <div className="w-full max-w-6xl mx-auto px-6 text-center">
-          {/* Static Header Content - Title, Subtitle, and Description remain fixed */}
-          <div className="max-w-4xl mx-auto mb-12">
-            <h2 className="text-4xl md:text-[72px] md:leading-[92px] font-medium pb-2 mb-2">
-              {title[0]} <br /> {title[1]}
-            </h2>
-            <p className="text-gray-500 mb-12">{subtitle}</p>
-            
-            {/* Dots stay fixed but state updates */}
-            <div className="flex justify-center gap-1 mb-8">
-              {[0, 1, 2, 3].map((i) => (
-                <span 
-                  key={i} 
-                  className={`transition-all duration-300 rounded-full ${i === activeIndex ? 'w-6 h-1.5 bg-black' : 'w-1.5 h-1.5 bg-gray-200'}`}
-                ></span>
-              ))}
-            </div>
-            
-            <p className="text-xl mb-10 max-w-3xl mx-auto">
-              <span className="font-bold">{highlight}</span> {description}
-            </p>
-          </div>
+    <section className="px-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 items-center gap-10 md:gap-14">
+        {/* Texto */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.6 }}
+          className={`md:col-span-5 text-center md:text-left ${reverse ? 'md:order-2' : ''}`}
+        >
+          <h2 className="text-3xl md:text-5xl font-medium tracking-tight leading-[1.1] mb-4">
+            {title[0]} <br className="hidden md:block" /> {title[1]}
+          </h2>
+          <p className="text-gray-500 mb-6 text-base">{subtitle}</p>
+          <p className="text-lg text-gray-800 leading-relaxed">
+            <span className="font-bold text-black">{highlight}</span> {description}
+          </p>
+        </motion.div>
 
-          {/* Animated Mockup Component - ONLY this part transitions horizontally */}
-          <div className="relative flex justify-center items-center w-full max-w-[1104px] mx-auto">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeIndex}
-                initial={{ opacity: 0, x: 100 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} // Decelerating curve for premium feel
-                className={`relative flex justify-center items-center h-[500px] md:h-[600px] ${gradientClass} rounded-3xl overflow-hidden w-full shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)]`}
-              >
-                {/* Mac Browser Mockup - Screen Placeholder */}
-                <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.2)] border border-white/20 w-full max-w-5xl aspect-video overflow-hidden relative z-10 mx-4 flex flex-col scale-[0.85] md:scale-100">
-                  <div className="bg-white/50 border-b border-gray-100/20 px-4 py-3 flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
-                      <div className="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
-                      <div className="w-3 h-3 rounded-full bg-[#27c93f]"></div>
-                    </div>
-                    <div className="mx-auto bg-gray-100/50 rounded-lg px-3 py-1 text-[10px] text-gray-400 font-medium flex items-center gap-2 w-1/3">
-                      {url}
-                    </div>
-                  </div>
-                  <div className="flex-1 flex items-center justify-center bg-gray-50/10">
-                    <div className="relative group cursor-pointer">
-                      <div className="w-16 h-16 bg-black/5 rounded-full flex items-center justify-center backdrop-blur-sm border border-black/5 group-hover:scale-110 transition-transform">
-                        <Play className="w-8 h-8 text-black/20" />
-                      </div>
-                      <span className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-widest text-black/20">
-                        {`${moduleLabel} ${activeIndex + 1}`}
-                      </span>
-                    </div>
-                  </div>
+        {/* Mockup — un solo frame por sección. Cuando llegue la captura
+            real, pasar `imageSrc` y se renderiza dentro del chrome. */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className={`md:col-span-7 ${reverse ? 'md:order-1' : ''}`}
+        >
+          <div className={`relative ${gradientClass} rounded-3xl p-4 md:p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.12)]`}>
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/20 aspect-video overflow-hidden flex flex-col shadow-[0_20px_50px_-10px_rgba(0,0,0,0.15)]">
+              <div className="bg-white/60 border-b border-gray-100/40 px-4 py-2.5 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
                 </div>
-              </motion.div>
-            </AnimatePresence>
+                <div className="mx-auto bg-gray-100/50 rounded-md px-3 py-0.5 text-[10px] text-gray-400 font-medium w-1/2 text-center truncate">
+                  {url}
+                </div>
+              </div>
+              <div className="flex-1 flex items-center justify-center bg-gray-50/10 relative">
+                {imageSrc ? (
+                  <img
+                    src={imageSrc}
+                    alt={imageAlt || ''}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-14 h-14 bg-black/5 rounded-full flex items-center justify-center border border-black/5">
+                    <Play className="w-6 h-6 text-black/15" />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </section>
   );
 }
 

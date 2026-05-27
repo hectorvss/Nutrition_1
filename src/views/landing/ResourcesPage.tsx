@@ -1,4 +1,4 @@
-import { ChevronLeft, BookOpen, FileText, Headphones, Newspaper } from 'lucide-react';
+import { BookOpen, FileText, Headphones, Newspaper } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface ResourcesPageProps {
@@ -78,31 +78,23 @@ export default function ResourcesPage({ onBack }: ResourcesPageProps) {
   ];
 
   return (
-    <div className="pt-32 pb-20 px-4 max-w-6xl mx-auto">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors mb-10"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        {isEs ? 'Volver a inicio' : 'Back to home'}
-      </button>
-
+    <div className="pt-32 pb-20 px-4 max-w-6xl mx-auto text-center">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
         {isEs ? 'Recursos' : 'Resources'}
       </p>
       <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-6 leading-tight">
         {isEs ? 'Aprende, configura, crece.' : 'Learn, set up, grow.'}
       </h1>
-      <p className="text-gray-500 text-lg max-w-2xl mb-16">
+      <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-16">
         {isEs
           ? 'Guías, artículos y documentación para sacar el máximo a la plataforma.'
           : 'Guides, articles and documentation to get the most out of the platform.'}
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
         {groups.map(({ Icon, labelEs, labelEn, itemsEs, itemsEn }, i) => (
           <div key={i} className="bg-white border border-gray-100 rounded-3xl p-8">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center justify-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
                 <Icon className="w-5 h-5 text-black" />
               </div>
@@ -110,7 +102,7 @@ export default function ResourcesPage({ onBack }: ResourcesPageProps) {
             </div>
             <ul className="space-y-3">
               {(isEs ? itemsEs : itemsEn).map((item, j) => (
-                <li key={j} className="text-sm text-gray-700 hover:text-black transition-colors cursor-pointer flex items-center justify-between border-b border-gray-100 last:border-b-0 pb-3 last:pb-0">
+                <li key={j} className="text-sm text-gray-700 hover:text-black transition-colors cursor-pointer flex items-center justify-center gap-3 border-b border-gray-100 last:border-b-0 pb-3 last:pb-0">
                   <span>{item}</span>
                   <span className="text-[10px] text-gray-300 uppercase tracking-widest">
                     {isEs ? 'Próximamente' : 'Soon'}

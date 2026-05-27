@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, CheckCircle2, Calendar, Users, Sparkles } from 'lucide-react';
+import { CheckCircle2, Calendar, Users, Sparkles } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface DemoPageProps {
@@ -43,19 +43,11 @@ export default function DemoPage({ onBack }: DemoPageProps) {
   };
 
   return (
-    <div className="pt-32 pb-20 px-4 max-w-3xl mx-auto">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors mb-10"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        {isEs ? 'Volver a inicio' : 'Back to home'}
-      </button>
-
+    <div className="pt-32 pb-20 px-4 max-w-3xl mx-auto text-center">
       <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-4">
         {isEs ? 'Reserva una demo personalizada' : 'Book a personalised demo'}
       </h1>
-      <p className="text-gray-500 text-lg mb-12 max-w-xl">
+      <p className="text-gray-500 text-lg mb-12 max-w-xl mx-auto">
         {isEs
           ? '30 minutos. Te enseñamos la plataforma sobre tu caso real y resolvemos cualquier duda antes de probar la prueba gratuita.'
           : '30 minutes. We walk you through the platform against your real case and answer any question before you start the free trial.'}
@@ -67,7 +59,7 @@ export default function DemoPage({ onBack }: DemoPageProps) {
           { Icon: Users, label: isEs ? 'En vivo, 1-a-1' : 'Live, 1-on-1' },
           { Icon: Sparkles, label: isEs ? 'Sobre tu caso real' : 'On your real case' },
         ].map(({ Icon, label }, i) => (
-          <div key={i} className="bg-gray-50 rounded-2xl px-4 py-3 flex items-center gap-3 text-sm">
+          <div key={i} className="bg-gray-50 rounded-2xl px-4 py-3 flex items-center justify-center gap-3 text-sm">
             <Icon className="w-4 h-4 text-black" />
             <span className="text-gray-700">{label}</span>
           </div>
