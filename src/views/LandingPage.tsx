@@ -342,78 +342,77 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               </motion.div>
             </section>
           </main>
-
-          {/* Footer */}
-          <footer className="pt-32 pb-16 relative overflow-hidden bg-white text-black">
-            <div className="max-w-6xl mx-auto px-6 relative z-10">
-              <div className="flex flex-col items-center mb-16">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-gray-400">{t('designed_for_professionals')}</p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900 mb-6 font-black font-sans">NutriFit Systems Inc.</p>
-                <div className="flex gap-6 text-gray-400">
-                  <a
-                    href={SOCIAL.x}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="X / Twitter"
-                    className="hover:text-black transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </a>
-                  <a
-                    href={SOCIAL.instagram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Instagram"
-                    className="hover:text-black transition-colors"
-                  >
-                    <Instagram className="w-4 h-4" />
-                  </a>
-                  <a
-                    href={SOCIAL.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="LinkedIn"
-                    className="hover:text-black transition-colors"
-                  >
-                    <Linkedin className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-t border-gray-100 pt-8">
-                <div className="flex flex-wrap justify-center gap-6 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  {[
-                    { key: 'about' as const,     label: isEs ? 'Sobre nosotros' : 'About' },
-                    { key: 'changelog' as const, label: 'Changelog' },
-                    { key: 'resources' as const, label: isEs ? 'Recursos' : 'Resources' },
-                    { key: 'privacy' as const,   label: t('privacy_policy') },
-                    { key: 'terms' as const,     label: isEs ? 'Términos' : 'Terms' },
-                    { key: 'security' as const,  label: t('security') },
-                  ].map(({ key, label }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setCurrentPage(key)}
-                      className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                  <span className="flex items-center gap-2">
-                    {t('platform_status')}: <span className="text-green-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> {t('all_systems_go')}</span>
-                  </span>
-                  <span>v1.0</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Color Spectrum at Bottom */}
-            <div className="absolute bottom-0 left-0 w-full h-32 spectrum-footer blur-3xl opacity-50 pointer-events-none"></div>
-          </footer>
         </>
       )}
+
+      {/* Footer global — visible en TODAS las paginas (home + subpaginas).
+          Sin bloque blanco ni espectro multicolor: vive directamente sobre
+          el fondo gradiente rosa-indigo de la landing. */}
+      <footer className="pt-24 pb-12 relative">
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <div className="flex flex-col items-center mb-12">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-gray-400">{t('designed_for_professionals')}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900 mb-6 font-black font-sans">NutriFit Systems Inc.</p>
+            <div className="flex gap-6 text-gray-400">
+              <a
+                href={SOCIAL.x}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="X / Twitter"
+                className="hover:text-black transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </a>
+              <a
+                href={SOCIAL.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="hover:text-black transition-colors"
+              >
+                <Instagram className="w-4 h-4" />
+              </a>
+              <a
+                href={SOCIAL.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+                className="hover:text-black transition-colors"
+              >
+                <Linkedin className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 border-t border-black/5 pt-8">
+            <div className="flex flex-wrap justify-center gap-6 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              {[
+                { key: 'about' as const,     label: isEs ? 'Sobre nosotros' : 'About' },
+                { key: 'changelog' as const, label: 'Changelog' },
+                { key: 'resources' as const, label: isEs ? 'Recursos' : 'Resources' },
+                { key: 'privacy' as const,   label: t('privacy_policy') },
+                { key: 'terms' as const,     label: isEs ? 'Términos' : 'Terms' },
+                { key: 'security' as const,  label: t('security') },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCurrentPage(key)}
+                  className="hover:text-black transition-colors bg-transparent border-none cursor-pointer p-0 uppercase tracking-widest"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              <span className="flex items-center gap-2">
+                {t('platform_status')}: <span className="text-green-500 flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> {t('all_systems_go')}</span>
+              </span>
+              <span>v1.0</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
