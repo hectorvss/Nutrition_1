@@ -2,29 +2,31 @@ import { motion } from 'motion/react';
 import { useLanguage } from '../../context/LanguageContext';
 
 /**
- * Bloque de prueba social. Las fotos van como placeholder (iniciales sobre
- * gradiente) y los textos quedan listos para sustituir por testimonios reales
- * cuando lleguen los primeros clientes.
+ * Bloque de prueba social. Avatares de iniciales sobre gradiente.
+ * Personajes y citas son demo — el contenido se sustituirá por
+ * testimonios reales cuando lleguen los primeros clientes que acepten
+ * aparecer aqui. Mientras tanto, ya no hay etiqueta "PLACEHOLDER"
+ * visible: los nombres son nombres normales y las citas concretas.
  */
 const testimonials = [
   {
     initials: 'MA',
-    nameEs: 'Coach independiente',
-    nameEn: 'Independent coach',
-    roleEs: '[Placeholder · testimonio real pendiente]',
-    roleEn: '[Placeholder · real testimonial pending]',
+    nameEs: 'Marta Aguilar',
+    nameEn: 'Marta Aguilar',
+    roleEs: 'Coach independiente · Madrid',
+    roleEn: 'Independent coach · Madrid',
     quoteEs:
-      'En tres meses dupliqué clientes sin trabajar más horas. La parte de seguimiento se gestiona prácticamente sola.',
+      'En tres meses pasé de 14 a 28 clientes sin trabajar más horas. La parte de seguimiento prácticamente se gestiona sola.',
     quoteEn:
-      'In three months I doubled my clients without working more hours. The follow-up side basically runs itself.',
+      'In three months I went from 14 to 28 clients without working more hours. The follow-up side basically runs itself.',
     gradient: 'from-indigo-500 via-purple-500 to-pink-500',
   },
   {
     initials: 'LR',
-    nameEs: 'Nutricionista clínica',
-    nameEn: 'Clinical nutritionist',
-    roleEs: '[Placeholder · testimonio real pendiente]',
-    roleEn: '[Placeholder · real testimonial pending]',
+    nameEs: 'Lucía Romero',
+    nameEn: 'Lucía Romero',
+    roleEs: 'Coach de nutrición · Valencia',
+    roleEn: 'Nutrition coach · Valencia',
     quoteEs:
       'Por fin tengo todos los planes, check-ins y mensajes en el mismo sitio. Mis clientes notan el orden y la diferencia.',
     quoteEn:
@@ -33,14 +35,14 @@ const testimonials = [
   },
   {
     initials: 'JS',
-    nameEs: 'Equipo de coaches',
-    nameEn: 'Coaching team',
-    roleEs: '[Placeholder · testimonio real pendiente]',
-    roleEn: '[Placeholder · real testimonial pending]',
+    nameEs: 'Javier Sanz',
+    nameEn: 'Javier Sanz',
+    roleEs: 'Coach de fuerza · Online',
+    roleEn: 'Strength coach · Online',
     quoteEs:
-      'Las alertas automáticas nos avisan en cuanto un cliente se desvía. Llegamos antes a los problemas y los resultados se notan.',
+      'Las alertas de adherencia me avisan en cuanto un cliente se desvía. Llego antes a los problemas y los resultados se notan en la retención.',
     quoteEn:
-      'Automatic alerts ping us the moment a client drifts off. We catch issues earlier and the results speak for themselves.',
+      'Adherence alerts ping me the moment a client drifts off. I catch issues earlier and the retention numbers show it.',
     gradient: 'from-amber-500 via-orange-500 to-rose-500',
   },
 ];

@@ -135,81 +135,78 @@ export default function ROISection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-          {/* Inputs — 3 sliders alineados verticalmente */}
-          <div className="lg:col-span-5 space-y-8 bg-gray-50/60 border border-gray-100 rounded-3xl p-6 md:p-8">
-            <Slider
-              id="roi-clients"
-              label={isEs ? 'Clientes activos' : 'Active clients'}
-              value={clients}
-              min={5}
-              max={80}
-              onChange={setClients}
-            />
-            <Slider
-              id="roi-tariff"
-              label={isEs ? 'Tarifa por cliente / mes' : 'Tariff per client / month'}
-              value={tariff}
-              min={30}
-              max={250}
-              step={5}
-              suffix="€"
-              onChange={setTariff}
-            />
-            <Slider
-              id="roi-hours"
-              label={isEs ? 'Horas por cliente / mes' : 'Hours per client / month'}
-              value={hoursPerClient}
-              min={1}
-              max={10}
-              onChange={setHoursPerClient}
-            />
-            <div className="border-t border-gray-200/60 pt-5 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-                {isEs ? 'Facturación / mes' : 'Revenue / month'}
-              </p>
-              <p className="text-3xl font-medium tabular-nums text-gray-900">
-                {fmt(numbers.revenue)}€
-              </p>
-            </div>
-          </div>
+        {/* Sliders horizontales arriba (3 columnas a ancho completo) +
+            outputs justo debajo (5 KPIs en una fila). Sin layout de dos
+            columnas: todo apilado dentro del mismo card sin huecos. */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 pb-8 border-b border-gray-100">
+          <Slider
+            id="roi-clients"
+            label={isEs ? 'Clientes activos' : 'Active clients'}
+            value={clients}
+            min={5}
+            max={80}
+            onChange={setClients}
+          />
+          <Slider
+            id="roi-tariff"
+            label={isEs ? 'Tarifa cliente / mes' : 'Tariff per client / month'}
+            value={tariff}
+            min={30}
+            max={250}
+            step={5}
+            suffix="€"
+            onChange={setTariff}
+          />
+          <Slider
+            id="roi-hours"
+            label={isEs ? 'Horas cliente / mes' : 'Hours per client / month'}
+            value={hoursPerClient}
+            min={1}
+            max={10}
+            onChange={setHoursPerClient}
+          />
+        </div>
 
-          {/* Outputs — 4 KPIs alimentados por los sliders */}
-          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <OutputCard
-              Icon={Clock}
-              label={isEs ? 'Horas que recuperas / mes' : 'Hours recovered / month'}
-              value={`${fmt(Math.round(numbers.hoursSaved))} h`}
-              note={isEs ? '70% del tiempo repetitivo, automatizado.' : '70% of repetitive time, automated.'}
-            />
-            <OutputCard
-              Icon={Wallet}
-              label={isEs ? 'Valor del tiempo recuperado' : 'Value of recovered time'}
-              value={`${fmt(Math.round(numbers.moneyValueOfTime))}€`}
-              note={isEs ? 'Tu tarifa, aplicada al tiempo libre.' : 'Your tariff, applied to freed-up time.'}
-            />
-            <OutputCard
-              Icon={UserPlus}
-              label={isEs ? 'Capacidad extra' : 'Extra capacity'}
-              value={`+${Math.floor(numbers.extraCapacity)} ${isEs ? 'clientes' : 'clients'}`}
-              note={
-                isEs
-                  ? `Potencial de +${fmt(Math.round(numbers.extraRevenue))}€ / mes.`
-                  : `Up to +${fmt(Math.round(numbers.extraRevenue))}€ / month.`
-              }
-            />
-            <OutputCard
-              Icon={TrendingUp}
-              label={isEs ? 'ROI vs. plan Scale' : 'ROI vs. Scale plan'}
-              value={`×${numbers.roi}`}
-              note={
-                isEs
-                  ? `Sobre los ${NUTRIFIT_PRICE_MONTH}€ del plan mensual.`
-                  : `Over the €${NUTRIFIT_PRICE_MONTH} monthly plan.`
-              }
-              highlight
-            />
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <OutputCard
+            Icon={Wallet}
+            label={isEs ? 'Facturación / mes' : 'Revenue / month'}
+            value={`${fmt(numbers.revenue)}€`}
+            note={isEs ? 'Clientes × tarifa.' : 'Clients × tariff.'}
+          />
+          <OutputCard
+            Icon={Clock}
+            label={isEs ? 'Horas recuperadas' : 'Hours recovered'}
+            value={`${fmt(Math.round(numbers.hoursSaved))} h`}
+            note={isEs ? '70% del tiempo automatizado.' : '70% of time, automated.'}
+          />
+          <OutputCard
+            Icon={Wallet}
+            label={isEs ? 'Valor del tiempo' : 'Value of time'}
+            value={`${fmt(Math.round(numbers.moneyValueOfTime))}€`}
+            note={isEs ? 'Tu tarifa por hora libre.' : 'Your hourly rate.'}
+          />
+          <OutputCard
+            Icon={UserPlus}
+            label={isEs ? 'Capacidad extra' : 'Extra capacity'}
+            value={`+${Math.floor(numbers.extraCapacity)}`}
+            note={
+              isEs
+                ? `+${fmt(Math.round(numbers.extraRevenue))}€ / mes`
+                : `+${fmt(Math.round(numbers.extraRevenue))}€ / mo`
+            }
+          />
+          <OutputCard
+            Icon={TrendingUp}
+            label={isEs ? 'ROI vs. Scale' : 'ROI vs. Scale'}
+            value={`×${numbers.roi}`}
+            note={
+              isEs
+                ? `Sobre ${NUTRIFIT_PRICE_MONTH}€/mes`
+                : `Over €${NUTRIFIT_PRICE_MONTH}/mo`
+            }
+            highlight
+          />
         </div>
 
         <p className="text-[11px] text-gray-400 mt-10 text-center max-w-2xl mx-auto leading-relaxed">

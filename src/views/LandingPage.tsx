@@ -274,9 +274,9 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_progress_tracking_highlight')}
               description={t('landing_progress_tracking_description')}
               gradientClass="gradient-bg-planning"
-              url="nutrifit.pro/check-ins"
-              imageSrc="/landing/feature-checkins.png"
-              imageAlt="Panel de check-ins semanales con adherencia y peso por cliente"
+              url="nutrifit.pro/analytics"
+              imageSrc="/landing/feature-progress.png"
+              imageAlt="Panel de analíticas: clientes activos, retención, MRR, ARR y churn rate"
             />
 
             <FeatureSequenceSection

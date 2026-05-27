@@ -340,93 +340,71 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
           {isEs ? 'Siete fricciones diarias, resueltas.' : 'Seven daily frictions, solved.'}
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left">
+        {/* Tarjetas problema — 1 por fila a ancho completo. Mas
+            respiro, texto mas grande, "Antes" en gris (sin tachado). */}
+        <div className="space-y-6 text-left">
           {problems.map(({ Icon, es, en }, i) => {
             const p = isEs ? es : en;
             return (
               <div
                 key={i}
-                className="bg-white border border-gray-100 rounded-3xl p-6 md:p-7 flex flex-col"
+                className="bg-white border border-gray-100 rounded-3xl p-8 md:p-10 grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-10 items-start"
               >
-                {/* Header: numero + icono + titulo */}
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-black" />
+                {/* Columna izquierda: numero + icono + titulo */}
+                <div className="md:col-span-3 flex md:block items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-black/5 flex items-center justify-center shrink-0 md:mb-5">
+                    <Icon className="w-6 h-6 text-black" />
                   </div>
                   <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-0.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-1">
                       {`0${i + 1}`}
                     </p>
-                    <h3 className="text-base md:text-lg font-medium tracking-tight leading-snug">
+                    <h3 className="text-xl md:text-2xl font-medium tracking-tight leading-snug">
                       {p.title}
                     </h3>
                   </div>
                 </div>
 
-                {/* 2 columnas: antes (X) vs con NutriFit (✓) */}
-                <div className="grid grid-cols-2 gap-4 flex-1">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-3 flex items-center gap-1.5">
-                      <XCircle className="w-3 h-3 text-gray-300" />
-                      {isEs ? 'Antes' : 'Before'}
-                    </p>
-                    <ul className="space-y-2">
-                      {p.before.map((b, j) => (
-                        <li key={j} className="text-[13px] text-gray-500 leading-snug flex items-start gap-2">
-                          <span className="text-gray-300 mt-1 shrink-0">·</span>
-                          <span className="line-through decoration-gray-200">{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-600 mb-3 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                      {isEs ? 'Con NutriFit' : 'With NutriFit'}
-                    </p>
-                    <ul className="space-y-2">
-                      {p.after.map((a, j) => (
-                        <li key={j} className="text-[13px] text-gray-800 leading-snug flex items-start gap-2">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500 mt-1 shrink-0" />
-                          <span>{a}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                {/* Centro: Antes (texto gris, sin tachado) */}
+                <div className="md:col-span-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4 flex items-center gap-1.5">
+                    <XCircle className="w-3 h-3 text-gray-300" />
+                    {isEs ? 'Antes' : 'Before'}
+                  </p>
+                  <ul className="space-y-3">
+                    {p.before.map((b, j) => (
+                      <li key={j} className="text-[15px] text-gray-400 leading-relaxed flex items-start gap-2.5">
+                        <span className="text-gray-300 mt-1.5 shrink-0">·</span>
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                {/* Proof line — micro letra, separada */}
-                <p className="text-[11px] text-gray-400 leading-relaxed border-t border-gray-100 pt-3 mt-5">
-                  <span className="font-bold uppercase tracking-widest text-gray-400 mr-1.5">
-                    {isEs ? 'En el producto' : 'In the product'}
-                  </span>
-                  {p.proof}
-                </p>
+                {/* Derecha: Con NutriFit (checks verdes) */}
+                <div className="md:col-span-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 mb-4 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    {isEs ? 'Con NutriFit' : 'With NutriFit'}
+                  </p>
+                  <ul className="space-y-3">
+                    {p.after.map((a, j) => (
+                      <li key={j} className="text-[15px] text-gray-900 leading-relaxed flex items-start gap-2.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                        <span>{a}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[12px] text-gray-400 leading-relaxed border-t border-gray-100 pt-4 mt-5">
+                    <span className="font-bold uppercase tracking-widest text-gray-400 mr-2">
+                      {isEs ? 'En el producto' : 'In the product'}
+                    </span>
+                    {p.proof}
+                  </p>
+                </div>
               </div>
             );
           })}
-        </div>
-
-        {/* "Para quién NO es esto" — solo 3 chips muy cortos */}
-        <div className="mt-20 bg-gray-50/50 border border-gray-100 rounded-3xl p-8 md:p-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
-            {isEs ? 'Para quién NO es esto' : 'Who this isn’t for'}
-          </p>
-          <h3 className="text-xl md:text-2xl font-medium tracking-tight mb-6">
-            {isEs ? 'Te lo decimos antes de que pruebes.' : 'We tell you before you sign up.'}
-          </h3>
-          <ul className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-            {[
-              { es: 'Equipos de varios coaches', en: 'Multi-coach teams' },
-              { es: 'Gimnasios o cadenas',        en: 'Gyms or chains' },
-              { es: 'Nutrición clínica regulada', en: 'Regulated clinical practice' },
-            ].map((x, i) => (
-              <li key={i} className="bg-white border border-gray-100 rounded-2xl px-5 py-4 flex items-center justify-center gap-2 text-gray-700">
-                <XCircle className="w-4 h-4 text-gray-300 shrink-0" />
-                <span className="font-medium">{isEs ? x.es : x.en}</span>
-              </li>
-            ))}
-          </ul>
         </div>
 
         {/* CTA */}
