@@ -97,7 +97,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
   };
 
   return (
-    <div className={`font-body text-on-surface ${embedded ? '' : 'min-h-screen'}`}>
+    <div className={`bg-surface font-body text-on-surface ${embedded ? '' : 'min-h-screen'}`}>
       <main className={`max-w-7xl mx-auto px-8 ${embedded ? 'py-6' : 'py-24'}`}>
         {/* Header Section — solo en modo landing (no embebido). En la pantalla
             de Suscripciones ya hay una cabecera propia, asi que se omite. */}
