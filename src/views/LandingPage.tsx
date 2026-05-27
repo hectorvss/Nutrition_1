@@ -59,22 +59,11 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
     });
   };
 
-  // Fondo en gradiente vertical: BLANCO arriba → ROSA abajo. La
-  // transicion es uniforme y notoria a lo largo de toda la pagina, sin
-  // bandas blancas intermedias ni espectros multicolor. Mismo tratamiento
-  // para home y subpaginas (Features, Soluciones, etc.) porque el `div`
-  // es el wrapper de todo el componente LandingPage.
+  // Fondo en gradiente diagonal suave: indigo arriba-izquierda → blanco
+  // central → rosa abajo-derecha. Los componentes con `bg-white` siguen
+  // destacando por contraste.
   return (
-    <div
-      className="min-h-screen font-sans text-black"
-      style={{
-        // Gradiente vertical, blanco arriba → coral-naranja abajo, con
-        // paso intermedio por rose/pink para que la transicion sea
-        // notoria pero armonica. Sin bandas blancas ni rainbow.
-        background:
-          'linear-gradient(180deg, #ffffff 0%, #fff1f2 25%, #fbcfe8 55%, #fed7aa 85%, #fdba74 100%)',
-      }}
-    >
+    <div className="bg-gradient-to-br from-indigo-50 via-white to-rose-50 min-h-screen font-sans text-black">
       {/* Floating Navigation Header */}
       <div className="fixed top-8 left-0 w-full px-8 flex justify-between items-center z-50 pointer-events-none">
         <div className="flex items-center pointer-events-auto">
