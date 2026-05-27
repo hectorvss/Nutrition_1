@@ -204,7 +204,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                   <img
                     src="/landing/feature-dashboard.png"
                     alt="Dashboard del manager: tareas pendientes, clientes activos y actualizaciones del día"
-                    className="absolute inset-0 w-full h-full object-contain object-top"
+                    className="absolute inset-0 w-full h-full object-cover object-top"
                     loading="eager"
                   />
                 </div>
@@ -501,7 +501,7 @@ function FeatureSequenceSection({
                   <img
                     src={imageSrc}
                     alt={imageAlt || ''}
-                    className="absolute inset-0 w-full h-full object-contain object-top"
+                    className="absolute inset-0 w-full h-full object-cover object-top"
                     loading="lazy"
                   />
                 ) : (
