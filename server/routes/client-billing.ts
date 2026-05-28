@@ -231,6 +231,86 @@ router.post('/', async (req: any, res) => {
   }
 });
 
+// ── PATCH /:id/price — cambia el importe de un cobro ───────────────────────
+// recurring/one_time → crea un Price nuevo, regenera el payment link y, si ya
+// hay una suscripción viva, le cambia el item (con prorrateo). Las facturas
+// finalizadas no se pueden editar en Stripe: hay que anularla y crear otra.
+router.patch('/:id/price', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+
+    const { data: row } = await supabaseAdmin
+      .from('client_billing')
+      .select('*')
+      .eq('id', id)
+      .eq('manager_id', req.user.id)
+      .maybeSingle();
+    if (!row) return res.status(404).json({ error: 'Billing record not found' });
+
+    if (row.kind === 'invoice') {
+      return res.status(400).json({ error: 'invoice_immutable', message: 'Una factura finalizada no se puede editar. Cancélala y crea un cobro nuevo.' });
+    }
+    if (['canceled', 'void'].includes(row.status)) {
+      return res.status(400).json({ error: 'Cannot edit a canceled charge' });
+    }
+
+    const amountNum = Number(req.body?.amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0 || amountNum > 1_000_000) {
+      return res.status(400).json({ error: 'amount must be a positive number' });
+    }
+    const amountCents = Math.round(amountNum * 100);
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+
+    // Reutiliza el producto si existe; si no, crea uno.
+    let productId = row.stripe_product_id;
+    if (!productId) {
+      const product = await stripe.products.create({ name: row.description || 'Coaching' });
+      productId = product.id;
+    }
+    const newPrice = await stripe.prices.create({
+      product: productId,
+      unit_amount: amountCents,
+      currency: row.currency || 'eur',
+      ...(row.kind === 'recurring' ? { recurring: { interval: (row.interval || 'month') as any } } : {}),
+    });
+
+    const updates: any = { amount_cents: amountCents, stripe_price_id: newPrice.id, stripe_product_id: productId };
+
+    // Si ya hay una suscripción activa, cámbiale el precio in-place (prorrateo).
+    if (row.stripe_subscription_id) {
+      const sub = await stripe.subscriptions.retrieve(row.stripe_subscription_id) as any;
+      const itemId = sub?.items?.data?.[0]?.id;
+      if (itemId) {
+        await stripe.subscriptions.update(row.stripe_subscription_id, {
+          items: [{ id: itemId, price: newPrice.id }],
+          proration_behavior: 'create_prorations',
+        });
+      }
+    } else if (row.stripe_payment_link_id) {
+      // Desactiva el link antiguo y crea uno nuevo con el precio actualizado.
+      try { await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+      const link = await stripe.paymentLinks.create({
+        line_items: [{ price: newPrice.id, quantity: 1 }],
+        metadata: { client_id: row.client_id, manager_id: req.user.id },
+        after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+      });
+      updates.stripe_payment_link_id = link.id;
+      updates.payment_url = link.url;
+    }
+
+    await supabaseAdmin.from('client_billing').update(updates).eq('id', id);
+    const { data: fresh } = await supabaseAdmin.from('client_billing').select('*').eq('id', id).maybeSingle();
+    res.json(fresh);
+  } catch (error: any) {
+    console.error('Error updating billing price:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // ── POST /:id/remind — envía un mensaje al cliente con el link de pago ─────
 router.post('/:id/remind', async (req: any, res) => {
   try {
@@ -291,11 +371,20 @@ router.post('/:id/sync', async (req: any, res) => {
     if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
     const { stripe } = conn;
 
+    // En el SDK v20 (Basil) `current_period_end` se movió de la raíz de la
+    // suscripción a `items.data[].current_period_end`. Como pineamos la
+    // apiVersion a acacia (2024-12-18) el wire response aún lo trae en la
+    // raíz, pero leemos AMBOS para no romper si la apiVersion sube.
+    const subPeriodEnd = (sub: any): string | null => {
+      const ts = sub?.current_period_end ?? sub?.items?.data?.[0]?.current_period_end;
+      return ts ? new Date(ts * 1000).toISOString() : null;
+    };
+
     const updates: any = {};
     if (row.stripe_subscription_id) {
       const sub = await stripe.subscriptions.retrieve(row.stripe_subscription_id) as any;
       updates.status = sub.status;
-      updates.current_period_end = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null;
+      updates.current_period_end = subPeriodEnd(sub);
     } else if (row.stripe_invoice_id) {
       const inv = await stripe.invoices.retrieve(row.stripe_invoice_id);
       updates.status = inv.status === 'paid' ? 'paid' : inv.status === 'void' ? 'void' : inv.status === 'uncollectible' ? 'uncollectible' : 'pending';
@@ -309,7 +398,7 @@ router.post('/:id/sync', async (req: any, res) => {
         const sub = await stripe.subscriptions.retrieve(subId) as any;
         updates.stripe_subscription_id = subId;
         updates.status = sub.status;
-        updates.current_period_end = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null;
+        updates.current_period_end = subPeriodEnd(sub);
       } else if (sess?.payment_status === 'paid') {
         updates.status = 'paid';
       }

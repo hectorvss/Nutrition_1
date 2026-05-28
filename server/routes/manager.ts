@@ -834,6 +834,42 @@ router.delete('/clients/:id', async (req: any, res) => {
       return res.status(404).json({ error: 'Client not found or access denied' });
     }
 
+    // Antes de borrar la fila (FK CASCADE elimina los `client_billing`), hay
+    // que CANCELAR los cobros vivos en la cuenta Stripe del coach. Si no, el
+    // cliente seguiría siendo facturado tras desaparecer del sistema.
+    // Best-effort: cualquier fallo de Stripe se loguea pero NO bloquea el
+    // borrado del cliente (el dinero ya no es nuestro problema de integridad
+    // de datos, pero el coach debe poder eliminar igualmente).
+    try {
+      const { data: liveBilling } = await supabaseAdmin
+        .from('client_billing')
+        .select('id, stripe_subscription_id, stripe_invoice_id, stripe_payment_link_id, status')
+        .eq('client_id', id)
+        .eq('manager_id', managerId)
+        .not('status', 'in', '("canceled","void","paid")');
+      if (liveBilling && liveBilling.length > 0) {
+        const { data: integ } = await supabaseAdmin
+          .from('integrations')
+          .select('stripe_secret_key')
+          .eq('user_id', managerId)
+          .maybeSingle();
+        if (integ?.stripe_secret_key) {
+          const coachStripe = newStripeClient(integ.stripe_secret_key);
+          for (const b of liveBilling) {
+            try {
+              if (b.stripe_subscription_id) await coachStripe.subscriptions.cancel(b.stripe_subscription_id);
+              if (b.stripe_invoice_id && b.status !== 'paid') await coachStripe.invoices.voidInvoice(b.stripe_invoice_id);
+              if (b.stripe_payment_link_id) await coachStripe.paymentLinks.update(b.stripe_payment_link_id, { active: false });
+            } catch (perRowErr) {
+              console.error(`[client delete] Stripe cancel failed for billing ${b.id}:`, perRowErr);
+            }
+          }
+        }
+      }
+    } catch (billingErr) {
+      console.error('[client delete] billing cleanup failed (non-fatal):', billingErr);
+    }
+
     // Atomic cascade. The previous flow issued 5 sequential deletes; a
     // network blip between two of them left the client in a half-deleted
     // state (submissions gone but user row still present, etc.).

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CreditCard, Plus, RefreshCw, Send, XCircle, Link2, ExternalLink,
-  TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2,
+  TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
@@ -62,6 +62,7 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editItem, setEditItem] = useState<BillingItem | null>(null);
 
   const money = (cents: number, currency: string) =>
     (cents / 100).toLocaleString(locale, { style: 'currency', currency: (currency || 'eur').toUpperCase() });
@@ -256,6 +257,9 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
                             </>
                           )}
                           <IconBtn title={isEs ? 'Sincronizar estado' : 'Sync status'} onClick={() => sync(it.id)} icon={RefreshCw} busy={busy} />
+                          {it.kind !== 'invoice' && !['canceled', 'void'].includes(it.status) && (
+                            <IconBtn title={isEs ? 'Cambiar precio' : 'Change price'} onClick={() => setEditItem(it)} icon={Pencil} />
+                          )}
                           {!['canceled', 'void', 'paid'].includes(it.status) && (
                             <IconBtn title={isEs ? 'Cancelar' : 'Cancel'} onClick={() => cancel(it.id)} icon={XCircle} accent="rose" />
                           )}
@@ -277,6 +281,69 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
           onCreated={() => { setShowCreate(false); load(); }}
         />
       )}
+
+      {editItem && (
+        <EditPriceModal
+          isEs={isEs}
+          item={editItem}
+          onClose={() => setEditItem(null)}
+          onSaved={() => { setEditItem(null); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Modal de cambio de precio ──────────────────────────────────────────────
+function EditPriceModal({ isEs, item, onClose, onSaved }: { isEs: boolean; item: BillingItem; onClose: () => void; onSaved: () => void }) {
+  const [amount, setAmount] = useState(String((item.amount_cents / 100).toFixed(2)));
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async () => {
+    setErr(null);
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
+    setSaving(true);
+    try {
+      await fetchWithAuth(`/manager/client-billing/${item.id}/price`, {
+        method: 'PATCH',
+        body: JSON.stringify({ amount: amt }),
+      });
+      onSaved();
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'Error al cambiar el precio.' : 'Error changing price.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Cambiar precio' : 'Change price'}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        {item.kind === 'recurring' && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+            {isEs
+              ? 'Si el cliente ya tiene una suscripción activa, el cambio se aplica con prorrateo en el próximo ciclo.'
+              : 'If the client already has an active subscription, the change is prorated on the next cycle.'}
+          </p>
+        )}
+        {err && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+        <Field label={isEs ? 'Nuevo importe' : 'New amount'}>
+          <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className={inputCls} autoFocus />
+        </Field>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
+          <button onClick={submit} disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {isEs ? 'Guardar' : 'Save'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
