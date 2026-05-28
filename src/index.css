@@ -2,6 +2,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 @import "tailwindcss";
 
+/* Tailwind v4: por defecto el variante `dark:` usa
+   @media (prefers-color-scheme: dark) — es decir, sigue al tema del SO.
+   Nuestro dark mode es in-app (ThemeContext alterna la clase `.dark` en
+   <html>). Esta línea reconecta `dark:` a esa clase para que el toggle
+   funcione de verdad. Sin ella, los cientos de clases `dark:` ya
+   presentes solo respondían al tema del sistema operativo. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-headline: "Noto Serif", serif;
