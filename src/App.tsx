@@ -43,6 +43,7 @@ import Training from './views/Training';
 import ExerciseDetail from './views/ExerciseDetail';
 import OnboardingDashboard from './views/OnboardingDashboard';
 import Subscriptions from './views/Subscriptions';
+import ClientBilling from './views/ClientBilling';
 import ClientApp from './ClientApp';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
@@ -53,7 +54,7 @@ import TrialBanner from './components/TrialBanner';
 import Paywall from './components/Paywall';
 import PaywallLimitModal from './components/PaywallLimitModal';
 
-type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'planning-template-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions';
+type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'planning-template-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions' | 'client-billing';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('landing');
@@ -325,6 +326,8 @@ export default function App() {
         return <Settings />;
       case 'subscriptions':
         return <Subscriptions onBack={() => setCurrentView('dashboard')} />;
+      case 'client-billing':
+        return <ClientBilling onBack={() => setCurrentView('settings')} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 p-10">

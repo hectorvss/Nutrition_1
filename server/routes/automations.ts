@@ -476,6 +476,9 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           profile: cProfile || null,
           coachName: _cachedCoachName,
           latestCheckIn: ciData,
+          // El trigger subscription-renewal-soon inyecta el link de pago en el
+          // payload para que `{Payment Link}` se resuelva en el recordatorio.
+          paymentUrl: (data as any)?.paymentUrl ?? null,
         };
 
         const execCtx: ExecutionContext = {
@@ -794,6 +797,9 @@ const cronHandler = async (req: any, res: any) => {
         const clientProfile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles;
         const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
         let shouldTrigger = false;
+        // Datos extra que algunos triggers inyectan en el payload (e.g. el
+        // link de pago para subscription-renewal-soon → `{Payment Link}`).
+        const triggerExtra: Record<string, any> = {};
 
         if (automation.trigger_id === 'weekly-checkin') {
           // Send if not sent in the last 7 days and it's the right day
@@ -966,8 +972,38 @@ const cronHandler = async (req: any, res: any) => {
           }
         }
 
+        else if (automation.trigger_id === 'subscription-renewal-soon') {
+          // El cliente tiene un cobro recurrente activo cuyo periodo termina
+          // dentro de N días (3 por defecto). Inyectamos el link de pago en
+          // el payload para que `{Payment Link}` lo resuelva en el mensaje.
+          const horizonDays = 3;
+          const horizon = new Date(today.getTime() + horizonDays * 86400000).toISOString();
+          const { data: billing } = await supabaseAdmin
+            .from('client_billing')
+            .select('payment_url, current_period_end, status')
+            .eq('client_id', client.id)
+            .eq('manager_id', automation.manager_id)
+            .in('status', ['active', 'trialing', 'past_due'])
+            .not('current_period_end', 'is', null)
+            .lte('current_period_end', horizon)
+            .order('current_period_end', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (billing?.current_period_end) {
+            const { data: lastSent } = await supabaseAdmin
+              .from('automation_logs').select('sent_at')
+              .eq('automation_id', automation.id).eq('client_id', client.id)
+              .order('sent_at', { ascending: false }).limit(1).maybeSingle();
+            // Dedupe: no repetir el aviso de renovación más de una vez cada 5 días.
+            if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / 86400000 >= 5) {
+              shouldTrigger = true;
+              if (billing.payment_url) triggerExtra.paymentUrl = billing.payment_url;
+            }
+          }
+        }
+
         if (shouldTrigger) {
-          await processTrigger(automation.manager_id, automation.trigger_id, { clientId: client.id });
+          await processTrigger(automation.manager_id, automation.trigger_id, { clientId: client.id, ...triggerExtra });
         }
       }
     }

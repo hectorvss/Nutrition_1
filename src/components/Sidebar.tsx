@@ -18,6 +18,7 @@ import {
   Settings,
   ShieldCheck,
   ArrowUpCircle,
+  CreditCard,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
@@ -108,6 +109,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
         { id: 'check-ins', label: t('checkins'), icon: ClipboardCheck },
         { id: 'onboarding', label: t('onboarding'), icon: ShieldCheck },
         { id: 'messages', label: t('messages'), icon: MessageSquare },
+        { id: 'client-billing', label: t('client_billing', { defaultValue: 'Cobros' }), icon: CreditCard },
       ]
     },
     {

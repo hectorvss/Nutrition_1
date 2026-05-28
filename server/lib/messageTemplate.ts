@@ -21,6 +21,9 @@ export interface RenderContext {
   coachName?: string | null;
   /** Ultimo check-in del cliente (data_json desplegado). */
   latestCheckIn?: Record<string, any> | null;
+  /** Link de pago activo del cliente (client_billing.payment_url). Para
+   *  recordatorios de cobro automatizados con `{Payment Link}`. */
+  paymentUrl?: string | null;
   /** Override puntual de variables (e.g. tests). Sustituye a todo lo anterior. */
   overrides?: Record<string, string | number>;
 }
@@ -93,6 +96,9 @@ export const KNOWN_VARIABLES: Array<{ token: string; resolve: (ctx: RenderContex
     }
   },
   { token: '{Today}', resolve: () => new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }) },
+  // Link de pago del cobro activo del cliente. Si no hay link, devolvemos
+  // cadena vacía para no dejar el placeholder crudo en un recordatorio.
+  { token: '{Payment Link}', resolve: ctx => String(ctx.paymentUrl || '') },
 ];
 
 const TOKEN_RE = /\{[^}]+\}/g;

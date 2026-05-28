@@ -42,6 +42,7 @@ const VARIABLES = [
   { label: '{Days Inactive}',     desc: 'Días sin abrir la app' },
   { label: '{Days Until Expiry}', desc: 'Días hasta que vence el plan' },
   { label: '{Today}',             desc: 'Fecha de hoy' },
+  { label: '{Payment Link}',      desc: 'Link de pago del cobro activo del cliente' },
 ];
 
 // Metadata for every action-step kind: icon, label and the card's icon colour.

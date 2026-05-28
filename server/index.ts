@@ -22,6 +22,7 @@ import automationRoutes from './routes/automations.js';
 import workflowRoutes from './routes/workflows.js';
 import onboardingRoutes from './routes/onboarding.js';
 import recipeRoutes from './routes/recipes.js';
+import clientBillingRoutes from './routes/client-billing.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3005;
@@ -100,6 +101,7 @@ app.use('/api/automations', automationRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use('/api/manager/client-billing', clientBillingRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });

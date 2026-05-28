@@ -64,8 +64,8 @@ export const TRIGGERS: TriggerDef[] = [
     icon: 'Cake', category: 'lifecycle', tier: 'advanced', wired: true,
     params: [{ key: 'months', label: 'Meses', type: 'number', defaultValue: 1, unit: 'meses' }] },
   { id: 'subscription-renewal-soon', name: 'Renovación próxima',
-    desc: 'X días antes de que renueve la suscripción del cliente.',
-    icon: 'CreditCard', category: 'lifecycle', tier: 'advanced', wired: false,
+    desc: 'Cuando un cobro recurrente del cliente está a punto de renovar (usa {Payment Link}).',
+    icon: 'CreditCard', category: 'lifecycle', tier: 'advanced', wired: true,
     params: [{ key: 'days', label: 'Dias antes', type: 'number', defaultValue: 7, unit: 'd' }] },
 
   // ─── Check-ins ──────────────────────────────────────────────────────────
