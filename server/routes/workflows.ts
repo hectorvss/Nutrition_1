@@ -121,6 +121,8 @@ export const WORKFLOW_CATALOG = [
     icon: 'Dumbbell', description: 'Fires when a client logs a workout session.', configFields: [] },
   { type: 'trigger', key: 'trigger.meal_logged', label: 'Meal logged', category: 'Triggers',
     icon: 'Utensils', description: 'Fires when a client logs a completed meal.', configFields: [] },
+  { type: 'trigger', key: 'trigger.activity_highlighted', label: 'Activity highlighted', category: 'Triggers',
+    icon: 'Star', description: 'Fires when the coach highlights (stars) a client activity in the progress feed.', configFields: [] },
   { type: 'trigger', key: 'trigger.client_inactive', label: 'Client inactive', category: 'Triggers',
     icon: 'AlarmClockOff', description: 'Daily cron — fires when a client has no activity for N+ days.',
     configFields: [{ name: 'days', label: 'Inactive for (days)', type: 'number' }] },
@@ -433,6 +435,7 @@ async function runLoop(p: {
         case 'trigger.onboarding_completed':
         case 'trigger.workout_logged':
         case 'trigger.meal_logged':
+        case 'trigger.activity_highlighted':
         case 'trigger.client_inactive':
         case 'trigger.day_of_week':
         case 'trigger.birthday':

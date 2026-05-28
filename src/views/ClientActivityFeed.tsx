@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dumbbell, ClipboardCheck, Utensils, MessageSquare, UserPlus,
-  Star, StickyNote, ChevronDown, Activity as ActivityIcon, Check, X,
+  Star, StickyNote, ChevronDown, Activity as ActivityIcon, Check, X, Send,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
@@ -40,9 +40,11 @@ const TYPE_META: Record<ActivityType, { icon: React.ElementType; color: string; 
 
 interface Props {
   clientId: string;
+  /** Abre el chat con este cliente (botón de mensaje en cada tarjeta). */
+  onMessage?: () => void;
 }
 
-export default function ClientActivityFeed({ clientId }: Props) {
+export default function ClientActivityFeed({ clientId, onMessage }: Props) {
   const { t, language } = useLanguage();
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 
@@ -102,7 +104,9 @@ export default function ClientActivityFeed({ clientId }: Props) {
     setItems(prev => prev.map(i => (i.id === item.id && i.type === item.type ? { ...i, highlighted: !i.highlighted } : i)));
     await fetchWithAuth('/manager/activity/highlight', {
       method: 'POST',
-      body: JSON.stringify({ activity_type: item.type, activity_id: item.id }),
+      // client_id + label permiten al backend notificar al cliente ("tu coach
+      // ha destacado…") y disparar trigger.activity_highlighted.
+      body: JSON.stringify({ activity_type: item.type, activity_id: item.id, client_id: clientId, label: item.title }),
     }).catch(() => {
       // revertir si falla
       setItems(prev => prev.map(i => (i.id === item.id && i.type === item.type ? { ...i, highlighted: !i.highlighted } : i)));
@@ -284,6 +288,15 @@ export default function ClientActivityFeed({ clientId }: Props) {
 
                   {/* Acciones */}
                   <div className="flex items-center gap-0.5 shrink-0">
+                    {onMessage && (
+                      <button
+                        onClick={onMessage}
+                        title={t('act_message', { defaultValue: 'Enviar mensaje' })}
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => toggleHighlight(item)}
                       title={t('act_highlight', { defaultValue: 'Destacar' })}

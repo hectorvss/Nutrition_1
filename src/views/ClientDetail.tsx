@@ -417,7 +417,7 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
             )
           )}
           {activeTab === 'Progress' && (
-            <ClientActivityFeed clientId={clientId} />
+            <ClientActivityFeed clientId={clientId} onMessage={() => onNavigate?.('messages', { clientId })} />
           )}
 
           {/* Global Insights Section */}

@@ -6,7 +6,7 @@ import { newStripeClient } from '../lib/stripe.js';
 import { google } from 'googleapis';
 import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
-import { vapidPublicKey, pushConfigured } from '../lib/push.js';
+import { sendPushToUser, vapidPublicKey, pushConfigured } from '../lib/push.js';
 import { nutritionPlanSchema, trainingProgramSchema } from '../schemas/plans.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { limitsForTier, isAccessBlocked, trialDaysLeft, makeEnforceLimit, countActiveAutomations, type PlanTier } from '../lib/plans.js';
@@ -5206,10 +5206,13 @@ router.get('/clients/:id/activity-feed', async (req: any, res) => {
   }
 });
 
-// POST /manager/activity/highlight  { activity_type, activity_id } — toggle estrella.
+// POST /manager/activity/highlight  { activity_type, activity_id, client_id?, label? }
+// Toggle estrella. Al DESTACAR (on) se notifica al cliente con un mensaje +
+// push ("tu coach ha destacado…") y se dispara trigger.activity_highlighted
+// para que el coach pueda encadenar workflows.
 router.post('/activity/highlight', async (req: any, res) => {
   const managerId = req.user.id;
-  const { activity_type, activity_id } = req.body || {};
+  const { activity_type, activity_id, client_id, label } = req.body || {};
   if (!ACTIVITY_TYPES.includes(activity_type) || !activity_id) {
     return res.status(400).json({ error: 'Invalid activity reference' });
   }
@@ -5223,6 +5226,28 @@ router.post('/activity/highlight', async (req: any, res) => {
     }
     await supabaseAdmin.from('coach_activity_highlights')
       .insert({ manager_id: managerId, activity_type, activity_id: String(activity_id) });
+
+    // Notificar al cliente que su coach ha destacado su actividad.
+    if (client_id) {
+      // El cliente debe pertenecer a este manager (evita notificar a terceros).
+      const { data: cli } = await supabaseAdmin.from('users')
+        .select('id, manager_id').eq('id', client_id).maybeSingle();
+      if (cli && cli.manager_id === managerId) {
+        const cleanLabel = String(label || '').trim().slice(0, 120);
+        const body = cleanLabel
+          ? `⭐ Tu coach ha destacado tu actividad: ${cleanLabel}. ¡Buen trabajo!`
+          : '⭐ Tu coach ha destacado una de tus actividades. ¡Buen trabajo!';
+        await supabaseAdmin.from('messages')
+          .insert({ sender_id: managerId, receiver_id: client_id, content: body })
+          .then(() => {}, () => {});
+        sendPushToUser(client_id, { title: '⭐ ¡Actividad destacada!', body, url: '/' })
+          .catch(() => {});
+        runWorkflowsForEvent(managerId, 'trigger.activity_highlighted', {
+          clientId: client_id, activityType: activity_type, activityId: String(activity_id),
+        }).catch(() => {});
+      }
+    }
+
     res.json({ highlighted: true });
   } catch (error: any) {
     console.error('Error toggling highlight:', error);
