@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { motion } from "motion/react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
+import InteractiveDemo from "./landing/InteractiveDemo";
 import Pricing from "../components/Pricing";
 import { useLanguage } from "../context/LanguageContext";
 import HowItWorks from "./landing/HowItWorks";
@@ -46,15 +47,22 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
   const { t, language, setLanguage } = useLanguage();
   const isEs = language === 'es';
   const [currentPage, setCurrentPage] = useState<LandingPageKind>('home');
+  // Popup de la demo interactiva — se abre desde el boton "tour interactivo".
+  const [showDemo, setShowDemo] = useState(false);
 
-  // Scroll a la sección de features (mockups). Si el usuario está en una
-  // sub-página, vuelve a home primero y luego hace scroll.
-  const scrollToFeatures = () => {
-    if (currentPage !== 'home') setCurrentPage('home');
-    requestAnimationFrame(() => {
-      document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-    });
-  };
+  // ESC cierra la demo; al abrirla bloqueamos el scroll del body para que
+  // el fondo no se mueva detras del modal.
+  useEffect(() => {
+    if (!showDemo) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowDemo(false); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showDemo]);
 
   // Fondo en gradiente diagonal suave: indigo arriba-izquierda → blanco
   // central → rosa abajo-derecha. Los componentes con `bg-white` siguen
@@ -234,12 +242,12 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               </div>
             </motion.div>      
               
-            {/* Trailer Play Button — al pulsar lleva a la sección de features
-                (donde están los mockups del producto). Cuando dispongamos del
-                vídeo, sustituir por la apertura del player. */}
+            {/* Tour interactivo — abre el popup con la demo interactiva en
+                vivo (no un vídeo): el visitante toca el producto sin
+                registrarse. */}
             <div className="mt-8 flex justify-center">
               <button
-                onClick={scrollToFeatures}
+                onClick={() => setShowDemo(true)}
                 className="bg-white/80 backdrop-blur-md border border-gray-200 px-6 py-3 rounded-full flex items-center gap-3 shadow-lg hover:bg-white transition-all group cursor-pointer"
               >
                 <div className="bg-black text-white rounded-full p-1.5 group-hover:scale-110 transition-transform">
@@ -437,6 +445,43 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
           </div>
         </div>
       </footer>
+
+      {/* Popup de la demo interactiva — se abre desde el boton "tour
+          interactivo" del hero. Overlay oscuro + card scrollable con la
+          demo dentro. ESC y clic-fuera cierran. */}
+      <AnimatePresence>
+        {showDemo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm overflow-y-auto"
+            onClick={() => setShowDemo(false)}
+          >
+            <motion.div
+              initial={{ y: 24, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 12, opacity: 0, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="relative bg-white rounded-3xl shadow-2xl my-8 mx-auto max-w-6xl w-[calc(100%-2rem)] p-6 md:p-10"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+            >
+              <button
+                type="button"
+                onClick={() => setShowDemo(false)}
+                className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-black hover:bg-gray-100 transition-colors"
+                aria-label={isEs ? 'Cerrar' : 'Close'}
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <InteractiveDemo onGetStarted={onGetStarted} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
