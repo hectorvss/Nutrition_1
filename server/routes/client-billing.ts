@@ -75,15 +75,43 @@ const frontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
 // ── GET / — lista de cobros del coach + KPIs ───────────────────────────────
 router.get('/', async (req: any, res) => {
   try {
+    // `stripeConnected` se calcula por adelantado: el listado NO necesita
+    // Stripe (lee el espejo local), pero la UI lo usa para el empty-state.
+    const { data: integ } = await supabaseAdmin
+      .from('integrations')
+      .select('stripe_secret_key')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    const stripeConnected = !!integ?.stripe_secret_key;
+
     const { data: rows, error } = await supabaseAdmin
       .from('client_billing')
-      .select('*, client:client_id(id, full_name, email)')
+      .select('*')
       .eq('manager_id', req.user.id)
       .order('created_at', { ascending: false })
       .limit(500);
     if (error) throw error;
 
     const list = rows || [];
+
+    // El nombre del cliente vive en `profiles.full_name` (NO en `users`),
+    // así que lo resolvemos en una segunda consulta y lo fusionamos. Esto
+    // evita el embed PostgREST roto que devolvía 500.
+    const clientIds = Array.from(new Set(list.map((r: any) => r.client_id).filter(Boolean)));
+    const nameById: Record<string, { full_name?: string; email?: string }> = {};
+    if (clientIds.length > 0) {
+      const [{ data: profiles }, { data: users }] = await Promise.all([
+        supabaseAdmin.from('profiles').select('user_id, full_name').in('user_id', clientIds),
+        supabaseAdmin.from('users').select('id, email').in('id', clientIds),
+      ]);
+      for (const u of (users || [])) nameById[u.id] = { ...(nameById[u.id] || {}), email: u.email };
+      for (const p of (profiles || [])) nameById[p.user_id] = { ...(nameById[p.user_id] || {}), full_name: p.full_name };
+    }
+    const withClient = list.map((r: any) => ({
+      ...r,
+      client: { id: r.client_id, full_name: nameById[r.client_id]?.full_name, email: nameById[r.client_id]?.email },
+    }));
+
     // KPIs: MRR de clientes (suscripciones activas normalizadas a mensual),
     // nº activas, pendientes/impagadas.
     let mrrCents = 0;
@@ -99,7 +127,7 @@ router.get('/', async (req: any, res) => {
     }
 
     res.json({
-      items: list,
+      items: withClient,
       kpis: {
         mrrCents,
         currency: list[0]?.currency || 'eur',
@@ -107,12 +135,9 @@ router.get('/', async (req: any, res) => {
         pendingOrOverdue: pendingCount,
         total: list.length,
       },
-      stripeConnected: true,
+      stripeConnected,
     });
   } catch (error: any) {
-    // Distingue "no conectado" para que la UI muestre el empty-state correcto.
-    const conn = await getCoachStripe(req.user.id);
-    if ('error' in conn) return res.json({ items: [], kpis: { mrrCents: 0, currency: 'eur', activeSubscriptions: 0, pendingOrOverdue: 0, total: 0 }, stripeConnected: false });
     console.error('Error listing client billing:', error);
     res.status(500).json({ error: safeErr(error) });
   }
@@ -121,7 +146,12 @@ router.get('/', async (req: any, res) => {
 // ── POST / — crea un cobro (recurring | one_time | invoice) ────────────────
 router.post('/', async (req: any, res) => {
   try {
-    const { client_id, kind, amount, currency, interval, description, days_until_due } = req.body;
+    const {
+      client_id, kind, amount, currency, interval, description, days_until_due,
+      // Control extra: días de prueba, cantidad de unidades, intervalo
+      // personalizado (cada N períodos) y códigos promocionales en el link.
+      trial_days, quantity, interval_count, allow_promotion_codes,
+    } = req.body;
 
     // Validaciones
     const validKinds = ['recurring', 'one_time', 'invoice'];
@@ -139,6 +169,14 @@ router.post('/', async (req: any, res) => {
     const safeCurrency = (typeof currency === 'string' && /^[a-z]{3}$/i.test(currency)) ? currency.toLowerCase() : 'eur';
     const safeInterval = ['month', 'year', 'week', 'day'].includes(interval) ? interval : 'month';
     const safeDesc = typeof description === 'string' ? description.slice(0, 300) : null;
+    // Control fino (todos con tope sano):
+    const qtyNum = Number(quantity);
+    const safeQty = Number.isFinite(qtyNum) && qtyNum >= 1 && qtyNum <= 999 ? Math.round(qtyNum) : 1;
+    const trialNum = Number(trial_days);
+    const safeTrialDays = Number.isFinite(trialNum) && trialNum > 0 && trialNum <= 365 ? Math.round(trialNum) : 0;
+    const icNum = Number(interval_count);
+    const safeIntervalCount = Number.isFinite(icNum) && icNum >= 1 && icNum <= 52 ? Math.round(icNum) : 1;
+    const allowPromos = allow_promotion_codes === true;
 
     const conn = await getCoachStripe(req.user.id);
     if ('error' in conn) return res.status(conn.code).json({ error: conn.error, message: 'Conecta tu cuenta de Stripe en Ajustes → Integraciones para poder cobrar a tus clientes.' });
@@ -164,12 +202,15 @@ router.post('/', async (req: any, res) => {
         product: product.id,
         unit_amount: amountCents,
         currency: safeCurrency,
-        ...(kind === 'recurring' ? { recurring: { interval: safeInterval as any } } : {}),
+        ...(kind === 'recurring'
+          ? { recurring: { interval: safeInterval as any, interval_count: safeIntervalCount, ...(safeTrialDays > 0 ? { trial_period_days: safeTrialDays } : {}) } }
+          : {}),
       });
       stripe_price_id = price.id;
       const link = await stripe.paymentLinks.create({
-        line_items: [{ price: price.id, quantity: 1 }],
+        line_items: [{ price: price.id, quantity: safeQty }],
         metadata: { client_id: client.id, manager_id: req.user.id },
+        allow_promotion_codes: allowPromos,
         after_completion: {
           type: 'redirect',
           redirect: { url: `${frontendUrl()}/?payment=success` },
@@ -454,6 +495,113 @@ router.post('/:id/cancel', async (req: any, res) => {
     res.json({ ok: true });
   } catch (error: any) {
     console.error('Error cancelling billing record:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// ── GET /stripe/subscriptions — candidatos para importar ───────────────────
+// Lista las suscripciones EXISTENTES en la cuenta Stripe del coach que aún no
+// están espejadas en client_billing, con email/nombre del customer, importe e
+// intervalo, para que el coach las importe y las asocie a un cliente.
+router.get('/stripe/subscriptions', async (req: any, res) => {
+  try {
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error, message: 'Conecta tu cuenta de Stripe en Ajustes → Integraciones.' });
+    const { stripe } = conn;
+
+    // Suscripciones ya importadas (para excluirlas).
+    const { data: existing } = await supabaseAdmin
+      .from('client_billing')
+      .select('stripe_subscription_id')
+      .eq('manager_id', req.user.id)
+      .not('stripe_subscription_id', 'is', null);
+    const already = new Set((existing || []).map((r: any) => r.stripe_subscription_id));
+
+    const subs = await stripe.subscriptions.list({ status: 'all', limit: 50, expand: ['data.customer'] });
+    const candidates = subs.data
+      .filter(s => !already.has(s.id))
+      .map(s => {
+        const item = (s as any).items?.data?.[0];
+        const price = item?.price;
+        const cust: any = s.customer;
+        const periodEndTs = (s as any).current_period_end ?? item?.current_period_end;
+        return {
+          stripe_subscription_id: s.id,
+          status: s.status,
+          customer_email: typeof cust === 'object' ? (cust?.email || null) : null,
+          customer_name: typeof cust === 'object' ? (cust?.name || null) : null,
+          stripe_customer_id: typeof cust === 'object' ? cust?.id : cust,
+          amount_cents: price?.unit_amount ?? 0,
+          currency: price?.currency || 'eur',
+          interval: price?.recurring?.interval || 'month',
+          interval_count: price?.recurring?.interval_count || 1,
+          stripe_price_id: price?.id || null,
+          stripe_product_id: typeof price?.product === 'string' ? price?.product : (price?.product?.id || null),
+          current_period_end: periodEndTs ? new Date(periodEndTs * 1000).toISOString() : null,
+          description: (typeof price?.product === 'object' ? price?.product?.name : null) || null,
+        };
+      });
+
+    res.json({ candidates });
+  } catch (error: any) {
+    console.error('Error listing Stripe subscriptions:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// ── POST /import — importa una suscripción existente y la asocia a un cliente ─
+router.post('/import', async (req: any, res) => {
+  try {
+    const { client_id, stripe_subscription_id } = req.body;
+    if (typeof stripe_subscription_id !== 'string' || !stripe_subscription_id.startsWith('sub_')) {
+      return res.status(400).json({ error: 'Invalid stripe_subscription_id' });
+    }
+    const client = await getOwnedClient(req.user.id, client_id);
+    if (!client) return res.status(403).json({ error: 'Client does not belong to this coach' });
+
+    // Evita duplicados.
+    const { data: dup } = await supabaseAdmin
+      .from('client_billing')
+      .select('id')
+      .eq('manager_id', req.user.id)
+      .eq('stripe_subscription_id', stripe_subscription_id)
+      .maybeSingle();
+    if (dup) return res.status(409).json({ error: 'already_imported', message: 'Esta suscripción ya está importada.' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+
+    const sub = await stripe.subscriptions.retrieve(stripe_subscription_id, { expand: ['items.data.price.product', 'customer'] }) as any;
+    const item = sub.items?.data?.[0];
+    const price = item?.price;
+    const periodEndTs = sub.current_period_end ?? item?.current_period_end;
+    const cust: any = sub.customer;
+
+    const { data: inserted, error } = await supabaseAdmin
+      .from('client_billing')
+      .insert({
+        manager_id: req.user.id,
+        client_id: client.id,
+        kind: 'recurring',
+        stripe_customer_id: typeof cust === 'object' ? cust?.id : cust,
+        stripe_subscription_id: sub.id,
+        stripe_price_id: price?.id || null,
+        stripe_product_id: typeof price?.product === 'string' ? price?.product : (price?.product?.id || null),
+        description: (typeof price?.product === 'object' ? price?.product?.name : null) || null,
+        amount_cents: price?.unit_amount ?? 0,
+        currency: price?.currency || 'eur',
+        interval: price?.recurring?.interval || 'month',
+        status: sub.status,
+        current_period_end: periodEndTs ? new Date(periodEndTs * 1000).toISOString() : null,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    res.json(inserted);
+  } catch (error: any) {
+    console.error('Error importing subscription:', error);
     res.status(500).json({ error: safeErr(error) });
   }
 });

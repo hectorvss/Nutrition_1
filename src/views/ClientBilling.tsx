@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   CreditCard, Plus, RefreshCw, Send, XCircle, Link2, ExternalLink,
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
+  DownloadCloud, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
@@ -62,6 +63,7 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editItem, setEditItem] = useState<BillingItem | null>(null);
 
   const money = (cents: number, currency: string) =>
@@ -180,12 +182,20 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
             {isEs ? 'Gestiona las suscripciones y pagos de tus clientes vía Stripe.' : 'Manage your clients’ subscriptions and payments via Stripe.'}
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#17cf54] hover:bg-[#15b84a] text-white font-semibold text-sm shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" /> {isEs ? 'Nuevo cobro' : 'New charge'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+          >
+            <DownloadCloud className="w-4 h-4" /> {isEs ? 'Importar de Stripe' : 'Import from Stripe'}
+          </button>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#17cf54] hover:bg-[#15b84a] text-white font-semibold text-sm shadow-sm transition"
+          >
+            <Plus className="w-4 h-4" /> {isEs ? 'Nuevo cobro' : 'New charge'}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -288,6 +298,15 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
           item={editItem}
           onClose={() => setEditItem(null)}
           onSaved={() => { setEditItem(null); load(); }}
+        />
+      )}
+
+      {showImport && (
+        <ImportModal
+          isEs={isEs}
+          locale={locale}
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); load(); }}
         />
       )}
     </div>
@@ -395,6 +414,12 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Opciones avanzadas (máximo control sobre la suscripción / cobro).
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [trialDays, setTrialDays] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [intervalCount, setIntervalCount] = useState('1');
+  const [allowPromos, setAllowPromos] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -421,6 +446,10 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
           amount: amt,
           currency,
           interval: kind === 'recurring' ? interval : undefined,
+          interval_count: kind === 'recurring' ? Number(intervalCount) || 1 : undefined,
+          trial_days: kind === 'recurring' && Number(trialDays) > 0 ? Number(trialDays) : undefined,
+          quantity: Number(quantity) || 1,
+          allow_promotion_codes: (kind === 'recurring' || kind === 'one_time') ? allowPromos : undefined,
           days_until_due: kind === 'invoice' ? Number(daysUntilDue) : undefined,
           description: description.trim() || undefined,
         }),
@@ -499,6 +528,37 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
           <Field label={isEs ? 'Descripción (opcional)' : 'Description (optional)'}>
             <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder={isEs ? 'Ej. Plan de coaching premium' : 'e.g. Premium coaching plan'} className={inputCls} maxLength={300} />
           </Field>
+
+          {/* Opciones avanzadas — máximo control sobre el cobro */}
+          {kind !== 'invoice' && (
+            <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+              <button type="button" onClick={() => setShowAdvanced(v => !v)} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                {isEs ? 'Opciones avanzadas' : 'Advanced options'}
+              </button>
+              {showAdvanced && (
+                <div className="mt-3 space-y-3">
+                  {kind === 'recurring' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label={isEs ? 'Días de prueba' : 'Trial days'}>
+                        <input type="number" min="0" max="365" value={trialDays} onChange={e => setTrialDays(e.target.value)} placeholder="0" className={inputCls} />
+                      </Field>
+                      <Field label={isEs ? 'Cada N períodos' : 'Every N periods'}>
+                        <input type="number" min="1" max="52" value={intervalCount} onChange={e => setIntervalCount(e.target.value)} className={inputCls} />
+                      </Field>
+                    </div>
+                  )}
+                  <Field label={isEs ? 'Cantidad (unidades)' : 'Quantity (units)'}>
+                    <input type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)} className={inputCls} />
+                  </Field>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[#17cf54]" />
+                    <span className="text-sm text-slate-600 dark:text-slate-300">{isEs ? 'Permitir códigos de descuento en el pago' : 'Allow promotion codes at checkout'}</span>
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -506,6 +566,130 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
           <button onClick={submit} disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {isEs ? 'Crear cobro' : 'Create charge'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal de importación desde Stripe ──────────────────────────────────────
+function ImportModal({ isEs, locale, onClose, onImported }: { isEs: boolean; locale: string; onClose: () => void; onImported: () => void }) {
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [busySub, setBusySub] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setErr(null);
+      try {
+        const [subs, cl] = await Promise.all([
+          fetchWithAuth('/manager/client-billing/stripe/subscriptions'),
+          fetchWithAuth('/manager/clients'),
+        ]);
+        setCandidates(subs?.candidates || []);
+        setClients(Array.isArray(cl) ? cl : (cl?.items || []));
+      } catch (e: any) {
+        setErr(e?.message || (isEs ? 'No se pudo conectar con Stripe.' : 'Could not connect to Stripe.'));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const money = (cents: number, currency: string) =>
+    (cents / 100).toLocaleString(locale, { style: 'currency', currency: (currency || 'eur').toUpperCase() });
+
+  const doImport = async (sub: any) => {
+    const clientId = mapping[sub.stripe_subscription_id];
+    if (!clientId) { setErr(isEs ? 'Selecciona el cliente para cada suscripción.' : 'Pick a client for each subscription.'); return; }
+    setBusySub(sub.stripe_subscription_id);
+    setErr(null);
+    try {
+      await fetchWithAuth('/manager/client-billing/import', {
+        method: 'POST',
+        body: JSON.stringify({ client_id: clientId, stripe_subscription_id: sub.stripe_subscription_id }),
+      });
+      setDoneIds(prev => new Set(prev).add(sub.stripe_subscription_id));
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'Error al importar.' : 'Import error.'));
+    } finally {
+      setBusySub(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Importar de Stripe' : 'Import from Stripe'}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          {isEs
+            ? 'Suscripciones existentes en tu cuenta de Stripe que aún no están aquí. Asígnalas a un cliente para gestionarlas desde la app.'
+            : 'Existing subscriptions in your Stripe account not yet here. Assign each to a client to manage it from the app.'}
+        </p>
+
+        {err && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+
+        <div className="overflow-y-auto flex-1 -mx-2 px-2">
+          {loading ? (
+            <div className="py-12 flex justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          ) : candidates.length === 0 ? (
+            <div className="py-10 text-center text-sm text-slate-500">{isEs ? 'No hay suscripciones nuevas para importar.' : 'No new subscriptions to import.'}</div>
+          ) : (
+            <div className="space-y-3">
+              {candidates.map(sub => {
+                const done = doneIds.has(sub.stripe_subscription_id);
+                const busy = busySub === sub.stripe_subscription_id;
+                return (
+                  <div key={sub.stripe_subscription_id} className="border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-900 dark:text-white text-sm truncate">
+                        {sub.customer_name || sub.customer_email || (isEs ? 'Cliente Stripe' : 'Stripe customer')}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {money(sub.amount_cents, sub.currency)}/{sub.interval === 'year' ? (isEs ? 'año' : 'yr') : (isEs ? 'mes' : 'mo')} · {sub.status}
+                      </div>
+                    </div>
+                    {done ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="w-4 h-4" /> {isEs ? 'Importada' : 'Imported'}</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={mapping[sub.stripe_subscription_id] || ''}
+                          onChange={e => setMapping(m => ({ ...m, [sub.stripe_subscription_id]: e.target.value }))}
+                          className="p-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white outline-none max-w-[160px]"
+                        >
+                          <option value="">{isEs ? 'Cliente…' : 'Client…'}</option>
+                          {clients.map(c => <option key={c.id} value={c.id}>{c.full_name || c.name || c.email}</option>)}
+                        </select>
+                        <button
+                          onClick={() => doImport(sub)}
+                          disabled={busy}
+                          className="px-3 py-2 rounded-lg bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-60 text-white text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DownloadCloud className="w-3.5 h-3.5" />}
+                          {isEs ? 'Importar' : 'Import'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5">
+          <button onClick={onImported} className="w-full px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm hover:opacity-90 transition">
+            {isEs ? 'Hecho' : 'Done'}
           </button>
         </div>
       </div>
