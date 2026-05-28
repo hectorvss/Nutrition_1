@@ -23,6 +23,7 @@ import TrainingTab from './client/TrainingTab';
 import PlanningTab from './client/PlanningTab';
 import MindsetTab from './client/MindsetTab';
 import InsightsTab from './client/InsightsTab';
+import ClientActivityFeed from './ClientActivityFeed';
 import DeleteClientModal from './client/DeleteClientModal';
 import PasswordResetModal from './client/PasswordResetModal';
 import EditProfileModal from './client/EditProfileModal';
@@ -34,7 +35,7 @@ interface ClientDetailProps {
   onNavigate?: (view: string, data?: any) => void;
 }
 
-type Tab = 'Information' | 'Nutrition' | 'Training' | 'Planning' | 'Mindset';
+type Tab = 'Information' | 'Nutrition' | 'Training' | 'Planning' | 'Mindset' | 'Progress';
 
 export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDetailProps) {
   const { t, language } = useLanguage();
@@ -302,7 +303,7 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
           </header>
 
           <div className="flex items-center gap-8 border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto scrollbar-hide">
-            {(['Information', 'Nutrition', 'Training', 'Planning', 'Mindset'] as Tab[]).map((tab) => (
+            {(['Information', 'Nutrition', 'Training', 'Planning', 'Mindset', 'Progress'] as Tab[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -317,6 +318,7 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
                 {tab === 'Training' && t('training')}
                 {tab === 'Planning' && t('planning')}
                 {tab === 'Mindset' && t('mindset')}
+                {tab === 'Progress' && t('progress_tab', { defaultValue: 'Progreso' })}
                 {activeTab === tab && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full"></div>
                 )}
@@ -413,6 +415,9 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
             ) : (
               <MindsetTab stats={stats} t={t} />
             )
+          )}
+          {activeTab === 'Progress' && (
+            <ClientActivityFeed clientId={clientId} />
           )}
 
           {/* Global Insights Section */}

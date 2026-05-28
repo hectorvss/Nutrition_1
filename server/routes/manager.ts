@@ -5022,6 +5022,203 @@ router.post('/push/unsubscribe', async (req: any, res) => {
   }
 });
 
+/* ============================================================================
+ * PROGRESO / ACOMPAÑAMIENTO — feed de actividad por cliente.
+ * Unifica en un solo timeline cronológico cada acción positiva del cliente:
+ * entrenos logueados, check-ins, comidas registradas, mensajes y onboarding.
+ * El coach puede destacar (estrella) y anotar cada actividad.
+ * ========================================================================== */
+
+const ACTIVITY_TYPES = ['workout', 'checkin', 'meal', 'message', 'onboarding'] as const;
+
+// GET /manager/clients/:id/activity-feed?type=all&before=<iso>&limit=30
+router.get('/clients/:id/activity-feed', async (req: any, res) => {
+  const managerId = req.user.id;
+  const clientId = req.params.id;
+  const type = String(req.query.type || 'all');
+  const limit = Math.min(50, Math.max(5, parseInt(String(req.query.limit), 10) || 30));
+  const beforeIso = req.query.before ? new Date(String(req.query.before)).toISOString() : new Date().toISOString();
+
+  try {
+    // El cliente debe pertenecer a este manager.
+    const { data: client } = await supabaseAdmin
+      .from('users')
+      .select('id, manager_id, email, profiles!left(full_name)')
+      .eq('id', clientId)
+      .maybeSingle();
+    if (!client || client.manager_id !== managerId) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    const profile: any = Array.isArray((client as any).profiles) ? (client as any).profiles[0] : (client as any).profiles;
+    const clientName = profile?.full_name || (client as any).email?.split('@')[0] || 'Cliente';
+
+    const want = (tp: string) => type === 'all' || type === tp;
+    const events: any[] = [];
+
+    // Entrenos logueados.
+    if (want('workout')) {
+      const { data } = await supabaseAdmin
+        .from('workout_logs')
+        .select('id, logged_at, workout_name, exercises, session_rpe, notes')
+        .eq('client_id', clientId).lt('logged_at', beforeIso)
+        .order('logged_at', { ascending: false }).limit(limit + 1);
+      (data || []).forEach((w: any) => {
+        const exCount = Array.isArray(w.exercises) ? w.exercises.length : 0;
+        const sets = Array.isArray(w.exercises)
+          ? w.exercises.reduce((a: number, ex: any) => a + (ex.sets_logged?.length || 0), 0) : 0;
+        const volume = Array.isArray(w.exercises)
+          ? w.exercises.reduce((a: number, ex: any) => a + (ex.sets_logged || []).reduce(
+              (s: number, st: any) => s + (Number(st.weight) || 0) * (Number(st.reps) || 0), 0), 0) : 0;
+        events.push({
+          type: 'workout', id: w.id, ts: w.logged_at,
+          title: w.workout_name || 'Entreno',
+          summary: { exercises: exCount, sets, volume: Math.round(volume), rpe: w.session_rpe },
+          detail: { exercises: w.exercises || [], notes: w.notes || null },
+        });
+      });
+    }
+
+    // Check-ins (legacy + plantilla dinámica).
+    if (want('checkin')) {
+      const [{ data: legacy }, { data: subs }] = await Promise.all([
+        supabaseAdmin.from('check_ins').select('id, date, data_json')
+          .eq('client_id', clientId).lt('date', beforeIso.split('T')[0])
+          .order('date', { ascending: false }).limit(limit + 1),
+        supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, answers_json')
+          .eq('client_id', clientId).lt('submitted_at', beforeIso)
+          .order('submitted_at', { ascending: false }).limit(limit + 1),
+      ]);
+      (legacy || []).forEach((c: any) => events.push({
+        type: 'checkin', id: c.id, ts: c.date,
+        title: 'Check-in semanal', summary: {}, detail: { answers: c.data_json || {} },
+      }));
+      (subs || []).forEach((s: any) => events.push({
+        type: 'checkin', id: s.id, ts: s.submitted_at,
+        title: 'Check-in', summary: {}, detail: { answers: s.answers_json || {} },
+      }));
+    }
+
+    // Comidas registradas por el cliente.
+    if (want('meal')) {
+      const { data } = await supabaseAdmin
+        .from('client_meal_logs')
+        .select('id, logged_at, meal_name, items, calories, protein, carbs, fats')
+        .eq('client_id', clientId).lt('logged_at', beforeIso)
+        .order('logged_at', { ascending: false }).limit(limit + 1);
+      (data || []).forEach((m: any) => events.push({
+        type: 'meal', id: m.id, ts: m.logged_at,
+        title: m.meal_name || 'Comida',
+        summary: { calories: m.calories, protein: m.protein, carbs: m.carbs, fats: m.fats,
+                   items: Array.isArray(m.items) ? m.items.length : 0 },
+        detail: { items: m.items || [] },
+      }));
+    }
+
+    // Mensajes enviados por el cliente.
+    if (want('message')) {
+      const { data } = await supabaseAdmin
+        .from('messages').select('id, content, created_at')
+        .eq('sender_id', clientId).eq('receiver_id', managerId).lt('created_at', beforeIso)
+        .order('created_at', { ascending: false }).limit(limit + 1);
+      (data || []).forEach((msg: any) => events.push({
+        type: 'message', id: msg.id, ts: msg.created_at,
+        title: 'Mensaje', summary: { preview: String(msg.content || '').slice(0, 120) },
+        detail: { content: msg.content || '' },
+      }));
+    }
+
+    // Onboarding completado.
+    if (want('onboarding')) {
+      const { data } = await supabaseAdmin
+        .from('client_onboarding_submissions').select('id, submitted_at, answers_json')
+        .eq('client_id', clientId).lt('submitted_at', beforeIso)
+        .order('submitted_at', { ascending: false }).limit(limit + 1);
+      (data || []).forEach((o: any) => events.push({
+        type: 'onboarding', id: o.id, ts: o.submitted_at,
+        title: 'Onboarding completado', summary: {}, detail: { answers: o.answers_json || {} },
+      }));
+    }
+
+    // Orden cronológico DESC + página.
+    events.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+    const hasMore = events.length > limit;
+    const page = events.slice(0, limit);
+    const nextCursor = hasMore && page.length ? page[page.length - 1].ts : null;
+
+    // Adjunta destacados y notas del coach para esta página.
+    if (page.length) {
+      const ids = page.map(e => String(e.id));
+      const [{ data: hl }, { data: notes }] = await Promise.all([
+        supabaseAdmin.from('coach_activity_highlights')
+          .select('activity_type, activity_id').eq('manager_id', managerId).in('activity_id', ids),
+        supabaseAdmin.from('coach_activity_notes')
+          .select('activity_type, activity_id, note').eq('manager_id', managerId).in('activity_id', ids),
+      ]);
+      const hlSet = new Set((hl || []).map((h: any) => `${h.activity_type}:${h.activity_id}`));
+      const noteMap = new Map((notes || []).map((n: any) => [`${n.activity_type}:${n.activity_id}`, n.note]));
+      page.forEach(e => {
+        const key = `${e.type}:${e.id}`;
+        e.highlighted = hlSet.has(key);
+        e.note = noteMap.get(key) || null;
+      });
+    }
+
+    res.json({ items: page, nextCursor, clientName });
+  } catch (error: any) {
+    console.error('Error building activity feed:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /manager/activity/highlight  { activity_type, activity_id } — toggle estrella.
+router.post('/activity/highlight', async (req: any, res) => {
+  const managerId = req.user.id;
+  const { activity_type, activity_id } = req.body || {};
+  if (!ACTIVITY_TYPES.includes(activity_type) || !activity_id) {
+    return res.status(400).json({ error: 'Invalid activity reference' });
+  }
+  try {
+    const { data: existing } = await supabaseAdmin.from('coach_activity_highlights')
+      .select('id').eq('manager_id', managerId)
+      .eq('activity_type', activity_type).eq('activity_id', String(activity_id)).maybeSingle();
+    if (existing) {
+      await supabaseAdmin.from('coach_activity_highlights').delete().eq('id', existing.id);
+      return res.json({ highlighted: false });
+    }
+    await supabaseAdmin.from('coach_activity_highlights')
+      .insert({ manager_id: managerId, activity_type, activity_id: String(activity_id) });
+    res.json({ highlighted: true });
+  } catch (error: any) {
+    console.error('Error toggling highlight:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// PUT /manager/activity/note  { activity_type, activity_id, note } — upsert (note vacía borra).
+router.put('/activity/note', async (req: any, res) => {
+  const managerId = req.user.id;
+  const { activity_type, activity_id, note } = req.body || {};
+  if (!ACTIVITY_TYPES.includes(activity_type) || !activity_id) {
+    return res.status(400).json({ error: 'Invalid activity reference' });
+  }
+  try {
+    const clean = String(note || '').trim().slice(0, 2000);
+    if (!clean) {
+      await supabaseAdmin.from('coach_activity_notes').delete()
+        .eq('manager_id', managerId).eq('activity_type', activity_type).eq('activity_id', String(activity_id));
+      return res.json({ note: null });
+    }
+    await supabaseAdmin.from('coach_activity_notes').upsert({
+      manager_id: managerId, activity_type, activity_id: String(activity_id),
+      note: clean, updated_at: new Date().toISOString(),
+    }, { onConflict: 'manager_id,activity_type,activity_id' });
+    res.json({ note: clean });
+  } catch (error: any) {
+    console.error('Error saving activity note:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 export default router;
 
 

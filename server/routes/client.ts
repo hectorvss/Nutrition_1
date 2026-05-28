@@ -1146,6 +1146,75 @@ router.get('/profile-stats', async (req: any, res) => {
   }
 });
 
+// ─── Meal logging ───────────────────────────────────────────────────────────
+// El cliente marca una comida como cumplida; alimenta el feed de Progreso del
+// coach. logged_at siempre server-side (no se puede backdatar).
+router.post('/meal-logs', async (req: any, res) => {
+  try {
+    const { plan_id, day_key, meal_name, items, calories, protein, carbs, fats } = req.body || {};
+
+    // Si viene plan_id, debe pertenecer a este cliente.
+    if (plan_id) {
+      const { data: planRow } = await supabaseAdmin
+        .from('nutrition_plans').select('id').eq('id', plan_id).eq('client_id', req.user.id).maybeSingle();
+      if (!planRow) return res.status(403).json({ error: 'Forbidden: plan does not belong to this client' });
+    }
+    const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+
+    const { data, error } = await supabaseAdmin
+      .from('client_meal_logs')
+      .insert({
+        client_id: req.user.id,
+        plan_id: plan_id || null,
+        day_key: typeof day_key === 'string' ? day_key.slice(0, 20) : null,
+        meal_name: typeof meal_name === 'string' ? meal_name.slice(0, 120) : 'Comida',
+        items: Array.isArray(items) ? items.slice(0, 100) : [],
+        calories: num(calories), protein: num(protein), carbs: num(carbs), fats: num(fats),
+        logged_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    // Dispara el trigger de workflow/automation (acción positiva del cliente).
+    try {
+      const { data: clientRow } = await supabaseAdmin
+        .from('users').select('manager_id').eq('id', req.user.id).maybeSingle();
+      if (clientRow?.manager_id) {
+        const { runWorkflowsForEvent } = await import('./workflows.js');
+        runWorkflowsForEvent(clientRow.manager_id, 'trigger.meal_logged', {
+          clientId: req.user.id, mealId: data?.id, loggedAt: data?.logged_at,
+        }).catch(() => {});
+      }
+    } catch { /* best-effort */ }
+
+    res.json(data);
+  } catch (error: any) {
+    console.error('Error saving meal log:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// GET /client/meal-logs — historial propio paginado.
+router.get('/meal-logs', async (req: any, res) => {
+  const page = parsePagination(req, { defaultLimit: 50, maxLimit: 200 });
+  try {
+    let q = supabaseAdmin
+      .from('client_meal_logs').select('*')
+      .eq('client_id', req.user.id)
+      .order('logged_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(page.limit + 1);
+    q = applyCursor(q, page.cursor, 'logged_at', 'desc');
+    const { data, error } = await q;
+    if (error) throw error;
+    res.json(buildPage(data || [], page.limit, 'logged_at'));
+  } catch (error: any) {
+    console.error('Error fetching meal logs:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 export default router;
 
 
