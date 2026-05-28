@@ -199,10 +199,10 @@ describe('known entries', () => {
     expect(kgParam!.type).toBe('number');
   });
 
-  it('subscription-renewal-soon trigger is not yet wired', () => {
+  it('subscription-renewal-soon trigger is wired (client_billing renewal reminders)', () => {
     const t = TRIGGER_BY_ID['subscription-renewal-soon'];
     expect(t).toBeDefined();
-    expect(t.wired).toBe(false);
+    expect(t.wired).toBe(true);
   });
 
   it('birthday trigger is basic and wired with no params', () => {

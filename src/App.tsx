@@ -110,6 +110,12 @@ export default function App() {
       // session_id lo conserva BillingContext para su polling; lo limpia el.
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    } else if (params.get('view') === 'client-billing') {
+      // Deep-link desde la notificación push "pago recibido".
+      setCurrentView('client-billing');
+      params.delete('view');
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
   }, [user]);
 
@@ -381,8 +387,12 @@ export default function App() {
             setSelectedClientId(null);
             setSelectedCheckInId(null);
           }
+          // Al navegar por el menú, Ajustes debe abrir en su pestaña por
+          // defecto — el deep-link a Integraciones (onConnectStripe) solo
+          // debe aplicar esa única vez, no quedar "pegado".
+          if (view === 'settings') setSettingsInitialTab(undefined);
           setCurrentView(view as View);
-        }} 
+        }}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />

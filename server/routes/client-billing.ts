@@ -284,7 +284,10 @@ router.post('/', async (req: any, res) => {
         stripe_product_id,
         payment_url,
         description: safeDesc,
-        amount_cents: amountCents,
+        // Guardamos el TOTAL que cobra Stripe (unitario × cantidad) para que
+        // KPIs/MRR, la tarjeta del chat y la vista del cliente muestren el
+        // importe real. Las facturas no aplican cantidad → total = unitario.
+        amount_cents: (kind === 'recurring' || kind === 'one_time') ? amountCents * safeQty : amountCents,
         currency: safeCurrency,
         interval: kind === 'recurring' ? safeInterval : null,
         status,
@@ -513,23 +516,51 @@ router.post('/:id/cancel', async (req: any, res) => {
     if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
     const { stripe } = conn;
 
+    // Si es un link recurrente que YA generó una suscripción pero aún no se
+    // ha sincronizado el id, lo resolvemos vía checkout sessions y lo
+    // cancelamos — de lo contrario seguiría cobrando tras "cancelar".
+    let subscriptionId: string | null = row.stripe_subscription_id || null;
+    if (!subscriptionId && row.kind === 'recurring' && row.stripe_payment_link_id) {
+      try {
+        const sessions = await stripe.checkout.sessions.list({ payment_link: row.stripe_payment_link_id, limit: 1 });
+        const sess = sessions.data[0];
+        if (sess?.subscription) subscriptionId = typeof sess.subscription === 'string' ? sess.subscription : sess.subscription.id;
+      } catch (lookupErr) {
+        console.error('Stripe subscription lookup before cancel failed:', lookupErr);
+      }
+    }
+
+    // Cancelar la suscripción es la operación con impacto monetario: si falla,
+    // NO marcamos el cobro como cancelado (la BD mentiría y el cliente
+    // seguiría pagando). El void de factura y la desactivación del link son
+    // best-effort y no bloquean.
+    let subscriptionCancelFailed = false;
+    if (subscriptionId) {
+      try {
+        await stripe.subscriptions.cancel(subscriptionId);
+      } catch (subErr) {
+        subscriptionCancelFailed = true;
+        console.error('Stripe subscription cancel FAILED:', subErr);
+      }
+    }
     try {
-      if (row.stripe_subscription_id) {
-        await stripe.subscriptions.cancel(row.stripe_subscription_id);
-      } else if (row.stripe_invoice_id && row.status !== 'paid') {
+      if (!subscriptionId && row.stripe_invoice_id && row.status !== 'paid') {
         await stripe.invoices.voidInvoice(row.stripe_invoice_id);
       }
       if (row.stripe_payment_link_id) {
-        // Desactiva el link para que no se pueda volver a usar.
         await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false });
       }
-    } catch (stripeErr) {
-      console.error('Stripe cancel partial failure:', stripeErr);
+    } catch (bestEffortErr) {
+      console.error('Stripe cancel best-effort failure (link/invoice):', bestEffortErr);
+    }
+
+    if (subscriptionCancelFailed) {
+      return res.status(502).json({ error: 'stripe_cancel_failed', message: 'No se pudo cancelar la suscripción en Stripe. Inténtalo de nuevo o revísalo en tu panel de Stripe.' });
     }
 
     await supabaseAdmin
       .from('client_billing')
-      .update({ status: row.stripe_invoice_id && row.status !== 'paid' ? 'void' : 'canceled' })
+      .update({ status: row.stripe_invoice_id && row.status !== 'paid' && !subscriptionId ? 'void' : 'canceled' })
       .eq('id', id);
 
     res.json({ ok: true });
@@ -612,7 +643,14 @@ router.post('/import', async (req: any, res) => {
     if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
     const { stripe } = conn;
 
-    const sub = await stripe.subscriptions.retrieve(stripe_subscription_id, { expand: ['items.data.price.product', 'customer'] }) as any;
+    // La suscripción debe existir en la cuenta del coach; si no, devolvemos un
+    // 404 claro en vez de un 500 críptico.
+    let sub: any;
+    try {
+      sub = await stripe.subscriptions.retrieve(stripe_subscription_id, { expand: ['items.data.price.product', 'customer'] }) as any;
+    } catch {
+      return res.status(404).json({ error: 'subscription_not_found', message: 'No se encontró esa suscripción en tu cuenta de Stripe.' });
+    }
     const item = sub.items?.data?.[0];
     const price = item?.price;
     const periodEndTs = sub.current_period_end ?? item?.current_period_end;
@@ -660,7 +698,11 @@ export async function runBillingSyncSweep(): Promise<{ checked: number; paid: nu
       .select('id, manager_id, client_id, status, stripe_subscription_id, stripe_invoice_id, stripe_payment_link_id, amount_cents, currency')
       .in('status', ['pending', 'past_due'])
       .or('stripe_subscription_id.not.is.null,stripe_invoice_id.not.is.null,stripe_payment_link_id.not.is.null')
-      .limit(300);
+      // Tope conservador: las llamadas a Stripe son secuenciales (timeout 8s
+      // c/u); 100 filas mantiene el barrido dentro del presupuesto del cron.
+      // Las filas no procesadas hoy se recogerán en la siguiente pasada.
+      .order('current_period_end', { ascending: true, nullsFirst: true })
+      .limit(100);
     if (!rows || rows.length === 0) return { checked: 0, paid: 0 };
 
     // Clave Stripe por manager (cacheada).

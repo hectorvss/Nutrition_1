@@ -129,7 +129,7 @@ export default function ClientBilling() {
                     <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${st.cls}`}>{st.label}</span>
                   </div>
 
-                  {it.payment_url && (needsPayment(it.status) || it.kind !== 'invoice') && (
+                  {it.payment_url && !['canceled', 'void'].includes(it.status) && (needsPayment(it.status) || it.kind !== 'invoice') && (
                     <a
                       href={it.payment_url}
                       target="_blank"

@@ -45,6 +45,10 @@ const STATUS_STYLE: Record<string, string> = {
   canceled: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
   void: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
   uncollectible: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
+  // Estados crudos de Stripe que sync puede copiar tal cual.
+  incomplete: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  incomplete_expired: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+  unpaid: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
 };
 
 interface ClientBillingProps {
@@ -68,6 +72,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const [editItem, setEditItem] = useState<BillingItem | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'canceled'>('all');
   const [search, setSearch] = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const money = (cents: number, currency: string) =>
     (cents / 100).toLocaleString(locale, { style: 'currency', currency: (currency || 'eur').toUpperCase() });
@@ -126,9 +131,20 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     }
   };
 
-  const copyLink = (url?: string | null) => {
+  const copyLink = async (url?: string | null, id?: string) => {
     if (!url) return;
-    navigator.clipboard?.writeText(url).catch(() => {});
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback para contextos sin clipboard API (http / navegadores viejos).
+        const ta = document.createElement('textarea');
+        ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      if (id) { setCopiedId(id); setTimeout(() => setCopiedId(c => (c === id ? null : c)), 1500); }
+    } catch { /* noop */ }
   };
 
   // Filtro por estado + búsqueda por nombre/email del cliente.
@@ -155,6 +171,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
       active: ['Activa', 'Active'], trialing: ['En prueba', 'Trial'], paid: ['Pagada', 'Paid'],
       pending: ['Pendiente', 'Pending'], past_due: ['Impago', 'Past due'],
       canceled: ['Cancelada', 'Canceled'], void: ['Anulada', 'Void'], uncollectible: ['Incobrable', 'Uncollectible'],
+      incomplete: ['Incompleta', 'Incomplete'], incomplete_expired: ['Expirada', 'Expired'], unpaid: ['Sin pagar', 'Unpaid'],
     };
     const pair = map[s] || [s, s];
     return isEs ? pair[0] : pair[1];
@@ -314,7 +331,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                         <div className="flex items-center justify-end gap-1.5">
                           {it.payment_url && (
                             <>
-                              <IconBtn title={isEs ? 'Copiar link' : 'Copy link'} onClick={() => copyLink(it.payment_url)} icon={Link2} />
+                              <IconBtn title={copiedId === it.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar link' : 'Copy link')} onClick={() => copyLink(it.payment_url, it.id)} icon={copiedId === it.id ? CheckCircle2 : Link2} accent={copiedId === it.id ? 'emerald' : undefined} />
                               <IconBtn title={isEs ? 'Abrir link' : 'Open link'} onClick={() => window.open(it.payment_url!, '_blank')} icon={ExternalLink} />
                               <IconBtn title={isEs ? 'Enviar tarjeta de pago al chat' : 'Send payment card to chat'} onClick={() => remind(it.id)} icon={Send} busy={busy} accent="emerald" />
                             </>

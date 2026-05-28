@@ -774,7 +774,8 @@ const cronHandler = async (req: any, res: any) => {
       .select('*')
       .eq('enabled', true)
       .in('trigger_id', ['weekly-checkin', 'birthday', 'inactivity', 'checkin-overdue', 'app-setup',
-        'adherence-high', 'adherence-low', 'anniversary', 'onboarding-stalled', 'checkin-pending-review']);
+        'adherence-high', 'adherence-low', 'anniversary', 'onboarding-stalled', 'checkin-pending-review',
+        'subscription-renewal-soon']);
     
     if (!automations) return res.json({ processed: 0 });
 
