@@ -334,6 +334,25 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               reverse
             />
 
+            {/* Workflow Builder visual — diferencial fuerte: un flujo
+                complejo (Churn Radar) con triggers, ramas condicionales y
+                múltiples acciones. La captura real demuestra que la
+                automatización avanzada existe de verdad. */}
+            <FeatureSequenceSection
+              title={isEs ? ['Automatización avanzada,', 'sin tocar código'] : ['Advanced automation,', 'zero code']}
+              subtitle={isEs
+                ? 'Constructor visual de workflows con ramas, condiciones y acciones.'
+                : 'A visual workflow builder with branches, conditions and actions.'}
+              highlight={isEs ? 'Diseña flujos complejos' : 'Build complex flows'}
+              description={isEs
+                ? 'arrastrando bloques: detecta riesgo de abandono, reacciona a la adherencia y dispara mensajes, tareas o alertas — todo en automático.'
+                : 'by dragging blocks: detect churn risk, react to adherence and fire messages, tasks or alerts — all on autopilot.'}
+              gradientClass="gradient-bg-privacy"
+              url="nutrifit.pro/automations/workflow"
+              imageSrc="/landing/feature-workflow.png"
+              imageAlt="Constructor visual de workflows: flujo Churn Radar con triggers, ramas condicionales y múltiples acciones"
+            />
+
             {/* Tras ver el producto: primero la calculadora de ROI (cuanto
                 te devuelve — valor concreto), luego la comparativa vs Excel /
                 WhatsApp / CRM (por que NutriFit y no lo que ya usas). El bloque
