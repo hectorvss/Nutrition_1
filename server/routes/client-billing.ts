@@ -76,11 +76,11 @@ const frontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
 // Estados que cuentan como "pagado/activo" para detectar la transición de
 // un cobro pendiente a cobrado y avisar al coach.
 const PAID_STATES = new Set(['active', 'trialing', 'paid']);
-const isPaid = (s?: string | null) => !!s && PAID_STATES.has(s);
+export const isPaid = (s?: string | null) => !!s && PAID_STATES.has(s);
 
 // Notifica al coach (push, best-effort) que un cliente ha pagado. Resuelve el
 // nombre del cliente para un mensaje legible. Nunca lanza.
-async function notifyManagerOfPayment(managerId: string, clientId: string, row: any) {
+export async function notifyManagerOfPayment(managerId: string, clientId: string, row: any) {
   try {
     const [{ data: prof }, { data: usr }] = await Promise.all([
       supabaseAdmin.from('profiles').select('full_name').eq('user_id', clientId).maybeSingle(),
@@ -94,7 +94,7 @@ async function notifyManagerOfPayment(managerId: string, clientId: string, row: 
       title: '💳 Pago recibido',
       body: `${name} ha pagado${amount ? ` ${amount}` : ''}.`,
       url: '/?view=client-billing',
-      prefKey: 'payments',
+      prefKey: 'payments_push',
     });
   } catch (e) {
     console.error('notifyManagerOfPayment failed (non-fatal):', e);

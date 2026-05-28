@@ -1568,6 +1568,7 @@ function BillingSettings() {
 function IntegrationsSettings() {
   const { integrations, saveIntegrations, isSaving } = useIntegrations();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1864,6 +1865,45 @@ function IntegrationsSettings() {
             </div>
           </div>
 
+          {/* Webhook en tiempo real (opcional pero recomendado): el coach pega
+              esta URL en sus webhooks de Stripe y copia el signing secret aquí,
+              para que pagos/renovaciones/cancelaciones se reflejen al instante. */}
+          <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">{t('realtime_webhook', { defaultValue: 'Webhook en tiempo real (recomendado)' })}</p>
+            </div>
+            <p className="text-xs text-slate-500">
+              {t('webhook_help', { defaultValue: 'En tu panel de Stripe → Desarrolladores → Webhooks, añade un endpoint con esta URL y eventos checkout.session.completed, customer.subscription.*, invoice.paid, invoice.payment_failed. Luego pega aquí el "Signing secret".' })}
+            </p>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">{t('webhook_url', { defaultValue: 'URL del endpoint' })}</label>
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value={`${window.location.origin}/api/stripe/coach-webhook/${user?.id || ''}`}
+                  className="flex-1 px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 font-mono outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/api/stripe/coach-webhook/${user?.id || ''}`).catch(() => {}); }}
+                  className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 transition"
+                >
+                  {t('copy', { defaultValue: 'Copiar' })}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 mb-1">{t('webhook_signing_secret', { defaultValue: 'Signing secret' })}</label>
+              <input
+                value={localIntegrations.stripe_webhook_secret || ''}
+                onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_webhook_secret: e.target.value })}
+                type="password"
+                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none"
+                placeholder="whsec_..."
+              />
+            </div>
+          </div>
+
           {/* Action footer — mirrors the Google Calendar card so both
               integrations share the same layout and button style. */}
           <div className="flex justify-end pt-2 gap-2 items-center">
@@ -1938,6 +1978,7 @@ function IntegrationsSettings() {
           {[
             { id: 'new_client_check_ins', title: t('checkins'), desc: t('new_client_check_ins_desc') },
             { id: 'new_messages', title: t('messages'), desc: t('new_messages_desc') },
+            { id: 'payments', title: t('payments', { defaultValue: 'Pagos' }), desc: t('payments_push_desc', { defaultValue: 'Avísame cuando un cliente paga una suscripción o cobro.' }) },
           ].map((item, i) => (
             <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-4 py-4 px-4 items-center">
               <div className="md:col-span-9">

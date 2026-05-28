@@ -23,6 +23,7 @@ import workflowRoutes from './routes/workflows.js';
 import onboardingRoutes from './routes/onboarding.js';
 import recipeRoutes from './routes/recipes.js';
 import clientBillingRoutes from './routes/client-billing.js';
+import coachWebhookRoutes from './routes/coach-webhook.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3005;
@@ -83,9 +84,12 @@ app.use('/api/auth/setup', sensitiveLimiter);
 app.use('/api/auth/forgot-password', authLimiter);
 app.use('/api/automations/cron', sensitiveLimiter);
 
-// IMPORTANT: Stripe Webhook needs the raw body for signature verification
-// This must be defined BEFORE express.json()
+// IMPORTANT: Stripe Webhooks need the raw body for signature verification.
+// These must be defined BEFORE express.json(). The platform webhook handles
+// manager→platform subscriptions; the coach webhook (per-coach signing secret)
+// handles coach→client charges in real time.
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+app.use('/api/stripe/coach-webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -102,6 +106,7 @@ app.use('/api/workflows', workflowRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/manager/client-billing', clientBillingRoutes);
+app.use('/api/stripe/coach-webhook', coachWebhookRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });

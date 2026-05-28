@@ -223,6 +223,7 @@ router.post('/integrations', async (req: any, res) => {
       stripe_enabled: integrationData.stripe_enabled,
       stripe_publishable_key: integrationData.stripe_publishable_key,
       stripe_secret_key: integrationData.stripe_secret_key,
+      stripe_webhook_secret: integrationData.stripe_webhook_secret,
       updated_at: new Date().toISOString()
     };
 
