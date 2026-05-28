@@ -32,6 +32,100 @@ export default function ClientNutrition() {
   const [eatenToday, setEatenToday] = useState<Set<number>>(new Set());
   const [savingMealIdx, setSavingMealIdx] = useState<number | null>(null);
 
+  // ───────────────────────────────────────────────────────────────────────
+  // Registro de comidas para el feed "Progreso" del coach (POST
+  // /client/meal-logs). A diferencia del toggle de adherencia de arriba,
+  // aquí enviamos los totales escalados + los items completos de la comida y
+  // sólo permitimos marcar (no desmarcar). Identificamos cada comida ya
+  // registrada hoy por su clave `${day_key}__${meal_name}` para que el botón
+  // siga mostrándose "Cumplida" al volver a la vista.
+  // ───────────────────────────────────────────────────────────────────────
+  const todayDayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
+  const [loggedMeals, setLoggedMeals] = useState<Set<string>>(new Set());
+  const [loggingMealKey, setLoggingMealKey] = useState<string | null>(null);
+  const [mealLogError, setMealLogError] = useState<string | null>(null);
+
+  const mealLogKey = (dayKey: string, mealName: string) => `${dayKey}__${mealName || ''}`;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const logs = await fetchWithAuth('/client/meal-logs');
+        if (cancelled) return;
+        const next = new Set<string>();
+        (Array.isArray(logs) ? logs : []).forEach((l: any) => {
+          // Sólo nos interesan los registros de HOY para marcar el botón.
+          // La columna real es `logged_at` (server-side timestamp).
+          const logDate = (l.logged_at || l.created_at || l.log_date || l.date || '').slice(0, 10);
+          if (logDate && logDate !== todayISO) return;
+          if (l.day_key && l.meal_name) next.add(mealLogKey(l.day_key, l.meal_name));
+        });
+        setLoggedMeals(next);
+      } catch (e) {
+        // 401/403/red → no romper la UI; el cliente puede registrar igualmente.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [todayISO, user?.id]);
+
+  // Calcula los totales escalados de una comida y hace el POST a meal-logs.
+  const logMeal = async (meal: any, dayKey: string, planId?: string | null) => {
+    const key = mealLogKey(dayKey, meal?.name);
+    if (loggedMeals.has(key) || loggingMealKey) return;
+    setLoggingMealKey(key);
+    setMealLogError(null);
+
+    const rawItems: any[] = Array.isArray(meal?.items) ? meal.items : [];
+    let calories = 0, protein = 0, carbs = 0, fats = 0;
+    const items = rawItems.map((i: any) => {
+      const qty = i.multiplier || i.quantity || 1;
+      calories += (i.calories || 0) * qty;
+      protein += (i.protein || 0) * qty;
+      carbs += (i.carbs || 0) * qty;
+      fats += (i.fats || 0) * qty;
+      return {
+        name: i.name,
+        calories: i.calories,
+        protein: i.protein,
+        carbs: i.carbs,
+        fats: i.fats,
+        servingSize: i.servingSize,
+        multiplier: i.multiplier,
+        quantity: i.quantity,
+      };
+    });
+
+    const payload = {
+      plan_id: planId || null,
+      day_key: dayKey,
+      meal_name: meal?.name || '',
+      items,
+      calories: Math.round(calories),
+      protein: Math.round(protein),
+      carbs: Math.round(carbs),
+      fats: Math.round(fats),
+    };
+
+    // Optimistic: marcamos ya como cumplida; revertimos si el POST falla.
+    const next = new Set(loggedMeals);
+    next.add(key);
+    setLoggedMeals(next);
+    try {
+      await fetchWithAuth('/client/meal-logs', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    } catch (e: any) {
+      const revert = new Set(loggedMeals);
+      revert.delete(key);
+      setLoggedMeals(revert);
+      setMealLogError(t('meal_log_error', { defaultValue: 'No se pudo registrar la comida. Inténtalo de nuevo.' }));
+    } finally {
+      setLoggingMealKey(null);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -555,6 +649,12 @@ export default function ClientNutrition() {
           </div>
         </div>
         <div className="p-8 space-y-6">
+          {mealLogError && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-300 text-xs font-bold">
+              <span className="material-symbols-outlined text-[16px]">error</span>
+              {mealLogError}
+            </div>
+          )}
           {meals.map((m: any, idx: number) => {
             const isEaten = eatenToday.has(idx);
             const isSaving = savingMealIdx === idx;
@@ -596,6 +696,13 @@ export default function ClientNutrition() {
                     {isEaten ? t('meal_done', { defaultValue: 'Hecha' }) : t('meal_mark_done', { defaultValue: 'Marcar como hecha' })}
                   </button>
                 )}
+                <MealLogButton
+                  meal={m}
+                  logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
+                  saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
+                  onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
+                  t={t}
+                />
               </div>
             );
           })}
@@ -694,29 +801,43 @@ export default function ClientNutrition() {
           </div>
         </div>
         <div className="p-8 space-y-6">
+          {mealLogError && (
+            <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-300 text-xs font-bold">
+              <span className="material-symbols-outlined text-[16px]">error</span>
+              {mealLogError}
+            </div>
+          )}
           {meals.map((m: any, idx: number) => (
-            <ExampleMealBlock 
-              key={idx}
-              title={m.name} 
-              time={m.time} 
-              kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
-              icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
-              iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
-              items={(m.items || []).map((i: any) => {
-                const qty = i.multiplier || i.quantity || 1;
-                // Mostrar la porción en gramos reales (ej. "80 g") en lugar
-                // del multiplicador × tamaño base ("100g × 0.8"), que es
-                // confuso para el cliente.
-                const portion = formatPortion(qty, i.servingSize);
-                return {
-                  name: i.name,
-                  sub: portion,
-                  kcal: Math.round((i.calories || 0) * qty),
-                  amount: portion,
-                };
-              })}
-              servingLabel={t('serving')}
-            />
+            <div key={idx}>
+              <ExampleMealBlock
+                title={m.name}
+                time={m.time}
+                kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
+                icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
+                iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
+                items={(m.items || []).map((i: any) => {
+                  const qty = i.multiplier || i.quantity || 1;
+                  // Mostrar la porción en gramos reales (ej. "80 g") en lugar
+                  // del multiplicador × tamaño base ("100g × 0.8"), que es
+                  // confuso para el cliente.
+                  const portion = formatPortion(qty, i.servingSize);
+                  return {
+                    name: i.name,
+                    sub: portion,
+                    kcal: Math.round((i.calories || 0) * qty),
+                    amount: portion,
+                  };
+                })}
+                servingLabel={t('serving')}
+              />
+              <MealLogButton
+                meal={m}
+                logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
+                saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
+                onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
+                t={t}
+              />
+            </div>
           ))}
         </div>
       </div>
@@ -797,6 +918,44 @@ export default function ClientNutrition() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Botón "Registrar comida" / "Cumplida ✓" que alimenta el feed de Progreso
+// del coach vía POST /client/meal-logs. Estado controlado por el padre:
+// `logged` (ya registrada hoy → verde, deshabilitado) y `saving` (enviando).
+function MealLogButton({ meal, logged, saving, onLog, t }: any) {
+  return (
+    <div className="mt-3 flex justify-end">
+      <button
+        type="button"
+        onClick={onLog}
+        disabled={logged || saving}
+        aria-pressed={logged}
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+          logged
+            ? 'bg-emerald-500 text-white cursor-default'
+            : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
+        } ${saving ? 'opacity-60 cursor-wait' : ''}`}
+      >
+        {saving ? (
+          <>
+            <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+            {t('meal_log_saving', { defaultValue: 'Registrando…' })}
+          </>
+        ) : logged ? (
+          <>
+            <span className="material-symbols-outlined text-[16px]">check_circle</span>
+            {t('meal_log_done', { defaultValue: 'Cumplida' })} ✓
+          </>
+        ) : (
+          <>
+            <span className="material-symbols-outlined text-[16px]">check</span>
+            {t('meal_log_mark', { defaultValue: 'Marcar como cumplida' })}
+          </>
+        )}
+      </button>
     </div>
   );
 }
