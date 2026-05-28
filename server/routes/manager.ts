@@ -5067,13 +5067,37 @@ router.post('/push/unsubscribe', async (req: any, res) => {
 
 const ACTIVITY_TYPES = ['workout', 'checkin', 'meal', 'message', 'onboarding'] as const;
 
-// GET /manager/clients/:id/activity-feed?type=all&before=<iso>&limit=30
+// GET /manager/clients/:id/activity-feed?type=all&before=<ts>|<id>&limit=30
+//
+// Cursor de paginación COMPUESTO: "<iso_ts>|<id>". Usar solo el timestamp es
+// inseguro porque varios eventos pueden compartir el mismo instante (p. ej. dos
+// comidas registradas a la vez, o un check-in legacy cuya fecha es solo `date`):
+// con `.lt(ts)` estricto se perderían items con el mismo ts, y sin desempate por
+// id la siguiente página podría repetir o saltar. Con el par (ts, id) ordenamos
+// y cortamos de forma determinista y avanzamos sin duplicar ni perder eventos.
 router.get('/clients/:id/activity-feed', async (req: any, res) => {
   const managerId = req.user.id;
   const clientId = req.params.id;
   const type = String(req.query.type || 'all');
   const limit = Math.min(50, Math.max(5, parseInt(String(req.query.limit), 10) || 30));
-  const beforeIso = req.query.before ? new Date(String(req.query.before)).toISOString() : new Date().toISOString();
+
+  // Decodifica el cursor compuesto "<iso>|<id>". `before` puede venir como cursor
+  // completo o, por compatibilidad, como un ISO suelto (sin id de desempate).
+  const rawBefore = req.query.before ? String(req.query.before) : '';
+  const pipeIdx = rawBefore.indexOf('|');
+  const beforeTsRaw = pipeIdx >= 0 ? rawBefore.slice(0, pipeIdx) : rawBefore;
+  const beforeId = pipeIdx >= 0 ? rawBefore.slice(pipeIdx + 1) : '';
+  const beforeMs = beforeTsRaw ? new Date(beforeTsRaw).getTime() : Date.now();
+  const beforeIso = new Date(beforeMs).toISOString();
+  // El cursor es exclusivo respecto al item ya mostrado: pasamos al servidor un
+  // filtro NO estricto (`.lte`) por timestamp y luego descartamos en memoria los
+  // items con (ts, id) >= (beforeMs, beforeId). Así no perdemos eventos que
+  // comparten timestamp con el último de la página anterior.
+  const afterCursor = (ms: number, id: string) => {
+    if (ms < beforeMs) return false;            // más antiguo → fuera (queda en página siguiente)
+    if (ms > beforeMs) return true;             // más reciente → ya mostrado
+    return !beforeId || String(id) >= beforeId; // mismo ts → desempata por id
+  };
 
   try {
     // El cliente debe pertenecer a este manager.
@@ -5091,95 +5115,148 @@ router.get('/clients/:id/activity-feed', async (req: any, res) => {
     const want = (tp: string) => type === 'all' || type === tp;
     const events: any[] = [];
 
+    // Cada fuente se ejecuta de forma aislada: si una falla (error de la query o
+    // excepción) registramos el aviso y devolvemos [] para esa fuente, de modo
+    // que el resto del feed sigue construyéndose (robustez, punto 6).
+    const safeSource = async (label: string, fn: () => Promise<void>) => {
+      try { await fn(); }
+      catch (e) { console.error(`activity-feed source '${label}' failed:`, e); }
+    };
+
     // Entrenos logueados.
     if (want('workout')) {
-      const { data } = await supabaseAdmin
-        .from('workout_logs')
-        .select('id, logged_at, workout_name, exercises, session_rpe, notes')
-        .eq('client_id', clientId).lt('logged_at', beforeIso)
-        .order('logged_at', { ascending: false }).limit(limit + 1);
-      (data || []).forEach((w: any) => {
-        const exCount = Array.isArray(w.exercises) ? w.exercises.length : 0;
-        const sets = Array.isArray(w.exercises)
-          ? w.exercises.reduce((a: number, ex: any) => a + (ex.sets_logged?.length || 0), 0) : 0;
-        const volume = Array.isArray(w.exercises)
-          ? w.exercises.reduce((a: number, ex: any) => a + (ex.sets_logged || []).reduce(
-              (s: number, st: any) => s + (Number(st.weight) || 0) * (Number(st.reps) || 0), 0), 0) : 0;
-        events.push({
-          type: 'workout', id: w.id, ts: w.logged_at,
-          title: w.workout_name || 'Entreno',
-          summary: { exercises: exCount, sets, volume: Math.round(volume), rpe: w.session_rpe },
-          detail: { exercises: w.exercises || [], notes: w.notes || null },
+      await safeSource('workout', async () => {
+        const { data, error } = await supabaseAdmin
+          .from('workout_logs')
+          .select('id, logged_at, workout_name, exercises, session_rpe, notes')
+          .eq('client_id', clientId).lte('logged_at', beforeIso)
+          .order('logged_at', { ascending: false }).limit(limit + 1);
+        if (error) throw error;
+        (data || []).forEach((w: any) => {
+          if (afterCursor(new Date(w.logged_at).getTime(), w.id)) return;
+          const exCount = Array.isArray(w.exercises) ? w.exercises.length : 0;
+          const sets = Array.isArray(w.exercises)
+            ? w.exercises.reduce((a: number, ex: any) => a + (ex.sets_logged?.length || 0), 0) : 0;
+          const volume = Array.isArray(w.exercises)
+            ? w.exercises.reduce((a: number, ex: any) => a + (ex.sets_logged || []).reduce(
+                (s: number, st: any) => s + (Number(st.weight) || 0) * (Number(st.reps) || 0), 0), 0) : 0;
+          events.push({
+            type: 'workout', id: w.id, ts: w.logged_at,
+            title: w.workout_name || 'Entreno',
+            summary: { exercises: exCount, sets, volume: Math.round(volume), rpe: w.session_rpe },
+            detail: { exercises: w.exercises || [], notes: w.notes || null },
+          });
         });
       });
     }
 
     // Check-ins (legacy + plantilla dinámica).
     if (want('checkin')) {
-      const [{ data: legacy }, { data: subs }] = await Promise.all([
-        supabaseAdmin.from('check_ins').select('id, date, data_json')
-          .eq('client_id', clientId).lt('date', beforeIso.split('T')[0])
-          .order('date', { ascending: false }).limit(limit + 1),
-        supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, answers_json')
-          .eq('client_id', clientId).lt('submitted_at', beforeIso)
-          .order('submitted_at', { ascending: false }).limit(limit + 1),
-      ]);
-      (legacy || []).forEach((c: any) => events.push({
-        type: 'checkin', id: c.id, ts: c.date,
-        title: 'Check-in semanal', summary: {}, detail: { answers: c.data_json || {} },
-      }));
-      (subs || []).forEach((s: any) => events.push({
-        type: 'checkin', id: s.id, ts: s.submitted_at,
-        title: 'Check-in', summary: {}, detail: { answers: s.answers_json || {} },
-      }));
+      // `check_ins.date` es solo fecha (sin hora): comparamos contra la fecha del
+      // cursor con `.lte` y filtramos el día exacto en memoria vía afterCursor
+      // (normalizamos la fecha a medianoche UTC). Antes se usaba
+      // `.lt(beforeIso.split('T')[0])`, que excluía TODOS los check-ins del día
+      // del cursor — bug de items perdidos.
+      const beforeDate = beforeIso.split('T')[0];
+      await safeSource('checkin:legacy', async () => {
+        const { data: legacy, error } = await supabaseAdmin.from('check_ins').select('id, date, data_json')
+          .eq('client_id', clientId).lte('date', beforeDate)
+          .order('date', { ascending: false }).limit(limit + 1);
+        if (error) throw error;
+        (legacy || []).forEach((c: any) => {
+          const ts = `${c.date}T00:00:00.000Z`;
+          if (afterCursor(new Date(ts).getTime(), c.id)) return;
+          events.push({
+            type: 'checkin', id: c.id, ts,
+            title: 'Check-in semanal', summary: {}, detail: { answers: c.data_json || {} },
+          });
+        });
+      });
+      await safeSource('checkin:submissions', async () => {
+        const { data: subs, error } = await supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, answers_json')
+          .eq('client_id', clientId).lte('submitted_at', beforeIso)
+          .order('submitted_at', { ascending: false }).limit(limit + 1);
+        if (error) throw error;
+        (subs || []).forEach((s: any) => {
+          if (afterCursor(new Date(s.submitted_at).getTime(), s.id)) return;
+          events.push({
+            type: 'checkin', id: s.id, ts: s.submitted_at,
+            title: 'Check-in', summary: {}, detail: { answers: s.answers_json || {} },
+          });
+        });
+      });
     }
 
     // Comidas registradas por el cliente.
     if (want('meal')) {
-      const { data } = await supabaseAdmin
-        .from('client_meal_logs')
-        .select('id, logged_at, meal_name, items, calories, protein, carbs, fats')
-        .eq('client_id', clientId).lt('logged_at', beforeIso)
-        .order('logged_at', { ascending: false }).limit(limit + 1);
-      (data || []).forEach((m: any) => events.push({
-        type: 'meal', id: m.id, ts: m.logged_at,
-        title: m.meal_name || 'Comida',
-        summary: { calories: m.calories, protein: m.protein, carbs: m.carbs, fats: m.fats,
-                   items: Array.isArray(m.items) ? m.items.length : 0 },
-        detail: { items: m.items || [] },
-      }));
+      await safeSource('meal', async () => {
+        const { data, error } = await supabaseAdmin
+          .from('client_meal_logs')
+          .select('id, logged_at, meal_name, items, calories, protein, carbs, fats')
+          .eq('client_id', clientId).lte('logged_at', beforeIso)
+          .order('logged_at', { ascending: false }).limit(limit + 1);
+        if (error) throw error;
+        (data || []).forEach((m: any) => {
+          if (afterCursor(new Date(m.logged_at).getTime(), m.id)) return;
+          events.push({
+            type: 'meal', id: m.id, ts: m.logged_at,
+            title: m.meal_name || 'Comida',
+            summary: { calories: m.calories, protein: m.protein, carbs: m.carbs, fats: m.fats,
+                       items: Array.isArray(m.items) ? m.items.length : 0 },
+            detail: { items: m.items || [] },
+          });
+        });
+      });
     }
 
     // Mensajes enviados por el cliente.
     if (want('message')) {
-      const { data } = await supabaseAdmin
-        .from('messages').select('id, content, created_at')
-        .eq('sender_id', clientId).eq('receiver_id', managerId).lt('created_at', beforeIso)
-        .order('created_at', { ascending: false }).limit(limit + 1);
-      (data || []).forEach((msg: any) => events.push({
-        type: 'message', id: msg.id, ts: msg.created_at,
-        title: 'Mensaje', summary: { preview: String(msg.content || '').slice(0, 120) },
-        detail: { content: msg.content || '' },
-      }));
+      await safeSource('message', async () => {
+        const { data, error } = await supabaseAdmin
+          .from('messages').select('id, content, created_at')
+          .eq('sender_id', clientId).eq('receiver_id', managerId).lte('created_at', beforeIso)
+          .order('created_at', { ascending: false }).limit(limit + 1);
+        if (error) throw error;
+        (data || []).forEach((msg: any) => {
+          if (afterCursor(new Date(msg.created_at).getTime(), msg.id)) return;
+          events.push({
+            type: 'message', id: msg.id, ts: msg.created_at,
+            title: 'Mensaje', summary: { preview: String(msg.content || '').slice(0, 120) },
+            detail: { content: msg.content || '' },
+          });
+        });
+      });
     }
 
     // Onboarding completado.
     if (want('onboarding')) {
-      const { data } = await supabaseAdmin
-        .from('client_onboarding_submissions').select('id, submitted_at, answers_json')
-        .eq('client_id', clientId).lt('submitted_at', beforeIso)
-        .order('submitted_at', { ascending: false }).limit(limit + 1);
-      (data || []).forEach((o: any) => events.push({
-        type: 'onboarding', id: o.id, ts: o.submitted_at,
-        title: 'Onboarding completado', summary: {}, detail: { answers: o.answers_json || {} },
-      }));
+      await safeSource('onboarding', async () => {
+        const { data, error } = await supabaseAdmin
+          .from('client_onboarding_submissions').select('id, submitted_at, answers_json')
+          .eq('client_id', clientId).lte('submitted_at', beforeIso)
+          .order('submitted_at', { ascending: false }).limit(limit + 1);
+        if (error) throw error;
+        (data || []).forEach((o: any) => {
+          if (afterCursor(new Date(o.submitted_at).getTime(), o.id)) return;
+          events.push({
+            type: 'onboarding', id: o.id, ts: o.submitted_at,
+            title: 'Onboarding completado', summary: {}, detail: { answers: o.answers_json || {} },
+          });
+        });
+      });
     }
 
-    // Orden cronológico DESC + página.
-    events.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
+    // Orden cronológico DESC determinista: por timestamp y, a igualdad, por id
+    // (desempate estable que evita duplicados/saltos entre páginas).
+    events.sort((a, b) => {
+      const d = new Date(b.ts).getTime() - new Date(a.ts).getTime();
+      return d !== 0 ? d : (String(b.id) < String(a.id) ? -1 : String(b.id) > String(a.id) ? 1 : 0);
+    });
     const hasMore = events.length > limit;
     const page = events.slice(0, limit);
-    const nextCursor = hasMore && page.length ? page[page.length - 1].ts : null;
+    // Cursor compuesto "<iso>|<id>" del último item de la página.
+    const last = page.length ? page[page.length - 1] : null;
+    const nextCursor = hasMore && last ? `${new Date(last.ts).toISOString()}|${last.id}` : null;
 
     // Adjunta destacados y notas del coach para esta página.
     if (page.length) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Dumbbell, ClipboardCheck, Utensils, MessageSquare, UserPlus,
   Star, StickyNote, ChevronDown, Activity as ActivityIcon, Check, X, Send,
@@ -59,6 +59,11 @@ export default function ClientActivityFeed({ clientId, onMessage }: Props) {
   const [notingId, setNotingId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
 
+  // Token incremental para descartar respuestas obsoletas: si el coach cambia
+  // de filtro rápidamente, una petición antigua puede resolverse después de la
+  // nueva y mezclar resultados de filtros distintos. Sólo aplicamos la última.
+  const reqIdRef = useRef(0);
+
   const FILTERS: { key: 'all' | ActivityType; label: string }[] = [
     { key: 'all',        label: t('act_filter_all', { defaultValue: 'Todas' }) },
     { key: 'workout',    label: t('act_filter_workout', { defaultValue: 'Entrenos' }) },
@@ -70,19 +75,29 @@ export default function ClientActivityFeed({ clientId, onMessage }: Props) {
 
   const load = useCallback(async (opts: { reset: boolean; cursor?: string | null; type?: 'all' | ActivityType }) => {
     const tp = opts.type ?? filter;
+    const myReq = ++reqIdRef.current;
     if (opts.reset) { setLoading(true); setError(false); } else { setLoadingMore(true); }
     try {
       const params = new URLSearchParams({ type: tp, limit: '20' });
       if (!opts.reset && opts.cursor) params.set('before', opts.cursor);
       const res = await fetchWithAuth(`/manager/clients/${clientId}/activity-feed?${params.toString()}`);
+      // Descartar si ya hay una petición más reciente en vuelo (cambio de filtro).
+      if (myReq !== reqIdRef.current) return;
       const fresh: ActivityItem[] = res?.items || [];
-      setItems(prev => (opts.reset ? fresh : [...prev, ...fresh]));
+      // Al añadir (load more) deduplicamos por type:id para evitar repetidos si
+      // el backend devuelve solapamiento en los bordes del cursor.
+      setItems(prev => {
+        if (opts.reset) return fresh;
+        const seen = new Set(prev.map(i => `${i.type}:${i.id}`));
+        return [...prev, ...fresh.filter(i => !seen.has(`${i.type}:${i.id}`))];
+      });
       setNextCursor(res?.nextCursor || null);
     } catch (e) {
       console.error('activity feed load failed', e);
+      if (myReq !== reqIdRef.current) return;
       if (opts.reset) setError(true);
     } finally {
-      setLoading(false); setLoadingMore(false);
+      if (myReq === reqIdRef.current) { setLoading(false); setLoadingMore(false); }
     }
   }, [clientId, filter]);
 
@@ -165,7 +180,7 @@ export default function ClientActivityFeed({ clientId, onMessage }: Props) {
     if (item.type === 'workout') {
       return (
         <div className="space-y-2">
-          {(item.detail.exercises || []).map((ex: any, i: number) => (
+          {(item.detail?.exercises || []).map((ex: any, i: number) => (
             <div key={i} className="flex items-start justify-between gap-3 text-sm">
               <span className="font-medium text-slate-700 dark:text-slate-300">{ex.name || '—'}</span>
               <span className="text-slate-500 text-xs shrink-0">
@@ -173,14 +188,14 @@ export default function ClientActivityFeed({ clientId, onMessage }: Props) {
               </span>
             </div>
           ))}
-          {item.detail.notes && <p className="text-xs text-slate-500 italic mt-1">{item.detail.notes}</p>}
+          {item.detail?.notes && <p className="text-xs text-slate-500 italic mt-1">{item.detail.notes}</p>}
         </div>
       );
     }
     if (item.type === 'meal') {
       return (
         <div className="space-y-1.5">
-          {(item.detail.items || []).map((it: any, i: number) => (
+          {(item.detail?.items || []).map((it: any, i: number) => (
             <div key={i} className="flex items-center justify-between text-sm">
               <span className="text-slate-700 dark:text-slate-300">{it.name}</span>
               <span className="text-slate-400 text-xs">{formatPortion(it.multiplier || it.quantity || 1, it.servingSize)}</span>
@@ -190,7 +205,7 @@ export default function ClientActivityFeed({ clientId, onMessage }: Props) {
       );
     }
     if (item.type === 'message') {
-      return <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{item.detail.content}</p>;
+      return <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{item.detail?.content}</p>;
     }
     // checkin / onboarding: pares pregunta → respuesta
     const answers = item.detail?.answers || {};

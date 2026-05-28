@@ -51,10 +51,16 @@ export default function ClientNutrition() {
     let cancelled = false;
     (async () => {
       try {
-        const logs = await fetchWithAuth('/client/meal-logs');
+        const res = await fetchWithAuth('/client/meal-logs');
         if (cancelled) return;
+        // `GET /client/meal-logs` devuelve un envelope paginado
+        // `{ data, nextCursor, hasMore }` (buildPage), NO un array plano.
+        // Antes hacíamos `Array.isArray(logs)` directamente sobre el objeto
+        // → siempre false → el set quedaba vacío y NINGUNA comida se marcaba
+        // como "Cumplida" al recargar (rompía hidratación y anti-duplicado).
+        const rows = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
         const next = new Set<string>();
-        (Array.isArray(logs) ? logs : []).forEach((l: any) => {
+        rows.forEach((l: any) => {
           // Sólo nos interesan los registros de HOY para marcar el botón.
           // La columna real es `logged_at` (server-side timestamp).
           const logDate = (l.logged_at || l.created_at || l.log_date || l.date || '').slice(0, 10);
@@ -96,6 +102,22 @@ export default function ClientNutrition() {
       };
     });
 
+    // Modo general: la comida no tiene `items` con kcal, sino `categories`
+    // con macros en gramos (proteína/hidratos/grasa). Sin esto el feed del
+    // coach mostraría la comida con 0 kcal/0 macros. Mismo mapeo que el
+    // cómputo de totales del plan (id 'p'/'c'/'f' o label).
+    if (rawItems.length === 0 && Array.isArray(meal?.categories)) {
+      meal.categories.forEach((cat: any) => {
+        const lbl = (cat.label || '').toLowerCase();
+        const amt = cat.amount || 0;
+        if (cat.id === 'p' || lbl.includes('protein') || lbl.includes('proteí')) protein += amt;
+        else if (cat.id === 'c' || lbl.includes('carb') || lbl.includes('hidrato')) carbs += amt;
+        else if (cat.id === 'f' || lbl.includes('fat') || lbl.includes('grasa')) fats += amt;
+      });
+      // Derivar kcal de los macros (4/4/9) cuando no hay kcal explícitas.
+      calories = protein * 4 + carbs * 4 + fats * 9;
+    }
+
     const payload = {
       plan_id: planId || null,
       day_key: dayKey,
@@ -108,18 +130,16 @@ export default function ClientNutrition() {
     };
 
     // Optimistic: marcamos ya como cumplida; revertimos si el POST falla.
-    const next = new Set(loggedMeals);
-    next.add(key);
-    setLoggedMeals(next);
+    // Usamos el updater funcional para no pisar otras comidas que se hayan
+    // marcado entre medias (el `loggedMeals` del closure puede estar obsoleto).
+    setLoggedMeals(prev => { const n = new Set(prev); n.add(key); return n; });
     try {
       await fetchWithAuth('/client/meal-logs', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
     } catch (e: any) {
-      const revert = new Set(loggedMeals);
-      revert.delete(key);
-      setLoggedMeals(revert);
+      setLoggedMeals(prev => { const n = new Set(prev); n.delete(key); return n; });
       setMealLogError(t('meal_log_error', { defaultValue: 'No se pudo registrar la comida. Inténtalo de nuevo.' }));
     } finally {
       setLoggingMealKey(null);
@@ -315,6 +335,13 @@ export default function ClientNutrition() {
   const planWeekOverrides = nutritionPlan.data_json?.weekOverrides || {};
   const planDays = planWeekOverrides[weekOfMonth] || nutritionPlan.data_json?.days || {};
   
+  // El botón "Marcar como cumplida" registra siempre bajo el day_key de HOY.
+  // Por eso sólo debe mostrarse cuando el día visible es hoy: en planes
+  // semanales, cuando `selectedDay` es el día actual; en planes diarios
+  // (estructura única) siempre. Así evitamos que el cliente "cumpla" la comida
+  // de otro día y se registre bajo hoy en el feed del coach.
+  const isViewingToday = !isWeekly || selectedDay === todayDayKey;
+
   const meals = isWeekly
     ? (planDays[selectedDay]?.meals || [])
     : (nutritionPlan.data_json?.meals || []);
@@ -696,13 +723,15 @@ export default function ClientNutrition() {
                     {isEaten ? t('meal_done', { defaultValue: 'Hecha' }) : t('meal_mark_done', { defaultValue: 'Marcar como hecha' })}
                   </button>
                 )}
-                <MealLogButton
-                  meal={m}
-                  logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
-                  saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
-                  onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
-                  t={t}
-                />
+                {isViewingToday && (
+                  <MealLogButton
+                    meal={m}
+                    logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
+                    saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
+                    onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
+                    t={t}
+                  />
+                )}
               </div>
             );
           })}
@@ -830,13 +859,15 @@ export default function ClientNutrition() {
                 })}
                 servingLabel={t('serving')}
               />
-              <MealLogButton
-                meal={m}
-                logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
-                saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
-                onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
-                t={t}
-              />
+              {isViewingToday && (
+                <MealLogButton
+                  meal={m}
+                  logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
+                  saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
+                  onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
+                  t={t}
+                />
+              )}
             </div>
           ))}
         </div>

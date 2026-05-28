@@ -95,6 +95,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   };
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -116,6 +117,17 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   useEffect(() => {
     if (initialClientId) setSelectedClientId(initialClientId);
   }, [initialClientId]);
+
+  // Focus the message input when a conversation becomes active (e.g. opened
+  // from the "Enviar mensaje" button on a client/progress card, or when a
+  // MANAGER selects a chat). Skipped while composing a broadcast.
+  useEffect(() => {
+    if (activeRecipient && !isComposing) {
+      // Defer to next tick so the input is mounted before focusing.
+      const id = window.setTimeout(() => messageInputRef.current?.focus(), 0);
+      return () => window.clearTimeout(id);
+    }
+  }, [activeRecipient, isComposing]);
 
   useEffect(() => {
     if (user?.role === 'MANAGER') {
@@ -1351,7 +1363,8 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
               {isRecording ? <StopCircle className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
           </div>
-          <input 
+          <input
+            ref={messageInputRef}
             value={newMessage}
             disabled={isRecording || uploading}
             onChange={(e) => setNewMessage(e.target.value)}

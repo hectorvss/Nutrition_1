@@ -1180,12 +1180,20 @@ router.post('/meal-logs', async (req: any, res) => {
     }
     const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 
+    // Normaliza day_key contra el conjunto conocido (igual que workout-logs)
+    // para que la clave `${day_key}__${meal_name}` que usa el cliente al
+    // hidratar coincida siempre y no se cuelen valores arbitrarios.
+    const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const safeDayKey = (typeof day_key === 'string' && VALID_DAYS.includes(day_key.toLowerCase()))
+      ? day_key.toLowerCase()
+      : null;
+
     const { data, error } = await supabaseAdmin
       .from('client_meal_logs')
       .insert({
         client_id: req.user.id,
         plan_id: plan_id || null,
-        day_key: typeof day_key === 'string' ? day_key.slice(0, 20) : null,
+        day_key: safeDayKey,
         meal_name: typeof meal_name === 'string' ? meal_name.slice(0, 120) : 'Comida',
         items: Array.isArray(items) ? items.slice(0, 100) : [],
         calories: num(calories), protein: num(protein), carbs: num(carbs), fats: num(fats),
@@ -1193,7 +1201,21 @@ router.post('/meal-logs', async (req: any, res) => {
       })
       .select()
       .single();
-    if (error) throw error;
+    if (error) {
+      // 23505 = el índice único anti-duplicado ya tiene esta comida de hoy.
+      // Es idempotente: marcar dos veces "cumplida" no es un error — devolvemos
+      // el registro existente y NO re-disparamos el trigger.
+      if (error.code === '23505') {
+        const { data: existing } = await supabaseAdmin
+          .from('client_meal_logs').select('*')
+          .eq('client_id', req.user.id)
+          .eq('day_key', safeDayKey)
+          .eq('meal_name', typeof meal_name === 'string' ? meal_name.slice(0, 120) : 'Comida')
+          .order('logged_at', { ascending: false }).limit(1).maybeSingle();
+        return res.json(existing || { ok: true, duplicate: true });
+      }
+      throw error;
+    }
 
     // Dispara el trigger de workflow/automation (acción positiva del cliente).
     try {
