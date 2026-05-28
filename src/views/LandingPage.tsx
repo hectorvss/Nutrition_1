@@ -125,7 +125,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               (antes salian "log_in" / "create_account" tal cual la clave). */}
           <button
             onClick={onLogin}
-            className="text-gray-400 hover:text-black font-medium text-lg transition-colors bg-transparent border-none cursor-pointer px-4 py-2"
+            className="bg-white/30 backdrop-blur-md border border-white/40 text-gray-700 hover:text-black hover:bg-white/50 font-medium text-lg transition-all cursor-pointer px-6 py-2.5 rounded-full shadow-sm hover:shadow-md"
           >
             {isEs ? 'Iniciar sesión' : 'Log in'}
           </button>
