@@ -1096,8 +1096,20 @@ const cronHandler = async (req: any, res: any) => {
       logger.error('billing.trials.expire_failed', { err: e?.message });
     }
 
-    logger.info('automations.cron.completed', { workflows: { resumed, scheduled }, trialsExpired, stepsResumed });
-    res.json({ success: true, workflows: { resumed, scheduled }, trialsExpired, stepsResumed });
+    // Sincroniza cobros pendientes contra Stripe y notifica al coach de los
+    // pagos nuevos (no hay webhook por-coach; este barrido diario lo cubre).
+    let billingPaid = 0;
+    try {
+      const { runBillingSyncSweep } = await import('./client-billing.js');
+      const sweep = await runBillingSyncSweep();
+      billingPaid = sweep.paid;
+      if (sweep.checked) logger.info('billing.sweep.completed', sweep);
+    } catch (e: any) {
+      logger.error('billing.sweep.failed', { err: e?.message });
+    }
+
+    logger.info('automations.cron.completed', { workflows: { resumed, scheduled }, trialsExpired, stepsResumed, billingPaid });
+    res.json({ success: true, workflows: { resumed, scheduled }, trialsExpired, stepsResumed, billingPaid });
   } catch (error: any) {
     logger.error('automations.cron.failed', { err: error?.message });
     res.status(500).json({ error: safeErr(error) });

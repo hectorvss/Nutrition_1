@@ -7,6 +7,7 @@ import { Router } from 'express';
 import { supabase, supabaseAdmin } from '../db/index.js';
 import { newStripeClient } from '../lib/stripe.js';
 import { safeErr } from '../lib/http.js';
+import { sendPushToUser } from '../lib/push.js';
 import type Stripe from 'stripe';
 
 const router = Router();
@@ -71,6 +72,34 @@ async function ensureStripeCustomer(stripe: Stripe, row: any, client: { email?: 
 }
 
 const frontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
+
+// Estados que cuentan como "pagado/activo" para detectar la transición de
+// un cobro pendiente a cobrado y avisar al coach.
+const PAID_STATES = new Set(['active', 'trialing', 'paid']);
+const isPaid = (s?: string | null) => !!s && PAID_STATES.has(s);
+
+// Notifica al coach (push, best-effort) que un cliente ha pagado. Resuelve el
+// nombre del cliente para un mensaje legible. Nunca lanza.
+async function notifyManagerOfPayment(managerId: string, clientId: string, row: any) {
+  try {
+    const [{ data: prof }, { data: usr }] = await Promise.all([
+      supabaseAdmin.from('profiles').select('full_name').eq('user_id', clientId).maybeSingle(),
+      supabaseAdmin.from('users').select('email').eq('id', clientId).maybeSingle(),
+    ]);
+    const name = prof?.full_name || usr?.email || 'Un cliente';
+    const amount = typeof row?.amount_cents === 'number'
+      ? (row.amount_cents / 100).toLocaleString('es-ES', { style: 'currency', currency: (row.currency || 'eur').toUpperCase() })
+      : '';
+    await sendPushToUser(managerId, {
+      title: '💳 Pago recibido',
+      body: `${name} ha pagado${amount ? ` ${amount}` : ''}.`,
+      url: '/?view=client-billing',
+      prefKey: 'payments',
+    });
+  } catch (e) {
+    console.error('notifyManagerOfPayment failed (non-fatal):', e);
+  }
+}
 
 // ── GET / — lista de cobros del coach + KPIs ───────────────────────────────
 router.get('/', async (req: any, res) => {
@@ -455,6 +484,10 @@ router.post('/:id/sync', async (req: any, res) => {
     if (Object.keys(updates).length > 0) {
       await supabaseAdmin.from('client_billing').update(updates).eq('id', id);
     }
+    // Transición pendiente → pagado/activo: avisa al coach.
+    if (updates.status && isPaid(updates.status) && !isPaid(row.status)) {
+      await notifyManagerOfPayment(req.user.id, row.client_id, { ...row, ...updates });
+    }
     const { data: fresh } = await supabaseAdmin.from('client_billing').select('*').eq('id', id).maybeSingle();
     res.json(fresh);
   } catch (error: any) {
@@ -612,5 +645,81 @@ router.post('/import', async (req: any, res) => {
     res.status(500).json({ error: safeErr(error) });
   }
 });
+
+// ── Barrido automático (cron) ──────────────────────────────────────────────
+// Como no hay webhooks por-coach, el cron diario sincroniza los cobros que
+// siguen pendientes/impagos contra Stripe y avisa al coach de los que se han
+// pagado desde la última pasada. Best-effort: agrupa por manager para leer su
+// clave Stripe una sola vez. Devuelve el nº de pagos detectados.
+export async function runBillingSyncSweep(): Promise<{ checked: number; paid: number }> {
+  let checked = 0;
+  let paid = 0;
+  try {
+    const { data: rows } = await supabaseAdmin
+      .from('client_billing')
+      .select('id, manager_id, client_id, status, stripe_subscription_id, stripe_invoice_id, stripe_payment_link_id, amount_cents, currency')
+      .in('status', ['pending', 'past_due'])
+      .or('stripe_subscription_id.not.is.null,stripe_invoice_id.not.is.null,stripe_payment_link_id.not.is.null')
+      .limit(300);
+    if (!rows || rows.length === 0) return { checked: 0, paid: 0 };
+
+    // Clave Stripe por manager (cacheada).
+    const keyByManager: Record<string, string | null> = {};
+    const getKey = async (managerId: string): Promise<string | null> => {
+      if (managerId in keyByManager) return keyByManager[managerId];
+      const { data } = await supabaseAdmin.from('integrations').select('stripe_secret_key').eq('user_id', managerId).maybeSingle();
+      keyByManager[managerId] = data?.stripe_secret_key || null;
+      return keyByManager[managerId];
+    };
+
+    for (const row of rows) {
+      const key = await getKey(row.manager_id);
+      if (!key) continue;
+      const stripe = newStripeClient(key);
+      checked++;
+      try {
+        let newStatus: string | null = null;
+        let subId: string | null = null;
+        let periodEnd: string | null = null;
+        if (row.stripe_subscription_id) {
+          const sub = await stripe.subscriptions.retrieve(row.stripe_subscription_id) as any;
+          newStatus = sub.status;
+          periodEnd = (sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end)
+            ? new Date((sub.current_period_end ?? sub.items.data[0].current_period_end) * 1000).toISOString() : null;
+        } else if (row.stripe_invoice_id) {
+          const inv = await stripe.invoices.retrieve(row.stripe_invoice_id);
+          newStatus = inv.status === 'paid' ? 'paid' : inv.status === 'void' ? 'void' : inv.status === 'uncollectible' ? 'uncollectible' : 'pending';
+        } else if (row.stripe_payment_link_id) {
+          const sessions = await stripe.checkout.sessions.list({ payment_link: row.stripe_payment_link_id, limit: 1 });
+          const sess = sessions.data[0];
+          if (sess?.subscription) {
+            subId = typeof sess.subscription === 'string' ? sess.subscription : sess.subscription.id;
+            const sub = await stripe.subscriptions.retrieve(subId) as any;
+            newStatus = sub.status;
+            periodEnd = (sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end)
+              ? new Date((sub.current_period_end ?? sub.items.data[0].current_period_end) * 1000).toISOString() : null;
+          } else if (sess?.payment_status === 'paid') {
+            newStatus = 'paid';
+          }
+        }
+        if (newStatus && newStatus !== row.status) {
+          const updates: any = { status: newStatus };
+          if (subId) updates.stripe_subscription_id = subId;
+          if (periodEnd) updates.current_period_end = periodEnd;
+          await supabaseAdmin.from('client_billing').update(updates).eq('id', row.id);
+          if (isPaid(newStatus) && !isPaid(row.status)) {
+            paid++;
+            await notifyManagerOfPayment(row.manager_id, row.client_id, { ...row, ...updates });
+          }
+        }
+      } catch (perRow) {
+        console.error(`[billing sweep] sync failed for ${row.id}:`, perRow);
+      }
+    }
+  } catch (e) {
+    console.error('[billing sweep] failed:', e);
+  }
+  return { checked, paid };
+}
 
 export default router;

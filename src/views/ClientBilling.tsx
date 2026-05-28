@@ -49,9 +49,10 @@ const STATUS_STYLE: Record<string, string> = {
 
 interface ClientBillingProps {
   onBack?: () => void;
+  onConnectStripe?: () => void;
 }
 
-export default function ClientBilling({ onBack }: ClientBillingProps) {
+export default function ClientBilling({ onBack, onConnectStripe }: ClientBillingProps) {
   const { t, language } = useLanguage();
   const isEs = language === 'es';
   const locale = isEs ? 'es-ES' : 'en-US';
@@ -172,15 +173,24 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
             {isEs
-              ? 'Para cobrar a tus clientes necesitas conectar tu propia cuenta de Stripe. Ve a Ajustes → Integraciones y añade tu Secret Key.'
-              : 'To charge your clients you need to connect your own Stripe account. Go to Settings → Integrations and add your Secret Key.'}
+              ? 'Para cobrar a tus clientes necesitas conectar tu propia cuenta de Stripe. Añade tu Secret Key en Ajustes → Integraciones.'
+              : 'To charge your clients you need to connect your own Stripe account. Add your Secret Key in Settings → Integrations.'}
           </p>
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm hover:opacity-90 transition"
-          >
-            {isEs ? 'Volver' : 'Back'}
-          </button>
+          <div className="flex items-center justify-center gap-2">
+            <button
+              onClick={onConnectStripe || onBack}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 transition"
+            >
+              <CreditCard className="w-4 h-4" />
+              {isEs ? 'Conectar Stripe' : 'Connect Stripe'}
+            </button>
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            >
+              {isEs ? 'Volver' : 'Back'}
+            </button>
+          </div>
         </div>
       </div>
     );

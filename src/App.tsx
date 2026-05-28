@@ -65,6 +65,9 @@ export default function App() {
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  // Permite abrir Ajustes directamente en una pestaña concreta (p. ej. desde
+  // el empty-state de Cobros → Integraciones para conectar Stripe).
+  const [settingsInitialTab, setSettingsInitialTab] = useState<string | undefined>(undefined);
   // Evento del calendario a resaltar al llegar desde Tareas (clic en una tarea
   // que en realidad es un evento del calendario).
   const [focusCalendarEventId, setFocusCalendarEventId] = useState<string | null>(null);
@@ -323,11 +326,14 @@ export default function App() {
           setCurrentView('onboarding');
         }} />;
       case 'settings':
-        return <Settings />;
+        return <Settings initialTab={settingsInitialTab as any} />;
       case 'subscriptions':
         return <Subscriptions onBack={() => setCurrentView('dashboard')} />;
       case 'client-billing':
-        return <ClientBilling onBack={() => setCurrentView('settings')} />;
+        return <ClientBilling
+          onBack={() => setCurrentView('dashboard')}
+          onConnectStripe={() => { setSettingsInitialTab('integrations'); setCurrentView('settings'); }}
+        />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 p-10">

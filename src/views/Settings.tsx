@@ -43,8 +43,8 @@ import AppearanceSettings from './settings/AppearanceSettings';
 
 type SettingsTab = 'general' | 'profile' | 'security' | 'billing' | 'integrations' | 'appearance';
 
-export default function Settings() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+export default function Settings({ initialTab }: { initialTab?: SettingsTab } = {}) {
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'general');
   const { t } = useLanguage();
   const { logout, user } = useAuth();
   const isClient = user?.role === 'CLIENT';
