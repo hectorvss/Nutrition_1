@@ -42,6 +42,7 @@ export default function ClientSidebar({ currentView, onNavigate, isOpen, onClose
     { id: 'training', label: t('training'), icon: 'fitness_center' },
     { id: 'roadmap', label: t('roadmap'), icon: 'map' },
     { id: 'progress', label: t('progress'), icon: 'trending_up' },
+    { id: 'billing', label: t('my_subscription', { defaultValue: isEs ? 'Mi suscripción' : 'My subscription' }), icon: 'credit_card' },
   ];
 
   useEffect(() => {

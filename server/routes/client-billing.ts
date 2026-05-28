@@ -367,19 +367,26 @@ router.post('/:id/remind', async (req: any, res) => {
     if (!row) return res.status(404).json({ error: 'Billing record not found' });
     if (!row.payment_url) return res.status(400).json({ error: 'This charge has no shareable payment link' });
 
-    // Mensaje: usa el texto que envíe el coach o uno por defecto, y SIEMPRE
-    // adjunta el link. Se inserta en `messages` (mismo canal que el chat).
+    // Tarjeta de pago enriquecida (igual que la tarjeta de feedback/check-in):
+    // se inserta en `messages` con attachment_type='payment' + payload con los
+    // datos del cobro, y el render del chat muestra una tarjeta con botón
+    // "Pagar ahora". `content` lleva la nota del coach (opcional).
     const custom = typeof req.body?.message === 'string' ? req.body.message.slice(0, 1000).trim() : '';
-    const amountMain = (row.amount_cents / 100).toLocaleString('es-ES', { style: 'currency', currency: (row.currency || 'eur').toUpperCase() });
-    const defaultBody = row.kind === 'recurring'
-      ? `Recordatorio de tu suscripción de coaching (${amountMain}/${row.interval === 'year' ? 'año' : 'mes'}). Puedes gestionar el pago aquí:`
-      : `Recordatorio de pago: ${amountMain}. Puedes completar el pago aquí:`;
-    const body = `${custom || defaultBody}\n${row.payment_url}`;
-
     const { error: msgErr } = await supabaseAdmin.from('messages').insert({
       sender_id: req.user.id,
       receiver_id: row.client_id,
-      content: body,
+      content: custom || null,
+      attachment_type: 'payment',
+      attachment_url: row.payment_url,
+      payload: {
+        billing_id: row.id,
+        kind: row.kind,
+        amount_cents: row.amount_cents,
+        currency: row.currency,
+        interval: row.interval,
+        description: row.description,
+        status: row.status,
+      },
     });
     if (msgErr) throw msgErr;
 

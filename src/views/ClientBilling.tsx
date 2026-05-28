@@ -65,6 +65,8 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editItem, setEditItem] = useState<BillingItem | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'canceled'>('all');
+  const [search, setSearch] = useState('');
 
   const money = (cents: number, currency: string) =>
     (cents / 100).toLocaleString(locale, { style: 'currency', currency: (currency || 'eur').toUpperCase() });
@@ -127,6 +129,20 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
     if (!url) return;
     navigator.clipboard?.writeText(url).catch(() => {});
   };
+
+  // Filtro por estado + búsqueda por nombre/email del cliente.
+  const matchesStatus = (s: string) =>
+    statusFilter === 'all' ? true
+      : statusFilter === 'active' ? (s === 'active' || s === 'trialing' || s === 'paid')
+      : statusFilter === 'pending' ? (s === 'pending' || s === 'past_due')
+      : (s === 'canceled' || s === 'void' || s === 'uncollectible');
+  const q = search.trim().toLowerCase();
+  const filteredItems = items.filter(it => {
+    if (!matchesStatus(it.status)) return false;
+    if (!q) return true;
+    const hay = `${it.client?.full_name || ''} ${it.client?.email || ''} ${it.description || ''}`.toLowerCase();
+    return hay.includes(q);
+  });
 
   const kindLabel = (k: string) =>
     k === 'recurring' ? (isEs ? 'Suscripción' : 'Subscription')
@@ -211,6 +227,30 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
         <KpiCard icon={AlertTriangle} color="amber" label={isEs ? 'Pendientes / impagos' : 'Pending / overdue'} value={kpis ? String(kpis.pendingOrOverdue) : '--'} />
       </div>
 
+      {/* Barra de filtros: estado + búsqueda por cliente */}
+      {items.length > 0 && (
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
+            {([['all', isEs ? 'Todos' : 'All'], ['active', isEs ? 'Activas' : 'Active'], ['pending', isEs ? 'Pendientes' : 'Pending'], ['canceled', isEs ? 'Canceladas' : 'Canceled']] as const).map(([k, lbl]) => (
+              <button
+                key={k}
+                onClick={() => setStatusFilter(k as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === k ? 'bg-[#17cf54] text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
+              >{lbl}</button>
+            ))}
+          </div>
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={isEs ? 'Buscar cliente…' : 'Search client…'}
+              className="w-full pl-3 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-[#17cf54]"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Tabla de cobros */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         {loading ? (
@@ -238,7 +278,10 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
                 </tr>
               </thead>
               <tbody>
-                {items.map(it => {
+                {filteredItems.length === 0 && (
+                  <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-slate-400">{isEs ? 'Ningún cobro coincide con el filtro.' : 'No charges match the filter.'}</td></tr>
+                )}
+                {filteredItems.map(it => {
                   const name = it.client?.full_name || it.client?.email || (isEs ? 'Cliente' : 'Client');
                   const busy = busyId === it.id;
                   return (
@@ -263,7 +306,7 @@ export default function ClientBilling({ onBack }: ClientBillingProps) {
                             <>
                               <IconBtn title={isEs ? 'Copiar link' : 'Copy link'} onClick={() => copyLink(it.payment_url)} icon={Link2} />
                               <IconBtn title={isEs ? 'Abrir link' : 'Open link'} onClick={() => window.open(it.payment_url!, '_blank')} icon={ExternalLink} />
-                              <IconBtn title={isEs ? 'Recordar pago por chat' : 'Send reminder in chat'} onClick={() => remind(it.id)} icon={Send} busy={busy} accent="emerald" />
+                              <IconBtn title={isEs ? 'Enviar tarjeta de pago al chat' : 'Send payment card to chat'} onClick={() => remind(it.id)} icon={Send} busy={busy} accent="emerald" />
                             </>
                           )}
                           <IconBtn title={isEs ? 'Sincronizar estado' : 'Sync status'} onClick={() => sync(it.id)} icon={RefreshCw} busy={busy} />

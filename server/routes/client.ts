@@ -527,6 +527,25 @@ router.delete('/nutrition-logs', async (req: any, res) => {
   }
 });
 
+// Mis cobros / suscripciones asignados por mi coach (vista de pago del
+// cliente). Solo expone los campos necesarios para pagar y comprobar el
+// estado — nunca ids internos de Stripe del coach ni metadatos de negocio.
+router.get('/billing', async (req: any, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('client_billing')
+      .select('id, kind, payment_url, description, amount_cents, currency, interval, status, current_period_end, created_at')
+      .eq('client_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    res.json(Array.isArray(data) ? data : []);
+  } catch (error: any) {
+    console.error('Error fetching client billing:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // Get my performance statistics (for Progress view)
 router.get('/profile-stats', async (req: any, res) => {
   const id = req.user.id;

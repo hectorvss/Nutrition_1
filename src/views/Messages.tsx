@@ -28,7 +28,8 @@ import {
   UserPlus,
   Users as GroupsIcon,
   XCircle,
-  Clock
+  Clock,
+  CreditCard
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
@@ -44,8 +45,9 @@ interface Message {
   receiver_id: string;
   content: string;
   attachment_url?: string;
-  attachment_type?: 'image' | 'file' | 'audio' | 'check_in';
+  attachment_type?: 'image' | 'file' | 'audio' | 'check_in' | 'payment';
   attachment_name?: string;
+  payload?: any;
   created_at: string;
   unreadCount?: number;
 }
@@ -1133,9 +1135,55 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                           </button>
                         </div>
                       )}
+                      {msg.attachment_type === 'payment' && (() => {
+                        const p: any = (msg as any).payload || {};
+                        const cur = (p.currency || 'eur').toUpperCase();
+                        const amount = typeof p.amount_cents === 'number'
+                          ? (p.amount_cents / 100).toLocaleString(locale, { style: 'currency', currency: cur })
+                          : null;
+                        const per = p.kind === 'recurring'
+                          ? `/${p.interval === 'year' ? (locale.startsWith('es') ? 'año' : 'yr') : (locale.startsWith('es') ? 'mes' : 'mo')}`
+                          : '';
+                        const isEs = locale.startsWith('es');
+                        return (
+                          <div className={`flex flex-col gap-3 p-4 rounded-xl border transition-all ${
+                            isOwn ? 'bg-white/40 border-indigo-200 shadow-sm' : 'bg-white/60 border-indigo-200 shadow-sm'
+                          }`}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-500 text-white">
+                                <CreditCard className="w-6 h-6" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold truncate text-slate-900">
+                                  {p.description || (p.kind === 'recurring' ? (isEs ? 'Suscripción de coaching' : 'Coaching subscription') : (isEs ? 'Pago' : 'Payment'))}
+                                </p>
+                                {amount && (
+                                  <p className="text-[13px] font-extrabold text-indigo-600">
+                                    {amount}<span className="text-[11px] font-semibold text-slate-400">{per}</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {msg.content && (
+                              <div className="text-xs p-3 rounded-lg border italic bg-indigo-50/50 border-indigo-100 text-slate-600">
+                                "{msg.content}"
+                              </div>
+                            )}
+                            <a
+                              href={msg.attachment_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              {isOwn ? (isEs ? 'Ver enlace de pago' : 'View payment link') : (isEs ? 'Pagar ahora' : 'Pay now')}
+                            </a>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
-                  {msg.content && msg.attachment_type !== 'check_in' && (
+                  {msg.content && msg.attachment_type !== 'check_in' && msg.attachment_type !== 'payment' && (
                     <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   )}
                 </div>

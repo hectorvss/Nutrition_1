@@ -25,13 +25,14 @@ import Messages from './views/Messages';
 // ActivityEditor that used to be wired here — that screen had a fake
 // "Save" button and exposed prescription editing the client must not touch.
 import ClientActivityView from './views/client/ClientActivityView';
+import ClientBilling from './views/client/ClientBilling';
 import OnboardingPopup from './components/OnboardingPopup';
 import { fetchWithAuth } from './api';
 import WeeklyCheckinFlow from './views/client/WeeklyCheckinFlow';
 import ClientActionFAB from './components/client/ClientActionFAB';
 import { useLanguage } from './context/LanguageContext';
 
-export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'settings' | 'activity-editor' | 'none';
+export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'billing' | 'settings' | 'activity-editor' | 'none';
 
 export default function ClientApp() {
   const [currentView, setCurrentView] = useState<ClientView>('dashboard');
@@ -148,6 +149,8 @@ export default function ClientApp() {
         );
       case 'messages':
         return <Messages onNavigate={(view) => setCurrentView(view as ClientView)} />;
+      case 'billing':
+        return <ClientBilling />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-500 p-10">
