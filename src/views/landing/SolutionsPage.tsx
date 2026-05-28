@@ -10,6 +10,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import UseCasesSection from './UseCasesSection';
 
 interface SolutionsPageProps {
   onBack: () => void;
@@ -403,8 +404,15 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
           })}
         </div>
 
+        {/* "Para qué momento del coach independiente" — movido aqui desde la
+            home. Su contexto natural es Soluciones, no la pantalla de
+            Producto. Deja la home centrada en el funnel de conversion. */}
+        <div className="mt-8 -mx-4 text-left">
+          <UseCasesSection />
+        </div>
+
         {/* CTA */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-16">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4">
           <button
             onClick={onStart}
             className="bg-black text-white px-8 py-3.5 rounded-full font-medium text-sm hover:bg-gray-800 transition-colors w-full sm:w-auto"

@@ -4,14 +4,11 @@ import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
 import Pricing from "../components/Pricing";
 import { useLanguage } from "../context/LanguageContext";
 import HowItWorks from "./landing/HowItWorks";
-import IntegrationsSection from "./landing/IntegrationsSection";
 import TestimonialsSection from "./landing/TestimonialsSection";
 import FAQSection from "./landing/FAQSection";
 import DemoPage from "./landing/DemoPage";
 import LegalPage, { type LegalKind } from "./landing/LegalPage";
 import StatsSection from "./landing/StatsSection";
-import FeatureGrid from "./landing/FeatureGrid";
-import UseCasesSection from "./landing/UseCasesSection";
 import ComparisonSection from "./landing/ComparisonSection";
 import FeaturesPage from "./landing/FeaturesPage";
 import SolutionsPage from "./landing/SolutionsPage";
@@ -234,11 +231,11 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               superior, el visitante ve de un golpe la diferencia. */}
           <ImpactSection />
 
-          {/* "Cómo funciona" + grid de features + integraciones dan contexto
-              del producto antes del recorrido animado. */}
+          {/* "Cómo funciona" en 3 pasos da contexto del producto antes del
+              recorrido animado. El grid completo de features (FeatureGrid) y
+              las integraciones viven en la pagina "Funciones" — aqui solo el
+              showcase visual con capturas reales para no diluir el funnel. */}
           <HowItWorks />
-          <FeatureGrid />
-          <IntegrationsSection />
 
           <main id="features" className="space-y-28 md:space-y-36 mb-40 scroll-mt-24">
             {/* 4 secciones de producto, 2 columnas (texto + mockup),
@@ -291,12 +288,13 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               reverse
             />
 
-            {/* "Para quién es" + comparativa de 4 columnas + calculadora de
-                ROI interactiva: el visitante ya ha visto el producto y ahora
-                toca convencerle con datos y un número concreto. */}
-            <UseCasesSection />
-            <ComparisonSection />
+            {/* Tras ver el producto: primero la calculadora de ROI (cuanto
+                te devuelve — valor concreto), luego la comparativa vs Excel /
+                WhatsApp / CRM (por que NutriFit y no lo que ya usas). El bloque
+                "para quien es" se movio a la pagina Soluciones, su contexto
+                natural. */}
             <ROISection />
+            <ComparisonSection />
 
             {/* Prueba social y resolución de dudas frecuentes antes del CTA
                 final, donde el visitante ya tiene contexto suficiente. */}
