@@ -39,6 +39,34 @@ export default function FAQSection() {
           q: '¿Puedo cancelar cuando quiera?',
           a: 'Sí, sin permanencia. Cancelas desde Ajustes → Facturación con un clic. Mantienes el acceso hasta el final del periodo ya pagado.',
         },
+        {
+          q: '¿Cómo paso mis clientes desde Excel o WhatsApp?',
+          a: 'Creas a cada cliente y le envías un enlace de onboarding que rellena él mismo desde el móvil: objetivos, alergias, medidas y preferencias llegan estructurados. No tienes que volcar hojas de cálculo a mano.',
+        },
+        {
+          q: '¿Cuánto se tarda en montarlo? ¿Necesito ser técnico?',
+          a: 'No necesitas saber nada técnico. En una tarde tienes tu primer cliente con plan y check-in funcionando, partiendo de plantillas. Las automatizaciones se diseñan arrastrando bloques, sin código.',
+        },
+        {
+          q: '¿Cómo cobro a mis clientes?',
+          a: 'Con cobros recurrentes vía Stripe integrados en la plataforma. Si una tarjeta falla, el cliente recibe el aviso y tú ves el estado sin perseguir a nadie. Nunca tocamos tu dinero: va directo a tu cuenta de Stripe.',
+        },
+        {
+          q: '¿Puedo usar mi propia marca?',
+          a: 'Sí. El portal del cliente lleva tu color corporativo y, en el plan Scale, tu dominio personalizado. Tu cliente ve tu servicio como un producto, no como una app genérica.',
+        },
+        {
+          q: '¿Sirve para nutrición y entrenamiento a la vez?',
+          a: 'Sí. Diseñas planes de nutrición con macros automáticos y programas de entrenamiento por bloques con progresión, RPE y RIR — todo para el mismo cliente, en el mismo sitio.',
+        },
+        {
+          q: '¿Cuántos clientes puedo llevar?',
+          a: 'Depende del plan: 20 en Professional, 60 en Scale y sin límite en Unlimited. Puedes subir o bajar de plan cuando quieras según vayas creciendo.',
+        },
+        {
+          q: '¿Y si necesito ayuda para empezar?',
+          a: 'Te acompañamos. Puedes reservar una demo guiada de 30 minutos sobre tu caso real y escribirnos cuando lo necesites. No te dejamos solo con una pantalla en blanco.',
+        },
       ]
     : [
         {
@@ -64,6 +92,34 @@ export default function FAQSection() {
         {
           q: 'Can I cancel anytime?',
           a: 'Yes, no commitment. Cancel from Settings → Billing in one click. You keep access until the end of the paid period.',
+        },
+        {
+          q: 'How do I move my clients over from Excel or WhatsApp?',
+          a: 'You create each client and send them an onboarding link they fill in from their phone: goals, allergies, measurements and preferences arrive structured. No manual spreadsheet importing.',
+        },
+        {
+          q: 'How long does setup take? Do I need to be technical?',
+          a: 'No technical skills needed. In one afternoon you have your first client up and running with a plan and a check-in, starting from templates. Automations are built by dragging blocks — no code.',
+        },
+        {
+          q: 'How do I charge my clients?',
+          a: 'Recurring billing via Stripe, built in. If a card fails, the client is notified and you see the status without chasing anyone. We never touch your money — it goes straight to your Stripe account.',
+        },
+        {
+          q: 'Can I use my own brand?',
+          a: 'Yes. The client portal carries your brand colour and, on the Scale plan, your custom domain. Your client sees your service as a product, not a generic app.',
+        },
+        {
+          q: 'Does it cover both nutrition and training?',
+          a: 'Yes. You build nutrition plans with automatic macros and block-based training programs with progression, RPE and RIR — for the same client, in one place.',
+        },
+        {
+          q: 'How many clients can I manage?',
+          a: 'Depends on the plan: 20 on Professional, 60 on Scale and unlimited on Unlimited. You can move up or down a plan whenever you like as you grow.',
+        },
+        {
+          q: 'What if I need help getting started?',
+          a: 'We’ve got you. Book a 30-minute guided demo on your real case and reach out whenever you need. We don’t leave you alone with a blank screen.',
         },
       ];
 
