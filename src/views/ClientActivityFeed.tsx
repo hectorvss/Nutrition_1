@@ -134,12 +134,17 @@ export default function ClientActivityFeed({ clientId, onMessage }: Props) {
   };
   const saveNote = async (item: ActivityItem) => {
     const clean = noteDraft.trim();
+    const prevNote = item.note ?? null;   // para revertir si el PUT falla
     setItems(prev => prev.map(i => (i.id === item.id && i.type === item.type ? { ...i, note: clean || null } : i)));
     setNotingId(null);
     await fetchWithAuth('/manager/activity/note', {
       method: 'PUT',
       body: JSON.stringify({ activity_type: item.type, activity_id: item.id, note: clean }),
-    }).catch(() => {});
+    }).catch(() => {
+      // Revertir el optimistic: si no revertimos, la UI muestra una nota
+      // "guardada" que en realidad no se persistió (engaña al coach).
+      setItems(prev => prev.map(i => (i.id === item.id && i.type === item.type ? { ...i, note: prevNote } : i)));
+    });
   };
 
   // ── Resumen por tipo (línea bajo el título) ──

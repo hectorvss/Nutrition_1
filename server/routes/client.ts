@@ -1170,7 +1170,7 @@ router.get('/profile-stats', async (req: any, res) => {
 // coach. logged_at siempre server-side (no se puede backdatar).
 router.post('/meal-logs', async (req: any, res) => {
   try {
-    const { plan_id, day_key, meal_name, items, calories, protein, carbs, fats } = req.body || {};
+    const { plan_id, day_key, meal_index, meal_name, items, calories, protein, carbs, fats } = req.body || {};
 
     // Si viene plan_id, debe pertenecer a este cliente.
     if (plan_id) {
@@ -1180,13 +1180,16 @@ router.post('/meal-logs', async (req: any, res) => {
     }
     const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : null; };
 
-    // Normaliza day_key contra el conjunto conocido (igual que workout-logs)
-    // para que la clave `${day_key}__${meal_name}` que usa el cliente al
-    // hidratar coincida siempre y no se cuelen valores arbitrarios.
+    // Normaliza day_key contra el conjunto conocido (igual que workout-logs).
     const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const safeDayKey = (typeof day_key === 'string' && VALID_DAYS.includes(day_key.toLowerCase()))
       ? day_key.toLowerCase()
       : null;
+    // meal_index (posición en el plan) es la clave estable de la comida —
+    // coincide con el meal_index de nutrition_logs (toggle de adherencia) y
+    // evita colisiones de comidas sin nombre.
+    const mi = Number(meal_index);
+    const safeMealIndex = Number.isFinite(mi) && mi >= 0 ? Math.round(mi) : null;
 
     const { data, error } = await supabaseAdmin
       .from('client_meal_logs')
@@ -1194,6 +1197,7 @@ router.post('/meal-logs', async (req: any, res) => {
         client_id: req.user.id,
         plan_id: plan_id || null,
         day_key: safeDayKey,
+        meal_index: safeMealIndex,
         meal_name: typeof meal_name === 'string' ? meal_name.slice(0, 120) : 'Comida',
         items: Array.isArray(items) ? items.slice(0, 100) : [],
         calories: num(calories), protein: num(protein), carbs: num(carbs), fats: num(fats),
@@ -1202,15 +1206,14 @@ router.post('/meal-logs', async (req: any, res) => {
       .select()
       .single();
     if (error) {
-      // 23505 = el índice único anti-duplicado ya tiene esta comida de hoy.
-      // Es idempotente: marcar dos veces "cumplida" no es un error — devolvemos
-      // el registro existente y NO re-disparamos el trigger.
+      // 23505 = el índice único anti-duplicado ya tiene esta comida hoy.
+      // Idempotente: devolvemos el registro existente y NO re-disparamos trigger.
       if (error.code === '23505') {
         const { data: existing } = await supabaseAdmin
           .from('client_meal_logs').select('*')
           .eq('client_id', req.user.id)
           .eq('day_key', safeDayKey)
-          .eq('meal_name', typeof meal_name === 'string' ? meal_name.slice(0, 120) : 'Comida')
+          .eq('meal_index', safeMealIndex)
           .order('logged_at', { ascending: false }).limit(1).maybeSingle();
         return res.json(existing || { ok: true, duplicate: true });
       }
@@ -1252,6 +1255,36 @@ router.get('/meal-logs', async (req: any, res) => {
     res.json(buildPage(data || [], page.limit, 'logged_at'));
   } catch (error: any) {
     console.error('Error fetching meal logs:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// DELETE /client/meal-logs?day_key=&meal_index= — des-marca la comida de HOY.
+// Soporta el botón unificado "hecha" (toggle): al desmarcar se retira también
+// del feed de Progreso del coach para mantener coherencia.
+router.delete('/meal-logs', async (req: any, res) => {
+  try {
+    const { day_key, meal_index } = req.query;
+    const now = new Date();
+    const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+    let q = supabaseAdmin.from('client_meal_logs').delete()
+      .eq('client_id', req.user.id)
+      .gte('logged_at', startOfTodayUTC);
+    // Mismo whitelist que el POST: sólo filtramos por day_key si es un día
+    // válido (evita borrados con un day_key arbitrario/erróneo).
+    const VALID_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    if (typeof day_key === 'string' && VALID_DAYS.includes(day_key.toLowerCase())) {
+      q = q.eq('day_key', day_key.toLowerCase());
+    }
+    if (meal_index !== undefined) {
+      const mi = Number(meal_index);
+      if (Number.isFinite(mi)) q = q.eq('meal_index', Math.round(mi));
+    }
+    const { error } = await q;
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error deleting meal log:', error);
     res.status(500).json({ error: safeErr(error) });
   }
 });

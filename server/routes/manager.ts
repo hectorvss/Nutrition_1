@@ -5088,7 +5088,11 @@ router.get('/clients/:id/activity-feed', async (req: any, res) => {
   const pipeIdx = rawBefore.indexOf('|');
   const beforeTsRaw = pipeIdx >= 0 ? rawBefore.slice(0, pipeIdx) : rawBefore;
   const beforeId = pipeIdx >= 0 ? rawBefore.slice(pipeIdx + 1) : '';
-  const beforeMs = beforeTsRaw ? new Date(beforeTsRaw).getTime() : Date.now();
+  // Si `before` trae basura, `new Date(...).getTime()` es NaN → toISOString()
+  // lanzaría RangeError y devolvería 500 en vez de la primera página. Hacemos
+  // fallback a Date.now() (primera página) cuando el timestamp no es válido.
+  const parsedBeforeMs = beforeTsRaw ? new Date(beforeTsRaw).getTime() : Date.now();
+  const beforeMs = Number.isFinite(parsedBeforeMs) ? parsedBeforeMs : Date.now();
   const beforeIso = new Date(beforeMs).toISOString();
   // El cursor es exclusivo respecto al item ya mostrado: pasamos al servidor un
   // filtro NO estricto (`.lte`) por timestamp y luego descartamos en memoria los
@@ -5159,30 +5163,37 @@ router.get('/clients/:id/activity-feed', async (req: any, res) => {
       // `.lt(beforeIso.split('T')[0])`, que excluía TODOS los check-ins del día
       // del cursor — bug de items perdidos.
       const beforeDate = beforeIso.split('T')[0];
-      await safeSource('checkin:legacy', async () => {
-        const { data: legacy, error } = await supabaseAdmin.from('check_ins').select('id, date, data_json')
-          .eq('client_id', clientId).lte('date', beforeDate)
-          .order('date', { ascending: false }).limit(limit + 1);
-        if (error) throw error;
-        (legacy || []).forEach((c: any) => {
-          const ts = `${c.date}T00:00:00.000Z`;
-          if (afterCursor(new Date(ts).getTime(), c.id)) return;
-          events.push({
-            type: 'checkin', id: c.id, ts,
-            title: 'Check-in semanal', summary: {}, detail: { answers: c.data_json || {} },
-          });
-        });
-      });
+      // Submissions PRIMERO; guardamos sus fechas para deduplicar los check-ins
+      // legacy del mismo día (cuentas migradas que tienen el mismo check-in en
+      // ambas tablas no deben aparecer dos veces).
+      const submissionDates = new Set<string>();
       await safeSource('checkin:submissions', async () => {
         const { data: subs, error } = await supabaseAdmin.from('client_checkin_submissions').select('id, submitted_at, answers_json')
           .eq('client_id', clientId).lte('submitted_at', beforeIso)
           .order('submitted_at', { ascending: false }).limit(limit + 1);
         if (error) throw error;
         (subs || []).forEach((s: any) => {
+          submissionDates.add(String(s.submitted_at).split('T')[0]);
           if (afterCursor(new Date(s.submitted_at).getTime(), s.id)) return;
           events.push({
             type: 'checkin', id: s.id, ts: s.submitted_at,
             title: 'Check-in', summary: {}, detail: { answers: s.answers_json || {} },
+          });
+        });
+      });
+      await safeSource('checkin:legacy', async () => {
+        const { data: legacy, error } = await supabaseAdmin.from('check_ins').select('id, date, data_json')
+          .eq('client_id', clientId).lte('date', beforeDate)
+          .order('date', { ascending: false }).limit(limit + 1);
+        if (error) throw error;
+        (legacy || []).forEach((c: any) => {
+          // Dedup: si ya hay una submission ese día, omitimos el legacy.
+          if (submissionDates.has(String(c.date))) return;
+          const ts = `${c.date}T00:00:00.000Z`;
+          if (afterCursor(new Date(ts).getTime(), c.id)) return;
+          events.push({
+            type: 'checkin', id: c.id, ts,
+            title: 'Check-in semanal', summary: {}, detail: { answers: c.data_json || {} },
           });
         });
       });
@@ -5305,24 +5316,37 @@ router.post('/activity/highlight', async (req: any, res) => {
     await supabaseAdmin.from('coach_activity_highlights')
       .insert({ manager_id: managerId, activity_type, activity_id: String(activity_id) });
 
-    // Notificar al cliente que su coach ha destacado su actividad.
+    // Notificar al cliente que su coach ha destacado su actividad — UNA sola
+    // vez por actividad (aunque el coach quite y vuelva a poner la estrella).
+    // El ledger coach_activity_notifications dedupe la notificación de forma
+    // permanente: si el upsert con ignoreDuplicates devuelve fila, es la 1ª vez.
     if (client_id) {
       // El cliente debe pertenecer a este manager (evita notificar a terceros).
       const { data: cli } = await supabaseAdmin.from('users')
         .select('id, manager_id').eq('id', client_id).maybeSingle();
       if (cli && cli.manager_id === managerId) {
-        const cleanLabel = String(label || '').trim().slice(0, 120);
-        const body = cleanLabel
-          ? `⭐ Tu coach ha destacado tu actividad: ${cleanLabel}. ¡Buen trabajo!`
-          : '⭐ Tu coach ha destacado una de tus actividades. ¡Buen trabajo!';
-        await supabaseAdmin.from('messages')
-          .insert({ sender_id: managerId, receiver_id: client_id, content: body })
-          .then(() => {}, () => {});
-        sendPushToUser(client_id, { title: '⭐ ¡Actividad destacada!', body, url: '/' })
-          .catch(() => {});
-        runWorkflowsForEvent(managerId, 'trigger.activity_highlighted', {
-          clientId: client_id, activityType: activity_type, activityId: String(activity_id),
-        }).catch(() => {});
+        const { data: notif } = await supabaseAdmin
+          .from('coach_activity_notifications')
+          .upsert(
+            { manager_id: managerId, activity_type, activity_id: String(activity_id) },
+            { onConflict: 'manager_id,activity_type,activity_id', ignoreDuplicates: true }
+          )
+          .select('id');
+        const firstTime = Array.isArray(notif) && notif.length > 0;
+        if (firstTime) {
+          const cleanLabel = String(label || '').trim().slice(0, 120);
+          const body = cleanLabel
+            ? `⭐ Tu coach ha destacado tu actividad: ${cleanLabel}. ¡Buen trabajo!`
+            : '⭐ Tu coach ha destacado una de tus actividades. ¡Buen trabajo!';
+          await supabaseAdmin.from('messages')
+            .insert({ sender_id: managerId, receiver_id: client_id, content: body })
+            .then(() => {}, () => {});
+          sendPushToUser(client_id, { title: '⭐ ¡Actividad destacada!', body, url: '/' })
+            .catch(() => {});
+          runWorkflowsForEvent(managerId, 'trigger.activity_highlighted', {
+            clientId: client_id, activityType: activity_type, activityId: String(activity_id),
+          }).catch(() => {});
+        }
       }
     }
 

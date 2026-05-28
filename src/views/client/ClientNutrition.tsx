@@ -29,123 +29,15 @@ export default function ClientNutrition() {
   // y la adherencia se mide por día calendario, no por slot del plan.
   // ───────────────────────────────────────────────────────────────────────
   const todayISO = new Date().toISOString().slice(0, 10);
+  const todayDayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const [eatenToday, setEatenToday] = useState<Set<number>>(new Set());
   const [savingMealIdx, setSavingMealIdx] = useState<number | null>(null);
+  const [mealActionError, setMealActionError] = useState<string | null>(null);
 
-  // ───────────────────────────────────────────────────────────────────────
-  // Registro de comidas para el feed "Progreso" del coach (POST
-  // /client/meal-logs). A diferencia del toggle de adherencia de arriba,
-  // aquí enviamos los totales escalados + los items completos de la comida y
-  // sólo permitimos marcar (no desmarcar). Identificamos cada comida ya
-  // registrada hoy por su clave `${day_key}__${meal_name}` para que el botón
-  // siga mostrándose "Cumplida" al volver a la vista.
-  // ───────────────────────────────────────────────────────────────────────
-  const todayDayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
-  const [loggedMeals, setLoggedMeals] = useState<Set<string>>(new Set());
-  const [loggingMealKey, setLoggingMealKey] = useState<string | null>(null);
-  const [mealLogError, setMealLogError] = useState<string | null>(null);
-
-  const mealLogKey = (dayKey: string, mealName: string) => `${dayKey}__${mealName || ''}`;
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetchWithAuth('/client/meal-logs');
-        if (cancelled) return;
-        // `GET /client/meal-logs` devuelve un envelope paginado
-        // `{ data, nextCursor, hasMore }` (buildPage), NO un array plano.
-        // Antes hacíamos `Array.isArray(logs)` directamente sobre el objeto
-        // → siempre false → el set quedaba vacío y NINGUNA comida se marcaba
-        // como "Cumplida" al recargar (rompía hidratación y anti-duplicado).
-        const rows = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-        const next = new Set<string>();
-        rows.forEach((l: any) => {
-          // Sólo nos interesan los registros de HOY para marcar el botón.
-          // La columna real es `logged_at` (server-side timestamp).
-          const logDate = (l.logged_at || l.created_at || l.log_date || l.date || '').slice(0, 10);
-          if (logDate && logDate !== todayISO) return;
-          if (l.day_key && l.meal_name) next.add(mealLogKey(l.day_key, l.meal_name));
-        });
-        setLoggedMeals(next);
-      } catch (e) {
-        // 401/403/red → no romper la UI; el cliente puede registrar igualmente.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [todayISO, user?.id]);
-
-  // Calcula los totales escalados de una comida y hace el POST a meal-logs.
-  const logMeal = async (meal: any, dayKey: string, planId?: string | null) => {
-    const key = mealLogKey(dayKey, meal?.name);
-    if (loggedMeals.has(key) || loggingMealKey) return;
-    setLoggingMealKey(key);
-    setMealLogError(null);
-
-    const rawItems: any[] = Array.isArray(meal?.items) ? meal.items : [];
-    let calories = 0, protein = 0, carbs = 0, fats = 0;
-    const items = rawItems.map((i: any) => {
-      const qty = i.multiplier || i.quantity || 1;
-      calories += (i.calories || 0) * qty;
-      protein += (i.protein || 0) * qty;
-      carbs += (i.carbs || 0) * qty;
-      fats += (i.fats || 0) * qty;
-      return {
-        name: i.name,
-        calories: i.calories,
-        protein: i.protein,
-        carbs: i.carbs,
-        fats: i.fats,
-        servingSize: i.servingSize,
-        multiplier: i.multiplier,
-        quantity: i.quantity,
-      };
-    });
-
-    // Modo general: la comida no tiene `items` con kcal, sino `categories`
-    // con macros en gramos (proteína/hidratos/grasa). Sin esto el feed del
-    // coach mostraría la comida con 0 kcal/0 macros. Mismo mapeo que el
-    // cómputo de totales del plan (id 'p'/'c'/'f' o label).
-    if (rawItems.length === 0 && Array.isArray(meal?.categories)) {
-      meal.categories.forEach((cat: any) => {
-        const lbl = (cat.label || '').toLowerCase();
-        const amt = cat.amount || 0;
-        if (cat.id === 'p' || lbl.includes('protein') || lbl.includes('proteí')) protein += amt;
-        else if (cat.id === 'c' || lbl.includes('carb') || lbl.includes('hidrato')) carbs += amt;
-        else if (cat.id === 'f' || lbl.includes('fat') || lbl.includes('grasa')) fats += amt;
-      });
-      // Derivar kcal de los macros (4/4/9) cuando no hay kcal explícitas.
-      calories = protein * 4 + carbs * 4 + fats * 9;
-    }
-
-    const payload = {
-      plan_id: planId || null,
-      day_key: dayKey,
-      meal_name: meal?.name || '',
-      items,
-      calories: Math.round(calories),
-      protein: Math.round(protein),
-      carbs: Math.round(carbs),
-      fats: Math.round(fats),
-    };
-
-    // Optimistic: marcamos ya como cumplida; revertimos si el POST falla.
-    // Usamos el updater funcional para no pisar otras comidas que se hayan
-    // marcado entre medias (el `loggedMeals` del closure puede estar obsoleto).
-    setLoggedMeals(prev => { const n = new Set(prev); n.add(key); return n; });
-    try {
-      await fetchWithAuth('/client/meal-logs', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-    } catch (e: any) {
-      setLoggedMeals(prev => { const n = new Set(prev); n.delete(key); return n; });
-      setMealLogError(t('meal_log_error', { defaultValue: 'No se pudo registrar la comida. Inténtalo de nuevo.' }));
-    } finally {
-      setLoggingMealKey(null);
-    }
-  };
-
+  // Hidrata la adherencia de HOY desde nutrition_logs (única fuente de
+  // verdad para "el cliente comió esta comida"). El feed del coach
+  // (client_meal_logs) se mantiene en paralelo desde `toggleMealDone`, así
+  // que no necesitamos hidratarlo aquí: ambos backends se escriben juntos.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -165,36 +57,102 @@ export default function ClientNutrition() {
     return () => { cancelled = true; };
   }, [todayISO, user?.id]);
 
-  const toggleMealEaten = async (idx: number, planId?: string | null) => {
-    setSavingMealIdx(idx);
-    const wasEaten = eatenToday.has(idx);
-    // Optimistic update — la red puede tardar 300 ms y queremos feedback
-    // inmediato. Se revierte si el servidor responde con error.
-    const next = new Set(eatenToday);
-    if (wasEaten) next.delete(idx); else next.add(idx);
-    setEatenToday(next);
-    try {
-      if (wasEaten) {
-        await fetchWithAuth(`/client/nutrition-logs?date=${todayISO}&meal_index=${idx}&kind=meal`, { method: 'DELETE' });
-      } else {
-        await fetchWithAuth('/client/nutrition-logs', {
-          method: 'POST',
-          body: JSON.stringify({
-            plan_id: planId || null,
-            log_date: todayISO,
-            meal_index: idx,
-            kind: 'meal',
-            eaten: true,
-          }),
-        });
-      }
-    } catch (e) {
-      // Revertir el optimistic en caso de fallo.
-      const revert = new Set(eatenToday);
-      setEatenToday(revert);
-    } finally {
-      setSavingMealIdx(null);
+  // Calcula los totales escalados + items de una comida para el feed de
+  // Progreso del coach (client_meal_logs). En modo general la comida no
+  // tiene `items` con kcal sino `categories` con macros en gramos → mismo
+  // mapeo que el cómputo de totales del plan, derivando kcal (4/4/9).
+  const buildMealLogPayload = (meal: any, idx: number, planId?: string | null) => {
+    const rawItems: any[] = Array.isArray(meal?.items) ? meal.items : [];
+    let calories = 0, protein = 0, carbs = 0, fats = 0;
+    const items = rawItems.map((i: any) => {
+      const qty = i.multiplier || i.quantity || 1;
+      calories += (i.calories || 0) * qty;
+      protein += (i.protein || 0) * qty;
+      carbs += (i.carbs || 0) * qty;
+      fats += (i.fats || 0) * qty;
+      return {
+        name: i.name,
+        calories: i.calories,
+        protein: i.protein,
+        carbs: i.carbs,
+        fats: i.fats,
+        servingSize: i.servingSize,
+        multiplier: i.multiplier,
+        quantity: i.quantity,
+      };
+    });
+    if (rawItems.length === 0 && Array.isArray(meal?.categories)) {
+      meal.categories.forEach((cat: any) => {
+        const lbl = (cat.label || '').toLowerCase();
+        const amt = cat.amount || 0;
+        if (cat.id === 'p' || lbl.includes('protein') || lbl.includes('proteí')) protein += amt;
+        else if (cat.id === 'c' || lbl.includes('carb') || lbl.includes('hidrato')) carbs += amt;
+        else if (cat.id === 'f' || lbl.includes('fat') || lbl.includes('grasa')) fats += amt;
+      });
+      calories = protein * 4 + carbs * 4 + fats * 9;
     }
+    return {
+      plan_id: planId || null,
+      day_key: todayDayKey,
+      meal_index: idx,
+      meal_name: meal?.name || '',
+      items,
+      calories: Math.round(calories),
+      protein: Math.round(protein),
+      carbs: Math.round(carbs),
+      fats: Math.round(fats),
+    };
+  };
+
+  // ÚNICO botón "comida hecha". Antes había dos sistemas distintos para la
+  // misma acción (un pill que escribía nutrition_logs y un botón aparte que
+  // escribía client_meal_logs sin poder desmarcarse). Ahora una sola acción:
+  //   • marcar  → POST nutrition_logs (adherencia) + POST meal_logs (feed)
+  //   • desmarcar → DELETE en ambos
+  // `eatenToday` es la única fuente de verdad y soporta toggle bidireccional.
+  const toggleMealDone = async (meal: any, idx: number, planId?: string | null) => {
+    if (savingMealIdx !== null) return;
+    setSavingMealIdx(idx);
+    setMealActionError(null);
+    const wasEaten = eatenToday.has(idx);
+    // Optimistic — feedback inmediato; se reconcilia con el resultado real.
+    setEatenToday(prev => { const n = new Set(prev); if (wasEaten) n.delete(idx); else n.add(idx); return n; });
+
+    // Dos escrituras: adherencia (nutrition_logs) y feed del coach
+    // (client_meal_logs). Usamos allSettled — con Promise.all un fallo de una
+    // pierna NO cancela la otra, así que el optimistic revert global dejaba el
+    // botón en desacuerdo con lo que se hidrata al recargar (que lee SÓLO
+    // nutrition_logs). Ambas operaciones son idempotentes (POST meal-logs
+    // tolera 23505; los DELETE son no-op si no hay fila), así que un reintento
+    // reconcilia cualquier escritura parcial.
+    const adherenceReq = wasEaten
+      ? fetchWithAuth(`/client/nutrition-logs?date=${todayISO}&meal_index=${idx}&kind=meal`, { method: 'DELETE' })
+      : fetchWithAuth('/client/nutrition-logs', {
+          method: 'POST',
+          body: JSON.stringify({ plan_id: planId || null, log_date: todayISO, meal_index: idx, kind: 'meal', eaten: true }),
+        });
+    const feedReq = wasEaten
+      ? fetchWithAuth(`/client/meal-logs?day_key=${encodeURIComponent(todayDayKey)}&meal_index=${idx}`, { method: 'DELETE' })
+      : fetchWithAuth('/client/meal-logs', {
+          method: 'POST',
+          body: JSON.stringify(buildMealLogPayload(meal, idx, planId)),
+        });
+
+    const [adherence, feed] = await Promise.allSettled([adherenceReq, feedReq]);
+
+    // nutrition_logs es la ÚNICA fuente de verdad del botón (es lo que se
+    // hidrata al recargar). Reconciliamos el estado visual con el resultado
+    // real de ESA pierna, no con el optimista, para que botón y recarga
+    // coincidan siempre aunque la otra pierna falle.
+    const adherenceOk = adherence.status === 'fulfilled';
+    const targetEaten = adherenceOk ? !wasEaten : wasEaten;
+    setEatenToday(prev => { const n = new Set(prev); if (targetEaten) n.add(idx); else n.delete(idx); return n; });
+
+    // Si cualquiera de las dos falló, avisamos para que el cliente reintente.
+    if (adherence.status === 'rejected' || feed.status === 'rejected') {
+      setMealActionError(t('meal_log_error', { defaultValue: 'No se pudo registrar la comida. Inténtalo de nuevo.' }));
+    }
+    setSavingMealIdx(null);
   };
 
   useEffect(() => {
@@ -676,65 +634,41 @@ export default function ClientNutrition() {
           </div>
         </div>
         <div className="p-8 space-y-6">
-          {mealLogError && (
+          {mealActionError && (
             <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-300 text-xs font-bold">
               <span className="material-symbols-outlined text-[16px]">error</span>
-              {mealLogError}
+              {mealActionError}
             </div>
           )}
-          {meals.map((m: any, idx: number) => {
-            const isEaten = eatenToday.has(idx);
-            const isSaving = savingMealIdx === idx;
-            return (
-              <div key={idx} className="relative">
-                <MealBlock
-                  title={m.name}
-                  time={m.time}
-                  kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
-                  icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
-                  iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
-                  macros={(m.categories || []).map((c: any) => ({
-                    label: c.label,
-                    sub: c.example,
-                    value: `${c.amount}g`,
-                    color: c.color
-                  }))}
-                  viewDetailsLabel={t('view_details')}
+          {meals.map((m: any, idx: number) => (
+            <div key={idx}>
+              <MealBlock
+                title={m.name}
+                time={m.time}
+                kcal={Math.round((m.items || []).reduce((a: number, i: any) => a + ((i.calories || 0) * (i.multiplier || i.quantity || 1)), 0))}
+                icon={m.iconName === 'Sunrise' ? 'wb_twilight' : m.iconName === 'Sun' ? 'sunny' : m.iconName === 'Moon' ? 'dark_mode' : 'restaurant'}
+                iconBg={m.iconColor || "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}
+                macros={(m.categories || []).map((c: any) => ({
+                  label: c.label,
+                  sub: c.example,
+                  value: `${c.amount}g`,
+                  color: c.color
+                }))}
+                viewDetailsLabel={t('view_details')}
+              />
+              {/* ÚNICO botón "comida hecha". Sólo cuando el día visible es
+                  HOY (no tiene sentido marcar comidas de otro día y que se
+                  registren bajo la fecha de hoy en el feed del coach). */}
+              {isViewingToday && (
+                <MealDoneButton
+                  done={eatenToday.has(idx)}
+                  saving={savingMealIdx === idx}
+                  onToggle={() => toggleMealDone(m, idx, nutritionPlan?.id)}
+                  t={t}
                 />
-                {/* Toggle "comida hecha hoy" — alimenta nutrition_logs y la
-                    adherencia diaria del KPI. Sólo se renderiza cuando el
-                    día seleccionado es hoy (no tiene sentido marcar comidas
-                    de mañana o de ayer). */}
-                {selectedDay === ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][new Date().getDay()] && (
-                  <button
-                    type="button"
-                    onClick={() => toggleMealEaten(idx, nutritionPlan?.id)}
-                    disabled={isSaving}
-                    aria-pressed={isEaten}
-                    className={`absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                      isEaten
-                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 hover:text-emerald-600'
-                    } ${isSaving ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  >
-                    <span className="material-symbols-outlined text-[14px]">
-                      {isEaten ? 'check_circle' : 'radio_button_unchecked'}
-                    </span>
-                    {isEaten ? t('meal_done', { defaultValue: 'Hecha' }) : t('meal_mark_done', { defaultValue: 'Marcar como hecha' })}
-                  </button>
-                )}
-                {isViewingToday && (
-                  <MealLogButton
-                    meal={m}
-                    logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
-                    saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
-                    onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
-                    t={t}
-                  />
-                )}
-              </div>
-            );
-          })}
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -830,10 +764,10 @@ export default function ClientNutrition() {
           </div>
         </div>
         <div className="p-8 space-y-6">
-          {mealLogError && (
+          {mealActionError && (
             <div className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/40 text-rose-600 dark:text-rose-300 text-xs font-bold">
               <span className="material-symbols-outlined text-[16px]">error</span>
-              {mealLogError}
+              {mealActionError}
             </div>
           )}
           {meals.map((m: any, idx: number) => (
@@ -860,11 +794,10 @@ export default function ClientNutrition() {
                 servingLabel={t('serving')}
               />
               {isViewingToday && (
-                <MealLogButton
-                  meal={m}
-                  logged={loggedMeals.has(mealLogKey(todayDayKey, m.name))}
-                  saving={loggingMealKey === mealLogKey(todayDayKey, m.name)}
-                  onLog={() => logMeal(m, todayDayKey, nutritionPlan?.id)}
+                <MealDoneButton
+                  done={eatenToday.has(idx)}
+                  saving={savingMealIdx === idx}
+                  onToggle={() => toggleMealDone(m, idx, nutritionPlan?.id)}
                   t={t}
                 />
               )}
@@ -953,20 +886,22 @@ export default function ClientNutrition() {
   );
 }
 
-// Botón "Registrar comida" / "Cumplida ✓" que alimenta el feed de Progreso
-// del coach vía POST /client/meal-logs. Estado controlado por el padre:
-// `logged` (ya registrada hoy → verde, deshabilitado) y `saving` (enviando).
-function MealLogButton({ meal, logged, saving, onLog, t }: any) {
+// ÚNICO botón "comida hecha". Marca/desmarca la comida del día: alimenta a la
+// vez la adherencia (nutrition_logs) y el feed de Progreso del coach
+// (client_meal_logs). Estado controlado por el padre: `done` (cumplida hoy →
+// verde, click la desmarca) y `saving` (enviando). Sustituye los dos botones
+// separados que antes escribían cada backend por su cuenta.
+function MealDoneButton({ done, saving, onToggle, t }: any) {
   return (
     <div className="mt-3 flex justify-end">
       <button
         type="button"
-        onClick={onLog}
-        disabled={logged || saving}
-        aria-pressed={logged}
+        onClick={onToggle}
+        disabled={saving}
+        aria-pressed={done}
         className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
-          logged
-            ? 'bg-emerald-500 text-white cursor-default'
+          done
+            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
             : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-500 hover:text-white hover:border-emerald-500'
         } ${saving ? 'opacity-60 cursor-wait' : ''}`}
       >
@@ -975,7 +910,7 @@ function MealLogButton({ meal, logged, saving, onLog, t }: any) {
             <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
             {t('meal_log_saving', { defaultValue: 'Registrando…' })}
           </>
-        ) : logged ? (
+        ) : done ? (
           <>
             <span className="material-symbols-outlined text-[16px]">check_circle</span>
             {t('meal_log_done', { defaultValue: 'Cumplida' })} ✓
