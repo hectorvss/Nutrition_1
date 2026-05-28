@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
+import { Search, Play, X, Instagram, Linkedin, MapPin, Lock, ShieldCheck, CreditCard } from "lucide-react";
 import Pricing from "../components/Pricing";
 import { useLanguage } from "../context/LanguageContext";
 import HowItWorks from "./landing/HowItWorks";
@@ -104,20 +104,20 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             <button
               onClick={() => setLanguage('es')}
               aria-pressed={isEs}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none inline-flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
                 isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
               }`}
             >
-              <span aria-hidden="true">🇪🇸</span> ES
+              ES
             </button>
             <button
               onClick={() => setLanguage('en')}
               aria-pressed={!isEs}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none inline-flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
                 !isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
               }`}
             >
-              <span aria-hidden="true">🇬🇧</span> EN
+              EN
             </button>
           </div>
 
@@ -248,21 +248,24 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             </div>
           </header>
 
-          {/* Trust strip — la jugada de confianza del competidor (badges
-              UE/RGPD) pero con señales reales nuestras. Banda fina justo bajo
-              el hero: datos en la UE, cifrado, RGPD, pagos con Stripe. */}
-          <div className="px-4 -mt-8 mb-4">
-            <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+          {/* Trust strip — señales reales de confianza (datos UE, cifrado,
+              RGPD, Stripe) en una banda limpia con iconos lucide y divisores
+              verticales. Sin emojis. */}
+          <div className="px-4 mt-6 mb-2">
+            <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-y-3">
               {[
-                { icon: '🇪🇺', es: 'Datos alojados en la UE', en: 'EU-hosted data' },
-                { icon: '🔒', es: 'Cifrado en tránsito y reposo', en: 'Encrypted in transit & at rest' },
-                { icon: '✓', es: 'Cumplimiento RGPD', en: 'GDPR compliant' },
-                { icon: '💳', es: 'Pagos seguros con Stripe', en: 'Secure payments via Stripe' },
+                { Icon: MapPin, es: 'Datos en la UE', en: 'EU-hosted' },
+                { Icon: Lock, es: 'Cifrado extremo a extremo', en: 'End-to-end encrypted' },
+                { Icon: ShieldCheck, es: 'Cumple RGPD', en: 'GDPR compliant' },
+                { Icon: CreditCard, es: 'Pagos con Stripe', en: 'Stripe payments' },
               ].map((b, i) => (
-                <span key={i} className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
-                  <span aria-hidden="true" className="text-sm">{b.icon}</span>
-                  {isEs ? b.es : b.en}
-                </span>
+                <div key={i} className="flex items-center">
+                  {i > 0 && <span className="hidden sm:block w-px h-3.5 bg-gray-200 mx-4" />}
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-400 px-2">
+                    <b.Icon className="w-3.5 h-3.5 text-gray-300" strokeWidth={2} />
+                    {isEs ? b.es : b.en}
+                  </span>
+                </div>
               ))}
             </div>
           </div>

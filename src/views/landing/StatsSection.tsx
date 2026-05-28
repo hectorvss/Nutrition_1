@@ -31,11 +31,11 @@ const stats: { value: string; labelEs: string; labelEn: string; subEs?: string; 
     subEn: 'no card, cancel anytime',
   },
   {
-    value: '100% UE',
-    labelEs: 'datos alojados en Europa',
-    labelEn: 'data hosted in Europe',
-    subEs: 'cifrados y bajo RGPD',
-    subEn: 'encrypted and GDPR-ready',
+    value: '1 sitio',
+    labelEs: 'planes, chat y progreso',
+    labelEn: 'plans, chat and progress',
+    subEs: 'tus clientes dejan de perderse entre apps',
+    subEn: 'no more juggling apps with clients',
   },
 ];
 
