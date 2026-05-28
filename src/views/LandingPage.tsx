@@ -112,20 +112,20 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             <button
               onClick={() => setLanguage('es')}
               aria-pressed={isEs}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
+              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none inline-flex items-center gap-1.5 ${
                 isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
               }`}
             >
-              ES
+              <span aria-hidden="true">🇪🇸</span> ES
             </button>
             <button
               onClick={() => setLanguage('en')}
               aria-pressed={!isEs}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
+              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none inline-flex items-center gap-1.5 ${
                 !isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
               }`}
             >
-              EN
+              <span aria-hidden="true">🇬🇧</span> EN
             </button>
           </div>
 
@@ -257,6 +257,25 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               </button>
             </div>
           </header>
+
+          {/* Trust strip — la jugada de confianza del competidor (badges
+              UE/RGPD) pero con señales reales nuestras. Banda fina justo bajo
+              el hero: datos en la UE, cifrado, RGPD, pagos con Stripe. */}
+          <div className="px-4 -mt-8 mb-4">
+            <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              {[
+                { icon: '🇪🇺', es: 'Datos alojados en la UE', en: 'EU-hosted data' },
+                { icon: '🔒', es: 'Cifrado en tránsito y reposo', en: 'Encrypted in transit & at rest' },
+                { icon: '✓', es: 'Cumplimiento RGPD', en: 'GDPR compliant' },
+                { icon: '💳', es: 'Pagos seguros con Stripe', en: 'Secure payments via Stripe' },
+              ].map((b, i) => (
+                <span key={i} className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                  <span aria-hidden="true" className="text-sm">{b.icon}</span>
+                  {isEs ? b.es : b.en}
+                </span>
+              ))}
+            </div>
+          </div>
 
           {/* Cifras de prueba justo despues del hero. */}
           <StatsSection />
