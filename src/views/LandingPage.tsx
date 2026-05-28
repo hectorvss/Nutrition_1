@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Search, Play, X, Instagram, Linkedin, MapPin, Lock, ShieldCheck, CreditCard } from "lucide-react";
+import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
 import Pricing from "../components/Pricing";
 import { useLanguage } from "../context/LanguageContext";
 import HowItWorks from "./landing/HowItWorks";
@@ -247,28 +247,6 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               </button>
             </div>
           </header>
-
-          {/* Trust strip — señales reales de confianza (datos UE, cifrado,
-              RGPD, Stripe) en una banda limpia con iconos lucide y divisores
-              verticales. Sin emojis. */}
-          <div className="px-4 mt-6 mb-2">
-            <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-y-3">
-              {[
-                { Icon: MapPin, es: 'Datos en la UE', en: 'EU-hosted' },
-                { Icon: Lock, es: 'Cifrado extremo a extremo', en: 'End-to-end encrypted' },
-                { Icon: ShieldCheck, es: 'Cumple RGPD', en: 'GDPR compliant' },
-                { Icon: CreditCard, es: 'Pagos con Stripe', en: 'Stripe payments' },
-              ].map((b, i) => (
-                <div key={i} className="flex items-center">
-                  {i > 0 && <span className="hidden sm:block w-px h-3.5 bg-gray-200 mx-4" />}
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-400 px-2">
-                    <b.Icon className="w-3.5 h-3.5 text-gray-300" strokeWidth={2} />
-                    {isEs ? b.es : b.en}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Cifras de prueba justo despues del hero. */}
           <StatsSection />
