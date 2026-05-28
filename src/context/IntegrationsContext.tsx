@@ -10,6 +10,8 @@ interface Integrations {
   stripe_enabled: boolean;
   stripe_publishable_key: string | null;
   stripe_secret_key: string | null;
+  // Signing secret del webhook por-coach (whsec_...) para eventos en tiempo real.
+  stripe_webhook_secret?: string | null;
 }
 
 interface StripeBalance {

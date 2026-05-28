@@ -11,14 +11,17 @@ import {
 // ---- decodeCursor --------------------------------------------------------
 
 describe('decodeCursor', () => {
+  // `i` (la columna id, tiebreak del keyset) DEBE ser un uuid: el hardening de
+  // seguridad de decodeCursor lo exige para que no se pueda inyectar en el
+  // filtro PostgREST. Los fixtures usan uuids válidos.
   it('decodes a valid cursor', () => {
-    const encoded = Buffer.from(JSON.stringify({ v: '2024-01-01', i: 'abc' }), 'utf8').toString('base64');
-    expect(decodeCursor(encoded)).toEqual({ v: '2024-01-01', i: 'abc' });
+    const encoded = Buffer.from(JSON.stringify({ v: '2024-01-01', i: '11111111-1111-1111-1111-111111111111' }), 'utf8').toString('base64');
+    expect(decodeCursor(encoded)).toEqual({ v: '2024-01-01', i: '11111111-1111-1111-1111-111111111111' });
   });
 
   it('decodes a cursor with optional t field', () => {
-    const encoded = Buffer.from(JSON.stringify({ v: '100', i: 'z1', t: 'legacy' }), 'utf8').toString('base64');
-    expect(decodeCursor(encoded)).toEqual({ v: '100', i: 'z1', t: 'legacy' });
+    const encoded = Buffer.from(JSON.stringify({ v: '100', i: '22222222-2222-2222-2222-222222222222', t: 'legacy' }), 'utf8').toString('base64');
+    expect(decodeCursor(encoded)).toEqual({ v: '100', i: '22222222-2222-2222-2222-222222222222', t: 'legacy' });
   });
 
   it('returns null for null input', () => {
@@ -69,8 +72,8 @@ describe('encodeCursor', () => {
   });
 
   it('round-trips with decodeCursor', () => {
-    const cursor = encodeCursor('2025-05-20T10:00:00Z', 'id-42');
-    expect(decodeCursor(cursor)).toEqual({ v: '2025-05-20T10:00:00Z', i: 'id-42' });
+    const cursor = encodeCursor('2025-05-20T10:00:00Z', '33333333-3333-3333-3333-333333333333');
+    expect(decodeCursor(cursor)).toEqual({ v: '2025-05-20T10:00:00Z', i: '33333333-3333-3333-3333-333333333333' });
   });
 });
 
@@ -80,7 +83,8 @@ describe('buildPage', () => {
   type Row = { id: string; created_at: string; name: string };
   const makeRows = (n: number): Row[] =>
     Array.from({ length: n }, (_, i) => ({
-      id: `id-${i}`,
+      // id debe ser un uuid válido (decodeCursor lo exige tras el hardening).
+      id: `0000000${i}-0000-0000-0000-000000000000`,
       created_at: `2024-01-${String(i + 1).padStart(2, '0')}`,
       name: `item-${i}`,
     }));
@@ -158,9 +162,9 @@ describe('parsePagination', () => {
   });
 
   it('decodes a valid cursor from query string', () => {
-    const encoded = encodeCursor('2024-01-01', 'abc');
+    const encoded = encodeCursor('2024-01-01', '44444444-4444-4444-4444-444444444444');
     const result = parsePagination(makeReq({ cursor: encoded }));
-    expect(result.cursor).toEqual({ v: '2024-01-01', i: 'abc' });
+    expect(result.cursor).toEqual({ v: '2024-01-01', i: '44444444-4444-4444-4444-444444444444' });
   });
 
   it('returns null cursor for invalid cursor param', () => {

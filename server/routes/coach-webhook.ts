@@ -66,11 +66,15 @@ router.post('/:managerId', async (req: any, res) => {
     return res.status(400).send(`Webhook Error: ${errMessage(err)}`);
   }
 
-  // Idempotencia: comparte la tabla del webhook de plataforma (PK event_id).
+  // Idempotencia: la tabla stripe_processed_events (PK event_id) la comparte el
+  // webhook de plataforma y TODOS los coaches. Los `evt_...` son únicos por
+  // CUENTA, no globalmente, así que namespaceamos con el managerId para que el
+  // evento de una cuenta nunca se descarte como duplicado de otra cuenta.
+  const dedupKey = `coach:${managerId}:${event.id}`;
   const { data: dup } = await supabaseAdmin
     .from('stripe_processed_events')
     .select('event_id')
-    .eq('event_id', event.id)
+    .eq('event_id', dedupKey)
     .maybeSingle();
   if (dup) return res.json({ received: true, duplicate: true });
 
