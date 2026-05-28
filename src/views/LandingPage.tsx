@@ -100,11 +100,11 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               `setLanguage` solo persiste en backend si hay manager logueado;
               para un visitante anonimo cambia el estado en memoria, que es
               justo lo que queremos en la landing publica. */}
-          <div className="hidden sm:flex items-center bg-white/40 backdrop-blur-md border border-white/20 rounded-full p-0.5 text-xs font-bold shadow-sm">
+          <div className="hidden sm:flex items-center bg-white/40 backdrop-blur-md border border-white/20 rounded-full p-1 text-base font-medium shadow-sm">
             <button
               onClick={() => setLanguage('es')}
               aria-pressed={isEs}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
+              className={`px-5 py-2 rounded-full transition-colors cursor-pointer border-none ${
                 isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
               }`}
             >
@@ -113,7 +113,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
             <button
               onClick={() => setLanguage('en')}
               aria-pressed={!isEs}
-              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
+              className={`px-5 py-2 rounded-full transition-colors cursor-pointer border-none ${
                 !isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
               }`}
             >
