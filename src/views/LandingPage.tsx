@@ -43,7 +43,7 @@ type LandingPageKind =
   | LegalKind;
 
 export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps) {
-  const { t, language } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const isEs = language === 'es';
   const [currentPage, setCurrentPage] = useState<LandingPageKind>('home');
 
@@ -95,6 +95,32 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
         </div>
 
         <div className="flex gap-4 pointer-events-auto items-center">
+          {/* Selector de idioma ES / EN. El landing arranca en 'es' por
+              defecto; aqui el visitante (aun sin login) puede cambiarlo.
+              `setLanguage` solo persiste en backend si hay manager logueado;
+              para un visitante anonimo cambia el estado en memoria, que es
+              justo lo que queremos en la landing publica. */}
+          <div className="hidden sm:flex items-center bg-white/40 backdrop-blur-md border border-white/20 rounded-full p-0.5 text-xs font-bold shadow-sm">
+            <button
+              onClick={() => setLanguage('es')}
+              aria-pressed={isEs}
+              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
+                isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
+              }`}
+            >
+              ES
+            </button>
+            <button
+              onClick={() => setLanguage('en')}
+              aria-pressed={!isEs}
+              className={`px-3 py-1.5 rounded-full transition-colors cursor-pointer border-none ${
+                !isEs ? 'bg-black text-white' : 'bg-transparent text-gray-500 hover:text-black'
+              }`}
+            >
+              EN
+            </button>
+          </div>
+
           {/* Etiquetas explicitas con mayuscula inicial y sin guion bajo
               (antes salian "log_in" / "create_account" tal cual la clave). */}
           <button
