@@ -25,7 +25,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
     const rawGoal = client.goal && client.goal !== 'Not Set' ? client.goal : null;
     const goalRaw = rawGoal
       || client.nutritionPlanGoal
-      || (hasPlan ? (client.plan && client.plan !== 'No Plan' ? client.plan : t('active_plan_status')) : 'Not Set');
+      || (hasPlan ? (client.plan && client.plan !== 'No Plan' ? client.plan : t('active_plan_status')) : t('not_set', { defaultValue: 'Sin definir' }));
     const goalLabel = goalRaw === 'Weight Loss' ? t('weight_loss_goal') :
                      goalRaw === 'Muscle Gain' ? t('muscle_gain_goal') :
                      goalRaw === 'Maintenance' ? t('maintenance_goal') :
@@ -199,6 +199,26 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
               </div>
             </div>
           ))}
+
+          {/* Empty-state — antes la lista filtrada vacía dejaba un hueco en
+              blanco. Mismo patrón que PlanningManagement. */}
+          {clients.length === 0 && (
+            <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <ClipboardList className="w-6 h-6 text-slate-400" />
+              </div>
+              <p className="text-sm font-bold text-slate-700 mb-1">
+                {search
+                  ? t('no_clients_found', { defaultValue: 'No se encontraron clientes' })
+                  : t('no_clients_yet', { defaultValue: 'Aún no tienes clientes' })}
+              </p>
+              <p className="text-xs text-slate-400 max-w-xs">
+                {search
+                  ? t('try_another_search', { defaultValue: 'Prueba con otro término de búsqueda.' })
+                  : t('add_clients_to_start', { defaultValue: 'Añade clientes para empezar a asignar planes.' })}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

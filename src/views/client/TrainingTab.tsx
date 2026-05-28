@@ -23,6 +23,12 @@ import {
 import Select from '../../components/ui/Select';
 import WorkoutLogItem from './WorkoutLogItem';
 import TrainingProgramCard from './TrainingProgramCard';
+import { useChartTooltipStyle } from '../../lib/useChartTheme';
+
+// Clave estable para la opción "Volumen semanal" del selector de análisis.
+// Antes el estado default era 'Weekly Volume' (inglés) y se comparaba con
+// t('weekly_volume'); en ES nunca casaba y el gráfico arrancaba vacío.
+const WEEKLY_VOLUME_KEY = '__weekly_volume__';
 
 interface TrainingTabProps {
   stats: any;
@@ -35,7 +41,8 @@ interface TrainingTabProps {
 const TrainingTab: React.FC<TrainingTabProps> = ({ stats, isLoading, t, clientId, onUpdateWorkoutLog }) => {
   const [strengthRange, setStrengthRange] = useState('1W');
   const [strengthWeekOffset, setStrengthWeekOffset] = useState(0);
-  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState('Weekly Volume');
+  const [selectedAnalysisSubject, setSelectedAnalysisSubject] = useState(WEEKLY_VOLUME_KEY);
+  const chartTooltipStyle = useChartTooltipStyle();
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null);
   const [visiblePRs, setVisiblePRs] = useState(4);
@@ -149,7 +156,7 @@ const TrainingTab: React.FC<TrainingTabProps> = ({ stats, isLoading, t, clientId
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
                 <div className="px-3 py-1 flex flex-col items-center min-w-[120px]">
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Semana</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">{t('week', { defaultValue: 'Semana' })}</span>
                   <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
                     {(() => {
                       const { monday, sunday } = getWeekRange(strengthWeekOffset);
@@ -186,18 +193,19 @@ const TrainingTab: React.FC<TrainingTabProps> = ({ stats, isLoading, t, clientId
 
         <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 scrollbar-hide no-scrollbar">
           {[
-            { name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
+            { id: WEEKLY_VOLUME_KEY, name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: t('volume_kg_unit', { defaultValue: 'kg vol.' }) },
             ...(stats?.training?.allExercises || []).map((ex: any) => ({
+              id: ex.name,
               name: ex.name,
               value: ex.pr || '--',
               unit: 'kg'
             }))
           ].map((ex, idx) => {
-            const isSelected = ex.name === selectedAnalysisSubject;
+            const isSelected = ex.id === selectedAnalysisSubject;
             return (
               <div
                 key={idx}
-                onClick={() => setSelectedAnalysisSubject(ex.name)}
+                onClick={() => setSelectedAnalysisSubject(ex.id)}
                 className={`flex-shrink-0 w-48 p-5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/10 shadow-md shadow-emerald-50' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm'}`}
               >
                 <div className="flex justify-between items-start mb-5">
@@ -251,7 +259,7 @@ const TrainingTab: React.FC<TrainingTabProps> = ({ stats, isLoading, t, clientId
               />
               <YAxis hide domain={['dataMin - 10', 'dataMax + 10']} />
               <Tooltip
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: '#fff' }}
+                contentStyle={chartTooltipStyle}
                 labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
                 labelFormatter={(label) => {
                   try {
@@ -262,7 +270,7 @@ const TrainingTab: React.FC<TrainingTabProps> = ({ stats, isLoading, t, clientId
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '20px' }} />
 
               {(() => {
-                if (selectedAnalysisSubject === t('weekly_volume')) {
+                if (selectedAnalysisSubject === WEEKLY_VOLUME_KEY) {
                   return (
                     <Area
                       name={t('weekly_volume')}
@@ -330,7 +338,7 @@ const TrainingTab: React.FC<TrainingTabProps> = ({ stats, isLoading, t, clientId
             const allSensations = stats?.training?.sensations || [];
 
             // Filter by selected lift if it's not "Weekly Volume"
-            const filtered = selectedAnalysisSubject === t('weekly_volume')
+            const filtered = selectedAnalysisSubject === WEEKLY_VOLUME_KEY
               ? allSensations
               : allSensations.filter((s: any) => s.exercise.toLowerCase().includes(selectedAnalysisSubject.toLowerCase()));
 

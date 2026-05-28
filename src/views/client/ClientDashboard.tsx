@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Skeleton, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
 import { formatPortion } from '../../lib/portionDisplay';
+import { computeCheckinAdherence } from '../../lib/checkinAdherence';
 
 interface ClientDashboardProps {
   onNavigate: (view: ClientView) => void;
@@ -230,16 +231,10 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       curr.setDate(curr.getDate() - 1);
     }
 
-    // Adherencia al check-in semanal: nº de check-ins en las últimas 4 semanas
-    // sobre 4 (un check-in por semana = 100%). Antes se dividía entre 7 días,
-    // dando como máximo ~14% aunque el cliente cumpliera a la perfección.
-    const fourWeeksAgo = new Date();
-    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-    let recentCheckIns = 0;
-    checkInDates.forEach((dateStr) => {
-      if (new Date(String(dateStr)) >= fourWeeksAgo) recentCheckIns++;
-    });
-    const adherence = Math.min(100, Math.round((recentCheckIns / 4) * 100));
+    // Adherencia al check-in semanal — util compartida con ClientCheckIns
+    // para que ambas pantallas muestren el mismo número (días únicos en las
+    // últimas 4 semanas / 4).
+    const adherence = computeCheckinAdherence(checkIns);
     return { adherence: adherence || 0, streak: consecutiveDays || 0 };
   };
 

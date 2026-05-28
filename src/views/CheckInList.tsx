@@ -18,7 +18,8 @@ interface CheckInListProps {
 
 export default function CheckInList({ onViewHistory, onManageTemplates }: CheckInListProps) {
   const { clients, isLoading: isClientsLoading } = useClient();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dateLocale = language === 'es' ? 'es-ES' : 'en-US';
   const [filter, setFilter] = useState<'All' | 'Unreviewed' | 'Completed'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -36,7 +37,12 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
         const data = unwrapList(await fetchWithAuth('/check-ins/manager/checkin-assignments?limit=200'));
         const map: Record<string, string> = {};
         data.forEach((a: any) => {
-          map[a.client_id] = a.template.name;
+          // Guard: una asignación puede llegar sin `template` (plantilla
+          // borrada o join nulo). Sin esta guarda, `.name` revienta el
+          // render de toda la vista.
+          if (a?.client_id && a.template?.name) {
+            map[a.client_id] = a.template.name;
+          }
         });
         setAssignments(map);
       } catch (err) {
@@ -71,11 +77,12 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
           template_id: templateId
         })
       });
-      const template = availableTemplates.find(t => t.id === templateId);
-      setAssignments(prev => ({ ...prev, [selectedClient.id]: template?.name || 'Assigned' }));
+      const tpl = availableTemplates.find(x => x.id === templateId);
+      setAssignments(prev => ({ ...prev, [selectedClient.id]: tpl?.name || t('assigned', { defaultValue: 'Asignada' }) }));
       setIsModalOpen(false);
     } catch (err) {
-      alert('Error assigning template');
+      console.error('Error assigning template:', err);
+      alert(t('assign_template_error', { defaultValue: 'No se pudo asignar la plantilla.' }));
     } finally {
       setIsAssigning(null);
     }
@@ -101,7 +108,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
       weight: c.weight ? `${c.weight}kg` : '--',
       nutritionAdherence: c.plan_name || '--',
       submitted: c.lastCheckInDate
-        ? new Date(c.lastCheckInDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        ? new Date(c.lastCheckInDate).toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })
         : t('no_checkins_label'),
       avatar: c.avatar,
       initials: c.name.substring(0, 2).toUpperCase(),

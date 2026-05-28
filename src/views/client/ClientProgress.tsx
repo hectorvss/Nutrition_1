@@ -443,7 +443,7 @@ export default function ClientProgress() {
       <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg', change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+          { label: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: t('volume_kg_unit', { defaultValue: 'kg vol.' }), change: '', icon: Dumbbell, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: t('avg_session_rpe'), value: stats?.training?.avgRPE || '--', unit: '/ 10', change: t('session_avg'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: t('workouts'), value: stats?.training?.workoutCount || '0', unit: t('sessions'), change: t('this_week'), icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
           { label: t('fatigue_level'), value: stats?.training?.fatigue || '--', unit: '/ 10', change: stats?.training?.fatigue > 7 ? t('high') : t('normal'), icon: AlertTriangle, color: stats?.training?.fatigue > 7 ? 'text-red-500' : 'text-amber-500', bg: stats?.training?.fatigue > 7 ? 'bg-red-50 dark:bg-red-900/20' : 'bg-amber-50 dark:bg-amber-900/20' },
@@ -517,7 +517,7 @@ export default function ClientProgress() {
 
         <div className="flex flex-nowrap overflow-x-auto gap-4 mb-8 pb-4 no-scrollbar">
           {[
-            { id: WEEKLY_VOLUME_KEY, name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: 'kg' },
+            { id: WEEKLY_VOLUME_KEY, name: t('weekly_volume'), value: stats?.training?.weeklyVolume?.toLocaleString() || '0', unit: t('volume_kg_unit', { defaultValue: 'kg vol.' }) },
             ...(stats?.training?.allExercises || []).map((ex: any) => ({
               id: ex.name,
               name: ex.name,
@@ -715,7 +715,7 @@ export default function ClientProgress() {
     const adherenceCards = [
       { label: t('nutrition'), value: nutritionAdh != null ? `${Math.round(Number(nutritionAdh))}%` : '--', icon: Utensils },
       { label: t('training'), value: trainingAdh != null ? `${Math.round(Number(trainingAdh))}%` : '--', icon: Dumbbell },
-      { label: t('planning_avg_steps'), value: avgSteps != null ? `${(Number(avgSteps) / 1000).toFixed(1)}k` : '--', icon: Activity },
+      { label: t('planning_avg_steps'), value: avgSteps != null ? (Number(avgSteps) >= 1000 ? `${(Number(avgSteps) / 1000).toFixed(1)}k` : String(Math.round(Number(avgSteps)))) : '--', icon: Activity },
     ];
 
     return (
@@ -756,14 +756,26 @@ export default function ClientProgress() {
     );
   };
 
-  const renderMindset = () => (
+  const renderMindset = () => {
+    // Bandas comunes 1-10: low (<=4) / avg (5-7) / high (>=8). Antes cada
+    // métrica usaba un umbral binario distinto (>7) e incoherente entre sí.
+    const band3 = (v: any): 'low' | 'avg' | 'high' | null => {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n <= 0) return null;
+      return n >= 8 ? 'high' : n >= 5 ? 'avg' : 'low';
+    };
+    const statusLabel = (v: any, labels: { low: string; avg: string; high: string }) => {
+      const b = band3(v);
+      return b ? labels[b] : '--';
+    };
+    return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[
-          { label: t('mood_upper'), value: stats?.mindset?.mood || '--', status: stats?.mindset?.mood > 7 ? t('good') : t('avg'), icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
-          { label: t('stress_upper'), value: stats?.mindset?.stress || '--', status: stats?.mindset?.stress > 7 ? t('high') : t('normal'), icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
-          { label: t('motivation_upper'), value: stats?.mindset?.motivation || '--', status: stats?.mindset?.motivation > 7 ? t('high') : t('low'), icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
-          { label: t('energy_upper'), value: stats?.mindset?.energy || '--', status: stats?.mindset?.energy > 7 ? t('high') : t('low'), icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
+          { label: t('mood_upper'), value: stats?.mindset?.mood || '--', status: statusLabel(stats?.mindset?.mood, { low: t('low'), avg: t('avg'), high: t('good') }), icon: Smile, color: 'text-blue-500', bg: 'bg-blue-50', dataKey: 'mood' },
+          { label: t('stress_upper'), value: stats?.mindset?.stress || '--', status: statusLabel(stats?.mindset?.stress, { low: t('low'), avg: t('normal'), high: t('high') }), icon: Flame, color: 'text-red-500', bg: 'bg-red-50', dataKey: 'stress' },
+          { label: t('motivation_upper'), value: stats?.mindset?.motivation || '--', status: statusLabel(stats?.mindset?.motivation, { low: t('low'), avg: t('avg'), high: t('high') }), icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50', dataKey: 'motivation' },
+          { label: t('energy_upper'), value: stats?.mindset?.energy || '--', status: statusLabel(stats?.mindset?.energy, { low: t('low'), avg: t('avg'), high: t('high') }), icon: Activity, color: 'text-amber-500', bg: 'bg-amber-50', dataKey: 'energy' },
         ].map((stat, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
             <div className="flex justify-between items-start mb-4">
@@ -811,7 +823,8 @@ export default function ClientProgress() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderInsights = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">

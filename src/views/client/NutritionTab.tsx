@@ -18,6 +18,7 @@ import {
   Legend,
 } from 'recharts';
 import NutritionPlanCard from './NutritionPlanCard';
+import { useChartTooltipStyle } from '../../lib/useChartTheme';
 
 interface NutritionTabProps {
   stats: any;
@@ -28,6 +29,7 @@ interface NutritionTabProps {
 const NutritionTab: React.FC<NutritionTabProps> = ({ stats, isLoading, t }) => {
   const [showBodyFat, setShowBodyFat] = useState(false);
   const [weightRange, setWeightRange] = useState<'3M' | '6M' | '1Y'>('3M');
+  const chartTooltipStyle = useChartTooltipStyle();
 
   const getFilteredWeightData = () => {
     const history = stats?.weightHistory || [];
@@ -121,7 +123,7 @@ const NutritionTab: React.FC<NutritionTabProps> = ({ stats, isLoading, t }) => {
                 <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
                 {showBodyFat && <YAxis yAxisId="bf" hide domain={['dataMin - 5', 'dataMax + 5']} />}
                 <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white)', color: 'var(--tw-colors-slate-900)' }}
+                  contentStyle={chartTooltipStyle}
                   labelStyle={{ fontWeight: 700, marginBottom: '4px' }}
                 />
                 {showBodyFat && <Legend verticalAlign="bottom" height={36} wrapperStyle={{ paddingTop: '10px' }} />}
@@ -142,23 +144,25 @@ const NutritionTab: React.FC<NutritionTabProps> = ({ stats, isLoading, t }) => {
             </div>
             <div className="space-y-6">
               {(() => {
+                // `stats.macros.{protein,carbs,fats}` viene del backend como
+                // % de adherencia por macro (0-100), NO como gramos. Antes se
+                // pintaba "{grams} g" — etiqueta incorrecta. Se muestra como %.
                 const m = stats?.macros || {};
                 const rows = [
-                  { label: 'PROTEIN', grams: m.protein || 0, color: 'bg-emerald-500' },
-                  { label: 'CARBS', grams: m.carbs || 0, color: 'bg-blue-400' },
-                  { label: 'FATS', grams: m.fats || 0, color: 'bg-amber-400' },
+                  { label: 'PROTEIN', pct: Math.max(0, Math.min(100, Number(m.protein) || 0)), color: 'bg-emerald-500' },
+                  { label: 'CARBS', pct: Math.max(0, Math.min(100, Number(m.carbs) || 0)), color: 'bg-blue-400' },
+                  { label: 'FATS', pct: Math.max(0, Math.min(100, Number(m.fats) || 0)), color: 'bg-amber-400' },
                 ];
-                const total = rows.reduce((s, r) => s + r.grams, 0);
                 return rows.map((macro, idx) => (
                   <div key={idx}>
                     <div className="flex justify-between items-end mb-2">
                       <div>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{macro.label}</span>
                       </div>
-                      <span className="text-xs font-bold text-emerald-500">{macro.grams} g</span>
+                      <span className="text-xs font-bold text-emerald-500">{macro.pct}%</span>
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                      <div className={`${macro.color} h-2 rounded-full`} style={{ width: `${total > 0 ? (macro.grams / total) * 100 : 0}%` }}></div>
+                      <div className={`${macro.color} h-2 rounded-full`} style={{ width: `${macro.pct}%` }}></div>
                     </div>
                   </div>
                 ));

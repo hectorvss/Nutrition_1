@@ -199,19 +199,7 @@ export default function ClientCheckIns() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-slate-900 dark:text-white">
-                    {(() => {
-                      // Same formula as ClientDashboard: count check-ins in
-                      // the past 28 days divided by 4 (1 per week = 100%).
-                      // Was 7-day/7 which capped a perfect client at 14%.
-                      if (checkIns.length === 0) return '—';
-                      const fourWeeksAgo = new Date();
-                      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-                      const recent = checkIns.filter(c => {
-                        const raw = c.date || c.created_at;
-                        return raw && new Date(raw) >= fourWeeksAgo;
-                      }).length;
-                      return Math.min(100, Math.round((recent / 4) * 100)) + '%';
-                    })()}
+                    {checkIns.length === 0 ? '—' : computeCheckinAdherence(checkIns) + '%'}
                   </p>
                   <p className="text-xs text-slate-400">{t('rate')}</p>
                 </div>

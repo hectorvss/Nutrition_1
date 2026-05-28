@@ -34,8 +34,19 @@ export default function WorkflowsList({ onBack, onOpen }: WorkflowsListProps) {
   useEffect(() => { load(); }, []);
 
   const remove = async (id: string) => {
-    await fetchWithAuth(`/workflows/${id}`, { method: 'DELETE' }).catch(() => {});
-    load();
+    // Confirmación antes de borrar — antes un clic en la papelera borraba
+    // sin aviso y tragaba el error en silencio.
+    const ok = window.confirm(
+      t('workflow_delete_confirm', { defaultValue: '¿Eliminar este workflow? Esta acción no se puede deshacer.' })
+    );
+    if (!ok) return;
+    try {
+      await fetchWithAuth(`/workflows/${id}`, { method: 'DELETE' });
+      load();
+    } catch (err) {
+      console.error('Error deleting workflow:', err);
+      setToggleError(t('workflow_delete_failed', { defaultValue: 'No se pudo eliminar el workflow.' }));
+    }
   };
 
   // Activar / desactivar un workflow sin abrir el builder, igual que las

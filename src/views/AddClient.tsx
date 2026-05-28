@@ -42,8 +42,25 @@ export default function AddClient({ onBack }: AddClientProps) {
     return 'new.client';
   }, [firstName, lastName, email]);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string) => {
+    // navigator.clipboard rechaza en contextos no-seguros (http) o sin
+    // permiso. Fallback a execCommand y, si todo falla, no romper la UI.
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch (err) {
+        console.error('Clipboard copy failed:', err);
+      }
+    }
   };
 
   const handleCreate = async () => {

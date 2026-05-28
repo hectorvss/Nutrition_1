@@ -420,9 +420,9 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
             </div>
             <div className="p-6 space-y-4">
               <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/50">
-                <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-1">⚠ This action cannot be undone</p>
+                <p className="text-sm font-bold text-red-700 dark:text-red-400 mb-1">⚠ {t('action_cannot_be_undone', { defaultValue: 'Esta acción no se puede deshacer' })}</p>
                 <p className="text-sm text-red-600 dark:text-red-400">
-                  All data for <span className="font-bold">{deleteTarget.name}</span> — including plans, sessions, and check-ins — will be permanently erased.
+                  {t('delete_client_warning_prefix', { defaultValue: 'Todos los datos de' })} <span className="font-bold">{deleteTarget.name}</span> {t('delete_client_warning_suffix', { defaultValue: '— planes, sesiones y check-ins — se borrarán permanentemente.' })}
                 </p>
               </div>
               <div>
@@ -459,7 +459,7 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                       </svg>
-                      Deleting...
+                      {t('deleting', { defaultValue: 'Eliminando…' })}
                     </>
                   ) : (
                     <><Trash2 className="w-4 h-4" /> {t('delete_permanently')}</>

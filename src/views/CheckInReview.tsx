@@ -170,17 +170,15 @@ export default function CheckInReview({ clientId, checkInId, onBack, readonly = 
     <div className="w-full">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
       <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
-        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-          {Array.isArray(value) ? (
-            <div className="flex flex-wrap gap-2 mt-1">
-              {value.map((v: string) => (
-                <span key={v} className="px-3 py-1 bg-[#17cf54]/10 text-[#17cf54] rounded-lg text-[11px] font-bold uppercase">{v}</span>
-              ))}
-            </div>
-          ) : (
-            value || '—'
-          )}
-        </p>
+        {Array.isArray(value) ? (
+          <div className="flex flex-wrap gap-2">
+            {value.map((v: string) => (
+              <span key={v} className="px-3 py-1 bg-[#17cf54]/10 text-[#17cf54] rounded-lg text-[11px] font-bold uppercase">{v}</span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{value || '—'}</p>
+        )}
       </div>
     </div>
   );

@@ -55,6 +55,14 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
 
   const [accessExpiration, setAccessExpiration] = useState('');
   const [savingExpiration, setSavingExpiration] = useState(false);
+  // Banner de error transitorio para acciones que antes solo hacían
+  // console.error (guardar expiración, actualizar log de entreno). Se
+  // auto-oculta a los 4s.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const flashError = (msg: string) => {
+    setActionError(msg);
+    window.setTimeout(() => setActionError(null), 4000);
+  };
 
   // ─── Password reveal / reset state ───────────────────────────────────────
   const [revealedPassword, setRevealedPassword] = useState<string | null>(null);
@@ -110,6 +118,7 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
       });
     } catch (error) {
       console.error('Error saving access expiration:', error);
+      flashError(t('save_error', { defaultValue: 'No se pudo guardar. Inténtalo de nuevo.' }));
     } finally {
       setSavingExpiration(false);
     }
@@ -167,6 +176,7 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
       setStats(data);
     } catch (error) {
       console.error('Error updating workout log:', error);
+      flashError(t('save_error', { defaultValue: 'No se pudo guardar. Inténtalo de nuevo.' }));
     }
   };
 
@@ -188,10 +198,16 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
   const displayAge = onboardingAnswers.edad || onboardingAnswers.age || (client as any).age || '--';
   const displayLocation = onboardingAnswers.localizacion || onboardingAnswers.location || (client as any).location || t('unknown');
   const displayPlan = (client as any).planFamilyLabel || (client as any).plan || t('no_plan');
-  const joinDate = (client as any).created_at ? new Date((client as any).created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+  const dateLocale = language === 'es' ? 'es-ES' : 'en-US';
+  const joinDate = (client as any).created_at ? new Date((client as any).created_at).toLocaleDateString(dateLocale, { month: 'short', year: 'numeric' }) : '—';
 
   return (
     <>
+    {actionError && (
+      <div className="fixed top-6 right-6 z-[120] bg-red-500 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg max-w-sm">
+        {actionError}
+      </div>
+    )}
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="p-6 md:p-8 lg:p-10">
@@ -220,7 +236,7 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
                   </span>
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 font-medium uppercase tracking-tight text-[10px] font-black">
-                  {displayGender}, {displayAge} years • {displayLocation}
+                  {displayGender}, {displayAge} {t('years', { defaultValue: 'años' })} • {displayLocation}
                 </p>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                   <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">

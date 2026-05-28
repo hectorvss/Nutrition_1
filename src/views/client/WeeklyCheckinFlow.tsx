@@ -366,7 +366,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
                 className="text-white px-10 py-5 rounded-2xl font-bold flex items-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-emerald-500/10 disabled:opacity-50"
                 style={{ backgroundColor: 'var(--brand-primary, #17cf54)' }}
               >
-                <span className="text-lg">{isSubmitting ? t('submitting') : (currentStep === totalSteps ? t('checkin_submitted') : t('continue_label'))}</span>
+                <span className="text-lg">{isSubmitting ? t('submitting') : (currentStep === totalSteps ? t('submit_checkin', { defaultValue: 'Enviar check-in' }) : t('continue_label'))}</span>
                 <span className="material-symbols-outlined text-[20px]">{currentStep === totalSteps ? 'task_alt' : 'arrow_forward'}</span>
               </button>
             </div>
