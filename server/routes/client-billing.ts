@@ -726,6 +726,345 @@ router.post('/import', async (req: any, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════════════════
+// PLANES — catálogo reutilizable (Product + Price + Payment Link en Stripe)
+// El coach crea un plan UNA vez y lo asigna a muchos clientes. La asignación
+// es una fila en client_billing con plan_id; el link de pago se comparte.
+// ════════════════════════════════════════════════════════════════════════
+
+// Crea Product + Price + Payment Link reutilizable para un plan en la cuenta
+// del coach. Devuelve los ids + la url del link.
+async function createStripePlanObjects(stripe: Stripe, p: {
+  name: string; description?: string | null; kind: 'recurring' | 'one_time';
+  amountCents: number; currency: string; interval?: string; intervalCount?: number;
+  trialDays?: number; allowPromos?: boolean; managerId: string;
+}) {
+  const product = await stripe.products.create({ name: p.name, description: p.description || undefined });
+  const price = await stripe.prices.create({
+    product: product.id,
+    unit_amount: p.amountCents,
+    currency: p.currency,
+    ...(p.kind === 'recurring'
+      ? { recurring: { interval: (p.interval || 'month') as any, interval_count: p.intervalCount || 1, ...(p.trialDays && p.trialDays > 0 ? { trial_period_days: p.trialDays } : {}) } }
+      : {}),
+  });
+  const link = await stripe.paymentLinks.create({
+    line_items: [{ price: price.id, quantity: 1 }],
+    allow_promotion_codes: !!p.allowPromos,
+    metadata: { manager_id: p.managerId, plan: '1' },
+    after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+  });
+  return { productId: product.id, priceId: price.id, linkId: link.id, url: link.url };
+}
+
+// Crea la asignación de un plan a un cliente (fila client_billing) y, si se
+// pide, envía la tarjeta de pago al chat. Reutiliza el link del plan.
+async function assignPlanRow(managerId: string, plan: any, clientId: string, sendToChat: boolean) {
+  const { data: inserted } = await supabaseAdmin
+    .from('client_billing')
+    .insert({
+      manager_id: managerId,
+      client_id: clientId,
+      plan_id: plan.id,
+      kind: plan.kind,
+      stripe_payment_link_id: plan.stripe_payment_link_id,
+      stripe_price_id: plan.stripe_price_id,
+      stripe_product_id: plan.stripe_product_id,
+      payment_url: plan.payment_url,
+      description: plan.name,
+      amount_cents: plan.amount_cents,
+      currency: plan.currency,
+      interval: plan.kind === 'recurring' ? plan.interval : null,
+      status: 'pending',
+    })
+    .select()
+    .single();
+  if (sendToChat && plan.payment_url) {
+    await supabaseAdmin.from('messages').insert({
+      sender_id: managerId,
+      receiver_id: clientId,
+      content: null,
+      attachment_type: 'payment',
+      attachment_url: plan.payment_url,
+      payload: {
+        billing_id: inserted?.id, plan_id: plan.id, kind: plan.kind,
+        amount_cents: plan.amount_cents, currency: plan.currency,
+        interval: plan.interval, description: plan.name, status: 'pending',
+      },
+    });
+  }
+  return inserted;
+}
+
+// GET /plans — catálogo + nº de suscriptores por plan.
+router.get('/plans', async (req: any, res) => {
+  try {
+    const { data: plans } = await supabaseAdmin
+      .from('billing_plans')
+      .select('*')
+      .eq('manager_id', req.user.id)
+      .order('created_at', { ascending: false });
+    const ids = (plans || []).map((p: any) => p.id);
+    const counts: Record<string, { total: number; active: number }> = {};
+    if (ids.length > 0) {
+      const { data: cb } = await supabaseAdmin
+        .from('client_billing')
+        .select('plan_id, status')
+        .eq('manager_id', req.user.id)
+        .in('plan_id', ids);
+      for (const r of (cb || [])) {
+        if (!r.plan_id) continue;
+        counts[r.plan_id] = counts[r.plan_id] || { total: 0, active: 0 };
+        counts[r.plan_id].total++;
+        if (r.status === 'active' || r.status === 'trialing') counts[r.plan_id].active++;
+      }
+    }
+    res.json({ plans: (plans || []).map((p: any) => ({ ...p, subscribers: counts[p.id] || { total: 0, active: 0 } })) });
+  } catch (error: any) {
+    console.error('Error listing plans:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /plans — crea un plan (objetos Stripe) + opcionalmente pre-asigna a clientes.
+router.post('/plans', async (req: any, res) => {
+  try {
+    const { name, description, kind, amount, currency, interval, interval_count, trial_days, allow_promotion_codes, assign_client_ids } = req.body;
+    if (kind !== 'recurring' && kind !== 'one_time') return res.status(400).json({ error: 'kind must be recurring|one_time' });
+    const safeName = typeof name === 'string' && name.trim() ? name.trim().slice(0, 120) : null;
+    if (!safeName) return res.status(400).json({ error: 'name is required' });
+    const amountNum = Number(amount);
+    if (!Number.isFinite(amountNum) || amountNum <= 0 || amountNum > 1_000_000) return res.status(400).json({ error: 'invalid amount' });
+    const amountCents = Math.round(amountNum * 100);
+    const safeCurrency = (typeof currency === 'string' && /^[a-z]{3}$/i.test(currency)) ? currency.toLowerCase() : 'eur';
+    const safeInterval = ['day', 'week', 'month', 'year'].includes(interval) ? interval : 'month';
+    const ic = Number(interval_count); const safeIntervalCount = Number.isFinite(ic) && ic >= 1 && ic <= 52 ? Math.round(ic) : 1;
+    const td = Number(trial_days); const safeTrial = Number.isFinite(td) && td > 0 && td <= 365 ? Math.round(td) : 0;
+    const safeDesc = typeof description === 'string' ? description.slice(0, 500) : null;
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error, message: 'Conecta tu cuenta de Stripe en Ajustes → Integraciones.' });
+    const { stripe } = conn;
+
+    const obj = await createStripePlanObjects(stripe, {
+      name: safeName, description: safeDesc, kind, amountCents, currency: safeCurrency,
+      interval: safeInterval, intervalCount: safeIntervalCount, trialDays: safeTrial,
+      allowPromos: allow_promotion_codes === true, managerId: req.user.id,
+    });
+
+    const { data: plan, error } = await supabaseAdmin
+      .from('billing_plans')
+      .insert({
+        manager_id: req.user.id, name: safeName, description: safeDesc, kind,
+        amount_cents: amountCents, currency: safeCurrency,
+        interval: kind === 'recurring' ? safeInterval : null,
+        interval_count: safeIntervalCount, trial_days: safeTrial,
+        allow_promotion_codes: allow_promotion_codes === true,
+        stripe_product_id: obj.productId, stripe_price_id: obj.priceId,
+        stripe_payment_link_id: obj.linkId, payment_url: obj.url, active: true,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    // Pre-asignación opcional a clientes (sólo los que pertenecen al coach).
+    let assigned = 0;
+    if (Array.isArray(assign_client_ids) && assign_client_ids.length > 0) {
+      for (const cid of assign_client_ids.slice(0, 200)) {
+        const client = await getOwnedClient(req.user.id, cid);
+        if (client) { await assignPlanRow(req.user.id, plan, client.id, true); assigned++; }
+      }
+    }
+
+    res.json({ plan, assigned });
+  } catch (error: any) {
+    console.error('Error creating plan:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// PATCH /plans/:id — edita nombre/descripcion/activo. Si cambia el importe,
+// crea un Price + Payment Link nuevos y desactiva el link antiguo (Stripe no
+// permite editar un precio existente).
+router.patch('/plans/:id', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+
+    const updates: any = {};
+    if (typeof req.body.name === 'string' && req.body.name.trim()) updates.name = req.body.name.trim().slice(0, 120);
+    if (typeof req.body.description === 'string') updates.description = req.body.description.slice(0, 500);
+    if (typeof req.body.active === 'boolean') updates.active = req.body.active;
+
+    const newAmount = req.body.amount !== undefined ? Number(req.body.amount) : null;
+    if (newAmount !== null && Number.isFinite(newAmount) && newAmount > 0 && Math.round(newAmount * 100) !== plan.amount_cents) {
+      const conn = await getCoachStripe(req.user.id);
+      if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+      const { stripe } = conn;
+      const amountCents = Math.round(newAmount * 100);
+      const price = await stripe.prices.create({
+        product: plan.stripe_product_id,
+        unit_amount: amountCents,
+        currency: plan.currency,
+        ...(plan.kind === 'recurring' ? { recurring: { interval: (plan.interval || 'month') as any, interval_count: plan.interval_count || 1 } } : {}),
+      });
+      try { if (plan.stripe_payment_link_id) await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+      const link = await stripe.paymentLinks.create({
+        line_items: [{ price: price.id, quantity: 1 }],
+        allow_promotion_codes: !!plan.allow_promotion_codes,
+        metadata: { manager_id: req.user.id, plan: '1' },
+        after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+      });
+      updates.amount_cents = amountCents;
+      updates.stripe_price_id = price.id;
+      updates.stripe_payment_link_id = link.id;
+      updates.payment_url = link.url;
+    }
+
+    if (Object.keys(updates).length > 0) await supabaseAdmin.from('billing_plans').update(updates).eq('id', id);
+    const { data: fresh } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).maybeSingle();
+    res.json(fresh);
+  } catch (error: any) {
+    console.error('Error updating plan:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /plans/:id/archive — archiva el plan (no borra asignaciones existentes).
+router.post('/plans/:id/archive', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    const conn = await getCoachStripe(req.user.id);
+    if (!('error' in conn)) {
+      const { stripe } = conn;
+      try { if (plan.stripe_payment_link_id) await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+      try { if (plan.stripe_product_id) await stripe.products.update(plan.stripe_product_id, { active: false }); } catch { /* noop */ }
+    }
+    await supabaseAdmin.from('billing_plans').update({ active: false }).eq('id', id);
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error archiving plan:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /plans/:id/assign — asigna el plan a uno o varios clientes.
+router.post('/plans/:id/assign', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    if (!plan.active) return res.status(400).json({ error: 'plan_archived', message: 'Este plan está archivado.' });
+
+    const ids: string[] = Array.isArray(req.body.client_ids) ? req.body.client_ids : [];
+    const sendToChat = req.body.send_to_chat !== false;
+    if (ids.length === 0) return res.status(400).json({ error: 'client_ids required' });
+
+    let assigned = 0; const skipped: string[] = [];
+    for (const cid of ids.slice(0, 200)) {
+      const client = await getOwnedClient(req.user.id, cid);
+      if (!client) { skipped.push(cid); continue; }
+      // Evita duplicar una asignación viva del mismo plan al mismo cliente.
+      const { data: dup } = await supabaseAdmin
+        .from('client_billing')
+        .select('id')
+        .eq('manager_id', req.user.id).eq('client_id', cid).eq('plan_id', id)
+        .not('status', 'in', '("canceled","void")')
+        .maybeSingle();
+      if (dup) { skipped.push(cid); continue; }
+      await assignPlanRow(req.user.id, plan, cid, sendToChat);
+      assigned++;
+    }
+    res.json({ assigned, skipped });
+  } catch (error: any) {
+    console.error('Error assigning plan:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// GET /plans/stripe/importable — products con precio en la cuenta del coach
+// que aún no están importados como plan.
+router.get('/plans/stripe/importable', async (req: any, res) => {
+  try {
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error, message: 'Conecta tu cuenta de Stripe en Ajustes → Integraciones.' });
+    const { stripe } = conn;
+    const { data: existing } = await supabaseAdmin.from('billing_plans').select('stripe_price_id').eq('manager_id', req.user.id).not('stripe_price_id', 'is', null);
+    const already = new Set((existing || []).map((r: any) => r.stripe_price_id));
+    const prices = await stripe.prices.list({ active: true, limit: 100, expand: ['data.product'] });
+    const candidates = prices.data
+      .filter(pr => !already.has(pr.id) && pr.unit_amount != null && (pr.product as any)?.active !== false)
+      .map(pr => ({
+        stripe_price_id: pr.id,
+        stripe_product_id: typeof pr.product === 'string' ? pr.product : (pr.product as any)?.id,
+        name: (typeof pr.product === 'object' ? (pr.product as any)?.name : null) || 'Plan',
+        description: (typeof pr.product === 'object' ? (pr.product as any)?.description : null) || null,
+        amount_cents: pr.unit_amount,
+        currency: pr.currency,
+        kind: pr.recurring ? 'recurring' : 'one_time',
+        interval: pr.recurring?.interval || null,
+        interval_count: pr.recurring?.interval_count || 1,
+      }));
+    res.json({ candidates });
+  } catch (error: any) {
+    console.error('Error listing importable prices:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /plans/import — importa un Price de Stripe como plan (creando un payment
+// link reutilizable si el producto no tiene uno aún).
+router.post('/plans/import', async (req: any, res) => {
+  try {
+    const { stripe_price_id } = req.body;
+    if (typeof stripe_price_id !== 'string' || !stripe_price_id.startsWith('price_')) return res.status(400).json({ error: 'Invalid stripe_price_id' });
+    const { data: dup } = await supabaseAdmin.from('billing_plans').select('id').eq('manager_id', req.user.id).eq('stripe_price_id', stripe_price_id).maybeSingle();
+    if (dup) return res.status(409).json({ error: 'already_imported' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+
+    const price = await stripe.prices.retrieve(stripe_price_id, { expand: ['product'] }) as any;
+    if (price.unit_amount == null) return res.status(400).json({ error: 'price_without_amount', message: 'Ese precio no tiene importe fijo.' });
+    const link = await stripe.paymentLinks.create({
+      line_items: [{ price: price.id, quantity: 1 }],
+      metadata: { manager_id: req.user.id, plan: '1' },
+      after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+    });
+    const { data: plan, error } = await supabaseAdmin
+      .from('billing_plans')
+      .insert({
+        manager_id: req.user.id,
+        name: (typeof price.product === 'object' ? price.product?.name : null) || 'Plan importado',
+        description: (typeof price.product === 'object' ? price.product?.description : null) || null,
+        kind: price.recurring ? 'recurring' : 'one_time',
+        amount_cents: price.unit_amount,
+        currency: price.currency || 'eur',
+        interval: price.recurring?.interval || null,
+        interval_count: price.recurring?.interval_count || 1,
+        stripe_product_id: typeof price.product === 'string' ? price.product : price.product?.id,
+        stripe_price_id: price.id,
+        stripe_payment_link_id: link.id,
+        payment_url: link.url,
+        active: true,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(plan);
+  } catch (error: any) {
+    console.error('Error importing plan:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // ── Barrido automático (cron) ──────────────────────────────────────────────
 // Como no hay webhooks por-coach, el cron diario sincroniza los cobros que
 // siguen pendientes/impagos contra Stripe y avisa al coach de los que se han

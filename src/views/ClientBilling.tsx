@@ -3,7 +3,7 @@ import {
   CreditCard, Plus, RefreshCw, Send, XCircle, Link2, ExternalLink,
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
   DownloadCloud, ChevronDown, ChevronUp, Search, Check, FileDown,
-  Wallet, CalendarClock, Repeat,
+  Wallet, CalendarClock, Repeat, Archive, Package,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -67,6 +67,22 @@ const STATUS_STYLE: Record<string, string> = {
   unpaid: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
 };
 
+interface Plan {
+  id: string;
+  name: string;
+  description?: string | null;
+  kind: 'recurring' | 'one_time';
+  amount_cents: number;
+  currency: string;
+  interval?: string | null;
+  interval_count?: number | null;
+  trial_days?: number | null;
+  allow_promotion_codes?: boolean;
+  payment_url?: string | null;
+  active: boolean;
+  subscribers?: { total: number; active: number };
+}
+
 interface ClientBillingProps {
   onBack?: () => void;
   onConnectStripe?: () => void;
@@ -77,15 +93,26 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const isEs = language === 'es';
   const locale = isEs ? 'es-ES' : 'en-US';
 
+  const [tab, setTab] = useState<'plans' | 'subscriptions'>('plans');
+
   const [items, setItems] = useState<BillingItem[]>([]);
   const [kpis, setKpis] = useState<Kpis | null>(null);
   const [stripeConnected, setStripeConnected] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editItem, setEditItem] = useState<BillingItem | null>(null);
+
+  // ── Pestaña Planes: catálogo de planes reutilizables ──────────────────────
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [showCreatePlan, setShowCreatePlan] = useState(false);
+  const [showImportPlans, setShowImportPlans] = useState(false);
+  const [editPlan, setEditPlan] = useState<Plan | null>(null);
+  const [assignPlan, setAssignPlan] = useState<Plan | null>(null);
+  const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
+  const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'canceled'>('all');
   const [kindFilter, setKindFilter] = useState<'all' | 'recurring' | 'one_time' | 'invoice'>('all');
   const [search, setSearch] = useState('');
@@ -121,7 +148,41 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     } catch { /* noop */ }
   };
 
-  useEffect(() => { load(); loadBalance(); }, []);
+  // Catálogo de planes reutilizables (pestaña Planes).
+  const loadPlans = async () => {
+    setLoadingPlans(true);
+    try {
+      const data = await fetchWithAuth('/manager/client-billing/plans');
+      setPlans(Array.isArray(data?.plans) ? data.plans : []);
+    } catch (e: any) {
+      setError(e?.message || (isEs ? 'Error al cargar los planes.' : 'Error loading plans.'));
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
+
+  const archivePlan = async (plan: Plan) => {
+    if (!window.confirm(isEs ? '¿Archivar este plan? No podrás asignarlo a nuevos clientes.' : 'Archive this plan? You won’t be able to assign it to new clients.')) return;
+    setBusyPlanId(plan.id);
+    try {
+      await fetchWithAuth(`/manager/client-billing/plans/${plan.id}/archive`, { method: 'POST', body: JSON.stringify({}) });
+      await loadPlans();
+    } catch (e: any) {
+      setError(e?.message || 'Error');
+    } finally {
+      setBusyPlanId(null);
+    }
+  };
+
+  const copyPlanLink = async (plan: Plan) => {
+    await copyLink(plan.payment_url, undefined);
+    if (plan.payment_url) {
+      setCopiedPlanId(plan.id);
+      setTimeout(() => setCopiedPlanId(c => (c === plan.id ? null : c)), 1500);
+    }
+  };
+
+  useEffect(() => { load(); loadBalance(); loadPlans(); }, []);
 
   // Exporta los cobros visibles a CSV (lo que el coach ve tras filtrar).
   const exportCsv = () => {
@@ -280,29 +341,55 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {items.length > 0 && (
-            <button
-              onClick={exportCsv}
-              title={isEs ? 'Exportar a CSV' : 'Export to CSV'}
-              className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-            >
-              <FileDown className="w-4 h-4" /> CSV
-            </button>
+          {tab === 'plans' ? (
+            <>
+              <button
+                onClick={() => setShowImportPlans(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              >
+                <DownloadCloud className="w-4 h-4" /> {isEs ? 'Importar de Stripe' : 'Import from Stripe'}
+              </button>
+              <button
+                onClick={() => setShowCreatePlan(true)}
+                style={brandStyle}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm shadow-sm`}
+              >
+                <Plus className="w-4 h-4" /> {isEs ? 'Crear plan' : 'Create plan'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowImport(true)}
+                title={isEs ? 'Importar suscripciones de Stripe' : 'Import subscriptions from Stripe'}
+                className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+              >
+                <DownloadCloud className="w-4 h-4" /> {isEs ? 'Importar suscripciones' : 'Import subscriptions'}
+              </button>
+              {items.length > 0 && (
+                <button
+                  onClick={exportCsv}
+                  title={isEs ? 'Exportar a CSV' : 'Export to CSV'}
+                  className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                >
+                  <FileDown className="w-4 h-4" /> CSV
+                </button>
+              )}
+            </>
           )}
-          <button
-            onClick={() => setShowImport(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-          >
-            <DownloadCloud className="w-4 h-4" /> {isEs ? 'Importar de Stripe' : 'Import from Stripe'}
-          </button>
-          <button
-            onClick={() => setShowCreate(true)}
-            style={brandStyle}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm shadow-sm`}
-          >
-            <Plus className="w-4 h-4" /> {isEs ? 'Nuevo cobro' : 'New charge'}
-          </button>
         </div>
+      </div>
+
+      {/* Pestañas: Planes / Suscripciones */}
+      <div className="flex items-center gap-1 mb-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 w-fit">
+        {([['plans', isEs ? 'Planes' : 'Plans'], ['subscriptions', isEs ? 'Suscripciones' : 'Subscriptions']] as const).map(([k, lbl]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k as any)}
+            style={tab === k ? brandStyle : undefined}
+            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${tab === k ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
+          >{lbl}</button>
+        ))}
       </div>
 
       {error && (
@@ -311,6 +398,26 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
         </div>
       )}
 
+      {/* ── Pestaña: Planes ──────────────────────────────────────────────── */}
+      {tab === 'plans' && (
+        <PlansTab
+          isEs={isEs}
+          locale={locale}
+          plans={plans}
+          loading={loadingPlans}
+          busyPlanId={busyPlanId}
+          copiedPlanId={copiedPlanId}
+          onCreate={() => setShowCreatePlan(true)}
+          onAssign={(p) => setAssignPlan(p)}
+          onEdit={(p) => setEditPlan(p)}
+          onArchive={archivePlan}
+          onCopyLink={copyPlanLink}
+        />
+      )}
+
+      {/* ── Pestaña: Suscripciones ───────────────────────────────────────── */}
+      {tab === 'subscriptions' && (
+      <>
       {/* KPIs principales */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <KpiCard icon={TrendingUp} color="emerald" label={isEs ? 'MRR de clientes' : 'Client MRR'} value={kpis ? money(kpis.mrrCents, kpis.currency) : '--'}
@@ -486,13 +593,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           </div>
         )}
       </div>
-
-      {showCreate && (
-        <CreateChargeModal
-          isEs={isEs}
-          onClose={() => setShowCreate(false)}
-          onCreated={() => { setShowCreate(false); load(); }}
-        />
+      </>
       )}
 
       {editItem && (
@@ -510,6 +611,43 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           locale={locale}
           onClose={() => setShowImport(false)}
           onImported={() => { setShowImport(false); load(); }}
+        />
+      )}
+
+      {showCreatePlan && (
+        <CreatePlanModal
+          isEs={isEs}
+          locale={locale}
+          onClose={() => setShowCreatePlan(false)}
+          onCreated={() => { setShowCreatePlan(false); loadPlans(); load(); }}
+        />
+      )}
+
+      {editPlan && (
+        <EditPlanModal
+          isEs={isEs}
+          locale={locale}
+          plan={editPlan}
+          onClose={() => setEditPlan(null)}
+          onSaved={() => { setEditPlan(null); loadPlans(); }}
+        />
+      )}
+
+      {assignPlan && (
+        <AssignPlanModal
+          isEs={isEs}
+          plan={assignPlan}
+          onClose={() => setAssignPlan(null)}
+          onAssigned={() => { setAssignPlan(null); loadPlans(); load(); }}
+        />
+      )}
+
+      {showImportPlans && (
+        <ImportPlansModal
+          isEs={isEs}
+          locale={locale}
+          onClose={() => setShowImportPlans(false)}
+          onImported={() => { setShowImportPlans(false); loadPlans(); }}
         />
       )}
     </div>
@@ -604,173 +742,6 @@ function IconBtn({ icon: Icon, onClick, title, busy, accent }: { icon: any; onCl
     >
       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
     </button>
-  );
-}
-
-// ── Modal de creación ────────────────────────────────────────────────────
-function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClose: () => void; onCreated: () => void }) {
-  const [clients, setClients] = useState<any[]>([]);
-  const [clientId, setClientId] = useState('');
-  const [kind, setKind] = useState<'recurring' | 'one_time' | 'invoice'>('recurring');
-  const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('eur');
-  const [interval, setInterval] = useState<'month' | 'year'>('month');
-  const [daysUntilDue, setDaysUntilDue] = useState('7');
-  const [description, setDescription] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  // Opciones avanzadas (máximo control sobre la suscripción / cobro).
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [trialDays, setTrialDays] = useState('');
-  const [quantity, setQuantity] = useState('1');
-  const [intervalCount, setIntervalCount] = useState('1');
-  const [allowPromos, setAllowPromos] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchWithAuth('/manager/clients');
-        // /manager/clients devuelve shape paginado { data, nextCursor }.
-        setClients(unwrapList(data));
-      } catch { /* noop */ }
-    })();
-  }, []);
-
-  const submit = async () => {
-    setErr(null);
-    if (!clientId) { setErr(isEs ? 'Selecciona un cliente.' : 'Select a client.'); return; }
-    const amt = Number(amount);
-    if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
-    setSaving(true);
-    try {
-      await fetchWithAuth('/manager/client-billing', {
-        method: 'POST',
-        body: JSON.stringify({
-          client_id: clientId,
-          kind,
-          amount: amt,
-          currency,
-          interval: kind === 'recurring' ? interval : undefined,
-          interval_count: kind === 'recurring' ? Number(intervalCount) || 1 : undefined,
-          trial_days: kind === 'recurring' && Number(trialDays) > 0 ? Number(trialDays) : undefined,
-          quantity: Number(quantity) || 1,
-          allow_promotion_codes: (kind === 'recurring' || kind === 'one_time') ? allowPromos : undefined,
-          days_until_due: kind === 'invoice' ? Number(daysUntilDue) : undefined,
-          description: description.trim() || undefined,
-        }),
-      });
-      onCreated();
-    } catch (e: any) {
-      setErr(e?.message || (isEs ? 'Error al crear el cobro.' : 'Error creating charge.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Nuevo cobro' : 'New charge'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-        </div>
-
-        {err && <div className="mb-4 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
-
-        <div className="space-y-4">
-          <Field label={isEs ? 'Cliente' : 'Client'}>
-            <ClientPicker clients={clients} value={clientId} onChange={setClientId} isEs={isEs} />
-          </Field>
-
-          <Field label={isEs ? 'Tipo de cobro' : 'Charge type'}>
-            <div className="grid grid-cols-3 gap-2">
-              {([['recurring', isEs ? 'Suscripción' : 'Subscription'], ['one_time', isEs ? 'Pago único' : 'One-time'], ['invoice', isEs ? 'Factura' : 'Invoice']] as const).map(([k, lbl]) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setKind(k as any)}
-                  style={kind === k ? brandStyle : undefined}
-                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
-                >{lbl}</button>
-              ))}
-            </div>
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={isEs ? 'Importe' : 'Amount'}>
-              <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className={inputCls} />
-            </Field>
-            <Field label={isEs ? 'Moneda' : 'Currency'}>
-              <select value={currency} onChange={e => setCurrency(e.target.value)} className={selectCls}>
-                <option value="eur">EUR €</option>
-                <option value="usd">USD $</option>
-                <option value="gbp">GBP £</option>
-                <option value="mxn">MXN $</option>
-              </select>
-            </Field>
-          </div>
-
-          {kind === 'recurring' && (
-            <Field label={isEs ? 'Frecuencia' : 'Frequency'}>
-              <div className="grid grid-cols-2 gap-2">
-                {([['month', isEs ? 'Mensual' : 'Monthly'], ['year', isEs ? 'Anual' : 'Yearly']] as const).map(([k, lbl]) => (
-                  <button key={k} type="button" onClick={() => setInterval(k as any)} className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${interval === k ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>{lbl}</button>
-                ))}
-              </div>
-            </Field>
-          )}
-
-          {kind === 'invoice' && (
-            <Field label={isEs ? 'Días para pagar' : 'Days until due'}>
-              <input type="number" min="1" max="90" value={daysUntilDue} onChange={e => setDaysUntilDue(e.target.value)} className={inputCls} />
-            </Field>
-          )}
-
-          <Field label={isEs ? 'Descripción (opcional)' : 'Description (optional)'}>
-            <input type="text" value={description} onChange={e => setDescription(e.target.value)} placeholder={isEs ? 'Ej. Plan de coaching premium' : 'e.g. Premium coaching plan'} className={inputCls} maxLength={300} />
-          </Field>
-
-          {/* Opciones avanzadas — máximo control sobre el cobro */}
-          {kind !== 'invoice' && (
-            <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-              <button type="button" onClick={() => setShowAdvanced(v => !v)} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
-                {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                {isEs ? 'Opciones avanzadas' : 'Advanced options'}
-              </button>
-              {showAdvanced && (
-                <div className="mt-3 space-y-3">
-                  {kind === 'recurring' && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Field label={isEs ? 'Días de prueba' : 'Trial days'}>
-                        <input type="number" min="0" max="365" value={trialDays} onChange={e => setTrialDays(e.target.value)} placeholder="0" className={inputCls} />
-                      </Field>
-                      <Field label={isEs ? 'Cada N períodos' : 'Every N periods'}>
-                        <input type="number" min="1" max="52" value={intervalCount} onChange={e => setIntervalCount(e.target.value)} className={inputCls} />
-                      </Field>
-                    </div>
-                  )}
-                  <Field label={isEs ? 'Cantidad (unidades)' : 'Quantity (units)'}>
-                    <input type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)} className={inputCls} />
-                  </Field>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
-                    <span className="text-sm text-slate-600 dark:text-slate-300">{isEs ? 'Permitir códigos de descuento en el pago' : 'Allow promotion codes at checkout'}</span>
-                  </label>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
-          <button onClick={submit} disabled={saving} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {isEs ? 'Crear cobro' : 'Create charge'}
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1038,6 +1009,618 @@ function Field({ label, children }: { label: string; children?: React.ReactNode 
     <div>
       <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 block">{label}</label>
       {children}
+    </div>
+  );
+}
+
+// Formatea un importe en céntimos con la moneda dada (helper local para modales).
+function fmtMoney(cents: number, currency: string | undefined, locale: string) {
+  return (cents / 100).toLocaleString(locale, { style: 'currency', currency: (currency || 'eur').toUpperCase() });
+}
+
+// Sufijo de periodicidad para planes recurrentes ("/mes", "/año", "cada 3 meses").
+function planPeriod(plan: Plan, isEs: boolean): string {
+  if (plan.kind !== 'recurring') return '';
+  const n = plan.interval_count && plan.interval_count > 1 ? plan.interval_count : 1;
+  const isYear = plan.interval === 'year';
+  if (n > 1) {
+    const unit = isYear ? (isEs ? 'años' : 'years') : (isEs ? 'meses' : 'months');
+    return isEs ? `cada ${n} ${unit}` : `every ${n} ${unit}`;
+  }
+  return isYear ? (isEs ? '/año' : '/yr') : (isEs ? '/mes' : '/mo');
+}
+
+// ── Pestaña Planes: catálogo de planes reutilizables ────────────────────────
+function PlansTab({
+  isEs, locale, plans, loading, busyPlanId, copiedPlanId,
+  onCreate, onAssign, onEdit, onArchive, onCopyLink,
+}: {
+  isEs: boolean;
+  locale: string;
+  plans: Plan[];
+  loading: boolean;
+  busyPlanId: string | null;
+  copiedPlanId: string | null;
+  onCreate: () => void;
+  onAssign: (p: Plan) => void;
+  onEdit: (p: Plan) => void;
+  onArchive: (p: Plan) => void;
+  onCopyLink: (p: Plan) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-12 flex items-center justify-center text-slate-400">
+        <Loader2 className="w-6 h-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center">
+        <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <CreditCard className="w-7 h-7 text-slate-400" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{isEs ? 'Aún no tienes planes' : 'No plans yet'}</h3>
+        <p className="text-sm text-slate-500 max-w-sm mx-auto mb-5">{isEs ? 'Crea un plan reutilizable y asígnalo a tus clientes.' : 'Create a reusable plan and assign it to your clients.'}</p>
+        <button onClick={onCreate} style={brandStyle} className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm shadow-sm`}>
+          <Plus className="w-4 h-4" /> {isEs ? 'Crear plan' : 'Create plan'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {plans.map(plan => {
+        const archived = plan.active === false;
+        const busy = busyPlanId === plan.id;
+        const subsActive = plan.subscribers?.active ?? 0;
+        const subsTotal = plan.subscribers?.total ?? 0;
+        return (
+          <div key={plan.id} className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 flex flex-col ${archived ? 'opacity-75' : ''}`}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="min-w-0">
+                <div className="font-bold text-slate-900 dark:text-white truncate">{plan.name}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {plan.kind === 'recurring' ? <Repeat className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
+                    {plan.kind === 'recurring' ? (isEs ? 'Suscripción' : 'Subscription') : (isEs ? 'Pago único' : 'One-time')}
+                  </span>
+                  {archived && (
+                    <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                      {isEs ? 'Archivado' : 'Archived'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <Package className="w-5 h-5 text-slate-300 dark:text-slate-600 flex-shrink-0" />
+            </div>
+
+            <div className="text-2xl font-black text-slate-900 dark:text-white mb-1">
+              {fmtMoney(plan.amount_cents, plan.currency, locale)}
+              {plan.kind === 'recurring' && (
+                <span className="text-sm font-semibold text-slate-400 ml-1">{planPeriod(plan, isEs)}</span>
+              )}
+            </div>
+
+            {plan.description && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{plan.description}</p>
+            )}
+
+            <div className="text-xs text-slate-400 mt-auto pt-3 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              {subsActive} {isEs ? 'activos' : 'active'} · {subsTotal} {isEs ? 'totales' : 'total'}
+            </div>
+
+            <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              {!archived && (
+                <button
+                  onClick={() => onAssign(plan)}
+                  style={brandStyle}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg ${brandBtnCls} text-xs font-bold`}
+                >
+                  <Users className="w-3.5 h-3.5" /> {isEs ? 'Asignar' : 'Assign'}
+                </button>
+              )}
+              {plan.payment_url && (
+                <IconBtn
+                  title={copiedPlanId === plan.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar link de pago' : 'Copy payment link')}
+                  onClick={() => onCopyLink(plan)}
+                  icon={copiedPlanId === plan.id ? CheckCircle2 : Link2}
+                  accent={copiedPlanId === plan.id ? 'emerald' : undefined}
+                />
+              )}
+              <IconBtn title={isEs ? 'Editar plan' : 'Edit plan'} onClick={() => onEdit(plan)} icon={Pencil} />
+              {!archived && (
+                <IconBtn title={isEs ? 'Archivar' : 'Archive'} onClick={() => onArchive(plan)} icon={Archive} busy={busy} accent="rose" />
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Multi-select de clientes (buscador + checkboxes) ────────────────────────
+function ClientMultiPicker({ clients, selected, onToggle, isEs }: {
+  clients: any[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  isEs: boolean;
+}) {
+  const [q, setQ] = useState('');
+  const ql = q.trim().toLowerCase();
+  const filtered = ql
+    ? clients.filter(c => `${c.full_name || ''} ${c.name || ''} ${c.email || ''}`.toLowerCase().includes(ql))
+    : clients;
+  return (
+    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+      <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800">
+          <Search className="w-3.5 h-3.5 text-slate-400" />
+          <input
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder={isEs ? 'Buscar cliente…' : 'Search client…'}
+            className="flex-1 bg-transparent text-xs outline-none text-slate-900 dark:text-white"
+          />
+        </div>
+      </div>
+      <div className="max-h-60 overflow-y-auto py-1" style={{ overscrollBehavior: 'contain' }}>
+        {filtered.length === 0 ? (
+          <div className="px-3 py-3 text-xs text-slate-400 text-center">{isEs ? 'Sin clientes' : 'No clients'}</div>
+        ) : filtered.map(c => {
+          const checked = selected.includes(c.id);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onToggle(c.id)}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            >
+              <span className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border ${checked ? 'border-transparent' : 'border-slate-300 dark:border-slate-600'}`} style={checked ? brandStyle : undefined}>
+                {checked && <Check className="w-3 h-3 text-white" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm text-slate-700 dark:text-slate-200">{c.full_name || c.name || c.email}</span>
+                {(c.full_name || c.name) && c.email && <span className="block text-[11px] text-slate-400 truncate">{c.email}</span>}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: crear plan ───────────────────────────────────────────────────────
+function CreatePlanModal({ isEs, locale, onClose, onCreated }: { isEs: boolean; locale: string; onClose: () => void; onCreated: () => void }) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [kind, setKind] = useState<'recurring' | 'one_time'>('recurring');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('eur');
+  const [interval, setInterval] = useState<'month' | 'year'>('month');
+  const [intervalCount, setIntervalCount] = useState('1');
+  const [trialDays, setTrialDays] = useState('');
+  const [allowPromos, setAllowPromos] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Pre-asignar a clientes (opcional, colapsable).
+  const [showAssign, setShowAssign] = useState(false);
+  const [clients, setClients] = useState<any[]>([]);
+  const [assignIds, setAssignIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchWithAuth('/manager/clients');
+        setClients(unwrapList(data));
+      } catch { /* noop */ }
+    })();
+  }, []);
+
+  const toggle = (id: string) => setAssignIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+
+  const submit = async () => {
+    setErr(null);
+    if (!name.trim()) { setErr(isEs ? 'Pon un nombre al plan.' : 'Give the plan a name.'); return; }
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
+    setSaving(true);
+    try {
+      await fetchWithAuth('/manager/client-billing/plans', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          kind,
+          amount: amt,
+          currency,
+          interval: kind === 'recurring' ? interval : undefined,
+          interval_count: kind === 'recurring' ? (Number(intervalCount) || 1) : undefined,
+          trial_days: kind === 'recurring' && Number(trialDays) > 0 ? Number(trialDays) : undefined,
+          allow_promotion_codes: allowPromos,
+          assign_client_ids: assignIds.length > 0 ? assignIds : undefined,
+        }),
+      });
+      onCreated();
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'Error al crear el plan.' : 'Error creating plan.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Crear plan' : 'Create plan'}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        {err && <div className="mb-4 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+
+        <div className="space-y-4">
+          <Field label={isEs ? 'Nombre' : 'Name'}>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder={isEs ? 'Ej. Coaching Premium' : 'e.g. Premium Coaching'} className={inputCls} maxLength={120} autoFocus />
+          </Field>
+
+          <Field label={isEs ? 'Descripción (opcional)' : 'Description (optional)'}>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder={isEs ? 'Qué incluye el plan…' : 'What the plan includes…'} className={inputCls} maxLength={500} />
+          </Field>
+
+          <Field label={isEs ? 'Tipo' : 'Type'}>
+            <div className="grid grid-cols-2 gap-2">
+              {([['recurring', isEs ? 'Suscripción' : 'Subscription'], ['one_time', isEs ? 'Pago único' : 'One-time']] as const).map(([k, lbl]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k as any)}
+                  style={kind === k ? brandStyle : undefined}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
+                >{lbl}</button>
+              ))}
+            </div>
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={isEs ? 'Importe' : 'Amount'}>
+              <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className={inputCls} />
+            </Field>
+            <Field label={isEs ? 'Moneda' : 'Currency'}>
+              <select value={currency} onChange={e => setCurrency(e.target.value)} className={selectCls}>
+                <option value="eur">EUR €</option>
+                <option value="usd">USD $</option>
+                <option value="gbp">GBP £</option>
+                <option value="mxn">MXN $</option>
+              </select>
+            </Field>
+          </div>
+
+          {kind === 'recurring' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={isEs ? 'Frecuencia' : 'Frequency'}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([['month', isEs ? 'Mensual' : 'Monthly'], ['year', isEs ? 'Anual' : 'Yearly']] as const).map(([k, lbl]) => (
+                      <button key={k} type="button" onClick={() => setInterval(k as any)} className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${interval === k ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>{lbl}</button>
+                    ))}
+                  </div>
+                </Field>
+                <Field label={isEs ? 'Cada N períodos' : 'Every N periods'}>
+                  <input type="number" min="1" max="52" value={intervalCount} onChange={e => setIntervalCount(e.target.value)} className={inputCls} />
+                </Field>
+              </div>
+              <Field label={isEs ? 'Días de prueba' : 'Trial days'}>
+                <input type="number" min="0" max="365" value={trialDays} onChange={e => setTrialDays(e.target.value)} placeholder="0" className={inputCls} />
+              </Field>
+            </>
+          )}
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
+            <span className="text-sm text-slate-600 dark:text-slate-300">{isEs ? 'Permitir códigos de descuento en el pago' : 'Allow promotion codes at checkout'}</span>
+          </label>
+
+          {/* Pre-asignar a clientes (opcional) */}
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+            <button type="button" onClick={() => setShowAssign(v => !v)} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+              {showAssign ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {isEs ? 'Pre-asignar a clientes (opcional)' : 'Pre-assign to clients (optional)'}
+              {assignIds.length > 0 && <span className="text-[var(--brand-primary)]">· {assignIds.length}</span>}
+            </button>
+            {showAssign && (
+              <div className="mt-3">
+                <ClientMultiPicker clients={clients} selected={assignIds} onToggle={toggle} isEs={isEs} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
+          <button onClick={submit} disabled={saving} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {isEs ? 'Crear plan' : 'Create plan'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: editar plan ──────────────────────────────────────────────────────
+function EditPlanModal({ isEs, locale, plan, onClose, onSaved }: { isEs: boolean; locale: string; plan: Plan; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(plan.name || '');
+  const [description, setDescription] = useState(plan.description || '');
+  const [editAmount, setEditAmount] = useState(false);
+  const [amount, setAmount] = useState(String((plan.amount_cents / 100).toFixed(2)));
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = async () => {
+    setErr(null);
+    if (!name.trim()) { setErr(isEs ? 'Pon un nombre al plan.' : 'Give the plan a name.'); return; }
+    const body: any = { name: name.trim(), description: description.trim() || null };
+    if (editAmount) {
+      const amt = Number(amount);
+      if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
+      body.amount = amt;
+    }
+    setSaving(true);
+    try {
+      await fetchWithAuth(`/manager/client-billing/plans/${plan.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+      onSaved();
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'Error al guardar.' : 'Error saving.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Editar plan' : 'Edit plan'}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        {err && <div className="mb-4 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+
+        <div className="space-y-4">
+          <Field label={isEs ? 'Nombre' : 'Name'}>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputCls} maxLength={120} autoFocus />
+          </Field>
+          <Field label={isEs ? 'Descripción' : 'Description'}>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className={inputCls} maxLength={500} />
+          </Field>
+
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+            <label className="flex items-center gap-2 cursor-pointer mb-2">
+              <input type="checkbox" checked={editAmount} onChange={e => setEditAmount(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{isEs ? 'Cambiar importe' : 'Change amount'}</span>
+            </label>
+            {editAmount && (
+              <>
+                <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className={inputCls} />
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  {isEs ? 'Cambiar el precio regenera el precio y el enlace de pago en Stripe.' : 'Changing the price regenerates the price and payment link in Stripe.'}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">{isEs ? 'Actual' : 'Current'}: {fmtMoney(plan.amount_cents, plan.currency, locale)}</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
+          <button onClick={submit} disabled={saving} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            {isEs ? 'Guardar' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: asignar plan a clientes ──────────────────────────────────────────
+function AssignPlanModal({ isEs, plan, onClose, onAssigned }: { isEs: boolean; plan: Plan; onClose: () => void; onAssigned: () => void }) {
+  const [clients, setClients] = useState<any[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [sendToChat, setSendToChat] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [result, setResult] = useState<{ assigned: number; skipped: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchWithAuth('/manager/clients');
+        setClients(unwrapList(data));
+      } catch { /* noop */ }
+    })();
+  }, []);
+
+  const toggle = (id: string) => setSelected(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+
+  const submit = async () => {
+    setErr(null);
+    if (selected.length === 0) { setErr(isEs ? 'Selecciona al menos un cliente.' : 'Select at least one client.'); return; }
+    setSaving(true);
+    try {
+      const res = await fetchWithAuth(`/manager/client-billing/plans/${plan.id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ client_ids: selected, send_to_chat: sendToChat }),
+      });
+      setResult({ assigned: Number(res?.assigned ?? selected.length), skipped: Number(res?.skipped ?? 0) });
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'Error al asignar.' : 'Error assigning.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Asignar plan' : 'Assign plan'}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 truncate">{plan.name}</p>
+
+        {result ? (
+          <div className="text-center py-6">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              {isEs ? `${result.assigned} asignados` : `${result.assigned} assigned`}
+              {result.skipped > 0 && (isEs ? `, ${result.skipped} omitidos` : `, ${result.skipped} skipped`)}
+            </p>
+            <button onClick={onAssigned} style={brandStyle} className={`mt-5 px-5 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm`}>
+              {isEs ? 'Hecho' : 'Done'}
+            </button>
+          </div>
+        ) : (
+          <>
+            {err && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+            <ClientMultiPicker clients={clients} selected={selected} onToggle={toggle} isEs={isEs} />
+            <label className="flex items-center gap-2 cursor-pointer mt-4">
+              <input type="checkbox" checked={sendToChat} onChange={e => setSendToChat(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
+              <span className="text-sm text-slate-600 dark:text-slate-300">{isEs ? 'Enviar enlace de pago por el chat' : 'Send payment link via chat'}</span>
+            </label>
+            <div className="flex gap-3 mt-6">
+              <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
+              <button onClick={submit} disabled={saving} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                {isEs ? 'Asignar' : 'Assign'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: importar planes desde Stripe ─────────────────────────────────────
+function ImportPlansModal({ isEs, locale, onClose, onImported }: { isEs: boolean; locale: string; onClose: () => void; onImported: () => void }) {
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setErr(null);
+      try {
+        const data = await fetchWithAuth('/manager/client-billing/plans/stripe/importable');
+        setCandidates(Array.isArray(data?.candidates) ? data.candidates : []);
+      } catch (e: any) {
+        setErr(e?.message || (isEs ? 'No se pudo conectar con Stripe.' : 'Could not connect to Stripe.'));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const doImport = async (c: any) => {
+    setBusyId(c.stripe_price_id);
+    setErr(null);
+    try {
+      await fetchWithAuth('/manager/client-billing/plans/import', {
+        method: 'POST',
+        body: JSON.stringify({ stripe_price_id: c.stripe_price_id }),
+      });
+      setDoneIds(prev => new Set(prev).add(c.stripe_price_id));
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'Error al importar.' : 'Import error.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const period = (c: any) => {
+    if (c.kind !== 'recurring') return '';
+    const n = c.interval_count && c.interval_count > 1 ? c.interval_count : 1;
+    const isYear = c.interval === 'year';
+    if (n > 1) {
+      const unit = isYear ? (isEs ? 'años' : 'years') : (isEs ? 'meses' : 'months');
+      return ` · ${isEs ? `cada ${n} ${unit}` : `every ${n} ${unit}`}`;
+    }
+    return isYear ? (isEs ? '/año' : '/yr') : (isEs ? '/mes' : '/mo');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-2xl p-6 max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Importar planes de Stripe' : 'Import plans from Stripe'}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          {isEs
+            ? 'Precios existentes en tu cuenta de Stripe que aún no son planes aquí. Impórtalos para reutilizarlos.'
+            : 'Existing prices in your Stripe account not yet plans here. Import them to reuse.'}
+        </p>
+
+        {err && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+
+        <div className="overflow-y-auto flex-1 -mx-2 px-2">
+          {loading ? (
+            <div className="py-12 flex justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          ) : candidates.length === 0 ? (
+            <div className="py-10 text-center text-sm text-slate-500">{isEs ? 'No hay precios nuevos para importar.' : 'No new prices to import.'}</div>
+          ) : (
+            <div className="space-y-3">
+              {candidates.map(c => {
+                const done = doneIds.has(c.stripe_price_id);
+                const busy = busyId === c.stripe_price_id;
+                return (
+                  <div key={c.stripe_price_id} className="border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-900 dark:text-white text-sm truncate">{c.name || (isEs ? 'Precio Stripe' : 'Stripe price')}</div>
+                      <div className="text-xs text-slate-400">
+                        {fmtMoney(c.amount_cents, c.currency, locale)}{period(c)} · {c.kind === 'recurring' ? (isEs ? 'Suscripción' : 'Subscription') : (isEs ? 'Pago único' : 'One-time')}
+                      </div>
+                    </div>
+                    {done ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="w-4 h-4" /> {isEs ? 'Importado' : 'Imported'}</span>
+                    ) : (
+                      <button
+                        onClick={() => doImport(c)}
+                        disabled={busy}
+                        style={brandStyle}
+                        className={`px-3 py-2 rounded-lg ${brandBtnCls} text-xs font-bold flex items-center gap-1.5 whitespace-nowrap`}
+                      >
+                        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DownloadCloud className="w-3.5 h-3.5" />}
+                        {isEs ? 'Importar' : 'Import'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5">
+          <button onClick={onImported} className="w-full px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm hover:opacity-90 transition">
+            {isEs ? 'Hecho' : 'Done'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
