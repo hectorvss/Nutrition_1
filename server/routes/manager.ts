@@ -731,83 +731,192 @@ router.post('/clients/:id/reset-password', async (req: any, res) => {
   }
 });
 
+// Shared client-creation routine used by both the single-create form and the
+// bulk CSV/Excel import. Returns a structured result instead of writing to the
+// response, so the bulk path can report per-row outcomes. Creates the auth
+// user, links it to the manager (rolling back the auth user on failure),
+// stores profile + clients_profiles, and fires the new-client automations.
+type CreateClientResult = {
+  ok: boolean;
+  clientId?: string;
+  code?: 'duplicate' | 'error';
+  message?: string;
+};
+
+async function createClientForManager(
+  managerId: string,
+  opts: { email: string; password: string; sendEmail?: boolean; profile?: any; name?: string },
+): Promise<CreateClientResult> {
+  const { email, password, profile, name } = opts;
+
+  // 1. Create the user in Auth space using the Admin API.
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { role: 'CLIENT' },
+  });
+  if (authError || !authData.user) {
+    const msg = authError?.message || 'Failed to create client';
+    const duplicate = /already|exist|registered|duplicate/i.test(msg);
+    return { ok: false, code: duplicate ? 'duplicate' : 'error', message: msg };
+  }
+  const clientId = authData.user.id;
+
+  // 2. Link the auto-created public.users row to this manager (rollback on fail).
+  const { error: linkError } = await supabaseAdmin
+    .from('users')
+    .update({ manager_id: managerId })
+    .eq('id', clientId);
+  if (linkError) {
+    console.error('Failed to link client to manager, rolling back auth user:', linkError);
+    await supabaseAdmin.auth.admin.deleteUser(clientId).catch(() => {});
+    return { ok: false, code: 'error', message: 'Failed to link client to manager' };
+  }
+
+  // 3. Display name / phone → profiles (the source GET /clients reads).
+  const fullName = (name || profile?.full_name || '').trim();
+  const phone = (profile?.phone || '').trim();
+  if (fullName || phone) {
+    const profilePayload: any = { user_id: clientId };
+    if (fullName) profilePayload.full_name = fullName;
+    if (phone) profilePayload.phone_number = phone;
+    const { error: nameError } = await supabaseAdmin
+      .from('profiles')
+      .upsert(profilePayload, { onConflict: 'user_id' });
+    if (nameError) console.error('Error saving client name/phone:', nameError);
+  }
+
+  // 4. Client-specific profile (only insert fields that were provided).
+  if (profile && (profile.weight != null || profile.goal || profile.notes || profile.height != null || profile.gender || profile.age != null)) {
+    const { error: profileError } = await supabaseAdmin.from('clients_profiles').insert({
+      user_id: clientId,
+      weight: profile.weight ?? null,
+      goal: profile.goal ?? null,
+      notes: profile.notes ?? null,
+      height: profile.height ?? null,
+      gender: profile.gender ?? null,
+      age: profile.age ?? null,
+    });
+    if (profileError) console.error('Error saving client profile:', profileError);
+  }
+
+  // 5. Trigger "Welcome Message" automation + any Advanced Workflows.
+  processTrigger(managerId, 'new-client', { clientId, sendEmail: opts.sendEmail }).catch(err => {
+    console.error('Trigger error (new-client):', err);
+  });
+  runWorkflowsForEvent(managerId, 'trigger.new_client', { clientId }).catch(err => {
+    console.error('Workflow trigger error (new_client):', err);
+  });
+
+  return { ok: true, clientId };
+}
+
 // Create a new client under this manager
 router.post('/clients', enforceClientLimit, async (req: any, res) => {
-  const { email, password, profile, name } = req.body;
+  const { email, password, profile, name, send_email } = req.body;
   const managerId = req.user.id;
 
   try {
-    // 1. Create the user in Auth space securely using the Admin API
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { role: 'CLIENT' }
-    });
-
-    if (authError || !authData.user) {
-      console.error('Client creation Auth error:', authError);
-      return res.status(400).json({ error: authError?.message || 'Failed to create client' });
+    const result = await createClientForManager(managerId, { email, password, profile, name, sendEmail: send_email });
+    if (!result.ok) {
+      const code = result.code === 'duplicate' ? 400 : 500;
+      return res.status(code).json({ error: result.message });
     }
-
-    const clientId = authData.user.id;
-
-    // 2. The database trigger automatically creates the `public.users` record.
-    // We just need to link it to the manager. If this fails the client would be
-    // orphaned (invisible to the manager) — roll back the auth user instead.
-    const { error: linkError } = await supabaseAdmin
-      .from('users')
-      .update({ manager_id: managerId })
-      .eq('id', clientId);
-    if (linkError) {
-      console.error('Failed to link client to manager, rolling back auth user:', linkError);
-      await supabaseAdmin.auth.admin.deleteUser(clientId).catch(() => {});
-      return res.status(500).json({ error: 'Failed to create client. Please try again.' });
-    }
-
-    // 3. Store the display name / phone in profiles (the source GET /clients reads).
-    const fullName = (name || profile?.full_name || '').trim();
-    const phone = (profile?.phone || '').trim();
-    if (fullName || phone) {
-      const profilePayload: any = { user_id: clientId };
-      if (fullName) profilePayload.full_name = fullName;
-      if (phone) profilePayload.phone_number = phone;
-      const { error: nameError } = await supabaseAdmin
-        .from('profiles')
-        .upsert(profilePayload, { onConflict: 'user_id' });
-      if (nameError) {
-        console.error('Error saving client name/phone:', nameError);
-      }
-    }
-
-    // 4. Create the client profile
-    if (profile) {
-      const { error: profileError } = await supabaseAdmin.from('clients_profiles').insert({
-        user_id: clientId,
-        weight: profile.weight,
-        goal: profile.goal,
-        notes: profile.notes,
-        height: profile.height,
-        gender: profile.gender,
-        age: profile.age
-      });
-
-      if (profileError) {
-        console.error('Error saving client profile:', profileError);
-      }
-    }
-
-    // 5. Trigger "Welcome Message" automation + any Advanced Workflows
-    processTrigger(managerId, 'new-client', { clientId }).catch(err => {
-      console.error('Trigger error (new-client):', err);
-    });
-    runWorkflowsForEvent(managerId, 'trigger.new_client', { clientId }).catch(err => {
-      console.error('Workflow trigger error (new_client):', err);
-    });
-
-    res.json({ success: true, client_id: clientId });
+    res.json({ success: true, client_id: result.clientId });
   } catch (error: any) {
     console.error('Error creating client:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// Bulk-import clients from a parsed CSV/Excel/paste/sheet. The frontend sends
+// already-validated rows; here we enforce the plan's client cap, skip duplicate
+// emails, and return a per-row result so the UI can show created/skipped/failed.
+router.post('/clients/import', async (req: any, res) => {
+  const managerId = req.user.id;
+  const { rows, sendEmail } = req.body || {};
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: 'No rows to import' });
+  }
+  if (rows.length > 2000) {
+    return res.status(400).json({ error: 'Too many rows (max 2000 per import)' });
+  }
+
+  try {
+    // Compute how many more clients this plan allows.
+    const { data: sub } = await supabaseAdmin
+      .from('manager_subscriptions')
+      .select('plan_tier')
+      .eq('user_id', managerId)
+      .maybeSingle();
+    const tier = (sub?.plan_tier as PlanTier) || 'trial';
+    const limit = limitsForTier(tier).activeClients; // number | null (null = unlimited)
+    const { count } = await supabaseAdmin
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('manager_id', managerId)
+      .eq('role', 'CLIENT')
+      .neq('status', 'inactive');
+    let remaining = limit == null ? Number.POSITIVE_INFINITY : Math.max(0, limit - (count ?? 0));
+
+    const genPassword = () => 'Nutri' + Math.floor(Math.random() * 9000 + 1000) + '$xp';
+    const results: Array<{ email: string; status: 'created' | 'duplicate' | 'limit' | 'error'; reason?: string }> = [];
+    let created = 0, skipped = 0, failed = 0;
+
+    for (const row of rows) {
+      const email = String(row?.email || '').trim().toLowerCase();
+      if (!email) { failed++; results.push({ email: '', status: 'error', reason: 'Missing email' }); continue; }
+      if (remaining <= 0) { skipped++; results.push({ email, status: 'limit' }); continue; }
+
+      const r = await createClientForManager(managerId, {
+        email,
+        password: genPassword(),
+        sendEmail: !!sendEmail,
+        profile: {
+          full_name: row.full_name,
+          phone: row.phone,
+          gender: row.gender,
+          age: row.age,
+          weight: row.weight,
+          height: row.height,
+          goal: row.goal,
+          notes: row.notes,
+        },
+      });
+
+      if (r.ok) { created++; remaining--; results.push({ email, status: 'created' }); }
+      else if (r.code === 'duplicate') { skipped++; results.push({ email, status: 'duplicate' }); }
+      else { failed++; results.push({ email, status: 'error', reason: r.message }); }
+    }
+
+    res.json({ created, skipped, failed, results });
+  } catch (error: any) {
+    console.error('Error importing clients:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// Server-side fetch of a public Google Sheet's CSV export. Done here (not in the
+// browser) to avoid CORS and to restrict the target to Google Sheets only.
+router.post('/clients/import/fetch-sheet', async (req: any, res) => {
+  const { url } = req.body || {};
+  if (typeof url !== 'string' || !/^https:\/\/docs\.google\.com\/spreadsheets\//.test(url)) {
+    return res.status(400).json({ error: 'Invalid Google Sheets URL' });
+  }
+  try {
+    const r = await fetch(url, { redirect: 'follow' });
+    if (!r.ok) {
+      return res.status(400).json({ error: 'Could not access the sheet. Make sure it is shared publicly.' });
+    }
+    const csv = await r.text();
+    // Google serves an HTML sign-in page (not CSV) when the sheet is private.
+    if (/^\s*<(!doctype|html)/i.test(csv.slice(0, 200))) {
+      return res.status(400).json({ error: 'The sheet is not public (anyone with the link).' });
+    }
+    res.json({ csv });
+  } catch (error: any) {
+    console.error('Error fetching Google Sheet:', error);
     res.status(500).json({ error: safeErr(error) });
   }
 });

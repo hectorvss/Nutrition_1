@@ -14,13 +14,20 @@ import {
   Filter,
   X,
   HelpCircle,
-  Trash2
+  Trash2,
+  Upload,
+  ChevronDown,
+  FileDown,
+  FileSpreadsheet,
+  ClipboardPaste,
+  Link2,
 } from 'lucide-react';
 
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
 import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
+import ImportClientsModal, { type ImportMethod } from '../components/ImportClientsModal';
 
 // We don't need the local Client interface or mock data anymore
 // The interface is now defined in ClientContext.tsx
@@ -32,8 +39,10 @@ interface ClientListProps {
 
 export default function ClientList({ onViewDetail, onAddClient }: ClientListProps) {
   const { t } = useLanguage();
-  const { clients, isLoading: loading, error, deleteClient, archiveClient } = useClient();
-  
+  const { clients, isLoading: loading, error, deleteClient, archiveClient, reloadClients } = useClient();
+
+  const [showImportMenu, setShowImportMenu] = useState(false);
+  const [importMethod, setImportMethod] = useState<ImportMethod | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'All' | 'Active' | 'At Risk' | 'Archived'>('All');
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
@@ -161,8 +170,45 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
               <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-xl">{t('clients_subtitle')}</p>
             </div>
             <div className="flex items-center gap-3">
-              {/* Export List button removed as requested */}
-              <button 
+              {/* Importar clientes — mismo estilo de botón "outline" que el CSV */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowImportMenu(v => !v)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                >
+                  <Upload className="w-4 h-4" />
+                  {t('import_clients_btn', { defaultValue: 'Importar clientes' })}
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showImportMenu ? 'rotate-180' : ''}`} />
+                </button>
+                {showImportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowImportMenu(false)} />
+                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-20 overflow-hidden">
+                      {([
+                        { method: 'csv' as ImportMethod,    icon: FileDown,        title: 'CSV',                 desc: t('import_csv_desc', { defaultValue: 'Archivo .csv (Excel, Sheets, Numbers…)' }) },
+                        { method: 'excel' as ImportMethod,  icon: FileSpreadsheet, title: 'Excel',               desc: t('import_excel_desc', { defaultValue: 'Sube un .xlsx o .xls directamente' }) },
+                        { method: 'paste' as ImportMethod,  icon: ClipboardPaste,  title: t('import_paste', { defaultValue: 'Pegar desde hoja de cálculo' }), desc: t('import_paste_desc', { defaultValue: 'Copia/pega filas desde Excel o Sheets' }) },
+                        { method: 'gsheet' as ImportMethod, icon: Link2,           title: 'Google Sheets',       desc: t('import_gsheet_desc', { defaultValue: 'Pega el enlace de una hoja pública' }) },
+                      ]).map(opt => (
+                        <button
+                          key={opt.method}
+                          onClick={() => { setShowImportMenu(false); setImportMethod(opt.method); }}
+                          className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
+                        >
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <opt.icon className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-900 dark:text-white text-sm">{opt.title}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">{opt.desc}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <button
                 onClick={onAddClient}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 text-sm font-bold"
               >
@@ -171,6 +217,13 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
               </button>
             </div>
           </header>
+
+          <ImportClientsModal
+            open={importMethod != null}
+            method={importMethod || 'csv'}
+            onClose={() => setImportMethod(null)}
+            onImported={() => { reloadClients(); }}
+          />
 
           {error && (
              <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6">
