@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { 
   User, 
   Lock, 
@@ -788,8 +789,12 @@ function SecuritySettings() {
           fetchWithAuth('/manager/security/sessions'),
           fetchWithAuth('/manager/security/history')
         ]);
-        setSessions(sessionsData || []);
-        setHistory(historyData || []);
+        // Ambos endpoints están paginados: devuelven { data, nextCursor,
+        // hasMore }, NO un array. Sin unwrapList, `sessions`/`history`
+        // quedaban como objeto y `.map` crasheaba toda la pantalla de
+        // Settings al abrir la pestaña de Seguridad.
+        setSessions(unwrapList(sessionsData));
+        setHistory(unwrapList(historyData));
       } catch (err) {
         console.error('Error loading security data:', err);
       }

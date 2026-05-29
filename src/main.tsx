@@ -4,6 +4,20 @@ import * as Sentry from '@sentry/react';
 import App from './App.tsx';
 import './index.css';
 
+// Anti-FOUC: aplica el tema cacheado (color de marca + dark mode) ANTES de
+// que React monte, para que el primer paint ya salga con la preferencia del
+// manager y no con el default emerald/claro. ThemeContext lo confirma luego
+// con el valor del servidor.
+try {
+  const raw = localStorage.getItem('theme_settings_cache');
+  if (raw) {
+    const p = JSON.parse(raw);
+    const root = document.documentElement;
+    if (typeof p?.theme_color === 'string') root.style.setProperty('--brand-primary', p.theme_color);
+    if (p?.dark_mode) root.classList.add('dark');
+  }
+} catch { /* ignore */ }
+
 // Initialize Sentry before anything else. Only active when VITE_SENTRY_DSN is set.
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({

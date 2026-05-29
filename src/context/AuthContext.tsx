@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getAuthToken, setAuthToken, fetchWithAuth } from '../api';
+import { getAuthToken, setAuthToken } from '../api';
+import { supabase } from '../supabase';
 
 interface User {
   id: string;
@@ -45,7 +46,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const checkAuthStatus = async () => {
-      const token = getAuthToken();
+      // Prefer a FRESH token from the Supabase client (auto-refreshed)
+      // over the possibly-stale `auth_token` in localStorage. This is what
+      // stops a reload after ~1h from logging the user out: getSession()
+      // refreshes the access token if it expired, instead of sending the
+      // dead one and getting a 401.
+      let token = getAuthToken();
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.access_token) {
+          token = data.session.access_token;
+          setAuthToken(token);
+        }
+      } catch { /* fall back to cached token */ }
+
       if (!token) {
         setIsLoading(false);
         return;
@@ -98,6 +112,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     checkAuthStatus();
+
+    // Mantener `auth_token` sincronizado con los refrescos automáticos de
+    // Supabase. Cada vez que el cliente refresca el access token (cada
+    // ~1h) actualizamos el localStorage para que los consumidores que aún
+    // leen `getAuthToken()` directo no se queden con el token caducado.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.access_token) {
+        setAuthToken(session.access_token);
+      } else if (event === 'SIGNED_OUT') {
+        setAuthToken('');
+      }
+    });
+    return () => { sub.subscription.unsubscribe(); };
   }, []);
 
   const login = (token: string, userData: User) => {

@@ -12,8 +12,20 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+// Cache local del idioma para evitar el FOUC: la primera carga arranca con
+// el idioma guardado (no con 'es' por defecto), eliminando el salto de
+// idioma un par de segundos después de cargar.
+const LANG_CACHE_KEY = 'app_language_cache';
+const readLangCache = (): Language => {
+  try {
+    const v = localStorage.getItem(LANG_CACHE_KEY);
+    if (v === 'es' || v === 'en') return v;
+  } catch { /* ignore */ }
+  return 'es';
+};
+
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguageState] = useState<Language>('es');
+  const [language, setLanguageState] = useState<Language>(readLangCache);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
@@ -33,6 +45,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         const data = await fetchWithAuth('/manager/profile');
         if (data && data.language) {
           setLanguageState(data.language as Language);
+          try { localStorage.setItem(LANG_CACHE_KEY, data.language); } catch { /* ignore */ }
         }
       } catch (err) {
         console.error('Error loading language settings:', err);
@@ -45,6 +58,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
   const setLanguage = async (lang: Language) => {
     setLanguageState(lang);
+    try { localStorage.setItem(LANG_CACHE_KEY, lang); } catch { /* ignore */ }
     if (user && user.role === 'MANAGER') {
       try {
         await fetchWithAuth('/manager/profile', {
