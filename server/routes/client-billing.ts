@@ -1899,7 +1899,7 @@ export async function runBillingSyncSweep(): Promise<{ checked: number; paid: nu
   try {
     const { data: rows } = await supabaseAdmin
       .from('client_billing')
-      .select('id, manager_id, client_id, status, stripe_subscription_id, stripe_invoice_id, stripe_payment_link_id, amount_cents, currency, description, interval, payment_url, current_period_end, plan_id')
+      .select('id, manager_id, client_id, kind, status, stripe_subscription_id, stripe_invoice_id, stripe_payment_link_id, amount_cents, currency, description, interval, payment_url, current_period_end, plan_id')
       .in('status', ['pending', 'past_due'])
       .or('stripe_subscription_id.not.is.null,stripe_invoice_id.not.is.null,stripe_payment_link_id.not.is.null')
       // Tope conservador: las llamadas a Stripe son secuenciales (timeout 8s
@@ -1909,17 +1909,20 @@ export async function runBillingSyncSweep(): Promise<{ checked: number; paid: nu
       .limit(100);
     if (!rows || rows.length === 0) return { checked: 0, paid: 0 };
 
-    // Clave Stripe por manager (cacheada).
-    const keyByManager: Record<string, string | null> = {};
-    const getKey = async (managerId: string): Promise<string | null> => {
-      if (managerId in keyByManager) return keyByManager[managerId];
-      const { data } = await supabaseAdmin.from('integrations').select('stripe_secret_key').eq('user_id', managerId).maybeSingle();
-      keyByManager[managerId] = data?.stripe_secret_key || null;
-      return keyByManager[managerId];
+    // Clave Stripe + si tiene webhook por-coach (cacheado por manager). Si el
+    // coach tiene webhook configurado, ÉL es la fuente autoritativa de eventos
+    // de workflow; el barrido NO los dispara (evita doble ejecución). Si NO hay
+    // webhook, el barrido es el único emisor de los triggers de facturación.
+    const integByManager: Record<string, { key: string | null; hasWebhook: boolean }> = {};
+    const getInteg = async (managerId: string) => {
+      if (managerId in integByManager) return integByManager[managerId];
+      const { data } = await supabaseAdmin.from('integrations').select('stripe_secret_key, stripe_webhook_secret').eq('user_id', managerId).maybeSingle();
+      integByManager[managerId] = { key: data?.stripe_secret_key || null, hasWebhook: !!data?.stripe_webhook_secret };
+      return integByManager[managerId];
     };
 
     for (const row of rows) {
-      const key = await getKey(row.manager_id);
+      const { key, hasWebhook } = await getInteg(row.manager_id);
       if (!key) continue;
       const stripe = newStripeClient(key);
       checked++;
@@ -1956,16 +1959,33 @@ export async function runBillingSyncSweep(): Promise<{ checked: number; paid: nu
           if (isPaid(newStatus) && !isPaid(row.status)) {
             paid++;
             await notifyManagerOfPayment(row.manager_id, row.client_id, { ...row, ...updates });
-            // Fallback (sin webhook): dispara el workflow de pago recibido.
-            try {
-              const { runWorkflowsForEvent } = await import('./workflows.js');
-              await runWorkflowsForEvent(row.manager_id, 'trigger.payment_succeeded', {
-                clientId: row.client_id, billingId: row.id, planName: row.description,
-                amountCents: row.amount_cents, currency: row.currency, interval: row.interval,
-                paymentUrl: row.payment_url, subscriptionStatus: newStatus,
-                renewalDate: updates.current_period_end ?? row.current_period_end ?? null,
-              });
-            } catch (wfErr) { console.error('[billing sweep] workflow fire failed:', wfErr); }
+          }
+          // Triggers de workflow SOLO si el coach no tiene webhook (si lo tiene,
+          // los dispara el webhook en tiempo real → evitamos doble ejecución).
+          if (!hasWebhook) {
+            const basePayload = {
+              clientId: row.client_id, billingId: row.id, planName: row.description,
+              amountCents: row.amount_cents, currency: row.currency, interval: row.interval,
+              paymentUrl: row.payment_url,
+              renewalDate: updates.current_period_end ?? row.current_period_end ?? null,
+            };
+            const fire = async (triggerKey: string, status: string) => {
+              try {
+                const { runWorkflowsForEvent } = await import('./workflows.js');
+                await runWorkflowsForEvent(row.manager_id, triggerKey, { ...basePayload, subscriptionStatus: status });
+              } catch (wfErr) { console.error('[billing sweep] workflow fire failed:', wfErr); }
+            };
+            if (isPaid(newStatus) && !isPaid(row.status)) {
+              await fire('trigger.payment_succeeded', newStatus);
+              // Primera activación de una suscripción → también subscription_started.
+              if (row.kind === 'recurring' && (newStatus === 'active' || newStatus === 'trialing')) {
+                await fire('trigger.subscription_started', newStatus);
+              }
+            } else if (newStatus === 'past_due' && row.status !== 'past_due') {
+              await fire('trigger.payment_failed', 'past_due');
+            } else if (newStatus === 'canceled' && row.status !== 'canceled') {
+              await fire('trigger.subscription_canceled', 'canceled');
+            }
           }
         }
       } catch (perRow) {

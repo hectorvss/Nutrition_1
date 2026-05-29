@@ -338,11 +338,11 @@ const tEdge = (source: string, target: string, sourceHandle?: string): WorkflowE
 export const WORKFLOW_STARTER_TEMPLATES = [
   {
     id: 'tpl.payment_welcome',
-    name: 'Bienvenida al pagar',
-    description: 'Cuando un cliente paga su suscripción, le das la bienvenida y avisas al coach.',
+    name: 'Bienvenida al suscribirse',
+    description: 'Cuando un cliente activa su suscripción (primer pago), le das la bienvenida y avisas al coach.',
     category: 'Suscripciones',
     nodes: [
-      tNode('n1', 'trigger', 'trigger.payment_succeeded', 80, 160),
+      tNode('n1', 'trigger', 'trigger.subscription_started', 80, 160),
       tNode('n2', 'action', 'action.send_message', 360, 160, { message: '¡Bienvenido/a, {First Name}! 🎉 Tu suscripción a {Plan Name} ya está activa. Cualquier duda, escríbeme por aquí.' }),
       tNode('n3', 'action', 'action.notify_coach', 640, 160, { title: 'Nuevo pago de {Client Name}', description: '{Client Name} ha pagado {Amount} ({Plan Name}).' }),
     ],
