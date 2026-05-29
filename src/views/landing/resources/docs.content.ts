@@ -40,6 +40,14 @@ export const docs: ResourceArticle[] = [
         ],
       },
       {
+        type: 'img',
+        src: '/landing/feature-settings.png',
+        gradient: 'gradient-bg-privacy',
+        alt: 'Panel de ajustes con apartados de tema, seguridad, facturación e integraciones',
+        es: 'Desde Ajustes controlas el tema, la seguridad, la facturación y las integraciones de tu cuenta.',
+        en: 'From Settings you control your account theme, security, billing and integrations.',
+      },
+      {
         type: 'h',
         es: '2. Personaliza tu marca',
         en: '2. Customize your brand',
@@ -81,6 +89,14 @@ export const docs: ResourceArticle[] = [
           'Send the invitation; the client receives a link to create their password and access their space.',
           'Check in the list that the status changes from "Invited" to "Active" once they accept.',
         ],
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-onboarding.png',
+        gradient: 'gradient-bg-learning',
+        alt: 'Seguimiento de onboarding con el estado de incorporación de cada cliente',
+        es: 'El seguimiento de onboarding te muestra el estado de incorporación de cada cliente que invitas.',
+        en: 'Onboarding tracking shows you the onboarding status of every client you invite.',
       },
       {
         type: 'h',
