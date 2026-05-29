@@ -17,7 +17,7 @@ export default function RecipeList({ recipes, onSelect, onCreate }: RecipeListPr
         <div
           key={recipe.id}
           onClick={() => onSelect(recipe)}
-          className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row h-auto sm:h-48 cursor-pointer"
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row h-auto sm:h-48 cursor-pointer"
         >
           <div className="relative w-full sm:w-64 h-48 sm:h-full flex-shrink-0 bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center">
             <Utensils className="w-10 h-10 text-emerald-300" />
@@ -29,37 +29,37 @@ export default function RecipeList({ recipes, onSelect, onCreate }: RecipeListPr
                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             )}
-            <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
+            <div className="absolute top-3 left-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-sm">
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-              <span className="text-xs font-bold text-slate-700">{recipe.rating}</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{recipe.rating}</span>
             </div>
           </div>
           <div className="p-6 flex flex-col sm:flex-row flex-1 gap-6 items-start sm:items-center">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="font-bold text-xl text-slate-900 leading-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">{recipe.category}</span>
+                <h3 className="font-bold text-xl text-slate-900 dark:text-white leading-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">{recipe.category}</span>
               </div>
-              <p className="text-sm text-slate-500 line-clamp-2 mb-3">{t('recipe_card_sample_desc')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{t('recipe_card_sample_desc')}</p>
               <div className="flex flex-wrap gap-2 text-xs">
                 {recipe.tags.map(tag => (
-                  <span key={tag} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600">{tag}</span>
+                  <span key={tag} className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">{tag}</span>
                 ))}
               </div>
             </div>
-            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-6 sm:gap-4 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-100 pt-4 sm:pt-0 sm:pl-6">
-              <div className="flex flex-row sm:flex-col gap-4 sm:gap-2 text-sm font-medium text-slate-500 mr-auto sm:mr-0 text-right">
+            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-6 sm:gap-4 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-4 sm:pt-0 sm:pl-6">
+              <div className="flex flex-row sm:flex-col gap-4 sm:gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 mr-auto sm:mr-0 text-right">
                 <div className="flex items-center sm:justify-end gap-2">
                   <Flame className="w-4 h-4 text-orange-500" />
                   <span>{recipe.calories} kcal</span>
                 </div>
                 <div className="flex items-center sm:justify-end gap-2">
-                  <Clock className="w-4 h-4 text-slate-400" />
+                  <Clock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                   <span>{recipe.prepTime} min</span>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="p-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">
+                <button className="p-2.5 rounded-xl text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-transparent hover:border-red-100 dark:hover:border-red-900/30">
                   <Heart className="w-5 h-5" />
                 </button>
                 <button className="p-2.5 rounded-xl text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center">
@@ -72,9 +72,9 @@ export default function RecipeList({ recipes, onSelect, onCreate }: RecipeListPr
       ))}
       <div
         onClick={onCreate}
-        className="rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-white hover:border-emerald-500/50 transition-all cursor-pointer group p-4 flex items-center justify-center h-24"
+        className="rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-900 hover:border-emerald-500/50 transition-all cursor-pointer group p-4 flex items-center justify-center h-24"
       >
-        <div className="flex items-center gap-3 text-slate-400 group-hover:text-emerald-600 transition-colors">
+        <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500 group-hover:text-emerald-600 transition-colors">
           <Plus className="w-6 h-6" />
           <span className="font-bold text-lg">{t('create_custom_recipe')}</span>
         </div>

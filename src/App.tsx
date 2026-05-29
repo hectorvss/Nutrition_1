@@ -132,7 +132,7 @@ export default function App() {
   }, []);
   
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500">{t('loading_application')}</div>;
+    return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400">{t('loading_application')}</div>;
   }
   
   if (!user && currentView === 'landing') {
@@ -379,7 +379,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-emerald-100 selection:text-emerald-900 overflow-hidden">
       <Sidebar
         currentView={currentView} 
         onNavigate={(view) => {
@@ -400,7 +400,7 @@ export default function App() {
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <TrialBanner onUpgrade={() => setCurrentView('subscriptions')} />
         {/* Mobile Header Toggle */}
-        <div className="lg:hidden p-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0">
+        <div className="lg:hidden p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div 
               className="w-8 h-8 rounded-full bg-emerald-500 bg-cover bg-center flex items-center justify-center text-white font-bold text-xs shrink-0"
@@ -412,11 +412,11 @@ export default function App() {
             >
               {!profile?.avatar_url && (profile?.full_name?.[0] || 'S')}
             </div>
-            <span className="font-bold text-slate-900 text-sm">{profile?.full_name || 'NutriDash Pro'}</span>
+            <span className="font-bold text-slate-900 dark:text-white text-sm">{profile?.full_name || 'NutriDash Pro'}</span>
           </div>
-          <button 
+          <button
             onClick={() => setIsSidebarOpen(true)}
-            className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
             <Menu className="w-6 h-6" />
           </button>

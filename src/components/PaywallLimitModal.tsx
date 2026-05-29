@@ -256,7 +256,7 @@ export default function PaywallLimitModal() {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 12, opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-            className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -266,27 +266,27 @@ export default function PaywallLimitModal() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-black hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-gray-400 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800/50 transition-colors"
               aria-label={isEs ? 'Cerrar' : 'Close'}
             >
               <CloseIcon className="w-4 h-4" />
             </button>
 
             {/* Header con copy especifico al resource */}
-            <div className="px-8 pt-10 pb-6 border-b border-gray-100">
+            <div className="px-8 pt-10 pb-6 border-b border-gray-100 dark:border-slate-800">
               {/*@CR-1 Hero visual de uso saturado */}
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                   <copy.Icon className="w-6 h-6" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 mb-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-600 dark:text-rose-400 mb-1">
                     {isEs ? 'Límite alcanzado' : 'Limit reached'}
                   </p>
-                  <h2 id="paywall-limit-title" className="text-2xl md:text-3xl font-medium tracking-tight leading-tight">
+                  <h2 id="paywall-limit-title" className="text-2xl md:text-3xl font-medium tracking-tight leading-tight dark:text-white">
                     {isEs ? copy.esTitle : copy.enTitle}
                   </h2>
-                  <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-2 leading-relaxed">
                     {isEs ? copy.esSub : copy.enSub}
                   </p>
                 </div>
@@ -296,14 +296,14 @@ export default function PaywallLimitModal() {
               {limit > 0 && (
                 <div className="mt-6">
                   <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500">
                       {isEs ? 'Tu uso actual' : 'Your current usage'}
                     </span>
-                    <span className="text-sm font-bold tabular-nums text-gray-900">
-                      {used} / {limit} <span className="text-gray-400 font-medium">({detail?.tier})</span>
+                    <span className="text-sm font-bold tabular-nums text-gray-900 dark:text-white">
+                      {used} / {limit} <span className="text-gray-400 dark:text-slate-500 font-medium">({detail?.tier})</span>
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-2 rounded-full bg-gray-100 dark:bg-slate-800 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${overflowing}%` }}
@@ -316,7 +316,7 @@ export default function PaywallLimitModal() {
 
               {/*@CR-Urgency Strip de trial cuando quedan <=3 dias */}
               {trialUrgency !== null && (
-                <div className="mt-5 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5">
+                <div className="mt-5 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-amber-800 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-full px-3 py-1.5">
                   <Sparkles className="w-3 h-3" />
                   {isEs
                     ? `Te quedan ${trialUrgency} día${trialUrgency === 1 ? '' : 's'} de prueba`
@@ -329,18 +329,18 @@ export default function PaywallLimitModal() {
             <div className="px-8 py-6">
               {/* Toggle mensual/anual — friccion minima */}
               <div className="flex items-center justify-center mb-6">
-                <div className="inline-flex bg-gray-100 rounded-full p-1 text-xs font-bold">
+                <div className="inline-flex bg-gray-100 dark:bg-slate-800 rounded-full p-1 text-xs font-bold">
                   <button
                     type="button"
                     onClick={() => setIsAnnual(false)}
-                    className={`px-4 py-1.5 rounded-full transition-colors ${!isAnnual ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
+                    className={`px-4 py-1.5 rounded-full transition-colors ${!isAnnual ? 'bg-white dark:bg-slate-900 shadow-sm text-black dark:text-white' : 'text-gray-500 dark:text-slate-400'}`}
                   >
                     {isEs ? 'Mensual' : 'Monthly'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsAnnual(true)}
-                    className={`px-4 py-1.5 rounded-full transition-colors ${isAnnual ? 'bg-white shadow-sm text-black' : 'text-gray-500'}`}
+                    className={`px-4 py-1.5 rounded-full transition-colors ${isAnnual ? 'bg-white dark:bg-slate-900 shadow-sm text-black dark:text-white' : 'text-gray-500 dark:text-slate-400'}`}
                   >
                     {isEs ? 'Anual −20%' : 'Annual −20%'}
                   </button>
@@ -377,14 +377,14 @@ export default function PaywallLimitModal() {
 
               {/*@CR-4 Prueba social */}
               <div className="mt-6 flex items-center justify-center">
-                <div className="inline-flex items-center gap-2 text-[11px] font-medium text-gray-500 bg-gray-50 border border-gray-100 rounded-full px-3 py-1.5">
+                <div className="inline-flex items-center gap-2 text-[11px] font-medium text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800 rounded-full px-3 py-1.5">
                   <Sparkles className="w-3 h-3 text-emerald-500" />
                   {isEs ? '+200 coaches independientes en planes de pago' : '+200 independent coaches on paid plans'}
                 </div>
               </div>
 
               {/*@CR-5 Risk reversal */}
-              <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-gray-500 text-center">
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-gray-500 dark:text-slate-400 text-center">
                 <span className="inline-flex items-center justify-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                   {isEs ? 'Sin permanencia' : 'No lock-in'}
@@ -409,7 +409,7 @@ export default function PaywallLimitModal() {
                       window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'subscriptions' }));
                     } catch { /* SSR-safe */ }
                   }}
-                  className="text-xs font-medium text-gray-500 hover:text-black underline underline-offset-4"
+                  className="text-xs font-medium text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white underline underline-offset-4"
                 >
                   {isEs ? 'Ver todos los planes y la tabla comparativa' : 'See all plans and the comparison table'}
                 </button>
@@ -447,8 +447,8 @@ function PlanCard({ tier, isEs, isAnnual, gains, loading, highlight, onClick, ct
     <div
       className={`relative rounded-2xl border p-5 ${
         highlight
-          ? 'bg-emerald-50/60 border-emerald-200 ring-2 ring-emerald-500/20'
-          : 'bg-white border-gray-100'
+          ? 'bg-emerald-50/60 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/30 ring-2 ring-emerald-500/20'
+          : 'bg-white dark:bg-slate-800/50 border-gray-100 dark:border-slate-800'
       }`}
     >
       {badge && (
@@ -456,18 +456,18 @@ function PlanCard({ tier, isEs, isAnnual, gains, loading, highlight, onClick, ct
           className={`absolute -top-3 left-5 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${
             highlight
               ? 'bg-emerald-500 text-white shadow-sm'
-              : 'bg-white border border-gray-200 text-gray-500'
+              : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400'
           }`}
         >
           {badge}
         </span>
       )}
       <div className="flex items-baseline justify-between mb-1">
-        <h3 className="text-lg font-medium tracking-tight">{labelOfTier(tier)}</h3>
+        <h3 className="text-lg font-medium tracking-tight dark:text-white">{labelOfTier(tier)}</h3>
       </div>
       <div className="flex items-baseline gap-1 mb-4">
-        <span className="text-3xl font-medium tabular-nums">{price}€</span>
-        <span className="text-xs text-gray-400">/{isEs ? 'mes' : 'mo'}</span>
+        <span className="text-3xl font-medium tabular-nums dark:text-white">{price}€</span>
+        <span className="text-xs text-gray-400 dark:text-slate-500">/{isEs ? 'mes' : 'mo'}</span>
         {isAnnual && (
           <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600">
             {isEs ? '−20%' : '−20%'}
@@ -476,8 +476,8 @@ function PlanCard({ tier, isEs, isAnnual, gains, loading, highlight, onClick, ct
       </div>
       <ul className="space-y-1.5 mb-5">
         {gains.map((g, i) => (
-          <li key={i} className="text-[13px] text-gray-700 flex items-start gap-2">
-            <Sparkles className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${highlight ? 'text-emerald-500' : 'text-gray-400'}`} />
+          <li key={i} className="text-[13px] text-gray-700 dark:text-slate-200 flex items-start gap-2">
+            <Sparkles className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${highlight ? 'text-emerald-500' : 'text-gray-400 dark:text-slate-500'}`} />
             <span>{g}</span>
           </li>
         ))}
@@ -489,7 +489,7 @@ function PlanCard({ tier, isEs, isAnnual, gains, loading, highlight, onClick, ct
         className={`w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-sm font-bold transition-colors ${
           highlight
             ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-500/30'
-            : 'bg-black text-white hover:bg-gray-800'
+            : 'bg-black dark:bg-white text-white dark:text-slate-900 hover:bg-gray-800 dark:hover:bg-slate-200'
         } disabled:opacity-60 disabled:cursor-not-allowed`}
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}

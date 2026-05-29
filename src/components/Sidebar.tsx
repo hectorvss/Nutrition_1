@@ -155,12 +155,12 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
    */
   const renderSidebar = (expanded: boolean, mobile: boolean) => (
     <div
-      className={`flex flex-col bg-white border-r border-slate-200 overflow-hidden transition-[width] duration-300 ease-in-out ${
+      className={`flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 overflow-hidden transition-[width] duration-300 ease-in-out ${
         expanded ? 'w-64' : 'w-20'
       } ${mobile ? 'h-full' : 'h-screen'}`}
     >
       {/* Header: avatar + (nombre si expandido) + boton toggle */}
-      <div className={`h-16 flex items-center border-b border-slate-100 shrink-0 ${expanded ? 'px-4' : 'justify-center px-0'}`}>
+      <div className={`h-16 flex items-center border-b border-slate-100 dark:border-slate-800 shrink-0 ${expanded ? 'px-4' : 'justify-center px-0'}`}>
         {expanded ? (
           <>
             <div className="flex items-center gap-3 overflow-hidden">
@@ -173,10 +173,10 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                 }}
               />
               <div className="flex flex-col overflow-hidden">
-                <h1 className="text-slate-900 text-sm font-bold truncate">
+                <h1 className="text-slate-900 dark:text-white text-sm font-bold truncate">
                   {profile?.full_name || 'Nutritionist'}
                 </h1>
-                <p className="text-slate-500 text-xs truncate">
+                <p className="text-slate-500 dark:text-slate-400 text-xs truncate">
                   {profile?.professional_title || 'Expert Coach'}
                 </p>
               </div>
@@ -185,7 +185,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
               onClose && (
                 <button
                   onClick={onClose}
-                  className="ml-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                  className="ml-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -194,7 +194,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
               <button
                 onClick={toggleCollapsed}
                 title={isEs ? 'Contraer menú' : 'Collapse menu'}
-                className="ml-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                className="ml-auto w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
               >
                 <PanelLeftClose className="w-5 h-5" />
               </button>
@@ -215,7 +215,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                   : 'url("https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop")'
               }}
             />
-            <span className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-400 opacity-0 group-hover:opacity-100 group-hover:bg-slate-100 transition-all">
+            <span className="absolute inset-0 flex items-center justify-center rounded-lg text-slate-400 opacity-0 group-hover:opacity-100 group-hover:bg-slate-100 dark:group-hover:bg-slate-800 transition-all">
               <PanelLeftOpen className="w-5 h-5" />
             </span>
           </button>
@@ -231,7 +231,7 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
               </h3>
             ) : (
               // Colapsado: un separador fino en lugar del titulo de grupo.
-              <div className="mx-2 mb-2 h-px bg-slate-100" />
+              <div className="mx-2 mb-2 h-px bg-slate-100 dark:bg-slate-800" />
             )}
             <div className="flex flex-col gap-1">
               {group.items.map((item) => {
@@ -246,16 +246,16 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
                     title={!expanded ? item.label : undefined}
                     className={`relative flex items-center rounded-lg transition-colors group ${
                       expanded ? 'gap-3 px-3 py-2 w-full justify-start' : 'justify-center w-10 h-10 mx-auto'
-                    } ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                    } ${active ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
                   >
                     <div className="relative shrink-0">
                       <item.icon className={`w-[18px] h-[18px] ${
-                        active ? 'text-emerald-600' : 'text-slate-400 group-hover:text-emerald-500'
+                        active ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 group-hover:text-emerald-500'
                       }`} />
                       {/* Badge de no-leidos: en modo colapsado se muestra como
                           un punto pequeno sobre el icono de mensajes. */}
                       {item.id === 'messages' && unreadCount > 0 && !expanded && (
-                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-white" />
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#10b981] ring-2 ring-white dark:ring-slate-900" />
                       )}
                     </div>
                     {expanded && (

@@ -115,22 +115,22 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
   return (
     <div className="fixed inset-0 z-[200] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl"
+        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
             {t('custom_recurrence', { defaultValue: 'Recurrencia personalizada' })}
           </h3>
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
-            <X className="w-5 h-5 text-slate-500" />
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg">
+            <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
         <div className="space-y-5">
           {/* Frequency + interval */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
               {t('repeat_every', { defaultValue: 'Repetir cada' })}
             </label>
             <div className="flex items-center gap-2">
@@ -140,12 +140,12 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
                 max={365}
                 value={interval}
                 onChange={e => setInterval(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                className="w-20 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
+                className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
               />
               <Select
                 value={freq}
                 onChange={(v) => setFreq(v as Freq)}
-                className="flex-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
+                className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm py-2 px-3 focus:border-emerald-500 focus:ring-emerald-500"
               >
                 <option value="DAILY">{interval > 1 ? t('days', { defaultValue: 'días' }) : t('day', { defaultValue: 'día' })}</option>
                 <option value="WEEKLY">{interval > 1 ? t('weeks', { defaultValue: 'semanas' }) : t('week', { defaultValue: 'semana' })}</option>
@@ -157,7 +157,7 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
           {/* Weekday picker — only relevant for WEEKLY frequency */}
           {freq === 'WEEKLY' && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
                 {t('repeat_on', { defaultValue: 'Repetir en' })}
               </label>
               <div className="flex gap-1.5">
@@ -171,7 +171,7 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
                       className={`w-9 h-9 rounded-full text-xs font-bold transition-colors ${
                         active
                           ? 'bg-emerald-500 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800/50'
                       }`}
                     >
                       {t(d.labelKey, { defaultValue: d.defaultLabel })}
@@ -184,7 +184,7 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
 
           {/* Ends */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 uppercase tracking-wide">
               {t('ends', { defaultValue: 'Termina' })}
             </label>
             <div className="space-y-2">
@@ -210,7 +210,7 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
                   value={until}
                   min={anchorDate}
                   onChange={e => { setUntil(e.target.value); setEndsMode('on'); }}
-                  className="rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm py-1.5 px-2 focus:border-emerald-500 focus:ring-emerald-500"
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm py-1.5 px-2 focus:border-emerald-500 focus:ring-emerald-500"
                 />
               </label>
             </div>
@@ -227,7 +227,7 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
         <div className="flex justify-end gap-2 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50"
           >
             {t('cancel', { defaultValue: 'Cancelar' })}
           </button>
