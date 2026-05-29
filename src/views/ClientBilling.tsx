@@ -5,6 +5,7 @@ import {
   DownloadCloud, ChevronDown, ChevronUp, Search, Check,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
+import { unwrapList } from '../api/unwrap';
 import { useLanguage } from '../context/LanguageContext';
 
 // Dashboard "Cobros": el coach gestiona lo que cobra a SUS clientes usando su
@@ -497,8 +498,8 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
     (async () => {
       try {
         const data = await fetchWithAuth('/manager/clients');
-        const list = Array.isArray(data) ? data : (data?.items || []);
-        setClients(list);
+        // /manager/clients devuelve shape paginado { data, nextCursor }.
+        setClients(unwrapList(data));
       } catch { /* noop */ }
     })();
   }, []);
@@ -661,7 +662,7 @@ function ImportModal({ isEs, locale, onClose, onImported }: { isEs: boolean; loc
           fetchWithAuth('/manager/clients'),
         ]);
         setCandidates(subs?.candidates || []);
-        setClients(Array.isArray(cl) ? cl : (cl?.items || []));
+        setClients(unwrapList(cl));
       } catch (e: any) {
         setErr(e?.message || (isEs ? 'No se pudo conectar con Stripe.' : 'Could not connect to Stripe.'));
       } finally {
