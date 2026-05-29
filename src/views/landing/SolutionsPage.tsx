@@ -290,7 +290,7 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
         <div className="flex flex-wrap items-center justify-center gap-2 mb-16">
           {[
             isEs ? 'Coach 1-a-1'   : '1-on-1 coach',
-            isEs ? 'De 5 a 40 clientes' : '5 to 40 clients',
+            isEs ? 'Clientes ilimitados' : 'Unlimited clients',
             isEs ? 'Nutrición + entreno' : 'Nutrition + training',
             isEs ? 'Cobros recurrentes'  : 'Recurring billing',
           ].map((label, i) => (
