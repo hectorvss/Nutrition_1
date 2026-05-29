@@ -4,6 +4,7 @@ import { CheckCircle2, Verified, Clock, CreditCard } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 import { fetchWithAuth } from "../api";
+import { PRICE_MAP, TIER_MONTHLY_PRICE, type PaidTier } from "../lib/plans";
 
 interface PricingProps {
   onGetStarted?: () => void;
@@ -30,14 +31,9 @@ interface PricingProps {
   embedded?: boolean;
 }
 
-// Stable plan tiers — never derived from translated labels.
-type PlanTier = 'professional' | 'scale' | 'unlimited';
-
-const PRICE_MAP: Record<PlanTier, { monthly: string; annual: string }> = {
-  professional: { monthly: "price_1TCN9vCR4WvolxlpwC33dk8J", annual: "price_1TCf4PCR4Wvolxlp3MoDzi0J" },
-  scale: { monthly: "price_1TCNAHCR4WvolxlpwpLRfmwX", annual: "price_1TCf52CR4WvolxlpcMMLOVpv" },
-  unlimited: { monthly: "price_1TCNAcCR4WvolxlptLzNYdsz", annual: "price_1TCf5cCR4WvolxlpWGhpOgnI" },
-};
+// Stable plan tiers — never derived from translated labels. Price IDs and
+// monthly prices come from the shared src/lib/plans source of truth.
+type PlanTier = PaidTier;
 
 export default function Pricing({ onGetStarted, currentTier, onManageBilling, embedded = false }: PricingProps) {
   const { language } = useLanguage();
@@ -183,7 +179,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
             {
               tier: 'professional' as PlanTier,
               title: isEs ? "Profesional" : "Professional",
-              monthlyPrice: 39,
+              monthlyPrice: TIER_MONTHLY_PRICE.professional,
               clients: isEs ? "Hasta 20 clientes activos" : "Up to 20 active clients",
               features: [
                 isEs ? "Acceso completo a la plataforma" : "Full platform access",
@@ -199,7 +195,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
             {
               tier: 'scale' as PlanTier,
               title: "Scale",
-              monthlyPrice: 79,
+              monthlyPrice: TIER_MONTHLY_PRICE.scale,
               clients: isEs ? "Hasta 60 clientes activos" : "Up to 60 active clients",
               features: [
                 isEs ? "Todo lo de Profesional" : "Everything in Professional",
@@ -215,7 +211,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
             {
               tier: 'unlimited' as PlanTier,
               title: isEs ? "Ilimitado" : "Unlimited",
-              monthlyPrice: 99,
+              monthlyPrice: TIER_MONTHLY_PRICE.unlimited,
               clients: isEs ? "Clientes activos ilimitados" : "Unlimited active clients",
               features: [
                 isEs ? "Todo lo de Scale" : "Everything in Scale",

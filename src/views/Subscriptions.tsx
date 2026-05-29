@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, CreditCard, Clock, CheckCircle2, AlertTriangle, ArrowUpRight } from 'lucide-react';
+import { Sparkles, CreditCard, Clock, AlertTriangle, ArrowUpRight, Users, MessageSquare, Zap, HardDrive } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useBilling } from '../context/BillingContext';
 import { fetchWithAuth } from '../api';
@@ -153,38 +153,36 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
             </div>
           )}
 
-          {/* Uso vs limites */}
-          {status?.usage && status?.limits && (
-            <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-4">
-              {([
-                { key: 'activeClients',     label: isEs ? 'Clientes' : 'Clients' },
-                { key: 'monthlyMessages',   label: isEs ? 'Mensajes/mes' : 'Messages/mo' },
-                { key: 'activeAutomations', label: isEs ? 'Automatizaciones' : 'Automations' },
-                { key: 'storageGB',         label: isEs ? 'Almacenamiento (GB)' : 'Storage (GB)' },
-              ] as const).map(({ key, label }) => {
-                const used = (status.usage as any)[key] ?? 0;
-                const limit = (status.limits as any)[key];
-                const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
-                return (
-                  <div key={key}>
-                    <div className="flex justify-between items-baseline mb-1">
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                        {used}{limit != null ? ` / ${limit}` : ''}
-                      </span>
-                    </div>
-                    <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${limit != null ? pct : 8}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
+
+        {/* Uso vs limites — tarjetas estilo "Cobros" (billing): cada métrica con
+            su propio logo en chip de color, valor grande y barra de progreso. */}
+        {status?.usage && status?.limits && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {([
+              { key: 'activeClients',     label: isEs ? 'Clientes' : 'Clients',                   icon: Users,         color: 'emerald' },
+              { key: 'monthlyMessages',   label: isEs ? 'Mensajes/mes' : 'Messages/mo',           icon: MessageSquare, color: 'blue' },
+              { key: 'activeAutomations', label: isEs ? 'Automatizaciones' : 'Automations',       icon: Zap,           color: 'amber' },
+              { key: 'storageGB',         label: isEs ? 'Almacenamiento (GB)' : 'Storage (GB)',   icon: HardDrive,     color: 'indigo' },
+            ] as const).map(({ key, label, icon, color }) => {
+              const used = (status.usage as any)[key] ?? 0;
+              const limit = (status.limits as any)[key];
+              const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+              return (
+                <UsageCard
+                  key={key}
+                  icon={icon}
+                  color={color}
+                  label={label}
+                  used={used}
+                  limit={limit}
+                  pct={pct}
+                  unlimitedLabel={isEs ? 'Ilimitado' : 'Unlimited'}
+                />
+              );
+            })}
+          </div>
+        )}
 
         {/* Grid de planes + comparativa de features (reusa el componente
             publico Pricing — misma UI que la landing). currentTier marca
@@ -194,6 +192,36 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
           currentTier={tier}
           onManageBilling={status?.hasStripeSubscription ? openPortal : undefined}
         />
+      </div>
+    </div>
+  );
+}
+
+// Tarjeta de uso con el mismo lenguaje visual que los KPIs de "Cobros":
+// chip de color con el logo de la métrica, valor grande y barra de progreso.
+function UsageCard({ icon: Icon, color, label, used, limit, pct, unlimitedLabel }: {
+  icon: any; color: string; label: string; used: number; limit: number | null | undefined; pct: number; unlimitedLabel: string;
+}) {
+  const colorMap: Record<string, string> = {
+    emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
+    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+    indigo: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+  };
+  const barCls = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
+  const hasLimit = limit != null;
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
+        <span className={`w-8 h-8 rounded-xl flex items-center justify-center ${colorMap[color]}`}><Icon className="w-4 h-4" /></span>
+      </div>
+      <div className="flex items-baseline gap-1 mb-3">
+        <span className="text-2xl font-black text-slate-900 dark:text-white">{used}</span>
+        <span className="text-sm font-bold text-slate-400">{hasLimit ? `/ ${limit}` : unlimitedLabel}</span>
+      </div>
+      <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${barCls}`} style={{ width: `${hasLimit ? pct : 8}%` }} />
       </div>
     </div>
   );

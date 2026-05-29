@@ -12,11 +12,19 @@ import {
   Zap,
   Bell,
   Lock,
+  Check,
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useBilling, type PlanTier } from '../context/BillingContext';
 import { fetchWithAuth } from '../api';
+import {
+  type PaidTier,
+  TIER_LABEL,
+  effectiveMonthly,
+  priceIdFor,
+  planFeatures,
+} from '../lib/plans';
 
 /**
  * Modal de upsell que reemplaza el mensaje rojo de "you have reached
@@ -60,17 +68,9 @@ interface LimitEventDetail {
   accessBlocked?: boolean;
 }
 
-// Stripe price IDs — mirror Pricing.tsx (single source of truth would be
-// nicer, pero aqui los duplicamos para evitar un import circular con la
-// landing. Si cambia uno, cambia el otro).
-const PRICE_MAP: Record<'professional' | 'scale' | 'unlimited', { monthly: string; annual: string }> = {
-  professional: { monthly: 'price_1TCN9vCR4WvolxlpwC33dk8J', annual: 'price_1TCf4PCR4Wvolxlp3MoDzi0J' },
-  scale:        { monthly: 'price_1TCNAHCR4WvolxlpwpLRfmwX', annual: 'price_1TCf52CR4WvolxlpcMMLOVpv' },
-  unlimited:    { monthly: 'price_1TCNAcCR4WvolxlptLzNYdsz', annual: 'price_1TCf5cCR4WvolxlpWGhpOgnI' },
-};
-
-// Precios mostrados en el modal — espejo de Pricing.tsx
-const TIER_PRICES = { professional: 39, scale: 79, unlimited: 199 };
+// Stripe price IDs, precios y features viven en src/lib/plans.ts (fuente unica
+// de verdad, compartida con la landing Pricing). Antes se duplicaban aqui y el
+// precio de Unlimited se quedo desfasado (199€ en vez de 99€).
 
 // Copy especifico por resource. Cada entrada tiene:
 //  - icon, headline, subhead: lo que el visitante lee
@@ -142,30 +142,19 @@ const DEFAULT_COPY = {
   recommend: 'scale' as const,
 };
 
-// Beneficios concretos del plan al que sube el usuario, relativos al
-// resource que disparo el limite. Mantiene el lenguaje ganancia, no
-// privacion. Tres bullets max por bloque para escaneabilidad.
+// Beneficios concretos del plan, derivados de los limites REALES (src/lib/plans),
+// con el bullet relevante al limite alcanzado reordenado al principio para
+// conectar el dolor con la solucion.
 function gainsFor(
   resource: Resource | undefined,
-  tier: 'professional' | 'scale' | 'unlimited',
+  tier: PaidTier,
   isEs: boolean,
 ): string[] {
-  const fmt = (n: number) => n.toLocaleString(isEs ? 'es-ES' : 'en-US');
-  const baseEs: Record<typeof tier, string[]> = {
-    professional: ['20 clientes activos', '2.000 mensajes / mes', 'Automatizaciones esenciales'],
-    scale:        ['60 clientes activos', `${fmt(10_000)} mensajes / mes`, 'Automatizaciones avanzadas + alertas'],
-    unlimited:    ['Sin límite de clientes', 'Sin límite de mensajes', 'Todo el motor + API'],
-  };
-  const baseEn: Record<typeof tier, string[]> = {
-    professional: ['20 active clients', '2,000 messages / month', 'Essential automations'],
-    scale:        ['60 active clients', '10,000 messages / month', 'Advanced automations + alerts'],
-    unlimited:    ['Unlimited clients', 'Unlimited messages', 'Full engine + API'],
-  };
-  // Reorder para que el bullet relevante al limite quede primero — mejora
-  // la conexion entre el dolor y la solucion.
-  const list = (isEs ? baseEs : baseEn)[tier];
+  const list = planFeatures(tier, isEs); // [clientes, mensajes, automatizaciones]
   if (resource === 'monthlyMessages') return [list[1], list[0], list[2]];
-  if (resource === 'storageGB') return [list[2], list[0], list[1]];
+  if (resource === 'storageGB' || resource === 'activeAutomations' || resource === 'activeAlerts') {
+    return [list[2], list[0], list[1]];
+  }
   return list;
 }
 
@@ -213,17 +202,25 @@ export default function PaywallLimitModal() {
   const recommended = copy.recommend;          // tier sugerido principal
   const anchor: 'unlimited' = 'unlimited';     // tier ancla (precio mas alto)
 
-  const handleUpgrade = async (tier: 'professional' | 'scale' | 'unlimited') => {
+  const handleUpgrade = async (tier: PaidTier) => {
     if (!user) return;
     setLoadingTier(tier);
     try {
-      const selectedPriceId = isAnnual ? PRICE_MAP[tier].annual : PRICE_MAP[tier].monthly;
+      // Mismo endpoint que la pantalla de Billing/Pricing: crea la Checkout
+      // Session de Stripe; al volver con ?session_id=, BillingContext llama a
+      // /stripe/sync-session (no depende del webhook) y refresca el plan.
+      const selectedPriceId = priceIdFor(tier, isAnnual);
       const data = await fetchWithAuth('/stripe/create-checkout-session', {
         method: 'POST',
         body: JSON.stringify({ priceId: selectedPriceId, userId: user.id, userEmail: user.email }),
       });
       if (data?.url) {
         window.location.href = data.url;
+      } else if (String(data?.error || '').includes('already_subscribed')) {
+        // Ya tiene una suscripcion: mandarlo al portal de facturacion en vez de
+        // crear un segundo cobro.
+        setOpen(false);
+        try { window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'subscriptions' })); } catch { /* noop */ }
       } else {
         throw new Error(data?.error || 'Failed to create checkout session');
       }
@@ -422,14 +419,12 @@ export default function PaywallLimitModal() {
   );
 }
 
-function labelOfTier(t: 'professional' | 'scale' | 'unlimited'): string {
-  if (t === 'professional') return 'Professional';
-  if (t === 'scale') return 'Scale';
-  return 'Unlimited';
+function labelOfTier(t: PaidTier): string {
+  return TIER_LABEL[t];
 }
 
 interface PlanCardProps {
-  tier: 'professional' | 'scale' | 'unlimited';
+  tier: PaidTier;
   isEs: boolean;
   isAnnual: boolean;
   gains: string[];
@@ -441,43 +436,43 @@ interface PlanCardProps {
 }
 
 function PlanCard({ tier, isEs, isAnnual, gains, loading, highlight, onClick, cta, badge }: PlanCardProps) {
-  const monthly = TIER_PRICES[tier];
-  const price = isAnnual ? Math.round(monthly * 0.8) : monthly;
+  const price = effectiveMonthly(tier, isAnnual);
   return (
     <div
-      className={`relative rounded-2xl border p-5 ${
+      className={`relative rounded-2xl border p-5 shadow-sm transition-shadow flex flex-col ${
         highlight
-          ? 'bg-emerald-50/60 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/30 ring-2 ring-emerald-500/20'
-          : 'bg-white dark:bg-slate-800/50 border-gray-100 dark:border-slate-800'
+          ? 'bg-white dark:bg-slate-900 border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]/20'
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
       }`}
     >
       {badge && (
         <span
           className={`absolute -top-3 left-5 text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${
             highlight
-              ? 'bg-emerald-500 text-white shadow-sm'
-              : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400'
+              ? 'text-white shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
           }`}
+          style={highlight ? { backgroundColor: 'var(--brand-primary)' } : undefined}
         >
           {badge}
         </span>
       )}
-      <div className="flex items-baseline justify-between mb-1">
-        <h3 className="text-lg font-medium tracking-tight dark:text-white">{labelOfTier(tier)}</h3>
+      <div className="flex items-center gap-2 mb-1">
+        <h3 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">{labelOfTier(tier)}</h3>
       </div>
       <div className="flex items-baseline gap-1 mb-4">
-        <span className="text-3xl font-medium tabular-nums dark:text-white">{price}€</span>
-        <span className="text-xs text-gray-400 dark:text-slate-500">/{isEs ? 'mes' : 'mo'}</span>
+        <span className="text-3xl font-black tabular-nums text-slate-900 dark:text-white">{price}€</span>
+        <span className="text-xs font-semibold text-slate-400">/{isEs ? 'mes' : 'mo'}</span>
         {isAnnual && (
-          <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-emerald-600">
-            {isEs ? '−20%' : '−20%'}
+          <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-primary)]">
+            −20%
           </span>
         )}
       </div>
-      <ul className="space-y-1.5 mb-5">
+      <ul className="space-y-2 mb-5 flex-grow">
         {gains.map((g, i) => (
-          <li key={i} className="text-[13px] text-gray-700 dark:text-slate-200 flex items-start gap-2">
-            <Sparkles className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${highlight ? 'text-emerald-500' : 'text-gray-400 dark:text-slate-500'}`} />
+          <li key={i} className="text-[13px] font-medium text-slate-600 dark:text-slate-300 flex items-start gap-2">
+            <Check className={`w-4 h-4 mt-0.5 shrink-0 ${highlight ? 'text-[var(--brand-primary)]' : 'text-slate-400'}`} />
             <span>{g}</span>
           </li>
         ))}
@@ -486,11 +481,12 @@ function PlanCard({ tier, isEs, isAnnual, gains, loading, highlight, onClick, ct
         type="button"
         onClick={onClick}
         disabled={loading}
-        className={`w-full inline-flex items-center justify-center gap-2 py-3 rounded-full text-sm font-bold transition-colors ${
+        style={highlight ? { backgroundColor: 'var(--brand-primary)' } : undefined}
+        className={`w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition disabled:opacity-60 disabled:cursor-not-allowed ${
           highlight
-            ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-500/30'
-            : 'bg-black dark:bg-white text-white dark:text-slate-900 hover:bg-gray-800 dark:hover:bg-slate-200'
-        } disabled:opacity-60 disabled:cursor-not-allowed`}
+            ? 'text-white hover:brightness-95'
+            : 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+        }`}
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUpRight className="w-4 h-4" />}
         {cta}
