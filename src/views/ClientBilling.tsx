@@ -922,19 +922,25 @@ function ClientPicker({ clients, value, onChange, isEs, compact }: {
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
-  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Panel posicionado con position:fixed calculado desde el botón, para que
-  // NUNCA lo recorte el overflow del modal con scroll.
+  // NUNCA lo recorte el overflow del modal con scroll. Se abre hacia abajo o
+  // hacia arriba según el espacio disponible, y limita su alto al hueco real
+  // para que la lista siempre pueda scrollearse entera.
   const place = () => {
     const r = btnRef.current?.getBoundingClientRect();
     if (!r) return;
     const width = Math.max(r.width, 240);
-    // Si no cabe a la derecha, lo alineamos para que no se salga del viewport.
     const left = Math.min(r.left, window.innerWidth - width - 8);
-    setCoords({ top: r.bottom + 4, left: Math.max(8, left), width });
+    const spaceBelow = window.innerHeight - r.bottom - 8;
+    const spaceAbove = r.top - 8;
+    const openUp = spaceBelow < 220 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(160, Math.min(360, openUp ? spaceAbove : spaceBelow));
+    const top = openUp ? Math.max(8, r.top - 4 - maxHeight) : r.bottom + 4;
+    setCoords({ top, left: Math.max(8, left), width, maxHeight });
   };
 
   useEffect(() => {
@@ -945,15 +951,22 @@ function ClientPicker({ clients, value, onChange, isEs, compact }: {
       if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       setOpen(false);
     };
-    // Cerrar al hacer scroll (el panel fixed quedaría desanclado) o resize.
-    const onScroll = () => setOpen(false);
+    // Reposiciona al hacer scroll de un ancestro (el panel es fixed y quedaría
+    // desanclado), PERO ignora el scroll que ocurre DENTRO del propio panel
+    // (la lista de clientes) — si no, no se podría desplazar la lista.
+    const onScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (target && panelRef.current?.contains(target)) return; // scroll interno de la lista → no tocar
+      place();
+    };
+    const onResize = () => place();
     document.addEventListener('mousedown', onDoc);
     window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', onResize);
     return () => {
       document.removeEventListener('mousedown', onDoc);
       window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', onResize);
     };
   }, [open]);
 
@@ -980,8 +993,8 @@ function ClientPicker({ clients, value, onChange, isEs, compact }: {
       {open && coords && (
         <div
           ref={panelRef}
-          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 60 }}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden"
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, maxHeight: coords.maxHeight, zIndex: 60 }}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden flex flex-col"
         >
           {clients.length > 6 && (
             <div className="p-2 border-b border-slate-100 dark:border-slate-800">
@@ -997,7 +1010,7 @@ function ClientPicker({ clients, value, onChange, isEs, compact }: {
               </div>
             </div>
           )}
-          <div className="max-h-52 overflow-y-auto py-1">
+          <div className="flex-1 overflow-y-auto py-1" style={{ overscrollBehavior: 'contain' }}>
             {filtered.length === 0 ? (
               <div className="px-3 py-3 text-xs text-slate-400 text-center">{isEs ? 'Sin clientes' : 'No clients'}</div>
             ) : filtered.map(c => (
