@@ -4,7 +4,7 @@ import {
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
   DownloadCloud, ChevronDown, ChevronUp, Search, Check, FileDown,
   Wallet, CalendarClock, Repeat, Archive, Package, Trash2,
-  Settings2, Pause, Play, RotateCcw, Ban, MoreVertical,
+  Settings2, Pause, Play, RotateCcw, Ban, MoreVertical, Ticket,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -116,6 +116,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const [assignPlan, setAssignPlan] = useState<Plan | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Plan | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Plan | null>(null);
+  const [promoPlan, setPromoPlan] = useState<Plan | null>(null);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
   const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'canceled'>('all');
@@ -450,6 +451,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           onUnarchive={unarchivePlan}
           onDelete={(p) => setDeleteTarget(p)}
           onCopyLink={copyPlanLink}
+          onPromos={(p) => setPromoPlan(p)}
         />
       )}
 
@@ -709,6 +711,15 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           busy={busyPlanId === deleteTarget.id}
           onClose={() => setDeleteTarget(null)}
           onConfirm={async (deactivateStripe) => { await doDeletePlan(deleteTarget, deactivateStripe); setDeleteTarget(null); }}
+        />
+      )}
+
+      {promoPlan && (
+        <PlanPromoCodesModal
+          isEs={isEs}
+          locale={locale}
+          plan={promoPlan}
+          onClose={() => setPromoPlan(null)}
         />
       )}
     </div>
@@ -1444,7 +1455,7 @@ function planPeriod(plan: Plan, isEs: boolean): string {
 // ── Pestaña Planes: catálogo de planes reutilizables ────────────────────────
 function PlansTab({
   isEs, locale, plans, loading, busyPlanId, copiedPlanId,
-  onCreate, onAssign, onEdit, onArchive, onUnarchive, onDelete, onCopyLink,
+  onCreate, onAssign, onEdit, onArchive, onUnarchive, onDelete, onCopyLink, onPromos,
 }: {
   isEs: boolean;
   locale: string;
@@ -1459,6 +1470,7 @@ function PlansTab({
   onUnarchive: (p: Plan) => void;
   onDelete: (p: Plan) => void;
   onCopyLink: (p: Plan) => void;
+  onPromos: (p: Plan) => void;
 }) {
   if (loading) {
     return (
@@ -1546,21 +1558,19 @@ function PlansTab({
                   {isEs ? 'Desarchivar' : 'Unarchive'}
                 </button>
               )}
-              {plan.payment_url && !archived && (
-                <IconBtn
-                  title={copiedPlanId === plan.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar link de pago' : 'Copy payment link')}
-                  onClick={() => onCopyLink(plan)}
-                  icon={copiedPlanId === plan.id ? CheckCircle2 : Link2}
-                  accent={copiedPlanId === plan.id ? 'emerald' : undefined}
-                />
-              )}
-              {!archived && (
-                <>
-                  <IconBtn title={isEs ? 'Editar plan' : 'Edit plan'} onClick={() => onEdit(plan)} icon={Pencil} />
-                  <IconBtn title={isEs ? 'Archivar' : 'Archive'} onClick={() => onArchive(plan)} icon={Archive} accent="rose" />
-                </>
-              )}
-              <IconBtn title={isEs ? 'Eliminar plan' : 'Delete plan'} onClick={() => onDelete(plan)} icon={Trash2} accent="rose" />
+              <RowActionsMenu
+                isEs={isEs}
+                busy={busy}
+                actions={[
+                  ...(!archived && plan.payment_url ? [{ key: 'copy', icon: copiedPlanId === plan.id ? CheckCircle2 : Link2, label: copiedPlanId === plan.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar enlace de pago' : 'Copy payment link'), onClick: () => onCopyLink(plan), accent: copiedPlanId === plan.id ? 'emerald' as const : undefined }] : []),
+                  ...(!archived ? [
+                    { key: 'edit', icon: Pencil, label: isEs ? 'Editar plan' : 'Edit plan', onClick: () => onEdit(plan) },
+                    { key: 'promos', icon: Ticket, label: isEs ? 'Códigos promocionales' : 'Promotion codes', onClick: () => onPromos(plan) },
+                    { key: 'archive', icon: Archive, label: isEs ? 'Archivar' : 'Archive', onClick: () => onArchive(plan), accent: 'rose' as const },
+                  ] : []),
+                  { key: 'delete', icon: Trash2, label: isEs ? 'Eliminar plan' : 'Delete plan', onClick: () => onDelete(plan), accent: 'rose' as const },
+                ]}
+              />
             </div>
           </div>
         );
@@ -1622,7 +1632,12 @@ function ClientMultiPicker({ clients, selected, onToggle, isEs }: {
 }
 
 // ── Gestor de códigos promocionales (cupón + promotion code en Stripe) ──────
-function PromoCodesManager({ isEs, locale, currency }: { isEs: boolean; locale: string; currency: string }) {
+function PromoCodesManager({ isEs, locale, currency, planId }: { isEs: boolean; locale: string; currency: string; planId?: string }) {
+  // Cuando hay planId, los códigos quedan ligados al plan (cupón restringido a
+  // su producto en Stripe); si no, son de cuenta.
+  const basePath = planId
+    ? `/manager/client-billing/plans/${planId}/promotion-codes`
+    : '/manager/client-billing/promotion-codes';
   const [codes, setCodes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
@@ -1635,7 +1650,7 @@ function PromoCodesManager({ isEs, locale, currency }: { isEs: boolean; locale: 
 
   const load = async () => {
     setLoading(true);
-    try { const d = await fetchWithAuth('/manager/client-billing/promotion-codes'); setCodes(Array.isArray(d?.codes) ? d.codes : []); }
+    try { const d = await fetchWithAuth(basePath); setCodes(Array.isArray(d?.codes) ? d.codes : []); }
     catch { /* p.ej. Stripe no conectado */ }
     finally { setLoading(false); }
   };
@@ -1648,7 +1663,7 @@ function PromoCodesManager({ isEs, locale, currency }: { isEs: boolean; locale: 
     if (discType === 'percent' && v > 100) { setErr(isEs ? 'El porcentaje no puede superar 100.' : 'Percent can’t exceed 100.'); return; }
     setAdding(true);
     try {
-      await fetchWithAuth('/manager/client-billing/promotion-codes', {
+      await fetchWithAuth(basePath, {
         method: 'POST',
         body: JSON.stringify({
           code: code.trim() || undefined,
@@ -1743,6 +1758,34 @@ function PromoCodesManager({ isEs, locale, currency }: { isEs: boolean; locale: 
           {isEs ? 'Añadir código' : 'Add code'}
         </button>
         <p className="text-[10px] text-slate-400">{isEs ? 'Stripe lo guarda en mayúsculas; solo letras, números, guion y guion bajo. Déjalo vacío para uno automático.' : 'Stripe stores it uppercase; letters, numbers, hyphen and underscore only. Leave empty for an auto-generated one.'}</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal: códigos promocionales de un plan ────────────────────────────────
+// Los códigos quedan LIGADOS al plan (cupón restringido a su producto en
+// Stripe). Al crear uno se habilita allow_promotion_codes en el link del plan,
+// para que el cliente final lo introduzca en el checkout y se le aplique solo.
+function PlanPromoCodesModal({ isEs, locale, plan, onClose }: { isEs: boolean; locale: string; plan: Plan; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 pt-6 pb-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Ticket className="w-5 h-5 text-slate-400" /> {isEs ? 'Códigos promocionales' : 'Promotion codes'}</h3>
+            <p className="text-xs text-slate-400 truncate">{plan.name}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 flex-shrink-0"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="px-6 pb-6 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            {isEs
+              ? 'Estos códigos solo descuentan este plan. Se crean en tu cuenta de Stripe y el cliente los introduce en el pago para aplicar el descuento automáticamente.'
+              : 'These codes only discount this plan. They are created in your Stripe account and the client enters them at checkout to get the discount automatically.'}
+          </p>
+          <PromoCodesManager isEs={isEs} locale={locale} currency={(plan.currency || 'eur')} planId={plan.id} />
+        </div>
       </div>
     </div>
   );

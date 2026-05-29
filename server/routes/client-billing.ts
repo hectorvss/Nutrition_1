@@ -1652,6 +1652,96 @@ router.post('/promotion-codes/:id/deactivate', async (req: any, res) => {
   }
 });
 
+// ── Códigos promocionales LIGADOS A UN PLAN ────────────────────────────────
+// A diferencia de los de cuenta, el cupón se restringe al PRODUCTO del plan
+// (`applies_to.products`) y el código se etiqueta con metadata.plan_id, así
+// que solo descuenta ese plan. Además nos aseguramos de que el Payment Link
+// del plan acepte códigos (allow_promotion_codes) para que el cliente final
+// los pueda introducir en el checkout y se aplique el descuento solo.
+
+// GET /plans/:id/promotion-codes — códigos de ESTE plan (metadata.plan_id).
+router.get('/plans/:id/promotion-codes', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: plan } = await supabaseAdmin.from('billing_plans').select('id').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error, message: 'Conecta tu cuenta de Stripe en Ajustes → Integraciones.' });
+    const { stripe } = conn;
+    const list = await stripe.promotionCodes.list({ active: true, limit: 100, expand: ['data.coupon'] });
+    const codes = list.data.filter(pc => (pc.metadata as any)?.plan_id === id).map(mapPromo);
+    res.json({ codes });
+  } catch (error: any) {
+    console.error('Error listing plan promotion codes:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /plans/:id/promotion-codes — crea un código ligado al plan.
+router.post('/plans/:id/promotion-codes', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+
+    const { code, discount_type, value, duration, duration_in_months, max_redemptions } = req.body;
+
+    let safeCode: string | undefined;
+    if (typeof code === 'string' && code.trim()) {
+      const cleaned = code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+      if (!cleaned) return res.status(400).json({ error: 'invalid_code', message: 'El código solo puede contener letras, números, guion y guion bajo.' });
+      safeCode = cleaned.slice(0, 50);
+    }
+    const valNum = Number(value);
+    if (!Number.isFinite(valNum) || valNum <= 0) return res.status(400).json({ error: 'invalid_value' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+
+    // 1) Cupón restringido al producto del plan.
+    const couponParams: any = { duration: ['once', 'forever', 'repeating'].includes(duration) ? duration : 'once' };
+    if (couponParams.duration === 'repeating') {
+      const m = Number(duration_in_months);
+      couponParams.duration_in_months = Number.isFinite(m) && m >= 1 && m <= 36 ? Math.round(m) : 3;
+    }
+    if (discount_type === 'amount') {
+      couponParams.amount_off = Math.round(valNum * 100);
+      couponParams.currency = (plan.currency || 'eur').toLowerCase();
+    } else {
+      couponParams.percent_off = Math.min(100, Math.max(1, valNum));
+    }
+    if (plan.stripe_product_id) couponParams.applies_to = { products: [plan.stripe_product_id] };
+    couponParams.name = plan.name ? `${plan.name}`.slice(0, 40) : undefined;
+    const coupon = await stripe.coupons.create(couponParams);
+
+    // 2) Código promocional etiquetado con el plan.
+    const promoParams: any = { coupon: coupon.id, metadata: { plan_id: id, manager_id: req.user.id } };
+    if (safeCode) promoParams.code = safeCode;
+    const mr = Number(max_redemptions);
+    if (Number.isFinite(mr) && mr >= 1) promoParams.max_redemptions = Math.round(mr);
+    const pc = await stripe.promotionCodes.create(promoParams);
+
+    // 3) Asegura que el Payment Link del plan acepta códigos (si no, el cliente
+    //    no podría introducirlos en el checkout).
+    if (!plan.allow_promotion_codes && plan.stripe_payment_link_id) {
+      try {
+        await stripe.paymentLinks.update(plan.stripe_payment_link_id, { allow_promotion_codes: true });
+        await supabaseAdmin.from('billing_plans').update({ allow_promotion_codes: true }).eq('id', id);
+      } catch (e) { console.error('Could not enable promos on plan link (non-fatal):', e); }
+    }
+
+    const full = await stripe.promotionCodes.retrieve(pc.id, { expand: ['coupon'] });
+    res.json(mapPromo(full));
+  } catch (error: any) {
+    console.error('Error creating plan promotion code:', error);
+    res.status(400).json({ error: 'stripe_error', message: safeErr(error, 'No se pudo crear el código.') });
+  }
+});
+
 // ── Barrido automático (cron) ──────────────────────────────────────────────
 // Como no hay webhooks por-coach, el cron diario sincroniza los cobros que
 // siguen pendientes/impagos contra Stripe y avisa al coach de los que se han
