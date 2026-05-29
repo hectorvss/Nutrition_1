@@ -60,6 +60,14 @@ export const articles: ResourceArticle[] = [
         ],
       },
       {
+        type: 'img',
+        src: '/landing/feature-checkins.png',
+        gradient: 'gradient-bg-writing',
+        alt: 'Check-ins semanales con puntuación de adherencia y último peso registrado',
+        es: 'Los check-ins semanales te dan la puntuación de adherencia y el último peso en el mismo sitio, así conviertes ese número fijo de cada semana en una tendencia fácil de leer.',
+        en: 'Weekly check-ins put the adherence score and the latest weight in one place, turning that fixed weekly number into a trend that’s easy to read.',
+      },
+      {
         type: 'h',
         es: 'Qué hacer cuando la adherencia cae',
         en: 'What to do when adherence drops',
@@ -135,6 +143,14 @@ export const articles: ResourceArticle[] = [
         ],
       },
       {
+        type: 'img',
+        src: '/landing/feature-automations.png',
+        gradient: 'gradient-bg-learning',
+        alt: 'Lista de automatizaciones con renovación de plan, check-in semanal y radar de abandono',
+        es: 'Las automatizaciones —renovación de plan, check-in semanal, radar de abandono— hacen por ti el trabajo repetitivo que de otra forma te ataría a 20 clientes.',
+        en: 'Automations —plan renewal, weekly check-in, churn radar— handle the repetitive work for you that would otherwise cap you at 20 clients.',
+      },
+      {
         type: 'h',
         es: 'Qué estandarizar y qué personalizar',
         en: 'What to standardise and what to personalise',
@@ -151,6 +167,14 @@ export const articles: ResourceArticle[] = [
           'Personalise: how you read the data, the adjustments based on individual response and the tone of the conversation.',
           'Never standardise: the decision of when to change the plan, nor your attention in the client’s hard moments.',
         ],
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-messages.png',
+        gradient: 'gradient-bg-privacy',
+        alt: 'Bandeja de mensajería uno a uno con los clientes',
+        es: 'La mensajería uno a uno concentra las conversaciones en un único hilo por cliente: ahí reservas tu atención personal sin perderla entre apps y notificaciones sueltas.',
+        en: 'One-on-one messaging keeps each client’s conversation in a single thread: that’s where you save your personal attention without scattering it across apps and stray notifications.',
       },
       {
         type: 'tip',
@@ -216,6 +240,14 @@ export const articles: ResourceArticle[] = [
         type: 'p',
         es: 'La mayoría de estos errores desaparecen con una rutina de revisión de dos minutos antes de enviar el plan: comprueba que la proteína cubre el objetivo, que la fibra llega al rango razonable, que recalculaste las cifras para este cliente y que ningún alimento choca con sus alergias o sus gustos. No es glamuroso, pero es lo que separa un plan que funciona de uno que vuelve corregido.',
         en: 'Most of these mistakes disappear with a two-minute review routine before sending the plan: check that protein covers the target, that fibre reaches a reasonable range, that you recalculated the numbers for this client and that no food clashes with their allergies or preferences. It isn’t glamorous, but it’s what separates a plan that works from one that comes back for corrections.',
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-library.png',
+        gradient: 'gradient-bg-planning',
+        alt: 'Biblioteca de alimentos y recetas con tarjetas, kcal y etiquetas',
+        es: 'La biblioteca de alimentos y recetas, con kcal y etiquetas a la vista, te deja partir de opciones ya cuadradas y filtradas en lugar de recalcular cada plan desde cero.',
+        en: 'The foods and recipes library, with kcal and tags on show, lets you start from options that already add up and are filtered, instead of recalculating every plan from scratch.',
       },
       {
         type: 'tip',

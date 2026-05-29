@@ -54,6 +54,14 @@ export const guides: ResourceArticle[] = [
       },
       {
         type: 'img',
+        src: '/landing/feature-onboarding.png',
+        gradient: 'gradient-bg-shopping',
+        alt: 'Seguimiento de onboarding con asignación y estado por cliente',
+        es: 'Asigna el onboarding y sigue su estado cliente a cliente para no dejar ningún alta a medias.',
+        en: 'Assign the onboarding and track its status per client so no setup is left half-finished.',
+      },
+      {
+        type: 'img',
         src: '/landing/feature-clients.png',
         gradient: 'gradient-bg-learning',
         alt: 'Lista de clientes con estado, plan, adherencia y próxima cita',
@@ -127,6 +135,14 @@ export const guides: ResourceArticle[] = [
         alt: 'Plan de nutrición por cliente con objetivo, porcentaje de macros y kilocalorías',
         es: 'Cada plan de nutrición arranca de un preset y se afina con el objetivo, los macros y las kcal del cliente.',
         en: 'Each nutrition plan starts from a preset and is fine-tuned with the client’s goal, macros and kcal.',
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-library.png',
+        gradient: 'gradient-bg-learning',
+        alt: 'Biblioteca de alimentos y recetas con tarjetas que muestran kcal y etiquetas',
+        es: 'La biblioteca de alimentos y recetas te da bloques reutilizables con sus kcal y etiquetas para montar listas intercambiables.',
+        en: 'The Foods & Recipes library gives you reusable blocks with their kcal and tags to build interchangeable lists.',
       },
       {
         type: 'h',
@@ -204,6 +220,14 @@ export const guides: ResourceArticle[] = [
         type: 'p',
         es: 'Semanal es la cadencia por defecto para la mayoría: suficiente para corregir el rumbo, sin saturar al cliente. Para revisarlos rápido, mira primero la tendencia de peso y la adherencia: si la adherencia es alta y el peso no se mueve en la dirección esperada, ajusta el plan; si la adherencia es baja, el problema no son las cifras, es el cumplimiento, y ahí toca conversación, no recalcular macros.',
         en: 'Weekly is the default cadence for most clients: enough to course-correct without overwhelming them. To review fast, look first at the weight trend and adherence: if adherence is high and weight isn’t moving as expected, adjust the plan; if adherence is low, the problem isn’t the numbers but the follow-through, and that calls for a conversation, not recalculating macros.',
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-messages.png',
+        gradient: 'gradient-bg-writing',
+        alt: 'Bandeja de mensajería uno a uno con el cliente',
+        es: 'Cierra cada check-in en la mensajería uno a uno con esa única acción concreta para la semana.',
+        en: 'Close each check-in in the 1-on-1 messaging inbox with that single concrete action for the week.',
       },
       {
         type: 'tip',

@@ -40,6 +40,14 @@ export const stories: ResourceArticle[] = [
         ],
       },
       {
+        type: 'img',
+        src: '/landing/feature-onboarding.png',
+        gradient: 'gradient-bg-writing',
+        alt: 'Seguimiento de onboarding con el estado de alta de cada cliente',
+        es: 'El seguimiento de onboarding muestra en qué punto está cada cliente nuevo.',
+        en: 'Onboarding tracking shows exactly where each new client stands.',
+      },
+      {
         type: 'h',
         es: 'Qué cambió',
         en: 'What changed',
@@ -66,6 +74,14 @@ export const stories: ResourceArticle[] = [
         type: 'p',
         es: 'No desapareció el WhatsApp, pero dejó de ser su sistema de gestión para volver a ser solo un canal de conversación. Las revisiones quedaron programadas, los recordatorios salían solos y, sobre todo, Marta recuperó la cabeza para lo que de verdad importa: el entrenamiento.',
         en: 'WhatsApp did not disappear, but it stopped being her management system and went back to being just a conversation channel. Check-ins were scheduled, reminders went out on their own and, above all, Marta got her head back for what really matters: the coaching.',
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-messages.png',
+        gradient: 'gradient-bg-privacy',
+        alt: 'Bandeja de mensajería uno a uno con los clientes',
+        es: 'La mensajería uno a uno mantiene la conversación cercana, ya ordenada.',
+        en: 'One-on-one messaging keeps the conversation close, now organised.',
       },
       {
         type: 'quote',
@@ -148,6 +164,14 @@ export const stories: ResourceArticle[] = [
         en: 'Today a new client gets the same tidy experience whether Javier or any trainer on the team looks after them. Automations cover the minimum quality floor and leave each trainer the room to add their personal touch where it really counts.',
       },
       {
+        type: 'img',
+        src: '/landing/feature-automations.png',
+        gradient: 'gradient-bg-planning',
+        alt: 'Lista de automatizaciones activas del estudio',
+        es: 'Las automatizaciones activas garantizan el suelo mínimo de calidad.',
+        en: 'Active automations guarantee the minimum quality floor.',
+      },
+      {
         type: 'quote',
         es: 'Lo que más me gusta es que el flujo no le quita personalidad a nadie. Garantiza lo básico y libera al entrenador para lo humano, que es donde marcamos la diferencia.',
         en: 'What I like most is that the flow does not strip anyone’s personality. It guarantees the basics and frees the trainer for the human side, which is where we make the difference.',
@@ -221,6 +245,14 @@ export const stories: ResourceArticle[] = [
         type: 'p',
         es: 'Con las tardes administrativas de vuelta en su calendario, Lucía pudo aceptar más clientes sin alargar su jornada y, con los números delante, por fin se animó a ajustar su tarifa. Su sensación es que hoy gana bastante más trabajando las mismas horas, simplemente porque el tiempo va a entrenar y no a la administración.',
         en: 'With her admin afternoons back in her calendar, Lucía could take on more clients without stretching her day and, with the numbers in front of her, she finally felt confident raising her rate. Her sense is that she now earns considerably more working the same hours, simply because the time goes into coaching instead of admin.',
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-clients.png',
+        gradient: 'gradient-bg-shopping',
+        alt: 'Lista de clientes activos con su estado',
+        es: 'Con la gestión resuelta, la lista de clientes pudo crecer sin más horas.',
+        en: 'With admin solved, the client list could grow without extra hours.',
       },
       {
         type: 'quote',
