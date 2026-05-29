@@ -3,7 +3,7 @@ import {
   CreditCard, Plus, RefreshCw, Send, XCircle, Link2, ExternalLink,
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
   DownloadCloud, ChevronDown, ChevronUp, Search, Check, FileDown,
-  Wallet, CalendarClock, Repeat, Archive, Package,
+  Wallet, CalendarClock, Repeat, Archive, Package, Trash2,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -111,6 +111,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const [editPlan, setEditPlan] = useState<Plan | null>(null);
   const [assignPlan, setAssignPlan] = useState<Plan | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Plan | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Plan | null>(null);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
   const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'canceled'>('all');
@@ -167,6 +168,30 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     setBusyPlanId(plan.id);
     try {
       await fetchWithAuth(`/manager/client-billing/plans/${plan.id}/archive`, { method: 'POST', body: JSON.stringify({}) });
+      await loadPlans();
+    } catch (e: any) {
+      setError(e?.message || 'Error');
+    } finally {
+      setBusyPlanId(null);
+    }
+  };
+
+  const unarchivePlan = async (plan: Plan) => {
+    setBusyPlanId(plan.id);
+    try {
+      await fetchWithAuth(`/manager/client-billing/plans/${plan.id}/unarchive`, { method: 'POST', body: JSON.stringify({}) });
+      await loadPlans();
+    } catch (e: any) {
+      setError(e?.message || 'Error');
+    } finally {
+      setBusyPlanId(null);
+    }
+  };
+
+  const doDeletePlan = async (plan: Plan) => {
+    setBusyPlanId(plan.id);
+    try {
+      await fetchWithAuth(`/manager/client-billing/plans/${plan.id}`, { method: 'DELETE' });
       await loadPlans();
     } catch (e: any) {
       setError(e?.message || 'Error');
@@ -403,6 +428,8 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           onAssign={(p) => setAssignPlan(p)}
           onEdit={(p) => setEditPlan(p)}
           onArchive={(p) => setArchiveTarget(p)}
+          onUnarchive={unarchivePlan}
+          onDelete={(p) => setDeleteTarget(p)}
           onCopyLink={copyPlanLink}
         />
       )}
@@ -644,6 +671,54 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           onConfirm={async () => { await doArchivePlan(archiveTarget); setArchiveTarget(null); }}
         />
       )}
+
+      {deleteTarget && (
+        <DeletePlanModal
+          isEs={isEs}
+          plan={deleteTarget}
+          busy={busyPlanId === deleteTarget.id}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={async () => { await doDeletePlan(deleteTarget); setDeleteTarget(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Modal de confirmación al eliminar un plan (destructivo) ────────────────
+function DeletePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: boolean; plan: Plan; busy?: boolean; onClose: () => void; onConfirm: () => void }) {
+  const total = plan.subscribers?.total ?? 0;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Eliminar plan' : 'Delete plan'}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{plan.name}</p>
+          </div>
+        </div>
+        <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+          <p>{isEs ? 'Se eliminará el plan del catálogo y se desactivarán sus objetos en Stripe.' : 'The plan will be removed from the catalog and its Stripe objects deactivated.'}</p>
+          {total > 0 && (
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
+              {isEs
+                ? <>Las <b>{total}</b> asignaciones existentes se conservan en la pestaña Suscripciones (sus suscripciones <b>no se cancelan</b>), pero dejarán de estar vinculadas a este plan.</>
+                : <>The <b>{total}</b> existing assignments stay in the Subscriptions tab (their subscriptions are <b>not canceled</b>), but they’ll no longer be linked to this plan.</>}
+            </div>
+          )}
+          <p className="text-xs text-slate-400">{isEs ? 'Esta acción no se puede deshacer.' : 'This action cannot be undone.'}</p>
+        </div>
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
+          <button onClick={onConfirm} disabled={busy} className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {isEs ? 'Eliminar plan' : 'Delete plan'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1075,7 +1150,7 @@ function planPeriod(plan: Plan, isEs: boolean): string {
 // ── Pestaña Planes: catálogo de planes reutilizables ────────────────────────
 function PlansTab({
   isEs, locale, plans, loading, busyPlanId, copiedPlanId,
-  onCreate, onAssign, onEdit, onArchive, onCopyLink,
+  onCreate, onAssign, onEdit, onArchive, onUnarchive, onDelete, onCopyLink,
 }: {
   isEs: boolean;
   locale: string;
@@ -1087,6 +1162,8 @@ function PlansTab({
   onAssign: (p: Plan) => void;
   onEdit: (p: Plan) => void;
   onArchive: (p: Plan) => void;
+  onUnarchive: (p: Plan) => void;
+  onDelete: (p: Plan) => void;
   onCopyLink: (p: Plan) => void;
 }) {
   if (loading) {
@@ -1156,7 +1233,7 @@ function PlansTab({
             </div>
 
             <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              {!archived && (
+              {!archived ? (
                 <button
                   onClick={() => onAssign(plan)}
                   style={brandStyle}
@@ -1164,8 +1241,18 @@ function PlansTab({
                 >
                   <Users className="w-3.5 h-3.5" /> {isEs ? 'Asignar' : 'Assign'}
                 </button>
+              ) : (
+                <button
+                  onClick={() => onUnarchive(plan)}
+                  disabled={busy}
+                  style={brandStyle}
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg ${brandBtnCls} text-xs font-bold`}
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                  {isEs ? 'Desarchivar' : 'Unarchive'}
+                </button>
               )}
-              {plan.payment_url && (
+              {plan.payment_url && !archived && (
                 <IconBtn
                   title={copiedPlanId === plan.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar link de pago' : 'Copy payment link')}
                   onClick={() => onCopyLink(plan)}
@@ -1173,10 +1260,13 @@ function PlansTab({
                   accent={copiedPlanId === plan.id ? 'emerald' : undefined}
                 />
               )}
-              <IconBtn title={isEs ? 'Editar plan' : 'Edit plan'} onClick={() => onEdit(plan)} icon={Pencil} />
               {!archived && (
-                <IconBtn title={isEs ? 'Archivar' : 'Archive'} onClick={() => onArchive(plan)} icon={Archive} busy={busy} accent="rose" />
+                <>
+                  <IconBtn title={isEs ? 'Editar plan' : 'Edit plan'} onClick={() => onEdit(plan)} icon={Pencil} />
+                  <IconBtn title={isEs ? 'Archivar' : 'Archive'} onClick={() => onArchive(plan)} icon={Archive} accent="rose" />
+                </>
               )}
+              <IconBtn title={isEs ? 'Eliminar plan' : 'Delete plan'} onClick={() => onDelete(plan)} icon={Trash2} accent="rose" />
             </div>
           </div>
         );

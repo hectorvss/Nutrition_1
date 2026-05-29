@@ -953,6 +953,71 @@ router.post('/plans/:id/archive', async (req: any, res) => {
   }
 });
 
+// POST /plans/:id/unarchive — reactiva el plan (producto + link de pago).
+router.post('/plans/:id/unarchive', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    const updates: any = { active: true };
+    const conn = await getCoachStripe(req.user.id);
+    if (!('error' in conn)) {
+      const { stripe } = conn;
+      try { if (plan.stripe_product_id) await stripe.products.update(plan.stripe_product_id, { active: true }); } catch { /* noop */ }
+      // Reactivar el link antiguo; si Stripe no deja (p.ej. el precio quedó
+      // archivado), regeneramos uno nuevo a partir del precio del plan.
+      let linkOk = false;
+      if (plan.stripe_payment_link_id) {
+        try { await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: true }); linkOk = true; } catch { /* fallthrough */ }
+      }
+      if (!linkOk && plan.stripe_price_id) {
+        try {
+          const link = await stripe.paymentLinks.create({
+            line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
+            allow_promotion_codes: !!plan.allow_promotion_codes,
+            metadata: { manager_id: req.user.id, plan: '1' },
+            after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+          });
+          updates.stripe_payment_link_id = link.id;
+          updates.payment_url = link.url;
+        } catch { /* noop */ }
+      }
+    }
+    await supabaseAdmin.from('billing_plans').update(updates).eq('id', id);
+    const { data: fresh } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).maybeSingle();
+    res.json(fresh);
+  } catch (error: any) {
+    console.error('Error unarchiving plan:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// DELETE /plans/:id — elimina el plan del catálogo. Archiva los objetos de
+// Stripe (best-effort) y borra la fila. Las asignaciones existentes
+// (client_billing) se conservan: su plan_id queda en NULL (FK ON DELETE SET
+// NULL) y la suscripción del cliente NO se cancela.
+router.delete('/plans/:id', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    const conn = await getCoachStripe(req.user.id);
+    if (!('error' in conn)) {
+      const { stripe } = conn;
+      try { if (plan.stripe_payment_link_id) await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+      try { if (plan.stripe_product_id) await stripe.products.update(plan.stripe_product_id, { active: false }); } catch { /* noop */ }
+    }
+    const { error } = await supabaseAdmin.from('billing_plans').delete().eq('id', id).eq('manager_id', req.user.id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error deleting plan:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // POST /plans/:id/assign — asigna el plan a uno o varios clientes.
 router.post('/plans/:id/assign', async (req: any, res) => {
   try {
