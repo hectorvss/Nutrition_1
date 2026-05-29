@@ -960,12 +960,17 @@ function ManageSubscriptionModal({ isEs, locale, item, onClose, onChanged, onClo
                   {isRecurring && (
                     <div className="grid grid-cols-3 gap-2">
                       <Field label={isEs ? 'Intervalo' : 'Interval'}>
-                        <select value={interval} onChange={e => setInterval(e.target.value)} className={inputCls}>
-                          <option value="day">{isEs ? 'Día' : 'Day'}</option>
-                          <option value="week">{isEs ? 'Semana' : 'Week'}</option>
-                          <option value="month">{isEs ? 'Mes' : 'Month'}</option>
-                          <option value="year">{isEs ? 'Año' : 'Year'}</option>
-                        </select>
+                        <SelectMenu
+                          value={interval}
+                          onChange={setInterval}
+                          ariaLabel={isEs ? 'Intervalo' : 'Interval'}
+                          options={[
+                            { value: 'day', label: isEs ? 'Día' : 'Day' },
+                            { value: 'week', label: isEs ? 'Semana' : 'Week' },
+                            { value: 'month', label: isEs ? 'Mes' : 'Month' },
+                            { value: 'year', label: isEs ? 'Año' : 'Year' },
+                          ]}
+                        />
                       </Field>
                       <Field label={isEs ? 'Cada' : 'Every'}>
                         <input type="number" min="1" max="52" value={intervalCount} onChange={e => setIntervalCount(e.target.value)} className={inputCls} />
@@ -1295,6 +1300,92 @@ function ImportModal({ isEs, locale, onClose, onImported }: { isEs: boolean; loc
 
 const inputCls = 'w-full p-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:border-[var(--brand-primary)] focus:ring-0 outline-none';
 const selectCls = inputCls;
+
+// ── Desplegable CUSTOM (no <select> nativo) ────────────────────────────────
+// El <select> nativo se ve mal (panel oscuro del SO) y no respeta el tema.
+// Este usa un panel position:fixed calculado desde el botón para que NUNCA lo
+// recorte el overflow de un modal con scroll; se abre arriba/abajo según hueco.
+function SelectMenu({ value, onChange, options, ariaLabel }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  ariaLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const place = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = r.width;
+    const spaceBelow = window.innerHeight - r.bottom - 8;
+    const spaceAbove = r.top - 8;
+    const openUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+    const maxHeight = Math.max(140, Math.min(280, openUp ? spaceAbove : spaceBelow));
+    const top = openUp ? Math.max(8, r.top - 4 - maxHeight) : r.bottom + 4;
+    setCoords({ top, left: r.left, width, maxHeight });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    place();
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (target && panelRef.current?.contains(target)) return;
+      place();
+    };
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', place);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
+  const selected = options.find(o => o.value === value);
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label={ariaLabel}
+        onClick={() => setOpen(o => !o)}
+        className={`${inputCls} flex items-center justify-between gap-2 text-left ${open ? 'border-[var(--brand-primary)]' : ''}`}
+      >
+        <span className="truncate">{selected?.label ?? ''}</span>
+        <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && coords && (
+        <div
+          ref={panelRef}
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, maxHeight: coords.maxHeight, zIndex: 70 }}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-y-auto py-1"
+        >
+          {options.map(o => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => { onChange(o.value); setOpen(false); }}
+              className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm transition ${o.value === value ? 'text-[var(--brand-primary)] font-semibold bg-slate-50 dark:bg-slate-800/60' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+            >
+              <span className="truncate">{o.label}</span>
+              {o.value === value && <Check className="w-4 h-4 flex-shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
 
 // Color de marca que el admin asigna a su SaaS. Para botones sólidos usamos
 // el CSS var inline (Tailwind no resuelve bg- desde una variable arbitraria de
@@ -1744,11 +1835,16 @@ function PromoCodesManager({ isEs, locale, currency, planId }: { isEs: boolean; 
               ))}
             </div>
           </div>
-          <select value={duration} onChange={e => setDuration(e.target.value as any)} className={selectCls}>
-            <option value="once">{isEs ? 'Una vez' : 'Once'}</option>
-            <option value="repeating">{isEs ? 'Varios meses' : 'Several months'}</option>
-            <option value="forever">{isEs ? 'Para siempre' : 'Forever'}</option>
-          </select>
+          <SelectMenu
+            value={duration}
+            onChange={(v) => setDuration(v as any)}
+            ariaLabel={isEs ? 'Duración' : 'Duration'}
+            options={[
+              { value: 'once', label: isEs ? 'Una vez' : 'Once' },
+              { value: 'repeating', label: isEs ? 'Varios meses' : 'Several months' },
+              { value: 'forever', label: isEs ? 'Para siempre' : 'Forever' },
+            ]}
+          />
         </div>
         {duration === 'repeating' && (
           <input type="number" min="1" max="36" value={months} onChange={e => setMonths(e.target.value)} placeholder={isEs ? 'Meses' : 'Months'} className={inputCls} />
@@ -1889,12 +1985,17 @@ function CreatePlanModal({ isEs, locale, onClose, onCreated }: { isEs: boolean; 
               <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className={inputCls} />
             </Field>
             <Field label={isEs ? 'Moneda' : 'Currency'}>
-              <select value={currency} onChange={e => setCurrency(e.target.value)} className={selectCls}>
-                <option value="eur">EUR €</option>
-                <option value="usd">USD $</option>
-                <option value="gbp">GBP £</option>
-                <option value="mxn">MXN $</option>
-              </select>
+              <SelectMenu
+                value={currency}
+                onChange={setCurrency}
+                ariaLabel={isEs ? 'Moneda' : 'Currency'}
+                options={[
+                  { value: 'eur', label: 'EUR €' },
+                  { value: 'usd', label: 'USD $' },
+                  { value: 'gbp', label: 'GBP £' },
+                  { value: 'mxn', label: 'MXN $' },
+                ]}
+              />
             </Field>
           </div>
 
@@ -2048,12 +2149,17 @@ function EditPlanModal({ isEs, locale, plan, onClose, onSaved }: { isEs: boolean
               <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className={inputCls} />
             </Field>
             <Field label={isEs ? 'Moneda' : 'Currency'}>
-              <select value={currency} onChange={e => setCurrency(e.target.value)} className={selectCls}>
-                <option value="eur">EUR €</option>
-                <option value="usd">USD $</option>
-                <option value="gbp">GBP £</option>
-                <option value="mxn">MXN $</option>
-              </select>
+              <SelectMenu
+                value={currency}
+                onChange={setCurrency}
+                ariaLabel={isEs ? 'Moneda' : 'Currency'}
+                options={[
+                  { value: 'eur', label: 'EUR €' },
+                  { value: 'usd', label: 'USD $' },
+                  { value: 'gbp', label: 'GBP £' },
+                  { value: 'mxn', label: 'MXN $' },
+                ]}
+              />
             </Field>
           </div>
 
