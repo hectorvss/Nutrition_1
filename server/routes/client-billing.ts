@@ -1098,7 +1098,7 @@ async function createStripePlanObjects(stripe: Stripe, p: {
 
 // Crea la asignación de un plan a un cliente (fila client_billing) y, si se
 // pide, envía la tarjeta de pago al chat. Reutiliza el link del plan.
-async function assignPlanRow(managerId: string, plan: any, clientId: string, sendToChat: boolean) {
+export async function assignPlanRow(managerId: string, plan: any, clientId: string, sendToChat: boolean) {
   const { data: inserted } = await supabaseAdmin
     .from('client_billing')
     .insert({
@@ -1753,7 +1753,7 @@ export async function runBillingSyncSweep(): Promise<{ checked: number; paid: nu
   try {
     const { data: rows } = await supabaseAdmin
       .from('client_billing')
-      .select('id, manager_id, client_id, status, stripe_subscription_id, stripe_invoice_id, stripe_payment_link_id, amount_cents, currency')
+      .select('id, manager_id, client_id, status, stripe_subscription_id, stripe_invoice_id, stripe_payment_link_id, amount_cents, currency, description, interval, payment_url, current_period_end, plan_id')
       .in('status', ['pending', 'past_due'])
       .or('stripe_subscription_id.not.is.null,stripe_invoice_id.not.is.null,stripe_payment_link_id.not.is.null')
       // Tope conservador: las llamadas a Stripe son secuenciales (timeout 8s
@@ -1810,6 +1810,16 @@ export async function runBillingSyncSweep(): Promise<{ checked: number; paid: nu
           if (isPaid(newStatus) && !isPaid(row.status)) {
             paid++;
             await notifyManagerOfPayment(row.manager_id, row.client_id, { ...row, ...updates });
+            // Fallback (sin webhook): dispara el workflow de pago recibido.
+            try {
+              const { runWorkflowsForEvent } = await import('./workflows.js');
+              await runWorkflowsForEvent(row.manager_id, 'trigger.payment_succeeded', {
+                clientId: row.client_id, billingId: row.id, planName: row.description,
+                amountCents: row.amount_cents, currency: row.currency, interval: row.interval,
+                paymentUrl: row.payment_url, subscriptionStatus: newStatus,
+                renewalDate: updates.current_period_end ?? row.current_period_end ?? null,
+              });
+            } catch (wfErr) { console.error('[billing sweep] workflow fire failed:', wfErr); }
           }
         }
       } catch (perRow) {

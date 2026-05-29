@@ -13,8 +13,24 @@ import { supabaseAdmin } from '../db/index.js';
 import { newStripeClient } from '../lib/stripe.js';
 import { logger } from '../lib/logger.js';
 import { notifyManagerOfPayment, isPaid } from './client-billing.js';
+import { runWorkflowsForEvent } from './workflows.js';
 
 const router = Router();
+
+// Dispara los workflows de suscripción (best-effort, nunca bloquea el webhook).
+function fireSubWorkflow(managerId: string, triggerKey: string, row: any, extra: Record<string, any> = {}) {
+  runWorkflowsForEvent(managerId, triggerKey, {
+    clientId: row.client_id,
+    billingId: row.id,
+    planName: row.description,
+    amountCents: row.amount_cents,
+    currency: row.currency,
+    interval: row.interval,
+    paymentUrl: row.payment_url,
+    renewalDate: row.current_period_end,
+    ...extra,
+  }).catch(err => logger.error('coach_webhook.workflow_fire_failed', { managerId, triggerKey, err: errMessage(err) }));
+}
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
@@ -97,8 +113,15 @@ router.post('/:managerId', async (req: any, res) => {
           }
           if (updates.status) {
             await supabaseAdmin.from('client_billing').update(updates).eq('id', row.id);
+            const merged = { ...row, ...updates };
             if (isPaid(updates.status) && !isPaid(row.status)) {
-              await notifyManagerOfPayment(managerId, row.client_id, { ...row, ...updates });
+              await notifyManagerOfPayment(managerId, row.client_id, merged);
+            }
+            // Suscripción recién activada → subscription_started; pago único → payment_succeeded.
+            if (subscriptionId && isPaid(updates.status) && !isPaid(row.status)) {
+              fireSubWorkflow(managerId, 'trigger.subscription_started', merged, { subscriptionStatus: updates.status });
+            } else if (!subscriptionId && updates.status === 'paid' && row.status !== 'paid') {
+              fireSubWorkflow(managerId, 'trigger.payment_succeeded', merged, { subscriptionStatus: 'paid' });
             }
           }
         }
@@ -110,11 +133,16 @@ router.post('/:managerId', async (req: any, res) => {
         const row = await findRow(managerId, { subscriptionId: sub.id });
         if (row) {
           const status = event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status;
+          const periodEnd = periodEndIso(sub);
           await supabaseAdmin.from('client_billing')
-            .update({ status, current_period_end: periodEndIso(sub) })
+            .update({ status, current_period_end: periodEnd })
             .eq('id', row.id);
+          const merged = { ...row, status, current_period_end: periodEnd };
           if (isPaid(status) && !isPaid(row.status)) {
-            await notifyManagerOfPayment(managerId, row.client_id, { ...row, status });
+            await notifyManagerOfPayment(managerId, row.client_id, merged);
+          }
+          if (event.type === 'customer.subscription.deleted' && row.status !== 'canceled') {
+            fireSubWorkflow(managerId, 'trigger.subscription_canceled', merged, { subscriptionStatus: 'canceled' });
           }
         }
         break;
@@ -127,8 +155,12 @@ router.post('/:managerId', async (req: any, res) => {
         if (row) {
           const status = event.type === 'invoice.paid' ? (subscriptionId ? 'active' : 'paid') : 'past_due';
           await supabaseAdmin.from('client_billing').update({ status }).eq('id', row.id);
-          if (event.type === 'invoice.paid' && !isPaid(row.status)) {
-            await notifyManagerOfPayment(managerId, row.client_id, { ...row, status });
+          const merged = { ...row, status };
+          if (event.type === 'invoice.paid') {
+            if (!isPaid(row.status)) await notifyManagerOfPayment(managerId, row.client_id, merged);
+            fireSubWorkflow(managerId, 'trigger.payment_succeeded', merged, { subscriptionStatus: status });
+          } else {
+            fireSubWorkflow(managerId, 'trigger.payment_failed', merged, { subscriptionStatus: 'past_due' });
           }
         }
         break;

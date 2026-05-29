@@ -251,6 +251,28 @@ export const WORKFLOW_CATALOG = [
     configFields: [
       { name: 'weightA', label: 'Weight A (%)', type: 'number' },
     ] },
+
+  // ── Suscripciones (Stripe): triggers de facturación ──────────
+  { type: 'trigger', key: 'trigger.payment_succeeded', label: 'Payment succeeded', category: 'Triggers',
+    icon: 'DollarSign', description: 'Fires when a client pays a subscription invoice or one-time charge.', configFields: [] },
+  { type: 'trigger', key: 'trigger.payment_failed', label: 'Payment failed', category: 'Triggers',
+    icon: 'XCircle', description: 'Fires when a client\'s payment fails (past due).', configFields: [] },
+  { type: 'trigger', key: 'trigger.subscription_started', label: 'Subscription started', category: 'Triggers',
+    icon: 'CreditCard', description: 'Fires when a client\'s subscription becomes active.', configFields: [] },
+  { type: 'trigger', key: 'trigger.subscription_canceled', label: 'Subscription canceled', category: 'Triggers',
+    icon: 'XCircle', description: 'Fires when a client\'s subscription is canceled.', configFields: [] },
+  { type: 'trigger', key: 'trigger.renewal_upcoming', label: 'Renewal upcoming', category: 'Triggers',
+    icon: 'CalendarClock', description: 'Daily cron — fires N days before a subscription renews.',
+    configFields: [{ name: 'daysBefore', label: 'Days before renewal', type: 'number' }] },
+
+  // ── Suscripciones (Stripe): acciones de facturación ──────────
+  { type: 'action', key: 'action.assign_billing_plan', label: 'Assign subscription plan', category: 'Actions',
+    icon: 'CreditCard', description: 'Assign a billing plan to the client and send the payment link.',
+    configFields: [
+      { name: 'plan', label: 'Billing plan', type: 'select', source: 'billing_plans' },
+    ] },
+  { type: 'action', key: 'action.send_payment_link', label: 'Send payment link', category: 'Actions',
+    icon: 'Send', description: 'Send the client\'s most recent open payment link via chat.', configFields: [] },
 ] as const;
 
 const CATALOG_BY_KEY = new Map<string, any>(WORKFLOW_CATALOG.map(n => [n.key, n]));
@@ -266,10 +288,20 @@ function renderTemplate(text: string, ctx: any): string {
   if (!text) return '';
   const client = ctx.client || {};
   const firstName = (client.full_name || 'there').split(' ')[0];
+  const sub = ctx.subscription || {};
+  const amountStr = typeof sub.amountCents === 'number'
+    ? (sub.amountCents / 100).toLocaleString('es-ES', { style: 'currency', currency: (sub.currency || 'eur').toUpperCase() })
+    : '';
+  const renewalStr = sub.renewalDate ? new Date(sub.renewalDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   return String(text)
     .replace(/{First Name}/g, firstName)
     .replace(/{Client Name}/g, client.full_name || 'there')
     .replace(/{Coach Name}/g, ctx.coachName || 'your coach')
+    .replace(/{Plan Name}/g, sub.planName || '')
+    .replace(/{Amount}/g, amountStr)
+    .replace(/{Renewal Date}/g, renewalStr)
+    .replace(/{Subscription Status}/g, sub.status || '')
+    .replace(/{Payment Link}/g, sub.paymentUrl || '')
     .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, p) => {
       const v = getByPath(ctx, p);
       return v == null ? '' : String(v);
@@ -378,6 +410,19 @@ async function buildContext(managerId: string, triggerType: string, payload: any
       .order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (ci) ctx.checkin = { date: ci.date, ...(ci.data_json || {}) };
   }
+  // Datos de suscripción que inyectan los triggers de facturación (para los
+  // tokens {Plan Name}, {Amount}, {Renewal Date}, {Subscription Status},
+  // {Payment Link}).
+  if (payload?.planName || payload?.amountCents != null || payload?.paymentUrl || payload?.renewalDate || payload?.subscriptionStatus) {
+    ctx.subscription = {
+      planName: payload.planName ?? null,
+      amountCents: payload.amountCents ?? null,
+      currency: payload.currency ?? 'eur',
+      renewalDate: payload.renewalDate ?? null,
+      status: payload.subscriptionStatus ?? null,
+      paymentUrl: payload.paymentUrl ?? null,
+    };
+  }
   return ctx;
 }
 
@@ -441,6 +486,11 @@ async function runLoop(p: {
         case 'trigger.birthday':
         case 'trigger.checkin_overdue':
         case 'trigger.goal_reached':
+        case 'trigger.payment_succeeded':
+        case 'trigger.payment_failed':
+        case 'trigger.subscription_started':
+        case 'trigger.subscription_canceled':
+        case 'trigger.renewal_upcoming':
           await logStep(node, 'completed', { trigger: node.key });
           break;
 
@@ -930,6 +980,51 @@ async function runLoop(p: {
           if (tagErr) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
+        case 'action.assign_billing_plan': {
+          if (!ctx.client?.id) { await logStep(node, 'skipped', { reason: 'no client in context' }); break; }
+          const planId = String(cfg.plan || '').trim();
+          if (!planId) { await logStep(node, 'skipped', { reason: 'no plan selected' }); break; }
+          const { data: plan } = await supabaseAdmin
+            .from('billing_plans').select('*').eq('id', planId).eq('manager_id', managerId).maybeSingle();
+          if (!plan) { await logStep(node, 'skipped', { reason: `plan ${planId} not found` }); break; }
+          if (plan.active === false) { await logStep(node, 'skipped', { reason: 'plan archived' }); break; }
+          if (dryRun) { await logStep(node, 'completed', { dryRun: true, plan: plan.name }); break; }
+          // Evita duplicar una asignación viva del mismo plan.
+          const { data: dup } = await supabaseAdmin
+            .from('client_billing').select('id')
+            .eq('manager_id', managerId).eq('client_id', ctx.client.id).eq('plan_id', planId)
+            .not('status', 'in', '("canceled","void")').maybeSingle();
+          if (dup) { await logStep(node, 'skipped', { reason: 'client already on this plan' }); break; }
+          try {
+            const { assignPlanRow } = await import('./client-billing.js');
+            await assignPlanRow(managerId, plan, ctx.client.id, true);
+            await logStep(node, 'completed', { plan: plan.name });
+          } catch (e: any) {
+            await logStep(node, 'failed', { plan: plan.name }, e?.message || String(e));
+            status = 'failed'; return { status, steps, ctx };
+          }
+          break;
+        }
+        case 'action.send_payment_link': {
+          if (!ctx.client?.id) { await logStep(node, 'skipped', { reason: 'no client in context' }); break; }
+          if (dryRun) { await logStep(node, 'completed', { dryRun: true }); break; }
+          // El cobro abierto más reciente del cliente con enlace de pago.
+          const { data: row } = await supabaseAdmin
+            .from('client_billing').select('*')
+            .eq('manager_id', managerId).eq('client_id', ctx.client.id)
+            .not('payment_url', 'is', null)
+            .in('status', ['pending', 'past_due', 'active', 'trialing'])
+            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          if (!row) { await logStep(node, 'skipped', { reason: 'no open charge with a payment link' }); break; }
+          const { error } = await supabaseAdmin.from('messages').insert({
+            sender_id: managerId, receiver_id: ctx.client.id, content: '',
+            attachment_type: 'payment', attachment_url: row.payment_url,
+            payload: { billing_id: row.id, plan_id: row.plan_id, kind: row.kind, amount_cents: row.amount_cents, currency: row.currency, interval: row.interval, description: row.description, status: row.status },
+          });
+          await logStep(node, error ? 'failed' : 'completed', { billing_id: row.id }, error?.message);
+          if (error) { status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
         default:
           await logStep(node, 'skipped', { reason: `unknown node ${node.key}` });
       }
@@ -1090,8 +1185,39 @@ export async function fireScheduledWorkflows(): Promise<number> {
       if (!trig) continue;
 
       // Only the cron-style triggers fire from this loop.
-      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive', 'trigger.birthday', 'trigger.checkin_overdue']);
+      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive', 'trigger.birthday', 'trigger.checkin_overdue', 'trigger.renewal_upcoming']);
       if (!cronTriggers.has(trig.key)) continue;
+
+      // trigger.renewal_upcoming: suscripciones activas cuya renovación cae
+      // dentro de la ventana [hoy, hoy+daysBefore]. Deduplica por fecha de
+      // renovación para no repetir el aviso en pasadas sucesivas.
+      if (trig.key === 'trigger.renewal_upcoming') {
+        const daysBefore = Math.max(1, Number(trig.config?.daysBefore) || 3);
+        const horizon = new Date(nowDate.getTime() + daysBefore * 86400000).toISOString();
+        const { data: rows } = await supabaseAdmin
+          .from('client_billing')
+          .select('id, client_id, plan_id, description, amount_cents, currency, interval, status, payment_url, current_period_end')
+          .eq('manager_id', def.manager_id)
+          .eq('kind', 'recurring')
+          .in('status', ['active', 'trialing'])
+          .not('current_period_end', 'is', null)
+          .gte('current_period_end', nowDate.toISOString())
+          .lte('current_period_end', horizon);
+        for (const row of rows || []) {
+          const res = await executeWorkflowVersion({
+            managerId: def.manager_id, versionId: version.id, nodes, edges: version.edges || [],
+            triggerType: 'trigger.renewal_upcoming',
+            payload: {
+              clientId: row.client_id, billingId: row.id, planName: row.description,
+              amountCents: row.amount_cents, currency: row.currency, interval: row.interval,
+              subscriptionStatus: row.status, paymentUrl: row.payment_url, renewalDate: row.current_period_end,
+            },
+            dedupeKey: `${version.id}:trigger.renewal_upcoming:${row.id}:${String(row.current_period_end).slice(0, 10)}`,
+          });
+          if (res.status !== 'skipped') fired++;
+        }
+        continue;
+      }
 
       // trigger.day_of_week: skip workflows whose configured weekday isn't today.
       if (trig.key === 'trigger.day_of_week' && trig.config?.day && trig.config.day !== todayWeekday) {
@@ -1241,13 +1367,14 @@ router.get('/config-options', verifyManager, async (req: any, res) => {
   try {
     const mid = req.user.id;
     const ownFilter = `manager_id.eq.${mid},manager_id.is.null`;
-    const [onb, chk, nut, trn, cli] = await Promise.all([
+    const [onb, chk, nut, trn, cli, bill] = await Promise.all([
       supabaseAdmin.from('onboarding_templates').select('id, name').or(ownFilter).order('name'),
       supabaseAdmin.from('checkin_templates').select('id, name').or(ownFilter).order('name'),
       supabaseAdmin.from('nutrition_templates').select('id, name').or(ownFilter).order('name'),
       supabaseAdmin.from('training_templates').select('id, name').or(ownFilter).order('name'),
       supabaseAdmin.from('users').select('id, email, profiles(full_name)')
         .eq('manager_id', mid).eq('role', 'CLIENT'),
+      supabaseAdmin.from('billing_plans').select('id, name, amount_cents, currency').eq('manager_id', mid).eq('active', true).order('created_at', { ascending: false }),
     ]);
     const opt = (rows: any[] | null) =>
       (rows || []).map(r => ({ value: r.id, label: r.name || 'Sin nombre' }));
@@ -1256,6 +1383,10 @@ router.get('/config-options', verifyManager, async (req: any, res) => {
       checkin_templates: opt(chk.data),
       nutrition_templates: opt(nut.data),
       training_templates: opt(trn.data),
+      billing_plans: (bill.data || []).map((r: any) => ({
+        value: r.id,
+        label: `${r.name || 'Plan'} · ${((r.amount_cents || 0) / 100).toLocaleString('es-ES', { style: 'currency', currency: (r.currency || 'eur').toUpperCase() })}`,
+      })),
       // assign_plan uses one combined list; value encodes the plan kind.
       plan_templates: [
         ...(nut.data || []).map(r => ({ value: `nutrition:${r.id}`, label: `🥗 ${r.name || 'Sin nombre'}` })),
