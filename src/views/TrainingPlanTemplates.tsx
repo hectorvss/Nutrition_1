@@ -61,8 +61,13 @@ export default function TrainingPlanTemplates({ onBack, onEditTemplate }: Traini
   };
 
   return (
-    <div className="w-full p-6 md:p-8 lg:p-10">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
+    <div className="w-full h-full flex flex-col p-6 md:p-8 lg:p-10">
+      {/* El shell de Training monta esta vista dentro de un contenedor
+          `h-full overflow-hidden`. La tarjeta debe LLENAR esa altura acotada
+          (`flex-1 min-h-0`) en vez de crecer con el contenido
+          (`min-h-[calc(...)]`), para que su lista interna (`flex-1
+          overflow-y-auto`) scrollee en vez de quedar recortada por el padre. */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <button onClick={onBack} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 flex items-center gap-1 text-sm font-medium mb-2">
