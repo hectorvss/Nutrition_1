@@ -345,61 +345,53 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
         </div>
       </div>
 
-      {/* Right side: Mac Browser Mockup — mismo marco que el mockup del hero de
-          la landing (marco blanco translúcido, sin borde lila, fondo blanco). */}
+      {/* Right side: la TARJETA COMPLETA (chrome con los 3 puntos + URL y la
+          captura embebida dentro) es lo que transiciona como una sola unidad.
+          Fondo totalmente blanco; la tarjeta sólo lleva una sombra suave y
+          difusa — sin panel de color ni línea dura. */}
       <div className="hidden lg:flex w-[55%] bg-white relative items-center justify-center p-8">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="w-full aspect-video bg-white/80 backdrop-blur-xl rounded-[32px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border border-white/20 overflow-hidden flex flex-col"
-        >
-          <div className="bg-white/50 border-b border-gray-100/20 px-6 py-4 flex items-center gap-2">
-            <div className="flex gap-2">
-              <div className="w-3.5 h-3.5 rounded-full bg-[#ff5f56]"></div>
-              <div className="w-3.5 h-3.5 rounded-full bg-[#ffbd2e]"></div>
-              <div className="w-3.5 h-3.5 rounded-full bg-[#27c93f]"></div>
-            </div>
-            <div className="mx-auto bg-gray-100/50 rounded-xl px-4 py-1.5 text-xs text-gray-400 font-medium flex items-center gap-2 w-1/3">
-              <Search className="w-3 h-3" />
-              nutrifit.pro/login
-            </div>
+        <div className="w-full max-w-2xl">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={showcase[slide].src}
+              initial={{ opacity: 0, y: 24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -24, scale: 0.98 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-white rounded-2xl aspect-video overflow-hidden flex flex-col shadow-[0_2px_8px_rgba(15,23,42,0.04),0_40px_90px_-25px_rgba(15,23,42,0.22)]"
+            >
+              <div className="bg-white border-b border-gray-100 px-4 py-2.5 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
+                </div>
+                <div className="mx-auto bg-gray-100/70 rounded-md px-3 py-0.5 text-[10px] text-gray-400 font-medium w-1/2 text-center flex items-center justify-center gap-1.5 truncate">
+                  <Search className="w-2.5 h-2.5" />
+                  nutrifit.pro/login
+                </div>
+              </div>
+              <div className="flex-1 relative overflow-hidden bg-white">
+                <img
+                  src={showcase[slide].src}
+                  alt={showcase[slide].label}
+                  className="absolute inset-0 w-full h-full object-cover object-top"
+                />
+                <div className="absolute bottom-4 left-4">
+                  <span className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-slate-700 text-xs font-bold tracking-wide shadow-sm">
+                    {showcase[slide].label}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+          {/* Indicadores de slide (fuera de la tarjeta para que persistan) */}
+          <div className="mt-5 flex justify-center gap-1.5">
+            {showcase.map((_, i) => (
+              <span key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === slide ? 'w-5 bg-slate-700' : 'w-1.5 bg-slate-300'}`} />
+            ))}
           </div>
-          <div className="flex-1 relative overflow-hidden bg-white">
-            <AnimatePresence mode="sync">
-              <motion.img
-                key={showcase[slide].src}
-                src={showcase[slide].src}
-                alt={showcase[slide].label}
-                initial={{ opacity: 0, scale: 1.06 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: 'easeInOut' }}
-                className="absolute inset-0 w-full h-full object-cover object-top"
-              />
-            </AnimatePresence>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={showcase[slide].label}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.5 }}
-                className="absolute bottom-5 left-5 flex items-center gap-2"
-              >
-                <span className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-slate-700 text-xs font-bold tracking-wide shadow-sm">
-                  {showcase[slide].label}
-                </span>
-              </motion.div>
-            </AnimatePresence>
-            {/* Indicadores */}
-            <div className="absolute bottom-6 right-5 flex gap-1.5">
-              {showcase.map((_, i) => (
-                <span key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === slide ? 'w-5 bg-slate-700' : 'w-1.5 bg-slate-300'}`} />
-              ))}
-            </div>
-          </div>
-        </motion.div>
+        </div>
       </div>
 
     </div>
