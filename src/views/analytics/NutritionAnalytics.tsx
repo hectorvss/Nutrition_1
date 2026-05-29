@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useLanguage } from '../../context/LanguageContext';
+import { useChartTooltipStyle } from '../../lib/useChartTheme';
 import { StatCard, DeficitClient, ChartCard, SectionHeader, ChartLegend, EmptyChart, LoadingProvider, SkeletonBlock, Skeleton, useAnalyticsLoading } from './components';
 
 /* ============================================================================
@@ -24,13 +25,10 @@ const PALETTE = {
 
 const AXIS_TICK = { fontSize: 12, fill: '#94a3b8' };
 const GRID_PROPS = { strokeDasharray: '3 3', stroke: '#f1f5f9' };
-// TODO(dark): recharts contentStyle is a plain JS object and can't read the `.dark`
-// class. White tooltip stays legible in dark; for a true dark tooltip use bg #1e293b /
-// text #f1f5f9 behind a theme hook.
-const TOOLTIP_STYLE = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 };
-
 export default function NutritionAnalytics({ data, loading }: any) {
   const { t } = useLanguage();
+  // Tooltip recharts dark-aware (sigue el .dark class).
+  const TOOLTIP_STYLE = { ...useChartTooltipStyle(), fontSize: 12 };
   const isLoading = !!loading;
 
   // Escala dinámica del gráfico de calorías existente.

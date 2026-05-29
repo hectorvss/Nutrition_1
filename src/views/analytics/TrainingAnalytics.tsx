@@ -8,6 +8,7 @@ import {
   ResponsiveContainer, Cell,
 } from 'recharts';
 import { useLanguage } from '../../context/LanguageContext';
+import { useChartTooltipStyle } from '../../lib/useChartTheme';
 import {
   StatCard, ChartCard, SectionHeader, ChartLegend, EmptyChart,
   DistributionItem, FrequencyItem,
@@ -32,13 +33,10 @@ const MUSCLE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#a855f7', '#f97316', '#
 
 const AXIS_TICK = { fontSize: 12, fill: '#94a3b8' } as const;
 const GRID_PROPS = { strokeDasharray: '3 3', stroke: '#f1f5f9' } as const;
-// TODO(dark): recharts contentStyle is a plain JS object and can't read the `.dark`
-// class. White tooltip stays legible in dark; for a true dark tooltip use bg #1e293b /
-// text #f1f5f9 behind a theme hook.
-const TOOLTIP_STYLE = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 } as const;
-
 export default function TrainingAnalytics({ data, loading }: any) {
   const { t } = useLanguage();
+  // Tooltip recharts dark-aware (sigue el .dark class).
+  const TOOLTIP_STYLE = { ...useChartTooltipStyle(), fontSize: 12 };
   const isLoading = !!loading;
   // Escala dinámica del gráfico de volumen: se adapta al pico real de
   // volumen movido (con 15% de margen) en lugar de un tope fijo.

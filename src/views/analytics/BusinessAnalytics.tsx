@@ -39,6 +39,7 @@ import {
   Legend,
 } from 'recharts';
 import { useLanguage } from '../../context/LanguageContext';
+import { useChartTooltipStyle } from '../../lib/useChartTheme';
 import {
   StatCard,
   ChartCard,
@@ -75,11 +76,6 @@ const PIE_PALETTE = [COLORS.emerald, COLORS.blue, COLORS.amber, COLORS.purple, C
 /* Estilo de ejes/grid/tooltip recharts — minimalista, compartido. */
 const axisProps = { axisLine: false as const, tickLine: false as const, tick: { fontSize: 12, fill: '#94a3b8' } };
 const gridProps = { strokeDasharray: '3 3', stroke: '#f1f5f9', vertical: false };
-// TODO(dark): recharts contentStyle is a plain JS object and can't read the `.dark`
-// class. White tooltip stays legible in dark (dark text on white) but is visually
-// inconsistent. For a true dark tooltip use bg #1e293b / text #f1f5f9 behind a theme hook.
-const tooltipStyle = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 };
-
 const CHART_HEIGHT = 280;
 
 function money(v: any): string {
@@ -89,6 +85,10 @@ function money(v: any): string {
 
 export default function BusinessAnalytics({ data, loading }: any) {
   const { t, language } = useLanguage();
+  // Tooltip de recharts que sigue el .dark class (antes era un objeto JS
+  // fijo con fondo blanco). El nombre `tooltipStyle` se conserva para no
+  // tocar los ~9 <Tooltip contentStyle={tooltipStyle}> de abajo.
+  const tooltipStyle = { ...useChartTooltipStyle(), fontSize: 12 };
   const isLoading = !!loading;
   const monthLabels = Array.from({ length: 12 }, (_, i) =>
     new Date(new Date().getFullYear(), i, 1).toLocaleString(
