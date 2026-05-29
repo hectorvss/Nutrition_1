@@ -659,8 +659,8 @@ function ArchivePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: bool
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white" style={brandStyle}>
+            <Archive className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Archivar plan' : 'Archive plan'}</h3>
@@ -670,7 +670,7 @@ function ArchivePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: bool
 
         <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
           {active > 0 && (
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
               {isEs
                 ? <><b>{active}</b> {active === 1 ? 'cliente tiene' : 'clientes tienen'} una suscripción activa a este plan. <b>No se cancelarán</b>: seguirán cobrándose con normalidad.</>
                 : <><b>{active}</b> {active === 1 ? 'client has' : 'clients have'} an active subscription to this plan. <b>They won’t be canceled</b> — they keep billing as usual.</>}
@@ -686,7 +686,7 @@ function ArchivePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: bool
 
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
-          <button onClick={onConfirm} disabled={busy} className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+          <button onClick={onConfirm} disabled={busy} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
             {isEs ? 'Archivar plan' : 'Archive plan'}
           </button>
