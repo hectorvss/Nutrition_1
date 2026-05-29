@@ -1157,34 +1157,43 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                           ? `/${p.interval === 'year' ? (locale.startsWith('es') ? 'año' : 'yr') : (locale.startsWith('es') ? 'mes' : 'mo')}`
                           : '';
                         const isEs = locale.startsWith('es');
+                        const title = p.description || (p.kind === 'recurring' ? (isEs ? 'Suscripción de coaching' : 'Coaching subscription') : (isEs ? 'Pago' : 'Payment'));
+                        // Mismo layout EXACTO que la tarjeta de check-in (los
+                        // emerald-* se remapean al color de marca vía CSS var).
                         return (
-                          <div className="flex flex-col gap-3 p-4 rounded-xl border transition-all bg-white/70 dark:bg-slate-800/60 border-indigo-200 dark:border-indigo-500/40 shadow-sm">
+                          <div className={`flex flex-col gap-3 p-4 rounded-xl border transition-all ${
+                            isOwn
+                              ? 'bg-white/40 border-green-200 shadow-sm'
+                              : 'bg-white/50 border-slate-200 shadow-sm'
+                          }`}>
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-indigo-500 text-white">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOwn ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
                                 <CreditCard className="w-6 h-6" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate text-slate-900 dark:text-white">
-                                  {p.description || (p.kind === 'recurring' ? (isEs ? 'Suscripción de coaching' : 'Coaching subscription') : (isEs ? 'Pago' : 'Payment'))}
+                                <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900' : 'text-slate-900'}`}>{title}</p>
+                                <p className="text-[11px] text-slate-500 font-medium">
+                                  {amount ? <>{amount}{per} · {isEs ? 'Pago seguro con Stripe' : 'Secure payment via Stripe'}</> : (isEs ? 'Pago seguro con Stripe' : 'Secure payment via Stripe')}
                                 </p>
-                                {amount && (
-                                  <p className="text-[13px] font-extrabold text-indigo-600 dark:text-indigo-400">
-                                    {amount}<span className="text-[11px] font-semibold text-slate-400">{per}</span>
-                                  </p>
-                                )}
                               </div>
                             </div>
+
                             {msg.content && (
-                              <div className="text-xs p-3 rounded-lg border italic bg-indigo-50/50 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-500/30 text-slate-600 dark:text-slate-300">
+                              <div className={`text-xs p-3 rounded-lg border italic ${isOwn ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-slate-100/50 border-slate-100 text-slate-600 line-clamp-2'}`}>
                                 "{msg.content}"
                               </div>
                             )}
+
                             {msg.attachment_url && (
                               <a
                                 href={msg.attachment_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700"
+                                className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                                  isOwn
+                                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                    : 'bg-slate-900 text-white hover:bg-slate-800'
+                                }`}
                               >
                                 <CreditCard className="w-4 h-4" />
                                 {isOwn ? (isEs ? 'Ver enlace de pago' : 'View payment link') : (isEs ? 'Pagar ahora' : 'Pay now')}
