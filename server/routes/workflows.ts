@@ -273,10 +273,131 @@ export const WORKFLOW_CATALOG = [
     ] },
   { type: 'action', key: 'action.send_payment_link', label: 'Send payment link', category: 'Actions',
     icon: 'Send', description: 'Send the client\'s most recent open payment link via chat.', configFields: [] },
+
+  // ── Suscripciones: triggers extra ────────────────────────────
+  { type: 'trigger', key: 'trigger.subscription_paused', label: 'Subscription paused', category: 'Triggers',
+    icon: 'XCircle', description: 'Fires when a client\'s subscription is paused.', configFields: [] },
+  { type: 'trigger', key: 'trigger.subscription_resumed', label: 'Subscription resumed', category: 'Triggers',
+    icon: 'CreditCard', description: 'Fires when a paused subscription is resumed.', configFields: [] },
+  { type: 'trigger', key: 'trigger.trial_ending', label: 'Trial ending', category: 'Triggers',
+    icon: 'CalendarClock', description: 'Daily cron — fires N days before a free trial ends.',
+    configFields: [{ name: 'daysBefore', label: 'Days before trial ends', type: 'number' }] },
+  { type: 'trigger', key: 'trigger.refund_issued', label: 'Refund issued', category: 'Triggers',
+    icon: 'DollarSign', description: 'Fires when a refund is issued to a client.', configFields: [] },
+
+  // ── Suscripciones: condiciones ───────────────────────────────
+  { type: 'condition', key: 'flow.has_active_subscription', label: 'Has active subscription', category: 'Logic',
+    icon: 'CreditCard', description: 'Branch on whether the client has an active/trialing subscription.',
+    branches: ['true', 'false'], configFields: [] },
+  { type: 'condition', key: 'flow.on_plan', label: 'On billing plan', category: 'Logic',
+    icon: 'CreditCard', description: 'Branch on whether the client has a live assignment of a given billing plan.',
+    branches: ['true', 'false'],
+    configFields: [{ name: 'plan', label: 'Billing plan', type: 'select', source: 'billing_plans' }] },
+
+  // ── Suscripciones: acciones extra ────────────────────────────
+  { type: 'action', key: 'action.cancel_subscription', label: 'Cancel subscription', category: 'Actions',
+    icon: 'XCircle', description: 'Cancel the client\'s active subscription (now or at period end).',
+    configFields: [{ name: 'when', label: 'When', type: 'select', options: ['period_end', 'immediate'] }] },
+  { type: 'action', key: 'action.pause_subscription', label: 'Pause subscription', category: 'Actions',
+    icon: 'XCircle', description: 'Pause billing on the client\'s active subscription.', configFields: [] },
+  { type: 'action', key: 'action.resume_subscription', label: 'Resume subscription', category: 'Actions',
+    icon: 'CreditCard', description: 'Resume billing on a paused subscription.', configFields: [] },
+  { type: 'action', key: 'action.create_promo_code', label: 'Create promo code', category: 'Actions',
+    icon: 'DollarSign', description: 'Create a promotion code tied to a billing plan (e.g. retention offer).',
+    configFields: [
+      { name: 'plan', label: 'Billing plan', type: 'select', source: 'billing_plans' },
+      { name: 'discountType', label: 'Discount', type: 'select', options: ['percent', 'amount'] },
+      { name: 'value', label: 'Value (% or amount)', type: 'number' },
+      { name: 'duration', label: 'Duration', type: 'select', options: ['once', 'repeating', 'forever'] },
+      { name: 'durationInMonths', label: 'Months (if repeating)', type: 'number' },
+      { name: 'code', label: 'Code (optional)', type: 'text' },
+    ] },
+  { type: 'action', key: 'action.create_charge', label: 'Create charge', category: 'Actions',
+    icon: 'DollarSign', description: 'Create a recurring or one-time charge and send the payment link.',
+    configFields: [
+      { name: 'kind', label: 'Type', type: 'select', options: ['recurring', 'one_time'] },
+      { name: 'amount', label: 'Amount', type: 'number' },
+      { name: 'currency', label: 'Currency', type: 'select', options: ['eur', 'usd', 'gbp', 'mxn'] },
+      { name: 'interval', label: 'Interval (recurring)', type: 'select', options: ['month', 'year', 'week', 'day'] },
+      { name: 'description', label: 'Label', type: 'text' },
+    ] },
 ] as const;
 
 const CATALOG_BY_KEY = new Map<string, any>(WORKFLOW_CATALOG.map(n => [n.key, n]));
 const TRIGGER_KEYS = WORKFLOW_CATALOG.filter(n => n.type === 'trigger').map(n => n.key);
+
+// ---- Plantillas de fábrica (recetas de suscripción listas para usar) ------
+// El manager las activa con un clic: se crean como un workflow nuevo (borrador)
+// que puede revisar/publicar. Algunos nodos (p. ej. el plan del cupón) quedan
+// sin rellenar a propósito para que el coach elija el plan.
+const tNode = (id: string, type: WorkflowNode['type'], key: string, x: number, y: number, config?: any): WorkflowNode =>
+  ({ id, type, key, position: { x, y }, ...(config ? { config } : {}) });
+const tEdge = (source: string, target: string, sourceHandle?: string): WorkflowEdge =>
+  ({ id: `e-${source}-${target}${sourceHandle ? '-' + sourceHandle : ''}`, source, target, ...(sourceHandle ? { sourceHandle } : {}) });
+
+export const WORKFLOW_STARTER_TEMPLATES = [
+  {
+    id: 'tpl.payment_welcome',
+    name: 'Bienvenida al pagar',
+    description: 'Cuando un cliente paga su suscripción, le das la bienvenida y avisas al coach.',
+    category: 'Suscripciones',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.payment_succeeded', 80, 160),
+      tNode('n2', 'action', 'action.send_message', 360, 160, { message: '¡Bienvenido/a, {First Name}! 🎉 Tu suscripción a {Plan Name} ya está activa. Cualquier duda, escríbeme por aquí.' }),
+      tNode('n3', 'action', 'action.notify_coach', 640, 160, { title: 'Nuevo pago de {Client Name}', description: '{Client Name} ha pagado {Amount} ({Plan Name}).' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3')],
+  },
+  {
+    id: 'tpl.dunning',
+    name: 'Recuperación de impagos (dunning)',
+    description: 'Si un pago falla: reenvía el enlace al instante y, si sigue sin pagar, avisa al coach y etiqueta al cliente.',
+    category: 'Suscripciones',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.payment_failed', 80, 160),
+      tNode('n2', 'action', 'action.send_message', 360, 160, { message: 'Hola {First Name}, no hemos podido procesar tu pago de {Plan Name}. Puedes reintentarlo aquí: {Payment Link}' }),
+      tNode('n3', 'action', 'action.send_payment_link', 640, 160),
+      tNode('n4', 'flow', 'flow.delay', 920, 160, { amount: 3, unit: 'days' }),
+      tNode('n5', 'action', 'action.notify_coach', 1200, 160, { title: 'Impago sin resolver: {Client Name}', description: '{Client Name} no ha regularizado su pago de {Plan Name} en 3 días.' }),
+      tNode('n6', 'action', 'action.tag_client', 1200, 320, { tag: 'impago', action: 'add' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4'), tEdge('n4', 'n5'), tEdge('n4', 'n6')],
+  },
+  {
+    id: 'tpl.renewal_reminder',
+    name: 'Recordatorio de renovación',
+    description: '3 días antes de renovar, avisas al cliente con el importe y la fecha.',
+    category: 'Suscripciones',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.renewal_upcoming', 80, 160, { daysBefore: 3 }),
+      tNode('n2', 'action', 'action.send_message', 360, 160, { message: 'Hola {First Name}, tu suscripción a {Plan Name} se renueva el {Renewal Date} por {Amount}. ¡Seguimos! 💪' }),
+    ],
+    edges: [tEdge('n1', 'n2')],
+  },
+  {
+    id: 'tpl.trial_conversion',
+    name: 'Fin de prueba → conversión',
+    description: 'Antes de que acabe la prueba gratuita, animas al cliente a continuar.',
+    category: 'Suscripciones',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.trial_ending', 80, 160, { daysBefore: 2 }),
+      tNode('n2', 'action', 'action.send_message', 360, 160, { message: 'Hola {First Name}, tu prueba de {Plan Name} termina el {Renewal Date}. Si quieres seguir, todo continuará automáticamente. ¿Te ayudo con algo antes?' }),
+    ],
+    edges: [tEdge('n1', 'n2')],
+  },
+  {
+    id: 'tpl.retention',
+    name: 'Retención al cancelar',
+    description: 'Cuando alguien cancela, le ofreces un código de descuento para volver (elige el plan en el nodo "Crear código").',
+    category: 'Suscripciones',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.subscription_canceled', 80, 160),
+      tNode('n2', 'action', 'action.create_promo_code', 360, 160, { discountType: 'percent', value: 20, duration: 'repeating', durationInMonths: 3, code: 'VUELVE20' }),
+      tNode('n3', 'action', 'action.send_message', 640, 160, { message: 'Sentimos que te vayas, {First Name}. Si cambias de idea, tienes un 20% durante 3 meses con el código VUELVE20. ¡Aquí seguimos!' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3')],
+  },
+] as const;
 
 // ---- Helpers -----------------------------------------------
 function getByPath(obj: any, path: string): any {
@@ -491,6 +612,10 @@ async function runLoop(p: {
         case 'trigger.subscription_started':
         case 'trigger.subscription_canceled':
         case 'trigger.renewal_upcoming':
+        case 'trigger.subscription_paused':
+        case 'trigger.subscription_resumed':
+        case 'trigger.trial_ending':
+        case 'trigger.refund_issued':
           await logStep(node, 'completed', { trigger: node.key });
           break;
 
@@ -658,6 +783,31 @@ async function runLoop(p: {
           const has = wanted ? tags.includes(wanted) : false;
           followHandle = has ? 'true' : 'false';
           await logStep(node, 'completed', { tag: wanted, hasTag: has });
+          break;
+        }
+
+        case 'flow.has_active_subscription': {
+          if (!ctx.client?.id) { followHandle = 'false'; await logStep(node, 'completed', { reason: 'no client', branch: 'false' }); break; }
+          const { count } = await supabaseAdmin
+            .from('client_billing').select('id', { count: 'exact', head: true })
+            .eq('manager_id', managerId).eq('client_id', ctx.client.id).eq('kind', 'recurring')
+            .in('status', ['active', 'trialing']);
+          const has = (count || 0) > 0;
+          followHandle = has ? 'true' : 'false';
+          await logStep(node, 'completed', { hasActiveSubscription: has });
+          break;
+        }
+        case 'flow.on_plan': {
+          if (!ctx.client?.id) { followHandle = 'false'; await logStep(node, 'completed', { reason: 'no client', branch: 'false' }); break; }
+          const planId = String(cfg.plan || '').trim();
+          if (!planId) { followHandle = 'false'; await logStep(node, 'completed', { reason: 'no plan', branch: 'false' }); break; }
+          const { count } = await supabaseAdmin
+            .from('client_billing').select('id', { count: 'exact', head: true })
+            .eq('manager_id', managerId).eq('client_id', ctx.client.id).eq('plan_id', planId)
+            .not('status', 'in', '("canceled","void")');
+          const has = (count || 0) > 0;
+          followHandle = has ? 'true' : 'false';
+          await logStep(node, 'completed', { planId, onPlan: has });
           break;
         }
 
@@ -1025,6 +1175,68 @@ async function runLoop(p: {
           if (error) { status = 'failed'; return { status, steps, ctx }; }
           break;
         }
+        case 'action.cancel_subscription': {
+          if (!ctx.client?.id) { await logStep(node, 'skipped', { reason: 'no client in context' }); break; }
+          const atEnd = cfg.when !== 'immediate';
+          if (dryRun) { await logStep(node, 'completed', { dryRun: true, atPeriodEnd: atEnd }); break; }
+          try {
+            const { wfCancelSubscription } = await import('./client-billing.js');
+            const r = await wfCancelSubscription(managerId, ctx.client.id, atEnd);
+            await logStep(node, r?.error ? 'failed' : (r?.skipped ? 'skipped' : 'completed'), r, r?.error);
+            if (r?.error) { status = 'failed'; return { status, steps, ctx }; }
+          } catch (e: any) { await logStep(node, 'failed', {}, e?.message); status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.pause_subscription':
+        case 'action.resume_subscription': {
+          if (!ctx.client?.id) { await logStep(node, 'skipped', { reason: 'no client in context' }); break; }
+          const pause = node.key === 'action.pause_subscription';
+          if (dryRun) { await logStep(node, 'completed', { dryRun: true, pause }); break; }
+          try {
+            const { wfSetPause } = await import('./client-billing.js');
+            const r = await wfSetPause(managerId, ctx.client.id, pause);
+            await logStep(node, r?.error ? 'failed' : (r?.skipped ? 'skipped' : 'completed'), r, r?.error);
+            if (r?.error) { status = 'failed'; return { status, steps, ctx }; }
+          } catch (e: any) { await logStep(node, 'failed', {}, e?.message); status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.create_promo_code': {
+          const planId = String(cfg.plan || '').trim();
+          if (!planId) { await logStep(node, 'skipped', { reason: 'no plan selected' }); break; }
+          const value = Number(cfg.value);
+          if (!Number.isFinite(value) || value <= 0) { await logStep(node, 'skipped', { reason: 'invalid value' }); break; }
+          if (dryRun) { await logStep(node, 'completed', { dryRun: true, planId, value }); break; }
+          try {
+            const { wfCreatePlanPromo } = await import('./client-billing.js');
+            const r = await wfCreatePlanPromo(managerId, planId, {
+              discountType: cfg.discountType === 'amount' ? 'amount' : 'percent',
+              value, duration: cfg.duration, durationInMonths: Number(cfg.durationInMonths) || undefined,
+              code: cfg.code ? renderTemplate(String(cfg.code), ctx) : undefined,
+            });
+            await logStep(node, r?.error ? 'failed' : 'completed', r, r?.error);
+            if (r?.error) { status = 'failed'; return { status, steps, ctx }; }
+            // Expone el código creado para usarlo en mensajes posteriores.
+            if (r?.code) ctx.data.promoCode = r.code;
+          } catch (e: any) { await logStep(node, 'failed', {}, e?.message); status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
+        case 'action.create_charge': {
+          if (!ctx.client?.id) { await logStep(node, 'skipped', { reason: 'no client in context' }); break; }
+          const amount = Number(cfg.amount);
+          if (!Number.isFinite(amount) || amount <= 0) { await logStep(node, 'skipped', { reason: 'invalid amount' }); break; }
+          if (dryRun) { await logStep(node, 'completed', { dryRun: true, amount }); break; }
+          try {
+            const { wfCreateCharge } = await import('./client-billing.js');
+            const r = await wfCreateCharge(managerId, ctx.client.id, {
+              kind: cfg.kind === 'one_time' ? 'one_time' : 'recurring',
+              amount, currency: cfg.currency, interval: cfg.interval,
+              description: cfg.description ? renderTemplate(String(cfg.description), ctx) : undefined,
+            });
+            await logStep(node, r?.error ? 'failed' : 'completed', r, r?.error);
+            if (r?.error) { status = 'failed'; return { status, steps, ctx }; }
+          } catch (e: any) { await logStep(node, 'failed', {}, e?.message); status = 'failed'; return { status, steps, ctx }; }
+          break;
+        }
         default:
           await logStep(node, 'skipped', { reason: `unknown node ${node.key}` });
       }
@@ -1185,8 +1397,38 @@ export async function fireScheduledWorkflows(): Promise<number> {
       if (!trig) continue;
 
       // Only the cron-style triggers fire from this loop.
-      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive', 'trigger.birthday', 'trigger.checkin_overdue', 'trigger.renewal_upcoming']);
+      const cronTriggers = new Set(['trigger.schedule', 'trigger.day_of_week', 'trigger.client_inactive', 'trigger.birthday', 'trigger.checkin_overdue', 'trigger.renewal_upcoming', 'trigger.trial_ending']);
       if (!cronTriggers.has(trig.key)) continue;
+
+      // trigger.trial_ending: suscripciones en prueba cuyo fin (current_period_end
+      // del periodo de prueba) cae dentro de la ventana [hoy, hoy+daysBefore].
+      if (trig.key === 'trigger.trial_ending') {
+        const daysBefore = Math.max(1, Number(trig.config?.daysBefore) || 3);
+        const horizon = new Date(nowDate.getTime() + daysBefore * 86400000).toISOString();
+        const { data: rows } = await supabaseAdmin
+          .from('client_billing')
+          .select('id, client_id, plan_id, description, amount_cents, currency, interval, status, payment_url, current_period_end')
+          .eq('manager_id', def.manager_id)
+          .eq('kind', 'recurring')
+          .eq('status', 'trialing')
+          .not('current_period_end', 'is', null)
+          .gte('current_period_end', nowDate.toISOString())
+          .lte('current_period_end', horizon);
+        for (const row of rows || []) {
+          const res = await executeWorkflowVersion({
+            managerId: def.manager_id, versionId: version.id, nodes, edges: version.edges || [],
+            triggerType: 'trigger.trial_ending',
+            payload: {
+              clientId: row.client_id, billingId: row.id, planName: row.description,
+              amountCents: row.amount_cents, currency: row.currency, interval: row.interval,
+              subscriptionStatus: row.status, paymentUrl: row.payment_url, renewalDate: row.current_period_end,
+            },
+            dedupeKey: `${version.id}:trigger.trial_ending:${row.id}:${String(row.current_period_end).slice(0, 10)}`,
+          });
+          if (res.status !== 'skipped') fired++;
+        }
+        continue;
+      }
 
       // trigger.renewal_upcoming: suscripciones activas cuya renovación cae
       // dentro de la ventana [hoy, hoy+daysBefore]. Deduplica por fecha de
@@ -1358,6 +1600,11 @@ async function loadPublishedTriggerVersions(managerId: string) {
 
 router.get('/catalog', verifyManager, (_req, res) => {
   res.json({ nodes: WORKFLOW_CATALOG, triggers: TRIGGER_KEYS });
+});
+
+// Plantillas de fábrica (recetas listas) para activar con un clic.
+router.get('/starter-templates', verifyManager, (_req, res) => {
+  res.json({ templates: WORKFLOW_STARTER_TEMPLATES });
 });
 
 // Real-data option lists for node config dropdowns (configField.source).

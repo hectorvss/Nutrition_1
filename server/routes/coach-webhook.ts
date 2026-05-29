@@ -134,8 +134,9 @@ router.post('/:managerId', async (req: any, res) => {
         if (row) {
           const status = event.type === 'customer.subscription.deleted' ? 'canceled' : sub.status;
           const periodEnd = periodEndIso(sub);
+          const nowPaused = !!sub.pause_collection;
           await supabaseAdmin.from('client_billing')
-            .update({ status, current_period_end: periodEnd })
+            .update({ status, current_period_end: periodEnd, paused: event.type === 'customer.subscription.deleted' ? false : nowPaused })
             .eq('id', row.id);
           const merged = { ...row, status, current_period_end: periodEnd };
           if (isPaid(status) && !isPaid(row.status)) {
@@ -143,6 +144,10 @@ router.post('/:managerId', async (req: any, res) => {
           }
           if (event.type === 'customer.subscription.deleted' && row.status !== 'canceled') {
             fireSubWorkflow(managerId, 'trigger.subscription_canceled', merged, { subscriptionStatus: 'canceled' });
+          } else if (event.type === 'customer.subscription.updated') {
+            // Transición de pausa: dispara paused/resumed según cambie el flag.
+            if (nowPaused && !row.paused) fireSubWorkflow(managerId, 'trigger.subscription_paused', merged, { subscriptionStatus: status });
+            else if (!nowPaused && row.paused) fireSubWorkflow(managerId, 'trigger.subscription_resumed', merged, { subscriptionStatus: status });
           }
         }
         break;

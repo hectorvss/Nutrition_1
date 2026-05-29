@@ -944,6 +944,15 @@ router.post('/:id/refund', async (req: any, res) => {
     }
 
     const refund = await stripe.refunds.create({ payment_intent: paymentIntentId });
+    // Dispara el workflow de reembolso emitido (best-effort).
+    try {
+      const { runWorkflowsForEvent } = await import('./workflows.js');
+      await runWorkflowsForEvent(req.user.id, 'trigger.refund_issued', {
+        clientId: row.client_id, billingId: row.id, planName: row.description,
+        amountCents: row.amount_cents, currency: row.currency, interval: row.interval,
+        subscriptionStatus: row.status,
+      });
+    } catch (wfErr) { console.error('refund workflow fire failed:', wfErr); }
     res.json({ ok: true, refund_id: refund.id, status: refund.status });
   } catch (error: any) {
     console.error('Error refunding charge:', error);
@@ -1741,6 +1750,143 @@ router.post('/plans/:id/promotion-codes', async (req: any, res) => {
     res.status(400).json({ error: 'stripe_error', message: safeErr(error, 'No se pudo crear el código.') });
   }
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// HELPERS REUTILIZABLES POR LOS WORKFLOWS (operaciones de facturación)
+// Encapsulan las operaciones de Stripe para que las acciones de workflow las
+// invoquen sin duplicar la lógica de los endpoints. Devuelven un objeto plano
+// con {ok} | {skipped} | {error} (nunca lanzan al caller del workflow).
+// ════════════════════════════════════════════════════════════════════════
+
+// Cobro recurrente "vivo" más reciente de un cliente (para cancelar/pausar).
+async function wfFindActiveRecurring(managerId: string, clientId: string) {
+  const { data } = await supabaseAdmin
+    .from('client_billing').select('*')
+    .eq('manager_id', managerId).eq('client_id', clientId).eq('kind', 'recurring')
+    .in('status', ['active', 'trialing', 'past_due', 'pending'])
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  return data;
+}
+
+export async function wfCancelSubscription(managerId: string, clientId: string, atPeriodEnd: boolean): Promise<any> {
+  const row = await wfFindActiveRecurring(managerId, clientId);
+  if (!row) return { skipped: 'no_subscription' };
+  const conn = await getCoachStripe(managerId);
+  if ('error' in conn) return { error: conn.error };
+  const { stripe } = conn;
+  const { data: cu } = await supabaseAdmin.from('users').select('email').eq('id', clientId).maybeSingle();
+  const subId = await resolveSubscriptionId(stripe, row, cu?.email);
+  const shared = await rowUsesSharedPlanLink(row);
+  if (subId) {
+    if (atPeriodEnd) await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
+    else await stripe.subscriptions.cancel(subId);
+  }
+  if (!atPeriodEnd && !shared && row.stripe_payment_link_id) {
+    try { await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+  }
+  if (atPeriodEnd && subId) {
+    await supabaseAdmin.from('client_billing').update({ cancel_at_period_end: true }).eq('id', row.id);
+  } else {
+    await supabaseAdmin.from('client_billing').update({ status: 'canceled', cancel_at_period_end: false, paused: false }).eq('id', row.id);
+  }
+  return { ok: true, scheduled: atPeriodEnd && !!subId };
+}
+
+export async function wfSetPause(managerId: string, clientId: string, pause: boolean): Promise<any> {
+  const row = await wfFindActiveRecurring(managerId, clientId);
+  if (!row) return { skipped: 'no_subscription' };
+  const conn = await getCoachStripe(managerId);
+  if ('error' in conn) return { error: conn.error };
+  const { stripe } = conn;
+  const { data: cu } = await supabaseAdmin.from('users').select('email').eq('id', clientId).maybeSingle();
+  const subId = await resolveSubscriptionId(stripe, row, cu?.email);
+  if (!subId) return { skipped: 'no_active_subscription' };
+  await stripe.subscriptions.update(subId, pause ? { pause_collection: { behavior: 'void' } } : ({ pause_collection: null } as any));
+  await supabaseAdmin.from('client_billing').update({ paused: pause, stripe_subscription_id: subId }).eq('id', row.id);
+  return { ok: true };
+}
+
+export async function wfCreatePlanPromo(managerId: string, planId: string, opts: {
+  discountType?: 'percent' | 'amount'; value: number; duration?: string; durationInMonths?: number; code?: string; maxRedemptions?: number;
+}): Promise<any> {
+  const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', planId).eq('manager_id', managerId).maybeSingle();
+  if (!plan) return { error: 'plan_not_found' };
+  const valNum = Number(opts.value);
+  if (!Number.isFinite(valNum) || valNum <= 0) return { error: 'invalid_value' };
+  const conn = await getCoachStripe(managerId);
+  if ('error' in conn) return { error: conn.error };
+  const { stripe } = conn;
+  const couponParams: any = { duration: ['once', 'forever', 'repeating'].includes(opts.duration || '') ? opts.duration : 'once' };
+  if (couponParams.duration === 'repeating') {
+    const m = Number(opts.durationInMonths);
+    couponParams.duration_in_months = Number.isFinite(m) && m >= 1 && m <= 36 ? Math.round(m) : 3;
+  }
+  if (opts.discountType === 'amount') {
+    couponParams.amount_off = Math.round(valNum * 100);
+    couponParams.currency = (plan.currency || 'eur').toLowerCase();
+  } else {
+    couponParams.percent_off = Math.min(100, Math.max(1, valNum));
+  }
+  if (plan.stripe_product_id) couponParams.applies_to = { products: [plan.stripe_product_id] };
+  const coupon = await stripe.coupons.create(couponParams);
+  const promoParams: any = { coupon: coupon.id, metadata: { plan_id: planId, manager_id: managerId } };
+  if (typeof opts.code === 'string' && opts.code.trim()) {
+    const cleaned = opts.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 50);
+    if (cleaned) promoParams.code = cleaned;
+  }
+  if (Number.isFinite(Number(opts.maxRedemptions)) && Number(opts.maxRedemptions) >= 1) promoParams.max_redemptions = Math.round(Number(opts.maxRedemptions));
+  const pc = await stripe.promotionCodes.create(promoParams);
+  if (!plan.allow_promotion_codes && plan.stripe_payment_link_id) {
+    try {
+      await stripe.paymentLinks.update(plan.stripe_payment_link_id, { allow_promotion_codes: true });
+      await supabaseAdmin.from('billing_plans').update({ allow_promotion_codes: true }).eq('id', planId);
+    } catch { /* noop */ }
+  }
+  return { ok: true, code: pc.code };
+}
+
+// Crea un cobro recurring|one_time para un cliente (producto + precio + link),
+// guarda la fila y opcionalmente envía la tarjeta de pago al chat.
+export async function wfCreateCharge(managerId: string, clientId: string, opts: {
+  kind?: 'recurring' | 'one_time'; amount: number; currency?: string; interval?: string; description?: string; sendToChat?: boolean;
+}): Promise<any> {
+  const client = await getOwnedClient(managerId, clientId);
+  if (!client) return { error: 'client_not_owned' };
+  const kind: 'recurring' | 'one_time' = opts.kind === 'one_time' ? 'one_time' : 'recurring';
+  const amountNum = Number(opts.amount);
+  if (!Number.isFinite(amountNum) || amountNum <= 0) return { error: 'invalid_amount' };
+  const amountCents = Math.round(amountNum * 100);
+  const currency = (typeof opts.currency === 'string' && /^[a-z]{3}$/i.test(opts.currency)) ? opts.currency.toLowerCase() : 'eur';
+  const interval = ['day', 'week', 'month', 'year'].includes(opts.interval || '') ? opts.interval! : 'month';
+  const conn = await getCoachStripe(managerId);
+  if ('error' in conn) return { error: conn.error };
+  const { stripe } = conn;
+  const productName = (opts.description && opts.description.slice(0, 300)) || `Coaching — ${client.full_name || client.email}`;
+  const product = await stripe.products.create({ name: productName });
+  const price = await stripe.prices.create({
+    product: product.id, unit_amount: amountCents, currency,
+    ...(kind === 'recurring' ? { recurring: { interval: interval as any } } : {}),
+  });
+  const link = await stripe.paymentLinks.create({
+    line_items: [{ price: price.id, quantity: 1 }],
+    metadata: { client_id: client.id, manager_id: managerId },
+    after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+  });
+  const { data: inserted } = await supabaseAdmin.from('client_billing').insert({
+    manager_id: managerId, client_id: client.id, kind,
+    stripe_payment_link_id: link.id, stripe_price_id: price.id, stripe_product_id: product.id,
+    payment_url: link.url, description: opts.description?.slice(0, 300) || null,
+    amount_cents: amountCents, currency, interval: kind === 'recurring' ? interval : null, status: 'pending',
+  }).select().single();
+  if (opts.sendToChat !== false && inserted) {
+    await supabaseAdmin.from('messages').insert({
+      sender_id: managerId, receiver_id: client.id, content: '',
+      attachment_type: 'payment', attachment_url: link.url,
+      payload: { billing_id: inserted.id, kind, amount_cents: amountCents, currency, interval: kind === 'recurring' ? interval : null, description: opts.description || null, status: 'pending' },
+    });
+  }
+  return { ok: true, billingId: inserted?.id };
+}
 
 // ── Barrido automático (cron) ──────────────────────────────────────────────
 // Como no hay webhooks por-coach, el cron diario sincroniza los cobros que
