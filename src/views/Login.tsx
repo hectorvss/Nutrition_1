@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../api';
-import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, ShieldCheck, Search } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../supabase';
 
@@ -345,25 +345,27 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
         </div>
       </div>
 
-      {/* Right side: Inset Mac Browser Mockup */}
+      {/* Right side: Mac Browser Mockup — mismo marco que el mockup del hero de
+          la landing (marco blanco translúcido, sin borde lila, fondo blanco). */}
       <div className="hidden lg:flex w-[55%] bg-white relative items-center justify-center p-8">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="w-full aspect-video bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-[32px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col border border-white/20"
+          className="w-full aspect-video bg-white/80 backdrop-blur-xl rounded-[32px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.15)] border border-white/20 overflow-hidden flex flex-col"
         >
-          <div className="bg-white/10 backdrop-blur-md border-b border-white/10 px-6 py-4 flex items-center gap-2">
+          <div className="bg-white/50 border-b border-gray-100/20 px-6 py-4 flex items-center gap-2">
             <div className="flex gap-2">
               <div className="w-3.5 h-3.5 rounded-full bg-[#ff5f56]"></div>
               <div className="w-3.5 h-3.5 rounded-full bg-[#ffbd2e]"></div>
               <div className="w-3.5 h-3.5 rounded-full bg-[#27c93f]"></div>
             </div>
-            <div className="mx-auto bg-white/10 rounded-xl px-4 py-1.5 text-[10px] text-white/40 font-bold uppercase tracking-widest flex items-center gap-2 w-1/3">
+            <div className="mx-auto bg-gray-100/50 rounded-xl px-4 py-1.5 text-xs text-gray-400 font-medium flex items-center gap-2 w-1/3">
+              <Search className="w-3 h-3" />
               nutrifit.pro/login
             </div>
           </div>
-          <div className="flex-1 relative overflow-hidden">
+          <div className="flex-1 relative overflow-hidden bg-white">
             <AnimatePresence mode="sync">
               <motion.img
                 key={showcase[slide].src}
@@ -376,8 +378,6 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
                 className="absolute inset-0 w-full h-full object-cover object-top"
               />
             </AnimatePresence>
-            {/* Degradado para legibilidad de la etiqueta */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
             <AnimatePresence mode="wait">
               <motion.div
                 key={showcase[slide].label}
@@ -387,7 +387,7 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
                 transition={{ duration: 0.5 }}
                 className="absolute bottom-5 left-5 flex items-center gap-2"
               >
-                <span className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs font-bold tracking-wide">
+                <span className="px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-gray-200 text-slate-700 text-xs font-bold tracking-wide shadow-sm">
                   {showcase[slide].label}
                 </span>
               </motion.div>
@@ -395,7 +395,7 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
             {/* Indicadores */}
             <div className="absolute bottom-6 right-5 flex gap-1.5">
               {showcase.map((_, i) => (
-                <span key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === slide ? 'w-5 bg-white' : 'w-1.5 bg-white/40'}`} />
+                <span key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === slide ? 'w-5 bg-slate-700' : 'w-1.5 bg-slate-300'}`} />
               ))}
             </div>
           </div>
