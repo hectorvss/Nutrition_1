@@ -49,15 +49,25 @@ async function getCoachStripe(managerId: string): Promise<{ stripe: Stripe } | {
 }
 
 // ── Helper: verifica que el cliente pertenece al coach ─────────────────────
+// OJO: `full_name` vive en `profiles`, NO en `users`. Seleccionarlo de `users`
+// hacía fallar la query (columna inexistente) → devolvía null → "Client does
+// not belong to this coach" para CUALQUIER cliente. Pedimos solo columnas
+// válidas de `users` y resolvemos el nombre aparte.
 async function getOwnedClient(managerId: string, clientId: string) {
   if (!UUID_RE.test(String(clientId))) return null;
   const { data } = await supabaseAdmin
     .from('users')
-    .select('id, email, full_name, manager_id')
+    .select('id, email, manager_id')
     .eq('id', clientId)
     .eq('manager_id', managerId)
     .maybeSingle();
-  return data || null;
+  if (!data) return null;
+  const { data: prof } = await supabaseAdmin
+    .from('profiles')
+    .select('full_name')
+    .eq('user_id', clientId)
+    .maybeSingle();
+  return { ...data, full_name: prof?.full_name || null };
 }
 
 // ── Helper: find-or-create Stripe Customer en la cuenta del coach ──────────
