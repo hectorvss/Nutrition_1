@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../api';
-import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, Play, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Loader2, ChevronRight, ShieldCheck } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../supabase';
 
@@ -21,6 +21,18 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
 
   const { login } = useAuth();
   const isSuccessMessage = error === t('login_reset_email_sent', { defaultValue: 'Si el email existe, recibirás un enlace para restablecer la contraseña.' });
+
+  // Showcase del panel derecho: alterna una foto de nutrición y otra de
+  // entrenamiento con un cross-fade cada 5s.
+  const showcase = [
+    { src: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80', label: t('login_showcase_nutrition', { defaultValue: 'Planes de nutrición' }) },
+    { src: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80', label: t('login_showcase_training', { defaultValue: 'Planes de entrenamiento' }) },
+  ];
+  const [slide, setSlide] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setSlide(s => (s + 1) % showcase.length), 5000);
+    return () => clearInterval(id);
+  }, []);
 
   // Establishes a real supabase-js session in the browser (needed for MFA),
   // then completes login — challenging for a 2FA code first if required.
@@ -348,9 +360,40 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
               nutrifit.pro/login
             </div>
           </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/10">
-              <Play className="w-8 h-8 text-white/20" />
+          <div className="flex-1 relative overflow-hidden">
+            <AnimatePresence mode="sync">
+              <motion.img
+                key={showcase[slide].src}
+                src={showcase[slide].src}
+                alt={showcase[slide].label}
+                initial={{ opacity: 0, scale: 1.06 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, ease: 'easeInOut' }}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </AnimatePresence>
+            {/* Degradado para legibilidad de la etiqueta */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={showcase[slide].label}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.5 }}
+                className="absolute bottom-5 left-5 flex items-center gap-2"
+              >
+                <span className="px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white text-xs font-bold tracking-wide">
+                  {showcase[slide].label}
+                </span>
+              </motion.div>
+            </AnimatePresence>
+            {/* Indicadores */}
+            <div className="absolute bottom-6 right-5 flex gap-1.5">
+              {showcase.map((_, i) => (
+                <span key={i} className={`h-1.5 rounded-full transition-all duration-500 ${i === slide ? 'w-5 bg-white' : 'w-1.5 bg-white/40'}`} />
+              ))}
             </div>
           </div>
         </motion.div>
