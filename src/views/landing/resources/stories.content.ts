@@ -4,7 +4,7 @@ export const stories: ResourceArticle[] = [
   {
     id: 'whatsapp-to-system',
     category: 'stories',
-    readMin: 5,
+    readMin: 7,
     es: {
       title: 'De WhatsApp a sistema profesional en 3 semanas',
       subtitle:
@@ -95,12 +95,45 @@ export const stories: ResourceArticle[] = [
         es: 'No intentes migrarlo todo en un día. Marta empezó solo por los clientes activos y dejó el archivo histórico para una tarde tranquila más adelante.',
         en: 'Do not try to migrate everything in one day. Marta started with active clients only and left the historical archive for a quiet afternoon later on.',
       },
+      {
+        type: 'h',
+        es: 'Cómo replicarlo',
+        en: 'How to replicate it',
+      },
+      {
+        type: 'p',
+        es: 'Migrar de WhatsApp a un sistema ordenado no requiere un fin de semana entero: basta con dar de alta a tus clientes activos uno a uno y dejar que la plataforma se encargue del resto. Estos son los pasos exactos que siguió Marta en NutriFit.',
+        en: 'Moving from WhatsApp to a tidy system does not take a whole weekend: you just add your active clients one by one and let the platform handle the rest. These are the exact steps Marta followed in NutriFit.',
+      },
+      {
+        type: 'steps',
+        es: [
+          'Entra en Clientes y pulsa «Nuevo Cliente». Rellena nombre, contacto y objetivo; con eso ya tienes su ficha central creada.',
+          'Desde Onboarding, asígnale el flujo de bienvenida para que reciba el primer mensaje y la encuesta inicial sin que tengas que copiar y pegar nada.',
+          'Ve a Nutrición y pulsa «Asignar Plan»: parte de una plantilla, ajusta los macros y guárdalo en la ficha del cliente.',
+          'Repite con cada cliente activo. En cuanto termines, el panel ya te muestra quién ha pagado y a quién le toca revisión.',
+        ],
+        en: [
+          'Go to Clients and click «New Client». Fill in name, contact and goal; that alone creates their central profile.',
+          'From Onboarding, assign them the welcome flow so they get the first message and initial survey without you copying and pasting anything.',
+          'Open Nutrition and click «Assign Plan»: start from a template, tweak the macros and save it to the client profile.',
+          'Repeat for each active client. As soon as you finish, the dashboard already shows who has paid and who is due for a check-in.',
+        ],
+      },
+      {
+        type: 'img',
+        src: '/landing/wt-new-client.png',
+        gradient: 'gradient-bg-learning',
+        alt: 'Formulario de alta de un nuevo cliente con nombre, contacto y objetivo',
+        es: 'El formulario «Nuevo Cliente» crea la ficha central en menos de un minuto.',
+        en: 'The «New Client» form creates the central profile in under a minute.',
+      },
     ],
   },
   {
     id: 'team-standard',
     category: 'stories',
-    readMin: 5,
+    readMin: 7,
     es: {
       title: 'Cómo un estudio de coaching estandariza su calidad',
       subtitle:
@@ -178,12 +211,58 @@ export const stories: ResourceArticle[] = [
         authorEs: 'Javier Sanz · Online',
         authorEn: 'Javier Sanz · Online',
       },
+      {
+        type: 'tip',
+        es: 'Estandariza primero el flujo que más se repite (la bienvenida) y mídelo un mes antes de plantillar el resto. Cambiar una plantilla compartida es mucho más rápido que corregir a cinco personas.',
+        en: 'Standardise the flow that repeats most first (the welcome) and measure it for a month before templating the rest. Editing one shared template is far faster than correcting five people.',
+      },
+      {
+        type: 'h',
+        es: 'Cómo replicarlo',
+        en: 'How to replicate it',
+      },
+      {
+        type: 'p',
+        es: 'La clave del estudio de Javier fue convertir su mejor proceso en plantillas que cualquier entrenador pudiera reutilizar, y dejar que las automatizaciones vigilaran el suelo mínimo de calidad. Así lo montaron en NutriFit.',
+        en: 'The key for Javier’s studio was turning their best process into templates any trainer could reuse, and letting automations watch over the minimum quality floor. This is how they set it up in NutriFit.',
+      },
+      {
+        type: 'steps',
+        es: [
+          'En Check-ins, abre las plantillas de check-in y crea una versión estándar con las preguntas que todo cliente debe recibir; guárdala para todo el equipo.',
+          'Ve a Automatizaciones y pulsa «Nueva Automatización»: define el flujo de bienvenida con sus mensajes y tiempos.',
+          'Añade una rama condicional: si el cliente no responde en 48 horas, que el entrenador asignado reciba un aviso.',
+          'Programa la primera revisión y la encuesta para que se disparen solas según la fecha de alta, sin depender de la memoria de nadie.',
+        ],
+        en: [
+          'In Check-ins, open the check-in templates and create a standard version with the questions every client must receive; save it for the whole team.',
+          'Go to Automations and click «New Automation»: define the welcome flow with its messages and timings.',
+          'Add a conditional branch: if the client does not reply within 48 hours, the assigned trainer gets a nudge.',
+          'Schedule the first check-in and the survey to fire automatically based on the join date, with no reliance on anyone’s memory.',
+        ],
+      },
+      {
+        type: 'img',
+        src: '/landing/wt-checkin-templates.png',
+        gradient: 'gradient-bg-shopping',
+        alt: 'Plantillas de check-in con preguntas estándar reutilizables',
+        es: 'Las plantillas de check-in fijan las preguntas que todo cliente recibe.',
+        en: 'Check-in templates lock in the questions every client receives.',
+      },
+      {
+        type: 'img',
+        src: '/landing/wt-new-automation.png',
+        gradient: 'gradient-bg-learning',
+        alt: 'Menú «Nueva Automatización» para definir el flujo de bienvenida',
+        es: '«Nueva Automatización» es donde se define el flujo de bienvenida compartido.',
+        en: '«New Automation» is where the shared welcome flow is defined.',
+      },
     ],
   },
   {
     id: 'double-revenue',
     category: 'stories',
-    readMin: 6,
+    readMin: 8,
     es: {
       title: 'Doblar facturación sin doblar horas',
       subtitle:
@@ -265,6 +344,41 @@ export const stories: ResourceArticle[] = [
         type: 'tip',
         es: 'Antes de subir tu tarifa, mira tu retención. Lucía esperó a ver dos meses estables en el panel para tener la conversación con confianza.',
         en: 'Before raising your rate, look at your retention. Lucía waited to see two stable months on the dashboard so she could have the conversation with confidence.',
+      },
+      {
+        type: 'h',
+        es: 'Cómo replicarlo',
+        en: 'How to replicate it',
+      },
+      {
+        type: 'p',
+        es: 'El salto de Lucía no vino de trabajar más, sino de quitarse de encima las tareas que no cobraba: cobros, recordatorios y planes hechos desde cero. Estos son los pasos que liberaron sus tardes en NutriFit.',
+        en: 'Lucía’s leap did not come from working more, but from shedding the tasks she was not billing for: payments, reminders and plans built from scratch. These are the steps that freed up her afternoons in NutriFit.',
+      },
+      {
+        type: 'steps',
+        es: [
+          'En Suscripciones, activa la facturación recurrente para cada cliente y olvídate de perseguir transferencias mes a mes.',
+          'En Automatizaciones, pulsa «Nueva Automatización» y crea los recordatorios de pago y de revisión para que salgan solos.',
+          'Usa las plantillas de Nutrición con «Asignar Plan» para no rehacer planes parecidos: parte de una base y ajusta los macros.',
+          'Procesa los check-ins por lotes desde Check-ins en un único bloque de tiempo a la semana, en vez de uno a uno a cualquier hora.',
+          'Abre Analítica y revisa retención e ingresos recurrentes: cuando veas dos meses estables, tendrás la base para ajustar tu tarifa con confianza.',
+        ],
+        en: [
+          'In Subscriptions, turn on recurring billing for each client and stop chasing transfers month after month.',
+          'In Automations, click «New Automation» and set up payment and check-in reminders so they go out on their own.',
+          'Use the Nutrition templates with «Assign Plan» to avoid rebuilding similar plans: start from a base and tweak the macros.',
+          'Process check-ins in batches from Check-ins in a single weekly time block, instead of one by one at all hours.',
+          'Open Analytics and review retention and recurring revenue: once you see two stable months, you have the basis to adjust your rate with confidence.',
+        ],
+      },
+      {
+        type: 'img',
+        src: '/landing/wt-new-automation.png',
+        gradient: 'gradient-bg-writing',
+        alt: 'Menú «Nueva Automatización» para configurar recordatorios de pago y revisión',
+        es: 'Desde «Nueva Automatización» salen solos los cobros y recordatorios.',
+        en: 'From «New Automation» the charges and reminders go out by themselves.',
       },
     ],
   },

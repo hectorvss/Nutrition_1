@@ -23,7 +23,7 @@ export default function ResourceArticle({ article, onBack, categoryLabel }: Prop
 
   return (
     <div className="pt-28 pb-24 px-4">
-      <article className="max-w-2xl mx-auto">
+      <article className="max-w-3xl mx-auto">
         {/* Volver */}
         <button
           onClick={onBack}

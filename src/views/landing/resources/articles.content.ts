@@ -4,7 +4,7 @@ export const articles: ResourceArticle[] = [
   {
     id: 'adherence-metric',
     category: 'articles',
-    readMin: 6,
+    readMin: 9,
     es: {
       title: 'Adherencia: la métrica que importa de verdad',
       subtitle: 'El peso sube y baja, las fotos engañan y las calorías mienten. Lo que predice resultados es cuánto cumple el cliente, semana tras semana.',
@@ -69,6 +69,33 @@ export const articles: ResourceArticle[] = [
       },
       {
         type: 'h',
+        es: 'Leer la adherencia en Analítica y Check-ins, paso a paso',
+        en: 'Reading adherence in Analytics and Check-ins, step by step',
+      },
+      {
+        type: 'p',
+        es: 'La teoría está clara; el problema es convertirla en una rutina de cinco minutos que hagas cada lunes sin pensar. En NutriFit tienes los dos sitios donde vive este número: la pestaña Analítica para la foto agregada de toda tu cartera y la pestaña Check-ins para bajar al detalle de cada cliente. Este es el recorrido exacto.',
+        en: 'The theory is clear; the problem is turning it into a five-minute routine you run every Monday without thinking. In NutriFit you have the two places this number lives: the Analítica tab for the aggregate snapshot of your whole roster and the Check-ins tab to drill into each client. Here’s the exact walkthrough.',
+      },
+      {
+        type: 'steps',
+        es: [
+          'Abre Analítica en el menú lateral y fíjate primero en la adherencia agregada y la retención: es tu termómetro general de la semana.',
+          'Entra en Check-ins y ordena la lista por puntuación de adherencia, de menor a mayor, para que los clientes en riesgo suban arriba del todo.',
+          'Abre el check-in de quien esté flojo y compara su porcentaje de esta semana con el de las tres anteriores: buscas tendencia, no el dato suelto.',
+          'Cruza esa adherencia con el último peso registrado del mismo panel: si cumple y no mueve, el problema es el plan; si no cumple, el problema es la vida.',
+          'Anota en una frase qué acción tomas con cada cliente en rojo antes de cerrar la pestaña, para no llegar al lunes siguiente con la misma duda.',
+        ],
+        en: [
+          'Open Analítica in the side menu and look first at aggregate adherence and retention: that’s your general thermometer for the week.',
+          'Go into Check-ins and sort the list by adherence score, lowest first, so at-risk clients rise to the very top.',
+          'Open the check-in of whoever is slipping and compare this week’s percentage with the previous three: you’re after a trend, not the isolated number.',
+          'Cross that adherence with the latest logged weight on the same panel: if they comply and it doesn’t move, the plan is the problem; if they don’t comply, life is the problem.',
+          'Write a one-line action for each client in the red before closing the tab, so you don’t reach next Monday with the same doubt.',
+        ],
+      },
+      {
+        type: 'h',
         es: 'Qué hacer cuando la adherencia cae',
         en: 'What to do when adherence drops',
       },
@@ -76,6 +103,41 @@ export const articles: ResourceArticle[] = [
         type: 'p',
         es: 'Una caída casi nunca es falta de fuerza de voluntad: suele ser un plan demasiado exigente para la vida real del cliente esa semana. Antes de motivar, investiga. Pregunta qué se interpuso, recorta el plan a la mínima versión que sí puede cumplir y vuelve a subir el listón cuando recupere la racha. Es más rentable bajar la exigencia y mantener la constancia que insistir en un plan perfecto que nadie sigue.',
         en: 'A drop is almost never a lack of willpower: it’s usually a plan too demanding for the client’s real life that week. Before motivating, investigate. Ask what got in the way, cut the plan down to the smallest version they can actually hit, and raise the bar again once the streak is back. It pays more to lower the demand and keep consistency than to insist on a perfect plan nobody follows.',
+      },
+      {
+        type: 'h',
+        es: 'Monta una alerta de adherencia a la baja',
+        en: 'Set up a low-adherence alert',
+      },
+      {
+        type: 'p',
+        es: 'Lo mejor sería no tener que acordarte de ordenar la lista cada semana: que el sistema te avise solo cuando alguien empiece a soltarse. Eso es exactamente lo que hace una automatización. En lugar de revisar cliente por cliente, defines la regla una vez y dejas que el radar de abandono trabaje por ti.',
+        en: 'Ideally you wouldn’t have to remember to sort the list every week: the system should warn you on its own when someone starts slipping. That’s exactly what an automation does. Instead of reviewing client by client, you define the rule once and let the churn radar work for you.',
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-automations.png',
+        gradient: 'gradient-bg-planning',
+        alt: 'Lista de automatizaciones con renovación de plan, check-in semanal y radar de abandono',
+        es: 'La lista de Automatizaciones reúne tus reglas activas —renovación de plan, check-in semanal, radar de abandono— y te dice de un vistazo qué se está vigilando solo.',
+        en: 'The Automatizaciones list gathers your active rules —plan renewal, weekly check-in, churn radar— and shows at a glance what’s being watched automatically.',
+      },
+      {
+        type: 'steps',
+        es: [
+          'Entra en Automatizaciones desde el menú lateral y pulsa "Nueva Automatización".',
+          'Elige "Simple Automation" para una regla directa; deja "Advanced Workflow" para cuando quieras encadenar varios pasos.',
+          'Como disparador, selecciona la caída de adherencia por debajo de un umbral (por ejemplo, menos del 70 % durante dos semanas seguidas).',
+          'Como acción, márcala para que te avise a ti y, si quieres, mande un mensaje de seguimiento al cliente.',
+          'Guarda y compruébala en la lista de Automatizaciones: a partir de ahí, el radar de abandono te trae los casos en lugar de buscarlos tú.',
+        ],
+        en: [
+          'Go into Automatizaciones from the side menu and click "Nueva Automatización".',
+          'Pick "Simple Automation" for a straightforward rule; save "Advanced Workflow" for when you want to chain several steps.',
+          'As the trigger, select adherence dropping below a threshold (for example, under 70 % for two weeks in a row).',
+          'As the action, set it to notify you and, if you want, send a follow-up message to the client.',
+          'Save it and check it in the Automatizaciones list: from there, the churn radar brings you the cases instead of you hunting for them.',
+        ],
       },
       {
         type: 'tip',
@@ -87,7 +149,7 @@ export const articles: ResourceArticle[] = [
   {
     id: 'scale-40',
     category: 'articles',
-    readMin: 7,
+    readMin: 10,
     es: {
       title: 'Cómo escalar a 40 clientes sin perder calidad',
       subtitle: 'Llegar a 40 clientes no es trabajar el doble de horas: es construir sistemas que hagan el trabajo repetitivo por ti y reservar tu atención para lo que de verdad necesita tu criterio.',
@@ -152,6 +214,49 @@ export const articles: ResourceArticle[] = [
       },
       {
         type: 'h',
+        es: 'Batch de check-ins y reutilización de plantillas, paso a paso',
+        en: 'Batching check-ins and reusing templates, step by step',
+      },
+      {
+        type: 'p',
+        es: 'Las dos palancas que más tiempo te devuelven son agrupar los check-ins en un único bloque y dejar de escribir planes desde cero. Lo primero ataca la dispersión; lo segundo, la duplicación. Así se montan ambas dentro de NutriFit sin inventar nada raro.',
+        en: 'The two levers that give you the most time back are batching your check-ins into a single block and never writing plans from scratch again. The first kills scatter; the second kills duplication. Here’s how to set both up inside NutriFit without inventing anything fancy.',
+      },
+      {
+        type: 'steps',
+        es: [
+          'Reserva una franja fija (por ejemplo, lunes por la mañana), abre Check-ins y ordena por fecha para revisarlos todos seguidos en una sola sesión.',
+          'Ve respondiendo de arriba abajo sin saltar a otras pestañas: el objetivo es no abrir y cerrar el contexto veinte veces al día.',
+          'Cuando un plan te funcione, entra en Nutrición y guárdalo en "Plantillas de Nutrición" para no volver a escribirlo.',
+          'Para un cliente nuevo, parte de esa plantilla con "Asignar Plan" y ajusta solo lo que cambia: peso, objetivo y preferencias.',
+          'Revisa el resultado con "Ver Plan" antes de enviarlo y, si encaja, guárdalo de nuevo como variante para la próxima vez.',
+        ],
+        en: [
+          'Block a fixed slot (Monday morning, say), open Check-ins and sort by date to review them all back to back in one session.',
+          'Answer top to bottom without jumping to other tabs: the goal is not to open and close the context twenty times a day.',
+          'When a plan works, go into Nutrición and save it under "Plantillas de Nutrición" so you never rewrite it.',
+          'For a new client, start from that template with "Asignar Plan" and adjust only what changes: weight, goal and preferences.',
+          'Review the result with "Ver Plan" before sending and, if it fits, save it again as a variant for next time.',
+        ],
+      },
+      {
+        type: 'img',
+        src: '/landing/feature-nutrition.png',
+        gradient: 'gradient-bg-shopping',
+        alt: 'Planes de nutrición por cliente con objetivo, macros y kcal',
+        es: 'Los planes de nutrición por cliente te dejan ver de un vistazo qué tiene asignado cada uno, así reutilizas estructuras en lugar de empezar cada plan en blanco.',
+        en: 'The per-client nutrition plans let you see at a glance what each one has assigned, so you reuse structures instead of starting every plan blank.',
+      },
+      {
+        type: 'img',
+        src: '/landing/wt-nutrition-plan.png',
+        gradient: 'gradient-bg-learning',
+        alt: 'Editor del plan con Plantillas de Nutrición, reparto de macros y Configuración del Plan',
+        es: 'En el editor, Plantillas de Nutrición y Configuración del Plan (Calorías objetivo y Reparto de macros) son el corazón de tu sistema: defines una vez y clonas para el resto.',
+        en: 'In the editor, Plantillas de Nutrición and Configuración del Plan (Calorías objetivo and Reparto de macros) are the heart of your system: define once and clone for the rest.',
+      },
+      {
+        type: 'h',
         es: 'Qué estandarizar y qué personalizar',
         en: 'What to standardise and what to personalise',
       },
@@ -186,7 +291,7 @@ export const articles: ResourceArticle[] = [
   {
     id: 'macro-mistakes',
     category: 'articles',
-    readMin: 5,
+    readMin: 8,
     es: {
       title: 'Errores comunes al planificar macros',
       subtitle: 'Planificar macros parece sencillo hasta que un cliente no progresa, se queda con hambre o reacciona a un alimento que ni mirabas. Estos son los fallos que más se repiten.',
@@ -240,6 +345,49 @@ export const articles: ResourceArticle[] = [
         type: 'p',
         es: 'La mayoría de estos errores desaparecen con una rutina de revisión de dos minutos antes de enviar el plan: comprueba que la proteína cubre el objetivo, que la fibra llega al rango razonable, que recalculaste las cifras para este cliente y que ningún alimento choca con sus alergias o sus gustos. No es glamuroso, pero es lo que separa un plan que funciona de uno que vuelve corregido.',
         en: 'Most of these mistakes disappear with a two-minute review routine before sending the plan: check that protein covers the target, that fibre reaches a reasonable range, that you recalculated the numbers for this client and that no food clashes with their allergies or preferences. It isn’t glamorous, but it’s what separates a plan that works from one that comes back for corrections.',
+      },
+      {
+        type: 'h',
+        es: 'Ajustar el reparto de macros en Configuración del Plan',
+        en: 'Adjusting the macro split in Plan Settings',
+      },
+      {
+        type: 'p',
+        es: 'La parte buena es que casi todos estos fallos se corrigen en la misma pantalla. En el editor de Nutrición, Configuración del Plan te deja fijar Calorías objetivo y, debajo, el Reparto de macros. La clave es bloquear primero la proteína por kilo de peso y dejar que hidratos y grasas se repartan lo que sobre, no al revés.',
+        en: 'The good news is that almost all of these mistakes are fixed on the same screen. In the Nutrición editor, Configuración del Plan lets you set Calorías objetivo and, below it, the Reparto de macros. The key is to lock protein per kilo of body weight first and let carbs and fat split what’s left, not the other way around.',
+      },
+      {
+        type: 'img',
+        src: '/landing/wt-nutrition-plan.png',
+        gradient: 'gradient-bg-learning',
+        alt: 'Editor del plan con Configuración del Plan, Calorías objetivo y Reparto de macros',
+        es: 'En Configuración del Plan ajustas Calorías objetivo y Reparto de macros en el mismo sitio, así ves cómo cambia el reparto antes de asignarlo al cliente.',
+        en: 'In Configuración del Plan you adjust Calorías objetivo and Reparto de macros in one place, so you see how the split shifts before assigning it to the client.',
+      },
+      {
+        type: 'steps',
+        es: [
+          'Abre Nutrición, elige al cliente y entra en Configuración del Plan.',
+          'Fija primero Calorías objetivo según el objetivo (déficit, mantenimiento o superávit) y la actividad real, no la teórica.',
+          'En Reparto de macros, asegura la proteína antes que nada (alrededor de 1,8–2,2 g por kilo) y revisa que la fibra quede en un rango razonable.',
+          'Reparte las calorías restantes entre hidratos y grasas según las preferencias del cliente, no según tu gusto.',
+          'Pulsa "Ver Plan" para comprobar el resultado y cruza cada comida con las alergias e intolerancias antes de asignarlo.',
+        ],
+        en: [
+          'Open Nutrición, pick the client and enter Configuración del Plan.',
+          'Set Calorías objetivo first based on the goal (deficit, maintenance or surplus) and real, not theoretical, activity.',
+          'In Reparto de macros, lock protein before anything else (around 1.8–2.2 g per kilo) and check that fibre lands in a reasonable range.',
+          'Split the remaining calories between carbs and fat according to the client’s preferences, not your taste.',
+          'Hit "Ver Plan" to check the result and cross every meal against allergies and intolerances before assigning it.',
+        ],
+      },
+      {
+        type: 'img',
+        src: '/landing/wt-recipe-detail.png',
+        gradient: 'gradient-bg-shopping',
+        alt: 'Ficha de receta con desglose de macros y kcal por ración',
+        es: 'La ficha de receta muestra los macros y las kcal por ración, así eliges opciones que ya cuadran con el reparto en vez de calcularlas a mano.',
+        en: 'The recipe detail shows macros and kcal per serving, so you pick options that already fit the split instead of working them out by hand.',
       },
       {
         type: 'img',
