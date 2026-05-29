@@ -193,10 +193,10 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     }
   };
 
-  const doDeletePlan = async (plan: Plan) => {
+  const doDeletePlan = async (plan: Plan, deactivateStripe: boolean) => {
     setBusyPlanId(plan.id);
     try {
-      await fetchWithAuth(`/manager/client-billing/plans/${plan.id}`, { method: 'DELETE' });
+      await fetchWithAuth(`/manager/client-billing/plans/${plan.id}?deactivate_stripe=${deactivateStripe ? 'true' : 'false'}`, { method: 'DELETE' });
       await loadPlans();
     } catch (e: any) {
       setError(e?.message || 'Error');
@@ -704,7 +704,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           plan={deleteTarget}
           busy={busyPlanId === deleteTarget.id}
           onClose={() => setDeleteTarget(null)}
-          onConfirm={async () => { await doDeletePlan(deleteTarget); setDeleteTarget(null); }}
+          onConfirm={async (deactivateStripe) => { await doDeletePlan(deleteTarget, deactivateStripe); setDeleteTarget(null); }}
         />
       )}
     </div>
@@ -712,8 +712,13 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
 }
 
 // ── Modal de confirmación al eliminar un plan (destructivo) ────────────────
-function DeletePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: boolean; plan: Plan; busy?: boolean; onClose: () => void; onConfirm: () => void }) {
+// Eliminar SIEMPRE borra el plan del catálogo del SaaS. Stripe no permite
+// borrar de verdad productos/precios ya usados ni los Payment Links, solo
+// ARCHIVARLOS (active:false), así que damos la opción de archivarlos en Stripe
+// o de dejarlos intactos allí.
+function DeletePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: boolean; plan: Plan; busy?: boolean; onClose: () => void; onConfirm: (archiveStripe: boolean) => void }) {
   const total = plan.subscribers?.total ?? 0;
+  const [archiveStripe, setArchiveStripe] = useState(true);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
@@ -727,7 +732,21 @@ function DeletePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: boole
           </div>
         </div>
         <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
-          <p>{isEs ? 'Se eliminará el plan del catálogo y se desactivarán sus objetos en Stripe.' : 'The plan will be removed from the catalog and its Stripe objects deactivated.'}</p>
+          <p>{isEs ? 'Se eliminará el plan del catálogo del SaaS.' : 'The plan will be removed from the SaaS catalog.'}</p>
+
+          {/* Opción: qué hacer en Stripe */}
+          <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 cursor-pointer">
+            <input type="checkbox" checked={archiveStripe} onChange={e => setArchiveStripe(e.target.checked)} className="mt-0.5 w-4 h-4 rounded accent-[var(--brand-primary)]" />
+            <span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100">{isEs ? 'Archivar también en Stripe' : 'Also archive in Stripe'}</span>
+              <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {isEs
+                  ? 'Desactiva el enlace de pago y el producto en tu cuenta de Stripe. Stripe no permite borrarlos de verdad, solo archivarlos. Si lo desmarcas, no se tocará nada en Stripe (podrás seguir usándolos allí).'
+                  : 'Deactivates the payment link and product in your Stripe account. Stripe does not allow truly deleting them, only archiving. If unchecked, nothing in Stripe is touched.'}
+              </span>
+            </span>
+          </label>
+
           {total > 0 && (
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
               {isEs
@@ -735,11 +754,11 @@ function DeletePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: boole
                 : <>The <b>{total}</b> existing assignments stay in the Subscriptions tab (their subscriptions are <b>not canceled</b>), but they’ll no longer be linked to this plan.</>}
             </div>
           )}
-          <p className="text-xs text-slate-400">{isEs ? 'Esta acción no se puede deshacer.' : 'This action cannot be undone.'}</p>
+          <p className="text-xs text-slate-400">{isEs ? 'Eliminar del catálogo no se puede deshacer.' : 'Removing from the catalog cannot be undone.'}</p>
         </div>
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
-          <button onClick={onConfirm} disabled={busy} className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+          <button onClick={() => onConfirm(archiveStripe)} disabled={busy} className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
             {isEs ? 'Eliminar plan' : 'Delete plan'}
           </button>

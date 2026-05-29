@@ -1341,21 +1341,26 @@ router.post('/plans/:id/unarchive', async (req: any, res) => {
   }
 });
 
-// DELETE /plans/:id — elimina el plan del catálogo. Archiva los objetos de
-// Stripe (best-effort) y borra la fila. Las asignaciones existentes
-// (client_billing) se conservan: su plan_id queda en NULL (FK ON DELETE SET
-// NULL) y la suscripción del cliente NO se cancela.
+// DELETE /plans/:id — elimina el plan del catálogo del SaaS. Con
+// ?deactivate_stripe=true (por defecto) ARCHIVA además los objetos de Stripe
+// (link + producto): Stripe no permite borrarlos de verdad, solo desactivarlos.
+// Con ?deactivate_stripe=false no se toca nada en Stripe. Las asignaciones
+// existentes (client_billing) se conservan: su plan_id queda en NULL (FK ON
+// DELETE SET NULL) y la suscripción del cliente NO se cancela.
 router.delete('/plans/:id', async (req: any, res) => {
   try {
     const { id } = req.params;
     if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const archiveStripe = req.query.deactivate_stripe !== 'false';
     const { data: plan } = await supabaseAdmin.from('billing_plans').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
     if (!plan) return res.status(404).json({ error: 'Plan not found' });
-    const conn = await getCoachStripe(req.user.id);
-    if (!('error' in conn)) {
-      const { stripe } = conn;
-      try { if (plan.stripe_payment_link_id) await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
-      try { if (plan.stripe_product_id) await stripe.products.update(plan.stripe_product_id, { active: false }); } catch { /* noop */ }
+    if (archiveStripe) {
+      const conn = await getCoachStripe(req.user.id);
+      if (!('error' in conn)) {
+        const { stripe } = conn;
+        try { if (plan.stripe_payment_link_id) await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+        try { if (plan.stripe_product_id) await stripe.products.update(plan.stripe_product_id, { active: false }); } catch { /* noop */ }
+      }
     }
     const { error } = await supabaseAdmin.from('billing_plans').delete().eq('id', id).eq('manager_id', req.user.id);
     if (error) throw error;
