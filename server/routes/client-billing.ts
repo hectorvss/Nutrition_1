@@ -449,7 +449,7 @@ router.post('/:id/remind', async (req: any, res) => {
     const { error: msgErr } = await supabaseAdmin.from('messages').insert({
       sender_id: req.user.id,
       receiver_id: row.client_id,
-      content: custom || null,
+      content: custom || '', // `messages.content` es NOT NULL → nunca null
       attachment_type: 'payment',
       attachment_url: row.payment_url,
       payload: {
@@ -783,7 +783,7 @@ async function assignPlanRow(managerId: string, plan: any, clientId: string, sen
     await supabaseAdmin.from('messages').insert({
       sender_id: managerId,
       receiver_id: clientId,
-      content: null,
+      content: '', // `messages.content` es NOT NULL → nunca null
       attachment_type: 'payment',
       attachment_url: plan.payment_url,
       payload: {
