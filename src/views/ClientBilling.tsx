@@ -4,7 +4,7 @@ import {
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
   DownloadCloud, ChevronDown, ChevronUp, Search, Check, FileDown,
   Wallet, CalendarClock, Repeat, Archive, Package, Trash2,
-  Settings2, UserCog, Pause, Play, RotateCcw, Ban, MoreVertical,
+  Settings2, Pause, Play, RotateCcw, Ban, MoreVertical,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -846,23 +846,12 @@ function ManageSubscriptionModal({ isEs, locale, item, onClose, onChanged, onClo
   const [trialDays, setTrialDays] = useState('0');
   const [allowPromos, setAllowPromos] = useState(false);
 
-  // Reasignar.
-  const [clients, setClients] = useState<any[]>([]);
-  const [targetClient, setTargetClient] = useState('');
-  const [sendToChat, setSendToChat] = useState(true);
-
   // Cancelar.
   const [cancelMode, setCancelMode] = useState<'immediate' | 'period_end'>(isRecurring ? 'period_end' : 'immediate');
 
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      try { setClients(unwrapList(await fetchWithAuth('/manager/clients'))); } catch { /* noop */ }
-    })();
-  }, []);
 
   const flash = (m: string) => { setOk(m); setTimeout(() => setOk(o => (o === m ? null : o)), 2500); };
   const call = async (key: string, path: string, body: any, opts: { close?: boolean; okMsg?: string } = {}) => {
@@ -902,10 +891,6 @@ function ManageSubscriptionModal({ isEs, locale, item, onClose, onChanged, onClo
     } finally { setBusy(null); }
   };
 
-  const doReassign = async () => {
-    if (!targetClient) { setErr(isEs ? 'Elige un cliente.' : 'Pick a client.'); return; }
-    await call('reassign', '/reassign', { client_id: targetClient, send_to_chat: sendToChat }, { close: true });
-  };
   const doPause = async () => { if (await call('pause', '/pause', {})) setPaused(true); };
   const doResume = async () => { if (await call('resume', '/resume', {})) setPaused(false); };
   const doRefund = async () => {
@@ -994,27 +979,6 @@ function ManageSubscriptionModal({ isEs, locale, item, onClose, onChanged, onClo
               </button>
             </div>
           </Section>
-
-          {/* ── Reasignar ── */}
-          {!isInvoice && (
-            <Section title={isEs ? 'Reasignar a otro cliente' : 'Reassign to another client'} icon={UserCog}>
-              {live || item.status === 'past_due' ? (
-                <p className="text-xs text-slate-400">{isEs ? 'No se puede mover una suscripción ya activa (pertenece al cliente actual en Stripe). Cancélala primero y asigna el plan al nuevo cliente.' : 'Cannot move an already active subscription. Cancel it first.'}</p>
-              ) : (
-                <div className="space-y-3">
-                  <ClientPicker clients={clients.filter(c => c.id !== item.client?.id)} value={targetClient} onChange={setTargetClient} isEs={isEs} />
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={sendToChat} onChange={e => setSendToChat(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
-                    <span className="text-xs text-slate-600 dark:text-slate-300">{isEs ? 'Enviar el enlace de pago al nuevo cliente por el chat' : 'Send the payment link to the new client via chat'}</span>
-                  </label>
-                  <button onClick={doReassign} disabled={busy === 'reassign' || !targetClient} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center justify-center gap-2 disabled:opacity-50">
-                    {busy === 'reassign' ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCog className="w-4 h-4" />}
-                    {isEs ? 'Mover al cliente seleccionado' : 'Move to selected client'}
-                  </button>
-                </div>
-              )}
-            </Section>
-          )}
 
           {/* ── Pausar / reanudar ── */}
           {isRecurring && (
