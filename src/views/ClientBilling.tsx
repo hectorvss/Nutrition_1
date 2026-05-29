@@ -38,7 +38,11 @@ interface Kpis {
   mrrCents: number;
   arrCents?: number;
   currency: string;
+  mrrByCurrency?: Record<string, number>;
   activeSubscriptions: number;
+  pausedSubscriptions?: number;
+  canceledSubscriptions?: number;
+  churnRate?: number;
   pendingOrOverdue: number;
   overdueAmountCents?: number;
   clientsBilled?: number;
@@ -477,6 +481,24 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"><Repeat className="w-3.5 h-3.5" /> {kpis.byKind.recurring} {isEs ? 'suscripciones' : 'subscriptions'}</span>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"><CreditCard className="w-3.5 h-3.5" /> {kpis.byKind.one_time} {isEs ? 'pagos únicos' : 'one-time'}</span>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"><FileDown className="w-3.5 h-3.5" /> {kpis.byKind.invoice} {isEs ? 'facturas' : 'invoices'}</span>
+          {typeof kpis.churnRate === 'number' && (kpis.activeSubscriptions + (kpis.canceledSubscriptions || 0)) > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 font-semibold"><AlertTriangle className="w-3.5 h-3.5" /> {kpis.churnRate}% {isEs ? 'cancelación' : 'churn'}</span>
+          )}
+          {!!kpis.pausedSubscriptions && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"><Pause className="w-3.5 h-3.5" /> {kpis.pausedSubscriptions} {isEs ? 'pausadas' : 'paused'}</span>
+          )}
+        </div>
+      )}
+
+      {/* MRR por moneda (si hay más de una divisa en juego, no se convierten) */}
+      {kpis?.mrrByCurrency && Object.keys(kpis.mrrByCurrency).length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 mb-8 -mt-4 text-xs">
+          <span className="text-slate-400 font-semibold uppercase tracking-widest">{isEs ? 'MRR por moneda' : 'MRR by currency'}:</span>
+          {Object.entries(kpis.mrrByCurrency).map(([cur, cents]) => (
+            <span key={cur} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 font-semibold">
+              {money(Number(cents), cur)}
+            </span>
+          ))}
         </div>
       )}
 

@@ -27,6 +27,22 @@ export default function ClientBilling() {
   const [items, setItems] = useState<ClientCharge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [portalBusy, setPortalBusy] = useState(false);
+
+  const hasManageable = items.some(it => ['active', 'trialing', 'past_due'].includes(it.status) && it.kind === 'recurring');
+  const openPortal = async () => {
+    setPortalBusy(true);
+    setError(null);
+    try {
+      const r = await fetchWithAuth('/client/billing/portal', { method: 'POST', body: JSON.stringify({}) });
+      if (r?.url) window.location.href = r.url;
+      else setError(isEs ? 'No se pudo abrir el portal.' : 'Could not open the portal.');
+    } catch (e: any) {
+      setError(e?.message || (isEs ? 'No se pudo abrir el portal.' : 'Could not open the portal.'));
+    } finally {
+      setPortalBusy(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -70,13 +86,25 @@ export default function ClientBilling() {
   return (
     <div className="flex-1 min-h-screen bg-[#f6f8f6] dark:bg-[#112116] p-6 md:p-10">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {isEs ? 'Mi suscripción' : 'My subscription'}
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {isEs ? 'Consulta y gestiona los pagos que tu coach te ha asignado.' : 'Review and manage the payments your coach assigned you.'}
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {isEs ? 'Mi suscripción' : 'My subscription'}
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              {isEs ? 'Consulta y gestiona los pagos que tu coach te ha asignado.' : 'Review and manage the payments your coach assigned you.'}
+            </p>
+          </div>
+          {hasManageable && (
+            <button
+              onClick={openPortal}
+              disabled={portalBusy}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm hover:opacity-90 transition disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[18px]">{portalBusy ? 'progress_activity' : 'settings'}</span>
+              {isEs ? 'Gestionar mi pago' : 'Manage billing'}
+            </button>
+          )}
         </div>
 
         {error && (

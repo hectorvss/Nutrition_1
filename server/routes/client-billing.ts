@@ -220,8 +220,13 @@ router.get('/', async (req: any, res) => {
     let activeCount = 0;
     let pendingCount = 0;
     let overdueAmountCents = 0;
+    let canceledRecurring = 0;
+    let pausedCount = 0;
     const byKind = { recurring: 0, one_time: 0, invoice: 0 } as Record<string, number>;
     const billedClients = new Set<string>();
+    // MRR por moneda (no convertimos divisas: mostramos cada una por separado
+    // para no inventar un tipo de cambio).
+    const mrrByCurrency: Record<string, number> = {};
     const now = Date.now();
     const horizon = now + 14 * 86400000;
     const upcoming: any[] = [];
@@ -234,7 +239,11 @@ router.get('/', async (req: any, res) => {
         activeCount++;
         const monthly = r.interval === 'year' ? Math.round(r.amount_cents / 12) : r.amount_cents;
         mrrCents += monthly;
+        const cur = (r.currency || 'eur').toLowerCase();
+        mrrByCurrency[cur] = (mrrByCurrency[cur] || 0) + monthly;
+        if (r.paused) pausedCount++;
       }
+      if (r.kind === 'recurring' && r.status === 'canceled') canceledRecurring++;
       if (r.status === 'pending' || r.status === 'past_due') {
         pendingCount++;
         overdueAmountCents += r.amount_cents || 0;
@@ -258,7 +267,14 @@ router.get('/', async (req: any, res) => {
         mrrCents,
         arrCents: mrrCents * 12,
         currency: list[0]?.currency || 'eur',
+        mrrByCurrency,
         activeSubscriptions: activeCount,
+        pausedSubscriptions: pausedCount,
+        canceledSubscriptions: canceledRecurring,
+        // Tasa de cancelación (histórica): canceladas / (activas + canceladas).
+        churnRate: (activeCount + canceledRecurring) > 0
+          ? Math.round((canceledRecurring / (activeCount + canceledRecurring)) * 1000) / 10
+          : 0,
         pendingOrOverdue: pendingCount,
         overdueAmountCents,
         clientsBilled: billedClients.size,

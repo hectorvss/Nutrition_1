@@ -3,6 +3,7 @@ import { safeErr } from '../lib/http.js';
 import { supabaseAdmin } from '../db/index.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { verifyClient } from '../middleware/auth.js';
+import { newStripeClient } from '../lib/stripe.js';
 
 const router = Router();
 
@@ -542,6 +543,72 @@ router.get('/billing', async (req: any, res) => {
     res.json(Array.isArray(data) ? data : []);
   } catch (error: any) {
     console.error('Error fetching client billing:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /billing/portal — abre el Portal de Facturación de Stripe del coach para
+// que el CLIENTE gestione su pago él mismo (cambiar tarjeta, ver facturas,
+// cancelar) sin que el coach intervenga. Usa la cuenta Stripe del coach y el
+// customer del cliente (resuelto desde la suscripción si no está guardado).
+router.post('/billing/portal', async (req: any, res) => {
+  try {
+    const clientId = req.user.id;
+    const { data: rows } = await supabaseAdmin
+      .from('client_billing')
+      .select('manager_id, stripe_customer_id, stripe_subscription_id, stripe_payment_link_id')
+      .eq('client_id', clientId)
+      .in('status', ['active', 'trialing', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'no_subscription', message: 'No tienes una suscripción activa que gestionar.' });
+    }
+    const managerId = rows[0].manager_id;
+    const { data: integ } = await supabaseAdmin
+      .from('integrations').select('stripe_secret_key').eq('user_id', managerId).maybeSingle();
+    if (!integ?.stripe_secret_key) {
+      return res.status(400).json({ error: 'stripe_not_connected', message: 'Tu coach aún no tiene la facturación configurada.' });
+    }
+    const stripe = newStripeClient(integ.stripe_secret_key);
+
+    // Resuelve el customer de Stripe: guardado, o desde la suscripción, o desde
+    // la sesión de checkout del enlace de pago (filtrando por email del cliente).
+    const { data: usr } = await supabaseAdmin.from('users').select('email').eq('id', clientId).maybeSingle();
+    let customerId: string | null = rows.find(r => r.stripe_customer_id)?.stripe_customer_id || null;
+    if (!customerId) {
+      for (const r of rows) {
+        try {
+          if (r.stripe_subscription_id) {
+            const sub = await stripe.subscriptions.retrieve(r.stripe_subscription_id) as any;
+            customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
+            if (customerId) break;
+          } else if (r.stripe_payment_link_id) {
+            const sessions = await stripe.checkout.sessions.list({ payment_link: r.stripe_payment_link_id, limit: 100 });
+            const sess = sessions.data.find(s => s.customer && s.customer_details?.email && usr?.email && s.customer_details.email.toLowerCase() === usr.email.toLowerCase());
+            customerId = sess ? (typeof sess.customer === 'string' ? sess.customer : (sess.customer as any)?.id) : null;
+            if (customerId) break;
+          }
+        } catch { /* sigue probando */ }
+      }
+    }
+    if (!customerId) {
+      return res.status(400).json({ error: 'no_customer', message: 'Aún no hay un pago registrado que gestionar. Paga primero desde el enlace.' });
+    }
+
+    try {
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/?view=my-subscription`,
+      });
+      res.json({ url: session.url });
+    } catch (portalErr: any) {
+      // Stripe exige activar el Customer Portal en la cuenta del coach.
+      console.error('billing portal create failed:', portalErr);
+      return res.status(400).json({ error: 'portal_unavailable', message: 'El portal de facturación no está disponible. Pídele a tu coach que lo active en su cuenta de Stripe.' });
+    }
+  } catch (error: any) {
+    console.error('Error creating client billing portal:', error);
     res.status(500).json({ error: safeErr(error) });
   }
 });

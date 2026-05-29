@@ -1613,7 +1613,8 @@ function BillingSettings() {
 
 function IntegrationsSettings() {
   const { integrations, saveIntegrations, isSaving } = useIntegrations();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === 'es';
   const { user } = useAuth();
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -1917,6 +1918,26 @@ function IntegrationsSettings() {
           <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">{t('realtime_webhook', { defaultValue: 'Webhook en tiempo real (recomendado)' })}</p>
+              {(() => {
+                const last = localIntegrations.stripe_webhook_last_event_at;
+                if (!localIntegrations.stripe_webhook_secret) return null;
+                if (!last) {
+                  return <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{t('webhook_no_events', { defaultValue: 'Sin eventos aún' })}</span>;
+                }
+                const diffMs = Date.now() - new Date(last).getTime();
+                const mins = Math.floor(diffMs / 60000);
+                const rel = mins < 1 ? (isEs ? 'hace un momento' : 'just now')
+                  : mins < 60 ? (isEs ? `hace ${mins} min` : `${mins} min ago`)
+                  : mins < 1440 ? (isEs ? `hace ${Math.floor(mins / 60)} h` : `${Math.floor(mins / 60)} h ago`)
+                  : (isEs ? `hace ${Math.floor(mins / 1440)} d` : `${Math.floor(mins / 1440)} d ago`);
+                const stale = diffMs > 7 * 86400000;
+                return (
+                  <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${stale ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${stale ? 'bg-slate-400' : 'bg-emerald-500'}`} />
+                    {isEs ? 'Último evento ' : 'Last event '}{rel}
+                  </span>
+                );
+              })()}
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {t('webhook_help', { defaultValue: 'En tu panel de Stripe → Desarrolladores → Webhooks, añade un endpoint con esta URL y eventos checkout.session.completed, customer.subscription.*, invoice.paid, invoice.payment_failed. Luego pega aquí el "Signing secret".' })}

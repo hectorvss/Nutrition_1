@@ -12,6 +12,8 @@ interface Integrations {
   stripe_secret_key: string | null;
   // Signing secret del webhook por-coach (whsec_...) para eventos en tiempo real.
   stripe_webhook_secret?: string | null;
+  // Marca del último evento de webhook recibido (salud de la conexión).
+  stripe_webhook_last_event_at?: string | null;
 }
 
 interface StripeBalance {

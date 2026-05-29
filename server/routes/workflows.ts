@@ -364,6 +364,20 @@ export const WORKFLOW_STARTER_TEMPLATES = [
     edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4'), tEdge('n4', 'n5'), tEdge('n4', 'n6')],
   },
   {
+    id: 'tpl.dunning_autopause',
+    name: 'Impago → auto-pausa',
+    description: 'Si un pago falla: avisas con el enlace, esperas 5 días y, si no paga, pausas la suscripción automáticamente.',
+    category: 'Suscripciones',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.payment_failed', 80, 160),
+      tNode('n2', 'action', 'action.send_message', 360, 160, { message: 'Hola {First Name}, tu pago de {Plan Name} no se ha podido procesar. Actualiza tu método de pago aquí: {Payment Link}' }),
+      tNode('n3', 'flow', 'flow.delay', 640, 160, { amount: 5, unit: 'days' }),
+      tNode('n4', 'action', 'action.pause_subscription', 920, 160),
+      tNode('n5', 'action', 'action.notify_coach', 1200, 160, { title: 'Suscripción pausada por impago: {Client Name}', description: '{Client Name} no regularizó {Plan Name}; se pausó automáticamente.' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4'), tEdge('n4', 'n5')],
+  },
+  {
     id: 'tpl.renewal_reminder',
     name: 'Recordatorio de renovación',
     description: '3 días antes de renovar, avisas al cliente con el importe y la fecha.',
