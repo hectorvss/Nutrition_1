@@ -1130,6 +1130,112 @@ router.post('/plans/import', async (req: any, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════════════════
+// CÓDIGOS PROMOCIONALES (cupón + promotion code en la cuenta del coach)
+// Son a nivel de cuenta: cualquier checkout con allow_promotion_codes los
+// acepta. Se gestionan al activar "permitir códigos" en un plan.
+// ════════════════════════════════════════════════════════════════════════
+
+const mapPromo = (pc: any) => {
+  const c: any = pc.coupon || {};
+  return {
+    id: pc.id,
+    code: pc.code,
+    active: pc.active,
+    max_redemptions: pc.max_redemptions ?? null,
+    times_redeemed: pc.times_redeemed ?? 0,
+    discount: {
+      percent_off: c.percent_off ?? null,
+      amount_off: c.amount_off ?? null,
+      currency: c.currency ?? null,
+      duration: c.duration ?? null,
+      duration_in_months: c.duration_in_months ?? null,
+    },
+  };
+};
+
+// GET /promotion-codes — lista los códigos activos de la cuenta del coach.
+router.get('/promotion-codes', async (req: any, res) => {
+  try {
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error, message: 'Conecta tu cuenta de Stripe en Ajustes → Integraciones.' });
+    const { stripe } = conn;
+    const list = await stripe.promotionCodes.list({ active: true, limit: 100, expand: ['data.coupon'] });
+    res.json({ codes: list.data.map(mapPromo) });
+  } catch (error: any) {
+    console.error('Error listing promotion codes:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// POST /promotion-codes — crea cupón + código promocional. El coach escribe el
+// código (Stripe lo normaliza a mayúsculas y exige alfanumérico/único).
+router.post('/promotion-codes', async (req: any, res) => {
+  try {
+    const { code, discount_type, value, duration, duration_in_months, currency, max_redemptions } = req.body;
+
+    // Código: alfanumérico (+ guiones), 1-50, mayúsculas. Si va vacío, Stripe
+    // genera uno automático.
+    let safeCode: string | undefined;
+    if (typeof code === 'string' && code.trim()) {
+      const cleaned = code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+      if (!cleaned) return res.status(400).json({ error: 'invalid_code', message: 'El código solo puede contener letras, números, guion y guion bajo.' });
+      safeCode = cleaned.slice(0, 50);
+    }
+
+    const valNum = Number(value);
+    if (!Number.isFinite(valNum) || valNum <= 0) return res.status(400).json({ error: 'invalid_value' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+
+    // 1) Cupón (el descuento real).
+    const couponParams: any = { duration: ['once', 'forever', 'repeating'].includes(duration) ? duration : 'once' };
+    if (couponParams.duration === 'repeating') {
+      const m = Number(duration_in_months);
+      couponParams.duration_in_months = Number.isFinite(m) && m >= 1 && m <= 36 ? Math.round(m) : 3;
+    }
+    if (discount_type === 'amount') {
+      couponParams.amount_off = Math.round(valNum * 100);
+      couponParams.currency = (typeof currency === 'string' && /^[a-z]{3}$/i.test(currency)) ? currency.toLowerCase() : 'eur';
+    } else {
+      const pct = Math.min(100, Math.max(1, valNum));
+      couponParams.percent_off = pct;
+    }
+    const coupon = await stripe.coupons.create(couponParams);
+
+    // 2) Código promocional que referencia el cupón.
+    const promoParams: any = { coupon: coupon.id };
+    if (safeCode) promoParams.code = safeCode;
+    const mr = Number(max_redemptions);
+    if (Number.isFinite(mr) && mr >= 1) promoParams.max_redemptions = Math.round(mr);
+    const pc = await stripe.promotionCodes.create(promoParams);
+
+    const full = await stripe.promotionCodes.retrieve(pc.id, { expand: ['coupon'] });
+    res.json(mapPromo(full));
+  } catch (error: any) {
+    console.error('Error creating promotion code:', error);
+    // Stripe devuelve mensajes útiles (código duplicado, etc.) — los pasamos.
+    res.status(400).json({ error: 'stripe_error', message: safeErr(error, 'No se pudo crear el código.') });
+  }
+});
+
+// POST /promotion-codes/:id/deactivate — desactiva un código.
+router.post('/promotion-codes/:id/deactivate', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (typeof id !== 'string' || !id.startsWith('promo_')) return res.status(400).json({ error: 'Invalid id' });
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    await conn.stripe.promotionCodes.update(id, { active: false });
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error deactivating promotion code:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
 // ── Barrido automático (cron) ──────────────────────────────────────────────
 // Como no hay webhooks por-coach, el cron diario sincroniza los cobros que
 // siguen pendientes/impagos contra Stripe y avisa al coach de los que se han

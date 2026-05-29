@@ -1327,6 +1327,133 @@ function ClientMultiPicker({ clients, selected, onToggle, isEs }: {
   );
 }
 
+// ── Gestor de códigos promocionales (cupón + promotion code en Stripe) ──────
+function PromoCodesManager({ isEs, locale, currency }: { isEs: boolean; locale: string; currency: string }) {
+  const [codes, setCodes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [code, setCode] = useState('');
+  const [discType, setDiscType] = useState<'percent' | 'amount'>('percent');
+  const [value, setValue] = useState('');
+  const [duration, setDuration] = useState<'once' | 'forever' | 'repeating'>('once');
+  const [months, setMonths] = useState('3');
+  const [adding, setAdding] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try { const d = await fetchWithAuth('/manager/client-billing/promotion-codes'); setCodes(Array.isArray(d?.codes) ? d.codes : []); }
+    catch { /* p.ej. Stripe no conectado */ }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const add = async () => {
+    setErr(null);
+    const v = Number(value);
+    if (!Number.isFinite(v) || v <= 0) { setErr(isEs ? 'Pon un valor de descuento.' : 'Enter a discount value.'); return; }
+    if (discType === 'percent' && v > 100) { setErr(isEs ? 'El porcentaje no puede superar 100.' : 'Percent can’t exceed 100.'); return; }
+    setAdding(true);
+    try {
+      await fetchWithAuth('/manager/client-billing/promotion-codes', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: code.trim() || undefined,
+          discount_type: discType,
+          value: v,
+          duration,
+          duration_in_months: duration === 'repeating' ? (Number(months) || 3) : undefined,
+          currency,
+        }),
+      });
+      setCode(''); setValue('');
+      await load();
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'No se pudo crear el código.' : 'Could not create the code.'));
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const deactivate = async (id: string) => {
+    try { await fetchWithAuth(`/manager/client-billing/promotion-codes/${id}/deactivate`, { method: 'POST', body: JSON.stringify({}) }); await load(); } catch { /* noop */ }
+  };
+
+  const discLabel = (d: any) => {
+    if (d.percent_off != null) return `${d.percent_off}%`;
+    if (d.amount_off != null) return (d.amount_off / 100).toLocaleString(locale, { style: 'currency', currency: (d.currency || 'eur').toUpperCase() });
+    return '';
+  };
+  const durLabel = (d: any) =>
+    d.duration === 'forever' ? (isEs ? 'siempre' : 'forever')
+      : d.duration === 'repeating' ? (isEs ? `${d.duration_in_months} meses` : `${d.duration_in_months} mo`)
+      : (isEs ? 'una vez' : 'once');
+
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-800/30 space-y-3">
+      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{isEs ? 'Códigos promocionales' : 'Promotion codes'}</p>
+
+      {/* Lista de códigos existentes */}
+      {loading ? (
+        <div className="py-2 flex justify-center text-slate-400"><Loader2 className="w-4 h-4 animate-spin" /></div>
+      ) : codes.length > 0 ? (
+        <div className="space-y-1.5">
+          {codes.map(c => (
+            <div key={c.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <div className="min-w-0">
+                <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">{c.code}</span>
+                <span className="text-xs text-slate-400 ml-2">−{discLabel(c.discount)} · {durLabel(c.discount)}{typeof c.max_redemptions === 'number' ? ` · ${c.times_redeemed}/${c.max_redemptions}` : ''}</span>
+              </div>
+              <button type="button" onClick={() => deactivate(c.id)} className="text-slate-400 hover:text-rose-500 transition flex-shrink-0" title={isEs ? 'Desactivar' : 'Deactivate'}>
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400">{isEs ? 'Aún no hay códigos. Crea uno abajo.' : 'No codes yet. Create one below.'}</p>
+      )}
+
+      {err && <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-xs text-rose-700 dark:text-rose-400">{err}</div>}
+
+      {/* Crear nuevo código */}
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <input
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase())}
+            placeholder={isEs ? 'CÓDIGO (ej. VERANO20)' : 'CODE (e.g. SUMMER20)'}
+            className={`${inputCls} font-mono uppercase`}
+            maxLength={50}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900">
+            <input type="number" min="0" step="0.01" value={value} onChange={e => setValue(e.target.value)} placeholder={discType === 'percent' ? '20' : '10.00'} className="flex-1 min-w-0 px-2.5 py-2 text-sm bg-transparent outline-none text-slate-900 dark:text-white" />
+            <div className="flex">
+              {([['percent', '%'], ['amount', (currency || 'eur').toUpperCase()]] as const).map(([k, lbl]) => (
+                <button key={k} type="button" onClick={() => setDiscType(k as any)} style={discType === k ? brandStyle : undefined} className={`px-2.5 py-2 text-xs font-bold ${discType === k ? 'text-white' : 'text-slate-500'}`}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+          <select value={duration} onChange={e => setDuration(e.target.value as any)} className={selectCls}>
+            <option value="once">{isEs ? 'Una vez' : 'Once'}</option>
+            <option value="repeating">{isEs ? 'Varios meses' : 'Several months'}</option>
+            <option value="forever">{isEs ? 'Para siempre' : 'Forever'}</option>
+          </select>
+        </div>
+        {duration === 'repeating' && (
+          <input type="number" min="1" max="36" value={months} onChange={e => setMonths(e.target.value)} placeholder={isEs ? 'Meses' : 'Months'} className={inputCls} />
+        )}
+        <button type="button" onClick={add} disabled={adding} style={brandStyle} className={`w-full px-3 py-2 rounded-lg ${brandBtnCls} text-xs font-bold flex items-center justify-center gap-1.5`}>
+          {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+          {isEs ? 'Añadir código' : 'Add code'}
+        </button>
+        <p className="text-[10px] text-slate-400">{isEs ? 'Stripe lo guarda en mayúsculas; solo letras, números, guion y guion bajo. Déjalo vacío para uno automático.' : 'Stripe stores it uppercase; letters, numbers, hyphen and underscore only. Leave empty for an auto-generated one.'}</p>
+      </div>
+    </div>
+  );
+}
+
 // ── Modal: crear plan ───────────────────────────────────────────────────────
 function CreatePlanModal({ isEs, locale, onClose, onCreated }: { isEs: boolean; locale: string; onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('');
@@ -1458,6 +1585,10 @@ function CreatePlanModal({ isEs, locale, onClose, onCreated }: { isEs: boolean; 
             <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
             <span className="text-sm text-slate-600 dark:text-slate-300">{isEs ? 'Permitir códigos de descuento en el pago' : 'Allow promotion codes at checkout'}</span>
           </label>
+
+          {/* Al activar, el coach puede crear los códigos ahí mismo (cuenta-wide
+              en Stripe; cualquier checkout con códigos habilitados los acepta). */}
+          {allowPromos && <PromoCodesManager isEs={isEs} locale={locale} currency={currency} />}
 
           {/* Pre-asignar a clientes (opcional) */}
           <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
