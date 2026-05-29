@@ -7,7 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { supabase } from '../supabase';
 
 export default function Login({ onBackToLanding, initialMode }: { onBackToLanding?: () => void; initialMode?: 'login' | 'signup' }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [isLogin, setIsLogin] = useState(initialMode !== 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,11 +22,14 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
   const { login } = useAuth();
   const isSuccessMessage = error === t('login_reset_email_sent', { defaultValue: 'Si el email existe, recibirás un enlace para restablecer la contraseña.' });
 
-  // Showcase del panel derecho: alterna una foto de nutrición y otra de
-  // entrenamiento con un cross-fade cada 5s.
+  // Showcase del panel derecho: alterna capturas reales del SaaS — la pantalla
+  // de asignar un plan de nutrición y la de asignar un plan de entrenamiento a
+  // los clientes — con un cross-fade cada 5s. La captura se sirve en el idioma
+  // actual de la interfaz (ES/EN).
+  const lang = language === 'en' ? 'en' : 'es';
   const showcase = [
-    { src: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80', label: t('login_showcase_nutrition', { defaultValue: 'Planes de nutrición' }) },
-    { src: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1200&q=80', label: t('login_showcase_training', { defaultValue: 'Planes de entrenamiento' }) },
+    { src: `/landing/feature-nutrition-${lang}.png`, label: t('login_showcase_nutrition', { defaultValue: 'Planes de nutrición' }) },
+    { src: `/landing/feature-training-${lang}.png`, label: t('login_showcase_training', { defaultValue: 'Planes de entrenamiento' }) },
   ];
   const [slide, setSlide] = useState(0);
   useEffect(() => {
@@ -370,7 +373,7 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 1.2, ease: 'easeInOut' }}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover object-top"
               />
             </AnimatePresence>
             {/* Degradado para legibilidad de la etiqueta */}
