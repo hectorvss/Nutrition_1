@@ -106,12 +106,12 @@ export default function AppearanceSettings() {
           cursor: pointer;
         }
       `}</style>
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden transition-all duration-300">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-all duration-300">
         <div className="p-6">
           <div className="mb-6 flex items-start justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">{t('theme_color')}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t('theme_color_desc')}</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('theme_color')}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('theme_color_desc')}</p>
             </div>
             {showCustom && (
               <button
@@ -142,7 +142,7 @@ export default function AppearanceSettings() {
                   }`}
                   style={{ backgroundColor: theme.color }}
                 />
-                <span className={`text-xs font-medium ${settings.theme_color === theme.color ? 'text-slate-900' : 'text-slate-500 group-hover:text-slate-900'}`}>
+                <span className={`text-xs font-medium ${settings.theme_color === theme.color ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
                   {theme.name}
                 </span>
               </button>
@@ -151,7 +151,7 @@ export default function AppearanceSettings() {
               onClick={() => setShowCustom(!showCustom)}
               className="group flex flex-col items-center gap-2"
             >
-              <div className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all ${!isPresetSelected || showCustom ? 'border-emerald-500 bg-emerald-50 text-emerald-600 ring-2 ring-emerald-500 ring-offset-2' : 'border-slate-300 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50'}`}>
+              <div className={`w-12 h-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all ${!isPresetSelected || showCustom ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-900' : 'border-slate-300 dark:border-slate-600 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>
                 <Palette className="w-5 h-5" />
               </div>
               <span className={`text-xs transition-colors ${!isPresetSelected || showCustom ? 'text-emerald-600 font-bold' : 'text-slate-500 group-hover:text-emerald-500'}`}>
@@ -168,7 +168,7 @@ export default function AppearanceSettings() {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="border-t border-slate-100 bg-slate-50/50"
+              className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50"
             >
               <div className="p-8">
                 <div className="flex flex-col lg:flex-row items-start gap-12">
@@ -178,17 +178,17 @@ export default function AppearanceSettings() {
                       style={{ backgroundColor: customColor }}
                     />
                     <div className="flex flex-col items-center">
-                      <span className="text-xl font-mono font-black text-slate-800 uppercase tracking-tighter">{customColor}</span>
+                      <span className="text-xl font-mono font-black text-slate-800 dark:text-white uppercase tracking-tighter">{customColor}</span>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('live_preview')}</span>
                     </div>
                   </div>
 
                   <div className="flex-1 w-full space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
-                      <div className="md:col-span-2 bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+                      <div className="md:col-span-2 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('hex_color_code')}</label>
-                          <div className="w-8 h-8 rounded-lg shadow-inner border border-slate-100" style={{ backgroundColor: customColor }} />
+                          <div className="w-8 h-8 rounded-lg shadow-inner border border-slate-100 dark:border-slate-700" style={{ backgroundColor: customColor }} />
                         </div>
                         <div className="relative">
                           <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-slate-400 font-bold text-lg">#</span>
@@ -201,7 +201,7 @@ export default function AppearanceSettings() {
                                 setCustomColor(`#${val}`);
                               }
                             }}
-                            className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-mono font-bold text-xl text-slate-900 transition-all outline-none"
+                            className="w-full pl-9 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 font-mono font-bold text-xl text-slate-900 dark:text-white transition-all outline-none"
                             placeholder="000000"
                           />
                         </div>
@@ -209,7 +209,7 @@ export default function AppearanceSettings() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('hue_label')}</label>
+                          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('hue_label')}</label>
                           <span className="text-xs font-mono font-bold text-slate-400">{Math.round(hexToHSL(customColor).h)}°</span>
                         </div>
                         <input
@@ -228,7 +228,7 @@ export default function AppearanceSettings() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('saturation_label')}</label>
+                          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('saturation_label')}</label>
                           <span className="text-xs font-mono font-bold text-slate-400">{Math.round(hexToHSL(customColor).s)}%</span>
                         </div>
                         <input
@@ -247,7 +247,7 @@ export default function AppearanceSettings() {
 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('brightness_label')}</label>
+                          <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('brightness_label')}</label>
                           <span className="text-xs font-mono font-bold text-slate-400">{Math.round(hexToHSL(customColor).l)}%</span>
                         </div>
                         <input
@@ -272,13 +272,13 @@ export default function AppearanceSettings() {
         </AnimatePresence>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Moon className="w-5 h-5 text-slate-400" />
             {t('dark_mode')}
           </h2>
-          <p className="text-sm text-slate-500 mt-1">{t('appearance_desc')}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('appearance_desc')}</p>
         </div>
         <label className="relative inline-flex items-center cursor-pointer">
           <input
@@ -287,7 +287,7 @@ export default function AppearanceSettings() {
             checked={settings.dark_mode}
             onChange={() => updateTheme({ dark_mode: !settings.dark_mode })}
           />
-          <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+          <div className="w-14 h-7 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
         </label>
       </div>
     </div>
