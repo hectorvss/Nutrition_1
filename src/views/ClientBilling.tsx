@@ -931,7 +931,7 @@ function ManageSubscriptionModal({ isEs, locale, item, onClose, onChanged, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-xl max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-3">
           <div className="min-w-0">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white truncate">{isEs ? 'Gestionar suscripción' : 'Manage subscription'}</h3>
