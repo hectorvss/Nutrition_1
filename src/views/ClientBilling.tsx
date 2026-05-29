@@ -101,7 +101,6 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [showImport, setShowImport] = useState(false);
   const [editItem, setEditItem] = useState<BillingItem | null>(null);
 
   // ── Pestaña Planes: catálogo de planes reutilizables ──────────────────────
@@ -360,24 +359,15 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
               </button>
             </>
           ) : (
-            <>
+            items.length > 0 && (
               <button
-                onClick={() => setShowImport(true)}
-                title={isEs ? 'Importar suscripciones de Stripe' : 'Import subscriptions from Stripe'}
+                onClick={exportCsv}
+                title={isEs ? 'Exportar a CSV' : 'Export to CSV'}
                 className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
               >
-                <DownloadCloud className="w-4 h-4" /> {isEs ? 'Importar suscripciones' : 'Import subscriptions'}
+                <FileDown className="w-4 h-4" /> CSV
               </button>
-              {items.length > 0 && (
-                <button
-                  onClick={exportCsv}
-                  title={isEs ? 'Exportar a CSV' : 'Export to CSV'}
-                  className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-                >
-                  <FileDown className="w-4 h-4" /> CSV
-                </button>
-              )}
-            </>
+            )
           )}
         </div>
       </div>
@@ -387,7 +377,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
         {([['plans', isEs ? 'Planes' : 'Plans'], ['subscriptions', isEs ? 'Suscripciones' : 'Subscriptions']] as const).map(([k, lbl]) => (
           <button
             key={k}
-            onClick={() => setTab(k as any)}
+            onClick={() => { setTab(k as any); setError(null); }}
             style={tab === k ? brandStyle : undefined}
             className={`px-4 py-2 rounded-lg text-sm font-bold transition ${tab === k ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
           >{lbl}</button>
@@ -607,14 +597,6 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
         />
       )}
 
-      {showImport && (
-        <ImportModal
-          isEs={isEs}
-          locale={locale}
-          onClose={() => setShowImport(false)}
-          onImported={() => { setShowImport(false); load(); }}
-        />
-      )}
 
       {showCreatePlan && (
         <CreatePlanModal
