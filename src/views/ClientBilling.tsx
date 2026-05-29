@@ -379,7 +379,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
       <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {isEs ? 'Cobros' : 'Billing'}
+            {isEs ? 'Suscripciones' : 'Subscriptions'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             {isEs ? 'Gestiona las suscripciones y pagos de tus clientes vía Stripe.' : 'Manage your clients’ subscriptions and payments via Stripe.'}
