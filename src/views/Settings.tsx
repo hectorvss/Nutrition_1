@@ -28,7 +28,10 @@ import {
   Maximize2,
   Minimize2,
   Type,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -38,6 +41,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useIntegrations } from '../context/IntegrationsContext';
 import { useBilling } from '../context/BillingContext';
 import { Globe, X, Bell } from 'lucide-react';
+import { PRICE_MAP, TIER_MONTHLY_PRICE, type PaidTier } from '../lib/plans';
 import { supabase } from '../supabase';
 import { enablePush, disablePush, isPushEnabled, pushSupported } from '../push';
 import AppearanceSettings from './settings/AppearanceSettings';
@@ -1229,16 +1233,14 @@ function SecuritySettings() {
 }
 
 
-// Stripe price ids per tier (same catalogue as the public Pricing page).
-const BILLING_PRICE_MAP: Record<string, { monthly: string; annual: string }> = {
-  professional: { monthly: 'price_1TCN9vCR4WvolxlpwC33dk8J', annual: 'price_1TCf4PCR4Wvolxlp3MoDzi0J' },
-  scale:        { monthly: 'price_1TCNAHCR4WvolxlpwpLRfmwX', annual: 'price_1TCf52CR4WvolxlpcMMLOVpv' },
-  unlimited:    { monthly: 'price_1TCNAcCR4WvolxlptLzNYdsz', annual: 'price_1TCf5cCR4WvolxlpWGhpOgnI' },
-};
+// Precios, price IDs y limites viven en src/lib/plans (fuente unica de verdad,
+// compartida con Pricing y el PaywallLimitModal). Aqui solo anadimos la copy
+// descriptiva por tier.
+const BILLING_PRICE_MAP = PRICE_MAP;
 const BILLING_PLANS = [
-  { tier: 'professional', monthlyPrice: 39, desc: 'Hasta 20 clientes activos', popular: false },
-  { tier: 'scale',        monthlyPrice: 79, desc: 'Hasta 60 clientes activos', popular: true },
-  { tier: 'unlimited',    monthlyPrice: 99, desc: 'Clientes ilimitados', popular: false },
+  { tier: 'professional' as PaidTier, monthlyPrice: TIER_MONTHLY_PRICE.professional, desc: 'Hasta 20 clientes activos', popular: false },
+  { tier: 'scale' as PaidTier,        monthlyPrice: TIER_MONTHLY_PRICE.scale,        desc: 'Hasta 60 clientes activos', popular: true },
+  { tier: 'unlimited' as PaidTier,    monthlyPrice: TIER_MONTHLY_PRICE.unlimited,    desc: 'Clientes ilimitados', popular: false },
 ];
 
 function BillingSettings() {
@@ -1336,18 +1338,21 @@ function BillingSettings() {
           BillingSettings se renderiza anidado y no recibe setCurrentView. */}
       <button
         onClick={() => window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'subscriptions' }))}
-        className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/30 dark:hover:to-orange-900/30 transition-colors group"
+        className="w-full flex items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-5 hover:shadow-md transition-shadow group"
       >
         <div className="flex items-center gap-3 text-left">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-white text-[20px]">auto_awesome</span>
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--brand-primary) 12%, white)', color: 'var(--brand-primary)' }}
+          >
+            <Sparkles className="w-5 h-5" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('view_all_plans', { defaultValue: 'Ver planes y comparativa completa' })}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">{t('view_all_plans_desc', { defaultValue: 'Compara features, mira tu uso y mejora de plan.' })}</p>
           </div>
         </div>
-        <span className="material-symbols-outlined text-amber-500 group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+        <ArrowRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" style={{ color: 'var(--brand-primary)' }} />
       </button>
 
       {/* Current Plan */}
@@ -1401,29 +1406,38 @@ function BillingSettings() {
                 {t('billing_annual', { defaultValue: 'Anual' })} <span className="text-emerald-600 font-semibold">−20%</span>
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               {BILLING_PLANS.map(plan => {
                 const price = isAnnual ? Math.round(plan.monthlyPrice * 0.8) : plan.monthlyPrice;
+                // Las 3 tarjetas son identicas; el unico distintivo de "Popular"
+                // es un pill flotante sobre el borde superior.
                 return (
                   <div
                     key={plan.tier}
-                    className={`relative rounded-xl border p-5 flex flex-col transition-shadow hover:shadow-sm ${plan.popular ? 'border-slate-300 dark:border-slate-600' : 'border-slate-200 dark:border-slate-800'}`}
+                    className="relative rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5 flex flex-col transition-shadow hover:shadow-md"
                   >
                     {plan.popular && (
-                      <span className="self-start text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full mb-2">
+                      <span
+                        className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-widest text-white px-3 py-1 rounded-full shadow-sm whitespace-nowrap"
+                        style={{ backgroundColor: 'var(--brand-primary)' }}
+                      >
                         {t('billing_popular', { defaultValue: 'Popular' })}
                       </span>
                     )}
                     <h3 className="text-base font-bold text-slate-900 dark:text-white capitalize">{t(`plan_${plan.tier}`, { defaultValue: plan.tier })}</h3>
                     <div className="mt-2 mb-1">
-                      <span className="text-3xl font-bold text-slate-900 dark:text-white">{price}€</span>
+                      <span className="text-3xl font-black text-slate-900 dark:text-white">{price}€</span>
                       <span className="text-sm text-slate-400">/{t('billing_month', { defaultValue: 'mes' })}</span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t(`plan_${plan.tier}_desc`, { defaultValue: plan.desc })}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                      {t(`plan_${plan.tier}_desc`, { defaultValue: plan.desc })}
+                    </p>
                     <button
                       onClick={() => handleSubscribe(plan.tier)}
                       disabled={!!subscribing}
-                      className={`mt-auto w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium text-sm transition-all active:scale-[0.99] disabled:opacity-50 ${plan.popular ? 'bg-slate-900 dark:bg-emerald-500 text-white hover:bg-slate-800 dark:hover:bg-emerald-600' : 'border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                      style={{ backgroundColor: 'var(--brand-primary)' }}
+                      className="mt-auto w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm text-white hover:brightness-95 transition-all active:scale-[0.99] disabled:opacity-50"
                     >
                       {subscribing === plan.tier && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                       {t('billing_subscribe', { defaultValue: 'Suscribirme' })}
