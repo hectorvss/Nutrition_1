@@ -73,8 +73,8 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
       <div className="max-w-7xl mx-auto px-6 py-10">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <Sparkles className="w-6 h-6 text-white" />
+          <div className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
+            <Sparkles className="w-6 h-6 text-slate-700 dark:text-slate-200" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -102,7 +102,9 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="flex items-start gap-4">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${
-                  isTrial ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'
+                  isTrial
+                    ? 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                    : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
                 }`}>
                   <CreditCard className="w-7 h-7" />
                 </div>
@@ -122,7 +124,7 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
                     )}
                   </div>
                   {isTrial && status?.trialDaysLeft != null && (
-                    <p className="text-sm text-amber-600 dark:text-amber-400 font-medium mt-1 flex items-center gap-1.5">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1 flex items-center gap-1.5">
                       <Clock className="w-4 h-4" />
                       {isEs
                         ? `Te quedan ${status.trialDaysLeft} días de prueba`
