@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CreditCard, Plus, RefreshCw, Send, XCircle, Link2, ExternalLink,
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
-  DownloadCloud, ChevronDown, ChevronUp, Search, Check,
+  DownloadCloud, ChevronDown, ChevronUp, Search, Check, FileDown,
+  Wallet, CalendarClock, Repeat,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -31,10 +32,24 @@ interface BillingItem {
 
 interface Kpis {
   mrrCents: number;
+  arrCents?: number;
   currency: string;
   activeSubscriptions: number;
   pendingOrOverdue: number;
+  overdueAmountCents?: number;
+  clientsBilled?: number;
+  byKind?: { recurring: number; one_time: number; invoice: number };
   total: number;
+}
+
+interface UpcomingRenewal {
+  id: string;
+  client?: { id: string; full_name?: string; email?: string };
+  amount_cents: number;
+  currency: string;
+  interval?: string | null;
+  current_period_end: string;
+  payment_url?: string | null;
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -72,8 +87,11 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const [showImport, setShowImport] = useState(false);
   const [editItem, setEditItem] = useState<BillingItem | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'canceled'>('all');
+  const [kindFilter, setKindFilter] = useState<'all' | 'recurring' | 'one_time' | 'invoice'>('all');
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [upcoming, setUpcoming] = useState<UpcomingRenewal[]>([]);
+  const [balance, setBalance] = useState<{ balance: number; mrr: number; recent_revenue: number[]; currency: string } | null>(null);
 
   const money = (cents: number, currency: string) =>
     (cents / 100).toLocaleString(locale, { style: 'currency', currency: (currency || 'eur').toUpperCase() });
@@ -85,6 +103,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
       const data = await fetchWithAuth('/manager/client-billing');
       setItems(data.items || []);
       setKpis(data.kpis || null);
+      setUpcoming(Array.isArray(data.upcomingRenewals) ? data.upcomingRenewals : []);
       setStripeConnected(data.stripeConnected !== false);
     } catch (e: any) {
       setError(e?.message || (isEs ? 'Error al cargar los cobros.' : 'Error loading billing.'));
@@ -93,7 +112,40 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     }
   };
 
-  useEffect(() => { load(); }, []);
+  // Saldo + ingresos recientes de la cuenta Stripe del coach (panel financiero
+  // real, no un KPI inventado). Best-effort: si Stripe no responde, no pasa nada.
+  const loadBalance = async () => {
+    try {
+      const b = await fetchWithAuth('/manager/integrations/stripe/balance');
+      if (b && typeof b.balance === 'number') setBalance(b);
+    } catch { /* noop */ }
+  };
+
+  useEffect(() => { load(); loadBalance(); }, []);
+
+  // Exporta los cobros visibles a CSV (lo que el coach ve tras filtrar).
+  const exportCsv = () => {
+    const rows = filteredItems.map(it => ({
+      cliente: it.client?.full_name || it.client?.email || '',
+      email: it.client?.email || '',
+      tipo: it.kind,
+      importe: (it.amount_cents / 100).toFixed(2),
+      moneda: (it.currency || 'eur').toUpperCase(),
+      intervalo: it.interval || '',
+      estado: it.status,
+      proxima_renovacion: it.current_period_end || '',
+      creado: it.created_at || '',
+      enlace: it.payment_url || '',
+    }));
+    const headers = Object.keys(rows[0] || { cliente: '', email: '', tipo: '', importe: '', moneda: '', intervalo: '', estado: '', proxima_renovacion: '', creado: '', enlace: '' });
+    const esc = (v: any) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [headers.join(','), ...rows.map(r => headers.map(h => esc((r as any)[h])).join(','))].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `cobros-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
 
   const remind = async (id: string) => {
     setBusyId(id);
@@ -157,6 +209,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const q = search.trim().toLowerCase();
   const filteredItems = items.filter(it => {
     if (!matchesStatus(it.status)) return false;
+    if (kindFilter !== 'all' && it.kind !== kindFilter) return false;
     if (!q) return true;
     const hay = `${it.client?.full_name || ''} ${it.client?.email || ''} ${it.description || ''}`.toLowerCase();
     return hay.includes(q);
@@ -227,6 +280,15 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {items.length > 0 && (
+            <button
+              onClick={exportCsv}
+              title={isEs ? 'Exportar a CSV' : 'Export to CSV'}
+              className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            >
+              <FileDown className="w-4 h-4" /> CSV
+            </button>
+          )}
           <button
             onClick={() => setShowImport(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition"
@@ -249,25 +311,85 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
         </div>
       )}
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <KpiCard icon={TrendingUp} color="emerald" label={isEs ? 'MRR de clientes' : 'Client MRR'} value={kpis ? money(kpis.mrrCents, kpis.currency) : '--'} />
-        <KpiCard icon={Users} color="blue" label={isEs ? 'Suscripciones activas' : 'Active subscriptions'} value={kpis ? String(kpis.activeSubscriptions) : '--'} />
-        <KpiCard icon={AlertTriangle} color="amber" label={isEs ? 'Pendientes / impagos' : 'Pending / overdue'} value={kpis ? String(kpis.pendingOrOverdue) : '--'} />
+      {/* KPIs principales */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <KpiCard icon={TrendingUp} color="emerald" label={isEs ? 'MRR de clientes' : 'Client MRR'} value={kpis ? money(kpis.mrrCents, kpis.currency) : '--'}
+          sub={kpis && kpis.arrCents ? `${money(kpis.arrCents, kpis.currency)} ${isEs ? 'ARR' : 'ARR'}` : undefined} />
+        <KpiCard icon={Users} color="blue" label={isEs ? 'Suscripciones activas' : 'Active subscriptions'} value={kpis ? String(kpis.activeSubscriptions) : '--'}
+          sub={kpis?.clientsBilled != null ? `${kpis.clientsBilled} ${isEs ? 'clientes' : 'clients'}` : undefined} />
+        <KpiCard icon={AlertTriangle} color="amber" label={isEs ? 'Pendientes / impagos' : 'Pending / overdue'} value={kpis ? String(kpis.pendingOrOverdue) : '--'}
+          sub={kpis && kpis.overdueAmountCents ? money(kpis.overdueAmountCents, kpis.currency) : undefined} />
+        <KpiCard icon={Wallet} color="indigo" label={isEs ? 'Saldo Stripe' : 'Stripe balance'}
+          value={balance ? money(Math.round(balance.balance * 100), balance.currency) : '--'} />
       </div>
 
-      {/* Barra de filtros: estado + búsqueda por cliente */}
+      {/* Tira secundaria: desglose por tipo de cobro */}
+      {kpis?.byKind && kpis.total > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-8 text-xs">
+          <span className="text-slate-400 font-semibold uppercase tracking-widest">{isEs ? 'Desglose' : 'Breakdown'}:</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"><Repeat className="w-3.5 h-3.5" /> {kpis.byKind.recurring} {isEs ? 'suscripciones' : 'subscriptions'}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"><CreditCard className="w-3.5 h-3.5" /> {kpis.byKind.one_time} {isEs ? 'pagos únicos' : 'one-time'}</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"><FileDown className="w-3.5 h-3.5" /> {kpis.byKind.invoice} {isEs ? 'facturas' : 'invoices'}</span>
+        </div>
+      )}
+
+      {/* Próximas renovaciones (14 días) — sección accionable */}
+      {upcoming.length > 0 && (
+        <div className="mb-8 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+            <CalendarClock className="w-4 h-4 text-indigo-500" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">{isEs ? 'Próximas renovaciones' : 'Upcoming renewals'}</h3>
+            <span className="text-[11px] font-semibold text-slate-400">· {isEs ? 'próximos 14 días' : 'next 14 days'}</span>
+          </div>
+          <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+            {upcoming.map(u => (
+              <div key={u.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm text-slate-900 dark:text-white truncate">{u.client?.full_name || u.client?.email || (isEs ? 'Cliente' : 'Client')}</div>
+                  <div className="text-xs text-slate-400">
+                    {money(u.amount_cents, u.currency)}/{u.interval === 'year' ? (isEs ? 'año' : 'yr') : (isEs ? 'mes' : 'mo')} · {isEs ? 'renueva el' : 'renews'} {new Date(u.current_period_end).toLocaleDateString(locale, { day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                {u.payment_url && (
+                  <button
+                    onClick={() => remind(u.id)}
+                    disabled={busyId === u.id}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    {busyId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                    {isEs ? 'Recordar' : 'Remind'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Barra de filtros: estado + tipo + búsqueda por cliente */}
       {items.length > 0 && (
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
-            {([['all', isEs ? 'Todos' : 'All'], ['active', isEs ? 'Activas' : 'Active'], ['pending', isEs ? 'Pendientes' : 'Pending'], ['canceled', isEs ? 'Canceladas' : 'Canceled']] as const).map(([k, lbl]) => (
-              <button
-                key={k}
-                onClick={() => setStatusFilter(k as any)}
-                style={statusFilter === k ? brandStyle : undefined}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === k ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
-              >{lbl}</button>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
+              {([['all', isEs ? 'Todos' : 'All'], ['active', isEs ? 'Activas' : 'Active'], ['pending', isEs ? 'Pendientes' : 'Pending'], ['canceled', isEs ? 'Canceladas' : 'Canceled']] as const).map(([k, lbl]) => (
+                <button
+                  key={k}
+                  onClick={() => setStatusFilter(k as any)}
+                  style={statusFilter === k ? brandStyle : undefined}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === k ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                >{lbl}</button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
+              {([['all', isEs ? 'Tipo' : 'Type'], ['recurring', isEs ? 'Suscripción' : 'Subscription'], ['one_time', isEs ? 'Único' : 'One-time'], ['invoice', isEs ? 'Factura' : 'Invoice']] as const).map(([k, lbl]) => (
+                <button
+                  key={k}
+                  onClick={() => setKindFilter(k as any)}
+                  style={kindFilter === k && k !== 'all' ? brandStyle : (kindFilter === k ? brandStyle : undefined)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${kindFilter === k ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                >{lbl}</button>
+              ))}
+            </div>
           </div>
           <div className="relative flex-1 min-w-[180px] max-w-xs">
             <input
@@ -304,12 +426,14 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                   <th className="text-left font-bold px-5 py-3">{isEs ? 'Tipo' : 'Type'}</th>
                   <th className="text-left font-bold px-5 py-3">{isEs ? 'Importe' : 'Amount'}</th>
                   <th className="text-left font-bold px-5 py-3">{isEs ? 'Estado' : 'Status'}</th>
+                  <th className="text-left font-bold px-5 py-3 hidden md:table-cell">{isEs ? 'Renovación' : 'Renewal'}</th>
+                  <th className="text-left font-bold px-5 py-3 hidden lg:table-cell">{isEs ? 'Creado' : 'Created'}</th>
                   <th className="text-right font-bold px-5 py-3">{isEs ? 'Acciones' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredItems.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-sm text-slate-400">{isEs ? 'Ningún cobro coincide con el filtro.' : 'No charges match the filter.'}</td></tr>
+                  <tr><td colSpan={7} className="px-5 py-10 text-center text-sm text-slate-400">{isEs ? 'Ningún cobro coincide con el filtro.' : 'No charges match the filter.'}</td></tr>
                 )}
                 {filteredItems.map(it => {
                   const name = it.client?.full_name || it.client?.email || (isEs ? 'Cliente' : 'Client');
@@ -329,6 +453,12 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                         <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${STATUS_STYLE[it.status] || STATUS_STYLE.pending}`}>
                           {statusLabel(it.status)}
                         </span>
+                      </td>
+                      <td className="px-5 py-4 text-slate-500 dark:text-slate-400 text-xs hidden md:table-cell">
+                        {it.current_period_end ? new Date(it.current_period_end).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+                      <td className="px-5 py-4 text-slate-500 dark:text-slate-400 text-xs hidden lg:table-cell">
+                        {it.created_at ? new Date(it.created_at).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center justify-end gap-1.5">
@@ -440,11 +570,12 @@ function EditPriceModal({ isEs, item, onClose, onSaved }: { isEs: boolean; item:
   );
 }
 
-function KpiCard({ icon: Icon, color, label, value }: { icon: any; color: string; label: string; value: string }) {
+function KpiCard({ icon: Icon, color, label, value, sub }: { icon: any; color: string; label: string; value: string; sub?: string }) {
   const colorMap: Record<string, string> = {
     emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
     blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
     amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+    indigo: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
   };
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5">
@@ -453,6 +584,7 @@ function KpiCard({ icon: Icon, color, label, value }: { icon: any; color: string
         <span className={`w-8 h-8 rounded-xl flex items-center justify-center ${colorMap[color]}`}><Icon className="w-4 h-4" /></span>
       </div>
       <div className="text-2xl font-black text-slate-900 dark:text-white">{value}</div>
+      {sub && <div className="text-[11px] font-semibold text-slate-400 mt-1 truncate">{sub}</div>}
     </div>
   );
 }

@@ -141,29 +141,61 @@ router.get('/', async (req: any, res) => {
       client: { id: r.client_id, full_name: nameById[r.client_id]?.full_name, email: nameById[r.client_id]?.email },
     }));
 
-    // KPIs: MRR de clientes (suscripciones activas normalizadas a mensual),
-    // nº activas, pendientes/impagadas.
+    // KPIs ampliados para un panel operativo (no sólo MRR):
+    //  - MRR / ARR de clientes (suscripciones activas normalizadas a mes/año)
+    //  - nº activas, pendientes/impagas + importe impago
+    //  - clientes facturados (distintos), desglose por tipo de cobro
+    //  - próximas renovaciones (14 días) como lista accionable
     let mrrCents = 0;
     let activeCount = 0;
     let pendingCount = 0;
-    for (const r of list) {
-      if (r.kind === 'recurring' && (r.status === 'active' || r.status === 'trialing')) {
+    let overdueAmountCents = 0;
+    const byKind = { recurring: 0, one_time: 0, invoice: 0 } as Record<string, number>;
+    const billedClients = new Set<string>();
+    const now = Date.now();
+    const horizon = now + 14 * 86400000;
+    const upcoming: any[] = [];
+
+    for (const r of withClient) {
+      byKind[r.kind] = (byKind[r.kind] || 0) + 1;
+      const isLive = r.status === 'active' || r.status === 'trialing';
+      if (isLive) billedClients.add(r.client_id);
+      if (r.kind === 'recurring' && isLive) {
         activeCount++;
         const monthly = r.interval === 'year' ? Math.round(r.amount_cents / 12) : r.amount_cents;
         mrrCents += monthly;
       }
-      if (r.status === 'pending' || r.status === 'past_due') pendingCount++;
+      if (r.status === 'pending' || r.status === 'past_due') {
+        pendingCount++;
+        overdueAmountCents += r.amount_cents || 0;
+      }
+      // Renovaciones próximas: recurrentes vivas con fin de periodo en ≤14 días.
+      if (r.kind === 'recurring' && isLive && r.current_period_end) {
+        const t = new Date(r.current_period_end).getTime();
+        if (Number.isFinite(t) && t >= now && t <= horizon) {
+          upcoming.push({
+            id: r.id, client: r.client, amount_cents: r.amount_cents, currency: r.currency,
+            interval: r.interval, current_period_end: r.current_period_end, payment_url: r.payment_url,
+          });
+        }
+      }
     }
+    upcoming.sort((a, b) => new Date(a.current_period_end).getTime() - new Date(b.current_period_end).getTime());
 
     res.json({
       items: withClient,
       kpis: {
         mrrCents,
+        arrCents: mrrCents * 12,
         currency: list[0]?.currency || 'eur',
         activeSubscriptions: activeCount,
         pendingOrOverdue: pendingCount,
+        overdueAmountCents,
+        clientsBilled: billedClients.size,
+        byKind,
         total: list.length,
       },
+      upcomingRenewals: upcoming,
       stripeConnected,
     });
   } catch (error: any) {
