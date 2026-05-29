@@ -83,6 +83,66 @@ async function ensureStripeCustomer(stripe: Stripe, row: any, client: { email?: 
 
 const frontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
 
+// Determina si una fila (asignación) usa el Payment Link COMPARTIDO de su plan.
+// Importante: ese link lo comparten TODOS los clientes del plan, así que NUNCA
+// debemos desactivarlo ni regenerarlo desde una sola fila (cortaría el pago al
+// resto). Cuando hay que mutar (cancelar/editar) clonamos un link dedicado.
+async function rowUsesSharedPlanLink(row: any): Promise<boolean> {
+  if (!row?.plan_id || !row?.stripe_payment_link_id) return false;
+  const { data: plan } = await supabaseAdmin
+    .from('billing_plans')
+    .select('stripe_payment_link_id')
+    .eq('id', row.plan_id)
+    .maybeSingle();
+  return !!plan && plan.stripe_payment_link_id === row.stripe_payment_link_id;
+}
+
+// Crea un Payment Link DEDICADO a esta fila/cliente reutilizando un precio, para
+// poder cancelar/editar sin tocar el link compartido del plan. Devuelve null si
+// no hay precio (p.ej. facturas).
+async function createDedicatedLink(
+  stripe: Stripe,
+  row: any,
+  managerId: string,
+  opts: { priceId?: string | null; allowPromos?: boolean } = {},
+): Promise<{ id: string; url: string } | null> {
+  const price = opts.priceId || row.stripe_price_id;
+  if (!price) return null;
+  const link = await stripe.paymentLinks.create({
+    line_items: [{ price, quantity: 1 }],
+    allow_promotion_codes: !!opts.allowPromos,
+    metadata: { client_id: row.client_id, manager_id: managerId, billing_id: row.id || '' },
+    after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+  });
+  return { id: link.id, url: link.url };
+}
+
+// Resuelve el id de la suscripción Stripe asociada a una fila recurrente cuando
+// aún no está espejado. Si el link es COMPARTIDO (plan), filtra las sesiones de
+// checkout por el email del cliente para no cancelar la suscripción de otro.
+async function resolveSubscriptionId(stripe: Stripe, row: any, clientEmail?: string | null): Promise<string | null> {
+  if (row.stripe_subscription_id) return row.stripe_subscription_id;
+  if (row.kind !== 'recurring' || !row.stripe_payment_link_id) return null;
+  try {
+    const shared = await rowUsesSharedPlanLink(row);
+    const sessions = await stripe.checkout.sessions.list({
+      payment_link: row.stripe_payment_link_id,
+      limit: shared ? 100 : 1,
+      expand: ['data.subscription'],
+    });
+    const sess = shared
+      ? sessions.data.find(s => !!s.subscription && (
+          (s.customer_details?.email && clientEmail && s.customer_details.email.toLowerCase() === clientEmail.toLowerCase()) ||
+          s.metadata?.client_id === row.client_id
+        ))
+      : sessions.data.find(s => !!s.subscription);
+    if (sess?.subscription) return typeof sess.subscription === 'string' ? sess.subscription : sess.subscription.id;
+  } catch (e) {
+    console.error('resolveSubscriptionId failed:', e);
+  }
+  return null;
+}
+
 // Estados que cuentan como "pagado/activo" para detectar la transición de
 // un cobro pendiente a cobrado y avisar al coach.
 const PAID_STATES = new Set(['active', 'trialing', 'paid']);
@@ -406,11 +466,16 @@ router.patch('/:id/price', async (req: any, res) => {
         });
       }
     } else if (row.stripe_payment_link_id) {
-      // Desactiva el link antiguo y crea uno nuevo con el precio actualizado.
-      try { await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+      // Crea un link DEDICADO con el precio actualizado. Solo desactivamos el
+      // link antiguo si NO era el compartido del plan (desactivar el del plan
+      // cortaría el pago al resto de clientes).
+      const sharedLink = await rowUsesSharedPlanLink(row);
+      if (!sharedLink) {
+        try { await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+      }
       const link = await stripe.paymentLinks.create({
         line_items: [{ price: newPrice.id, quantity: 1 }],
-        metadata: { client_id: row.client_id, manager_id: req.user.id },
+        metadata: { client_id: row.client_id, manager_id: req.user.id, billing_id: row.id },
         after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
       });
       updates.stripe_payment_link_id = link.id;
@@ -507,6 +572,9 @@ router.post('/:id/sync', async (req: any, res) => {
       const sub = await stripe.subscriptions.retrieve(row.stripe_subscription_id) as any;
       updates.status = sub.status;
       updates.current_period_end = subPeriodEnd(sub);
+      // Reconcilia los flags de UI con el estado real en Stripe.
+      updates.cancel_at_period_end = !!sub.cancel_at_period_end;
+      updates.paused = !!sub.pause_collection;
     } else if (row.stripe_invoice_id) {
       const inv = await stripe.invoices.retrieve(row.stripe_invoice_id);
       updates.status = inv.status === 'paid' ? 'paid' : inv.status === 'void' ? 'void' : inv.status === 'uncollectible' ? 'uncollectible' : 'pending';
@@ -554,23 +622,21 @@ router.post('/:id/cancel', async (req: any, res) => {
       .maybeSingle();
     if (!row) return res.status(404).json({ error: 'Billing record not found' });
 
+    const atPeriodEnd = req.body?.at_period_end === true;
+
     const conn = await getCoachStripe(req.user.id);
     if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
     const { stripe } = conn;
 
-    // Si es un link recurrente que YA generó una suscripción pero aún no se
-    // ha sincronizado el id, lo resolvemos vía checkout sessions y lo
-    // cancelamos — de lo contrario seguiría cobrando tras "cancelar".
-    let subscriptionId: string | null = row.stripe_subscription_id || null;
-    if (!subscriptionId && row.kind === 'recurring' && row.stripe_payment_link_id) {
-      try {
-        const sessions = await stripe.checkout.sessions.list({ payment_link: row.stripe_payment_link_id, limit: 1 });
-        const sess = sessions.data[0];
-        if (sess?.subscription) subscriptionId = typeof sess.subscription === 'string' ? sess.subscription : sess.subscription.id;
-      } catch (lookupErr) {
-        console.error('Stripe subscription lookup before cancel failed:', lookupErr);
-      }
-    }
+    // Resolver la suscripción asociada (espejada o vía checkout sessions). Para
+    // links COMPARTIDOS de un plan, el lookup filtra por email del cliente para
+    // no cancelar la suscripción de OTRO cliente del mismo plan.
+    const { data: clientUser } = await supabaseAdmin.from('users').select('email').eq('id', row.client_id).maybeSingle();
+    const subscriptionId = await resolveSubscriptionId(stripe, row, clientUser?.email);
+
+    // ¿El link es compartido por el plan? Si lo es, NUNCA lo desactivamos
+    // (cortaría el pago al resto de clientes del plan).
+    const sharedLink = await rowUsesSharedPlanLink(row);
 
     // Cancelar la suscripción es la operación con impacto monetario: si falla,
     // NO marcamos el cobro como cancelado (la BD mentiría y el cliente
@@ -579,7 +645,11 @@ router.post('/:id/cancel', async (req: any, res) => {
     let subscriptionCancelFailed = false;
     if (subscriptionId) {
       try {
-        await stripe.subscriptions.cancel(subscriptionId);
+        if (atPeriodEnd) {
+          await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
+        } else {
+          await stripe.subscriptions.cancel(subscriptionId);
+        }
       } catch (subErr) {
         subscriptionCancelFailed = true;
         console.error('Stripe subscription cancel FAILED:', subErr);
@@ -589,7 +659,8 @@ router.post('/:id/cancel', async (req: any, res) => {
       if (!subscriptionId && row.stripe_invoice_id && row.status !== 'paid') {
         await stripe.invoices.voidInvoice(row.stripe_invoice_id);
       }
-      if (row.stripe_payment_link_id) {
+      // Solo desactivamos el link si es DEDICADO a esta fila (no el del plan).
+      if (!atPeriodEnd && !sharedLink && row.stripe_payment_link_id) {
         await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false });
       }
     } catch (bestEffortErr) {
@@ -600,15 +671,283 @@ router.post('/:id/cancel', async (req: any, res) => {
       return res.status(502).json({ error: 'stripe_cancel_failed', message: 'No se pudo cancelar la suscripción en Stripe. Inténtalo de nuevo o revísalo en tu panel de Stripe.' });
     }
 
-    await supabaseAdmin
-      .from('client_billing')
-      .update({ status: row.stripe_invoice_id && row.status !== 'paid' && !subscriptionId ? 'void' : 'canceled' })
-      .eq('id', id);
+    if (atPeriodEnd && subscriptionId) {
+      // Programada: sigue activa hasta fin de ciclo; lo marcamos para la UI.
+      await supabaseAdmin.from('client_billing').update({ cancel_at_period_end: true }).eq('id', id);
+    } else {
+      await supabaseAdmin
+        .from('client_billing')
+        .update({ status: row.stripe_invoice_id && row.status !== 'paid' && !subscriptionId ? 'void' : 'canceled', cancel_at_period_end: false, paused: false })
+        .eq('id', id);
+    }
 
-    res.json({ ok: true });
+    res.json({ ok: true, scheduled: atPeriodEnd && !!subscriptionId });
   } catch (error: any) {
     console.error('Error cancelling billing record:', error);
     res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// ── PATCH /:id — edición completa de un cobro/suscripción ──────────────────
+// Permite cambiar etiqueta, importe, intervalo, días de prueba y códigos
+// promocionales. Si cambia algo del precio se crea un Price nuevo (Stripe no
+// permite editar uno existente) y un link DEDICADO (nunca el compartido del
+// plan). Si ya hay una suscripción viva, se le aplica el precio con prorrateo.
+router.patch('/:id', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+
+    const { data: row } = await supabaseAdmin
+      .from('client_billing').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!row) return res.status(404).json({ error: 'Billing record not found' });
+    if (['canceled', 'void'].includes(row.status)) {
+      return res.status(400).json({ error: 'Cannot edit a canceled charge' });
+    }
+
+    const updates: any = {};
+    // Etiqueta/descripción: editable en cualquier tipo (incluida factura).
+    if (typeof req.body.description === 'string') updates.description = req.body.description.slice(0, 300) || null;
+
+    // Cambios de precio: no aplican a facturas finalizadas.
+    const wantsPriceChange = ['amount', 'interval', 'interval_count', 'trial_days', 'allow_promotion_codes'].some(k => req.body[k] !== undefined);
+    if (wantsPriceChange) {
+      if (row.kind === 'invoice') {
+        return res.status(400).json({ error: 'invoice_immutable', message: 'Una factura finalizada no se puede reprecificar. Cancélala y crea un cobro nuevo.' });
+      }
+
+      const conn = await getCoachStripe(req.user.id);
+      if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+      const { stripe } = conn;
+
+      const amountCents = req.body.amount !== undefined
+        ? Math.round(Number(req.body.amount) * 100)
+        : row.amount_cents;
+      if (!Number.isFinite(amountCents) || amountCents <= 0 || amountCents > 100_000_000) {
+        return res.status(400).json({ error: 'amount must be a positive number' });
+      }
+      const interval = row.kind === 'recurring'
+        ? (['day', 'week', 'month', 'year'].includes(req.body.interval) ? req.body.interval : (row.interval || 'month'))
+        : null;
+      const icNum = Number(req.body.interval_count);
+      const intervalCount = Number.isFinite(icNum) && icNum >= 1 && icNum <= 52 ? Math.round(icNum) : 1;
+      const tdNum = Number(req.body.trial_days);
+      const trialDays = Number.isFinite(tdNum) && tdNum > 0 && tdNum <= 365 ? Math.round(tdNum) : 0;
+      const allowPromos = req.body.allow_promotion_codes === undefined ? false : req.body.allow_promotion_codes === true;
+
+      let productId = row.stripe_product_id;
+      if (!productId) {
+        const product = await stripe.products.create({ name: (updates.description ?? row.description) || 'Coaching' });
+        productId = product.id;
+      }
+      const newPrice = await stripe.prices.create({
+        product: productId,
+        unit_amount: amountCents,
+        currency: row.currency || 'eur',
+        ...(row.kind === 'recurring'
+          ? { recurring: { interval: interval as any, interval_count: intervalCount, ...(trialDays > 0 ? { trial_period_days: trialDays } : {}) } }
+          : {}),
+      });
+      updates.amount_cents = amountCents;
+      updates.stripe_price_id = newPrice.id;
+      updates.stripe_product_id = productId;
+      if (row.kind === 'recurring') updates.interval = interval;
+
+      // Si ya hay suscripción viva, cámbiale el item (con prorrateo). Si no, se
+      // regenera un link DEDICADO con el nuevo precio (sin tocar el del plan).
+      if (row.stripe_subscription_id) {
+        const sub = await stripe.subscriptions.retrieve(row.stripe_subscription_id) as any;
+        const itemId = sub?.items?.data?.[0]?.id;
+        if (itemId) {
+          await stripe.subscriptions.update(row.stripe_subscription_id, {
+            items: [{ id: itemId, price: newPrice.id }],
+            proration_behavior: 'create_prorations',
+          });
+        }
+      } else if (row.stripe_payment_link_id || row.stripe_price_id) {
+        const sharedLink = await rowUsesSharedPlanLink(row);
+        if (!sharedLink && row.stripe_payment_link_id) {
+          try { await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+        }
+        const link = await createDedicatedLink(stripe, row, req.user.id, { priceId: newPrice.id, allowPromos });
+        if (link) { updates.stripe_payment_link_id = link.id; updates.payment_url = link.url; }
+      }
+    }
+
+    if (Object.keys(updates).length > 0) await supabaseAdmin.from('client_billing').update(updates).eq('id', id);
+    const { data: fresh } = await supabaseAdmin.from('client_billing').select('*').eq('id', id).maybeSingle();
+    res.json(fresh);
+  } catch (error: any) {
+    console.error('Error editing billing record:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// ── POST /:id/reassign — mueve el cobro a OTRO cliente ─────────────────────
+// Solo para recurring/one_time sin suscripción viva (Stripe no permite mover
+// una suscripción activa a otro cliente). Genera un link dedicado al nuevo
+// cliente y bloquea duplicar el mismo plan en él.
+router.post('/:id/reassign', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: row } = await supabaseAdmin
+      .from('client_billing').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!row) return res.status(404).json({ error: 'Billing record not found' });
+
+    if (row.kind === 'invoice') {
+      return res.status(400).json({ error: 'invoice_not_movable', message: 'Una factura no se puede reasignar. Cancélala y crea un cobro nuevo para el otro cliente.' });
+    }
+    if (['active', 'trialing'].includes(row.status) || row.stripe_subscription_id) {
+      return res.status(400).json({ error: 'active_not_movable', message: 'No se puede mover una suscripción ya activa en Stripe (pertenece al cliente actual). Cancélala primero y asigna el plan al nuevo cliente.' });
+    }
+
+    const target = await getOwnedClient(req.user.id, req.body?.client_id);
+    if (!target) return res.status(403).json({ error: 'Client does not belong to this coach' });
+    if (target.id === row.client_id) return res.status(400).json({ error: 'same_client', message: 'El cobro ya pertenece a ese cliente.' });
+
+    // Bloquea duplicar una asignación viva del mismo plan en el nuevo cliente.
+    if (row.plan_id) {
+      const { data: dup } = await supabaseAdmin
+        .from('client_billing').select('id')
+        .eq('manager_id', req.user.id).eq('client_id', target.id).eq('plan_id', row.plan_id)
+        .not('status', 'in', '("canceled","void")')
+        .maybeSingle();
+      if (dup) return res.status(409).json({ error: 'duplicate_plan', message: 'Ese cliente ya tiene una suscripción activa de este plan.' });
+    }
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+
+    const allowPromos = row.plan_id
+      ? !!(await supabaseAdmin.from('billing_plans').select('allow_promotion_codes').eq('id', row.plan_id).maybeSingle()).data?.allow_promotion_codes
+      : false;
+    const link = await createDedicatedLink(stripe, { ...row, client_id: target.id }, req.user.id, { allowPromos });
+
+    const updates: any = {
+      client_id: target.id,
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+      status: 'pending',
+      cancel_at_period_end: false,
+      paused: false,
+    };
+    if (link) { updates.stripe_payment_link_id = link.id; updates.payment_url = link.url; }
+    await supabaseAdmin.from('client_billing').update(updates).eq('id', id);
+
+    // Tarjeta de pago al nuevo cliente (opcional).
+    const sendToChat = req.body?.send_to_chat !== false;
+    const newUrl = link?.url || row.payment_url;
+    if (sendToChat && newUrl) {
+      await supabaseAdmin.from('messages').insert({
+        sender_id: req.user.id, receiver_id: target.id, content: '',
+        attachment_type: 'payment', attachment_url: newUrl,
+        payload: { billing_id: row.id, plan_id: row.plan_id, kind: row.kind, amount_cents: row.amount_cents, currency: row.currency, interval: row.interval, description: row.description, status: 'pending' },
+      });
+    }
+
+    const { data: fresh } = await supabaseAdmin.from('client_billing').select('*').eq('id', id).maybeSingle();
+    res.json(fresh);
+  } catch (error: any) {
+    console.error('Error reassigning billing record:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// ── POST /:id/pause y /:id/resume — pausar/reanudar la cobranza ────────────
+router.post('/:id/pause', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: row } = await supabaseAdmin.from('client_billing').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!row) return res.status(404).json({ error: 'Billing record not found' });
+    if (row.kind !== 'recurring') return res.status(400).json({ error: 'not_subscription', message: 'Solo se pueden pausar suscripciones.' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+    const { data: clientUser } = await supabaseAdmin.from('users').select('email').eq('id', row.client_id).maybeSingle();
+    const subId = await resolveSubscriptionId(stripe, row, clientUser?.email);
+    if (!subId) return res.status(400).json({ error: 'no_active_subscription', message: 'No hay una suscripción activa que pausar (el cliente aún no ha pagado).' });
+
+    await stripe.subscriptions.update(subId, { pause_collection: { behavior: 'void' } });
+    await supabaseAdmin.from('client_billing').update({ paused: true, stripe_subscription_id: subId }).eq('id', id);
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error pausing subscription:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+router.post('/:id/resume', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: row } = await supabaseAdmin.from('client_billing').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!row) return res.status(404).json({ error: 'Billing record not found' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+    const { data: clientUser } = await supabaseAdmin.from('users').select('email').eq('id', row.client_id).maybeSingle();
+    const subId = await resolveSubscriptionId(stripe, row, clientUser?.email);
+    if (!subId) return res.status(400).json({ error: 'no_active_subscription', message: 'No hay una suscripción que reanudar.' });
+
+    await stripe.subscriptions.update(subId, { pause_collection: null as any });
+    await supabaseAdmin.from('client_billing').update({ paused: false }).eq('id', id);
+    res.json({ ok: true });
+  } catch (error: any) {
+    console.error('Error resuming subscription:', error);
+    res.status(500).json({ error: safeErr(error) });
+  }
+});
+
+// ── POST /:id/refund — reembolsa el último pago del cobro ──────────────────
+router.post('/:id/refund', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    if (!UUID_RE.test(String(id))) return res.status(400).json({ error: 'Invalid id' });
+    const { data: row } = await supabaseAdmin.from('client_billing').select('*').eq('id', id).eq('manager_id', req.user.id).maybeSingle();
+    if (!row) return res.status(404).json({ error: 'Billing record not found' });
+
+    const conn = await getCoachStripe(req.user.id);
+    if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+    const { stripe } = conn;
+
+    // Localiza el PaymentIntent del último pago según el tipo.
+    let paymentIntentId: string | null = null;
+    const { data: clientUser } = await supabaseAdmin.from('users').select('email').eq('id', row.client_id).maybeSingle();
+    if (row.kind === 'recurring') {
+      const subId = await resolveSubscriptionId(stripe, row, clientUser?.email);
+      if (subId) {
+        const sub = await stripe.subscriptions.retrieve(subId, { expand: ['latest_invoice.payment_intent'] }) as any;
+        const pi = sub?.latest_invoice?.payment_intent;
+        paymentIntentId = typeof pi === 'string' ? pi : pi?.id || null;
+      }
+    } else if (row.kind === 'invoice' && row.stripe_invoice_id) {
+      const inv = await stripe.invoices.retrieve(row.stripe_invoice_id, { expand: ['payment_intent'] }) as any;
+      const pi = inv?.payment_intent;
+      paymentIntentId = typeof pi === 'string' ? pi : pi?.id || null;
+    } else if (row.stripe_payment_link_id) {
+      const sessions = await stripe.checkout.sessions.list({ payment_link: row.stripe_payment_link_id, limit: 100 });
+      const sess = sessions.data.find(s => s.payment_status === 'paid' && (
+        (s.customer_details?.email && clientUser?.email && s.customer_details.email.toLowerCase() === clientUser.email.toLowerCase()) ||
+        s.metadata?.client_id === row.client_id || sessions.data.length === 1
+      ));
+      const pi = sess?.payment_intent;
+      paymentIntentId = typeof pi === 'string' ? pi : (pi as any)?.id || null;
+    }
+
+    if (!paymentIntentId) {
+      return res.status(400).json({ error: 'no_payment_found', message: 'No se encontró un pago reembolsable para este cobro.' });
+    }
+
+    const refund = await stripe.refunds.create({ payment_intent: paymentIntentId });
+    res.json({ ok: true, refund_id: refund.id, status: refund.status });
+  } catch (error: any) {
+    console.error('Error refunding charge:', error);
+    res.status(400).json({ error: safeErr(error) });
   }
 });
 
@@ -872,7 +1211,16 @@ router.post('/plans', async (req: any, res) => {
     if (Array.isArray(assign_client_ids) && assign_client_ids.length > 0) {
       for (const cid of assign_client_ids.slice(0, 200)) {
         const client = await getOwnedClient(req.user.id, cid);
-        if (client) { await assignPlanRow(req.user.id, plan, client.id, true); assigned++; }
+        if (!client) continue;
+        // Evita duplicar una asignación viva del mismo plan al mismo cliente.
+        const { data: dup } = await supabaseAdmin
+          .from('client_billing').select('id')
+          .eq('manager_id', req.user.id).eq('client_id', client.id).eq('plan_id', plan.id)
+          .not('status', 'in', '("canceled","void")')
+          .maybeSingle();
+        if (dup) continue;
+        await assignPlanRow(req.user.id, plan, client.id, true);
+        assigned++;
       }
     }
 

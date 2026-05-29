@@ -4,6 +4,7 @@ import {
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
   DownloadCloud, ChevronDown, ChevronUp, Search, Check, FileDown,
   Wallet, CalendarClock, Repeat, Archive, Package, Trash2,
+  Settings2, UserCog, Pause, Play, RotateCcw, Ban,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -28,6 +29,9 @@ interface BillingItem {
   current_period_end?: string | null;
   last_reminder_at?: string | null;
   created_at: string;
+  plan_id?: string | null;
+  cancel_at_period_end?: boolean;
+  paused?: boolean;
 }
 
 interface Kpis {
@@ -278,19 +282,6 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     setBusyId(id);
     try {
       await fetchWithAuth(`/manager/client-billing/${id}/sync`, { method: 'POST', body: JSON.stringify({}) });
-      await load();
-    } catch (e: any) {
-      setError(e?.message || 'Error');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const cancel = async (id: string) => {
-    if (!window.confirm(isEs ? '¿Cancelar este cobro? El cliente dejará de poder pagar con este link.' : 'Cancel this charge? The client will no longer be able to pay with this link.')) return;
-    setBusyId(id);
-    try {
-      await fetchWithAuth(`/manager/client-billing/${id}/cancel`, { method: 'POST', body: JSON.stringify({}) });
       await load();
     } catch (e: any) {
       setError(e?.message || 'Error');
@@ -604,9 +595,17 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                         {it.kind === 'recurring' && <span className="text-xs font-normal text-slate-400">/{it.interval === 'year' ? (isEs ? 'año' : 'yr') : (isEs ? 'mes' : 'mo')}</span>}
                       </td>
                       <td className="px-5 py-4">
-                        <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${STATUS_STYLE[it.status] || STATUS_STYLE.pending}`}>
-                          {statusLabel(it.status)}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold ${STATUS_STYLE[it.status] || STATUS_STYLE.pending}`}>
+                            {statusLabel(it.status)}
+                          </span>
+                          {it.paused && (
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{isEs ? 'Pausada' : 'Paused'}</span>
+                          )}
+                          {it.cancel_at_period_end && (
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">{isEs ? 'Cancela al final' : 'Cancels at end'}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-4 text-slate-500 dark:text-slate-400 text-xs hidden md:table-cell">
                         {it.current_period_end ? new Date(it.current_period_end).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
@@ -624,11 +623,8 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                             </>
                           )}
                           <IconBtn title={isEs ? 'Sincronizar estado' : 'Sync status'} onClick={() => sync(it.id)} icon={RefreshCw} busy={busy} />
-                          {it.kind !== 'invoice' && !['canceled', 'void'].includes(it.status) && (
-                            <IconBtn title={isEs ? 'Cambiar precio' : 'Change price'} onClick={() => setEditItem(it)} icon={Pencil} />
-                          )}
-                          {!['canceled', 'void', 'paid'].includes(it.status) && (
-                            <IconBtn title={isEs ? 'Cancelar' : 'Cancel'} onClick={() => cancel(it.id)} icon={XCircle} accent="rose" />
+                          {!['canceled', 'void'].includes(it.status) && (
+                            <IconBtn title={isEs ? 'Gestionar suscripción' : 'Manage subscription'} onClick={() => setEditItem(it)} icon={Settings2} accent="emerald" />
                           )}
                         </div>
                       </td>
@@ -644,11 +640,13 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
       )}
 
       {editItem && (
-        <EditPriceModal
+        <ManageSubscriptionModal
           isEs={isEs}
+          locale={locale}
           item={editItem}
           onClose={() => setEditItem(null)}
-          onSaved={() => { setEditItem(null); load(); }}
+          onChanged={() => { load(); }}
+          onClosedAfterChange={() => { setEditItem(null); load(); }}
         />
       )}
 
@@ -800,53 +798,244 @@ function ArchivePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: bool
 }
 
 // ── Modal de cambio de precio ──────────────────────────────────────────────
-function EditPriceModal({ isEs, item, onClose, onSaved }: { isEs: boolean; item: BillingItem; onClose: () => void; onSaved: () => void }) {
-  const [amount, setAmount] = useState(String((item.amount_cents / 100).toFixed(2)));
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+// ── Modal: Gestionar suscripción ───────────────────────────────────────────
+// Panel completo de opciones sobre un cobro/suscripción: editar detalles
+// (etiqueta, precio, intervalo, trial, promos), reasignar a otro cliente,
+// pausar/reanudar, cancelar (inmediato o a fin de ciclo) y reembolsar.
+function ManageSubscriptionModal({ isEs, locale, item, onClose, onChanged, onClosedAfterChange }: {
+  isEs: boolean; locale: string; item: BillingItem;
+  onClose: () => void; onChanged: () => void; onClosedAfterChange: () => void;
+}) {
+  const isRecurring = item.kind === 'recurring';
+  const isInvoice = item.kind === 'invoice';
+  const live = ['active', 'trialing'].includes(item.status);
+  const money = (cents: number) => (cents / 100).toLocaleString(locale, { style: 'currency', currency: (item.currency || 'eur').toUpperCase() });
 
-  const submit = async () => {
-    setErr(null);
-    const amt = Number(amount);
-    if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
-    setSaving(true);
+  // Espejo local de los flags que cambian sin recargar el modal.
+  const [paused, setPaused] = useState(!!item.paused);
+  const [cancelScheduled, setCancelScheduled] = useState(!!item.cancel_at_period_end);
+
+  // Edición de detalles.
+  const [desc, setDesc] = useState(item.description || '');
+  const [amount, setAmount] = useState(String((item.amount_cents / 100).toFixed(2)));
+  const [interval, setInterval] = useState((item.interval as string) || 'month');
+  const [intervalCount, setIntervalCount] = useState('1');
+  const [trialDays, setTrialDays] = useState('0');
+  const [allowPromos, setAllowPromos] = useState(false);
+
+  // Reasignar.
+  const [clients, setClients] = useState<any[]>([]);
+  const [targetClient, setTargetClient] = useState('');
+  const [sendToChat, setSendToChat] = useState(true);
+
+  // Cancelar.
+  const [cancelMode, setCancelMode] = useState<'immediate' | 'period_end'>(isRecurring ? 'period_end' : 'immediate');
+
+  const [busy, setBusy] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try { setClients(unwrapList(await fetchWithAuth('/manager/clients'))); } catch { /* noop */ }
+    })();
+  }, []);
+
+  const flash = (m: string) => { setOk(m); setTimeout(() => setOk(o => (o === m ? null : o)), 2500); };
+  const call = async (key: string, path: string, body: any, opts: { close?: boolean; okMsg?: string } = {}) => {
+    setErr(null); setBusy(key);
     try {
-      await fetchWithAuth(`/manager/client-billing/${item.id}/price`, {
-        method: 'PATCH',
-        body: JSON.stringify({ amount: amt }),
-      });
-      onSaved();
+      await fetchWithAuth(`/manager/client-billing/${item.id}${path}`, { method: 'POST', body: JSON.stringify(body) });
+      if (opts.okMsg) flash(opts.okMsg);
+      if (opts.close) { onClosedAfterChange(); } else { onChanged(); }
+      return true;
     } catch (e: any) {
-      setErr(e?.message || (isEs ? 'Error al cambiar el precio.' : 'Error changing price.'));
-    } finally {
-      setSaving(false);
-    }
+      setErr(e?.message || (isEs ? 'Error.' : 'Error.'));
+      return false;
+    } finally { setBusy(null); }
   };
+
+  const saveDetails = async () => {
+    setErr(null);
+    const body: any = { description: desc };
+    if (!isInvoice) {
+      const amt = Number(amount);
+      if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
+      body.amount = amt;
+      body.allow_promotion_codes = allowPromos;
+      if (isRecurring) {
+        body.interval = interval;
+        const ic = Number(intervalCount); if (Number.isFinite(ic) && ic >= 1) body.interval_count = Math.round(ic);
+        const td = Number(trialDays); if (Number.isFinite(td) && td >= 0) body.trial_days = Math.round(td);
+      }
+    }
+    setBusy('details');
+    try {
+      await fetchWithAuth(`/manager/client-billing/${item.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+      flash(isEs ? 'Cambios guardados.' : 'Changes saved.');
+      onChanged();
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'Error al guardar.' : 'Error saving.'));
+    } finally { setBusy(null); }
+  };
+
+  const doReassign = async () => {
+    if (!targetClient) { setErr(isEs ? 'Elige un cliente.' : 'Pick a client.'); return; }
+    await call('reassign', '/reassign', { client_id: targetClient, send_to_chat: sendToChat }, { close: true });
+  };
+  const doPause = async () => { if (await call('pause', '/pause', {})) setPaused(true); };
+  const doResume = async () => { if (await call('resume', '/resume', {})) setPaused(false); };
+  const doRefund = async () => {
+    if (!window.confirm(isEs ? '¿Reembolsar el último pago de este cobro? Esta acción no se puede deshacer.' : 'Refund the last payment? This cannot be undone.')) return;
+    await call('refund', '/refund', {}, { okMsg: isEs ? 'Reembolso emitido.' : 'Refund issued.' });
+  };
+  const doCancel = async () => {
+    const atEnd = isRecurring && cancelMode === 'period_end';
+    if (!atEnd && !window.confirm(isEs ? '¿Cancelar inmediatamente? El cliente perderá el acceso ya.' : 'Cancel immediately? The client loses access now.')) return;
+    const okRes = await call('cancel', '/cancel', { at_period_end: atEnd }, { close: !atEnd });
+    if (okRes && atEnd) setCancelScheduled(true);
+  };
+
+  const Section = ({ title, icon: Icon, children }: { title: string; icon: any; children?: React.ReactNode }) => (
+    <div className="py-4 border-t border-slate-100 dark:border-slate-800 first:border-t-0 first:pt-0">
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className="w-4 h-4 text-slate-400" />
+        <h4 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h4>
+      </div>
+      {children}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Cambiar precio' : 'Change price'}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md max-h-[88vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 pt-6 pb-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white truncate">{isEs ? 'Gestionar suscripción' : 'Manage subscription'}</h3>
+            <p className="text-xs text-slate-400 truncate">
+              {item.client?.full_name || item.client?.email || (isEs ? 'Cliente' : 'Client')} · {money(item.amount_cents)}{isRecurring ? `/${item.interval === 'year' ? (isEs ? 'año' : 'yr') : (isEs ? 'mes' : 'mo')}` : ''}
+              {paused && ` · ${isEs ? 'Pausada' : 'Paused'}`}
+              {cancelScheduled && ` · ${isEs ? 'Cancela al final' : 'Cancels at end'}`}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 flex-shrink-0"><X className="w-5 h-5" /></button>
         </div>
-        {item.kind === 'recurring' && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-            {isEs
-              ? 'Si el cliente ya tiene una suscripción activa, el cambio se aplica con prorrateo en el próximo ciclo.'
-              : 'If the client already has an active subscription, the change is prorated on the next cycle.'}
-          </p>
-        )}
-        {err && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
-        <Field label={isEs ? 'Nuevo importe' : 'New amount'}>
-          <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className={inputCls} autoFocus />
-        </Field>
-        <div className="flex gap-3 mt-6">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
-          <button onClick={submit} disabled={saving} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {isEs ? 'Guardar' : 'Save'}
-          </button>
+
+        <div className="px-6 pb-6 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
+          {err && <div className="mb-3 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+          {ok && <div className="mb-3 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-sm text-emerald-700 dark:text-emerald-400">{ok}</div>}
+
+          {/* ── Detalles ── */}
+          <Section title={isEs ? 'Detalles del cobro' : 'Charge details'} icon={Pencil}>
+            <div className="space-y-3">
+              <Field label={isEs ? 'Etiqueta / descripción' : 'Label / description'}>
+                <input value={desc} onChange={e => setDesc(e.target.value)} placeholder={isEs ? 'Ej: Plan Growth mensual' : 'e.g. Growth monthly plan'} className={inputCls} />
+              </Field>
+              {isInvoice ? (
+                <p className="text-xs text-slate-400">{isEs ? 'Una factura finalizada no se puede reprecificar. Solo puedes editar la etiqueta; para cambiar el importe, cancélala y crea un cobro nuevo.' : 'A finalized invoice cannot be repriced. You can only edit the label.'}</p>
+              ) : (
+                <>
+                  <Field label={isEs ? 'Importe' : 'Amount'}>
+                    <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className={inputCls} />
+                  </Field>
+                  {isRecurring && (
+                    <div className="grid grid-cols-3 gap-2">
+                      <Field label={isEs ? 'Intervalo' : 'Interval'}>
+                        <select value={interval} onChange={e => setInterval(e.target.value)} className={inputCls}>
+                          <option value="day">{isEs ? 'Día' : 'Day'}</option>
+                          <option value="week">{isEs ? 'Semana' : 'Week'}</option>
+                          <option value="month">{isEs ? 'Mes' : 'Month'}</option>
+                          <option value="year">{isEs ? 'Año' : 'Year'}</option>
+                        </select>
+                      </Field>
+                      <Field label={isEs ? 'Cada' : 'Every'}>
+                        <input type="number" min="1" max="52" value={intervalCount} onChange={e => setIntervalCount(e.target.value)} className={inputCls} />
+                      </Field>
+                      <Field label={isEs ? 'Prueba (días)' : 'Trial (days)'}>
+                        <input type="number" min="0" max="365" value={trialDays} onChange={e => setTrialDays(e.target.value)} className={inputCls} />
+                      </Field>
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
+                    <span className="text-xs text-slate-600 dark:text-slate-300">{isEs ? 'Permitir códigos promocionales en el enlace' : 'Allow promotion codes on the link'}</span>
+                  </label>
+                  {live && (
+                    <p className="text-[11px] text-slate-400">{isEs ? 'El cliente ya tiene una suscripción activa: el cambio de precio se aplica con prorrateo en el próximo ciclo.' : 'Active subscription: price change is prorated next cycle.'}</p>
+                  )}
+                </>
+              )}
+              <button onClick={saveDetails} disabled={busy === 'details'} style={brandStyle} className={`w-full px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
+                {busy === 'details' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                {isEs ? 'Guardar cambios' : 'Save changes'}
+              </button>
+            </div>
+          </Section>
+
+          {/* ── Reasignar ── */}
+          {!isInvoice && (
+            <Section title={isEs ? 'Reasignar a otro cliente' : 'Reassign to another client'} icon={UserCog}>
+              {live || item.status === 'past_due' ? (
+                <p className="text-xs text-slate-400">{isEs ? 'No se puede mover una suscripción ya activa (pertenece al cliente actual en Stripe). Cancélala primero y asigna el plan al nuevo cliente.' : 'Cannot move an already active subscription. Cancel it first.'}</p>
+              ) : (
+                <div className="space-y-3">
+                  <ClientPicker clients={clients.filter(c => c.id !== item.client?.id)} value={targetClient} onChange={setTargetClient} isEs={isEs} />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={sendToChat} onChange={e => setSendToChat(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
+                    <span className="text-xs text-slate-600 dark:text-slate-300">{isEs ? 'Enviar el enlace de pago al nuevo cliente por el chat' : 'Send the payment link to the new client via chat'}</span>
+                  </label>
+                  <button onClick={doReassign} disabled={busy === 'reassign' || !targetClient} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center justify-center gap-2 disabled:opacity-50">
+                    {busy === 'reassign' ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCog className="w-4 h-4" />}
+                    {isEs ? 'Mover al cliente seleccionado' : 'Move to selected client'}
+                  </button>
+                </div>
+              )}
+            </Section>
+          )}
+
+          {/* ── Pausar / reanudar ── */}
+          {isRecurring && (
+            <Section title={isEs ? 'Pausar cobranza' : 'Pause billing'} icon={paused ? Play : Pause}>
+              {paused ? (
+                <button onClick={doResume} disabled={busy === 'resume'} className="w-full px-4 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-semibold text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition flex items-center justify-center gap-2 disabled:opacity-50">
+                  {busy === 'resume' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                  {isEs ? 'Reanudar cobranza' : 'Resume billing'}
+                </button>
+              ) : (
+                <button onClick={doPause} disabled={busy === 'pause'} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center justify-center gap-2 disabled:opacity-50">
+                  {busy === 'pause' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
+                  {isEs ? 'Pausar la suscripción' : 'Pause subscription'}
+                </button>
+              )}
+              <p className="text-[11px] text-slate-400 mt-2">{isEs ? 'Pausar detiene los cobros sin cancelar la suscripción. Puedes reanudarla cuando quieras.' : 'Pausing stops charges without canceling. Resume anytime.'}</p>
+            </Section>
+          )}
+
+          {/* ── Reembolsar ── */}
+          <Section title={isEs ? 'Reembolsar' : 'Refund'} icon={RotateCcw}>
+            <button onClick={doRefund} disabled={busy === 'refund'} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center justify-center gap-2 disabled:opacity-50">
+              {busy === 'refund' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+              {isEs ? 'Reembolsar último pago' : 'Refund last payment'}
+            </button>
+          </Section>
+
+          {/* ── Cancelar ── */}
+          <Section title={isEs ? 'Cancelar' : 'Cancel'} icon={Ban}>
+            {isRecurring && (
+              <div className="space-y-2 mb-3">
+                {([['period_end', isEs ? 'Al final del ciclo actual (sigue activa hasta entonces)' : 'At the end of the current cycle'], ['immediate', isEs ? 'Inmediatamente (pierde acceso ya)' : 'Immediately']] as const).map(([k, lbl]) => (
+                  <label key={k} className="flex items-start gap-2 cursor-pointer">
+                    <input type="radio" name="cancelMode" checked={cancelMode === k} onChange={() => setCancelMode(k as any)} className="mt-0.5 w-4 h-4 accent-[var(--brand-primary)]" />
+                    <span className="text-xs text-slate-600 dark:text-slate-300">{lbl}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <button onClick={doCancel} disabled={busy === 'cancel'} className="w-full px-4 py-2.5 rounded-xl bg-rose-600 text-white font-semibold text-sm hover:bg-rose-700 transition flex items-center justify-center gap-2 disabled:opacity-50">
+              {busy === 'cancel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+              {isRecurring && cancelMode === 'period_end' ? (isEs ? 'Programar cancelación' : 'Schedule cancellation') : (isEs ? 'Cancelar ahora' : 'Cancel now')}
+            </button>
+          </Section>
         </div>
       </div>
     </div>
