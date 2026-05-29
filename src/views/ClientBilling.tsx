@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CreditCard, Plus, RefreshCw, Send, XCircle, Link2, ExternalLink,
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
-  DownloadCloud, ChevronDown, ChevronUp,
+  DownloadCloud, ChevronDown, ChevronUp, Search, Check,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
@@ -234,7 +234,8 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           </button>
           <button
             onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#17cf54] hover:bg-[#15b84a] text-white font-semibold text-sm shadow-sm transition"
+            style={brandStyle}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm shadow-sm`}
           >
             <Plus className="w-4 h-4" /> {isEs ? 'Nuevo cobro' : 'New charge'}
           </button>
@@ -262,7 +263,8 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
               <button
                 key={k}
                 onClick={() => setStatusFilter(k as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === k ? 'bg-[#17cf54] text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
+                style={statusFilter === k ? brandStyle : undefined}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${statusFilter === k ? 'text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}
               >{lbl}</button>
             ))}
           </div>
@@ -272,7 +274,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder={isEs ? 'Buscar cliente…' : 'Search client…'}
-              className="w-full pl-3 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-[#17cf54]"
+              className="w-full pl-3 pr-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:border-[var(--brand-primary)]"
             />
           </div>
         </div>
@@ -427,7 +429,7 @@ function EditPriceModal({ isEs, item, onClose, onSaved }: { isEs: boolean; item:
         </Field>
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
-          <button onClick={submit} disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+          <button onClick={submit} disabled={saving} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {isEs ? 'Guardar' : 'Save'}
           </button>
@@ -544,12 +546,7 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
 
         <div className="space-y-4">
           <Field label={isEs ? 'Cliente' : 'Client'}>
-            <select value={clientId} onChange={e => setClientId(e.target.value)} className={selectCls}>
-              <option value="">{isEs ? 'Selecciona…' : 'Select…'}</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>{c.full_name || c.name || c.email}</option>
-              ))}
-            </select>
+            <ClientPicker clients={clients} value={clientId} onChange={setClientId} isEs={isEs} />
           </Field>
 
           <Field label={isEs ? 'Tipo de cobro' : 'Charge type'}>
@@ -559,7 +556,8 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
                   key={k}
                   type="button"
                   onClick={() => setKind(k as any)}
-                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${kind === k ? 'bg-[#17cf54] border-[#17cf54] text-white' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[#17cf54]/50'}`}
+                  style={kind === k ? brandStyle : undefined}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
                 >{lbl}</button>
               ))}
             </div>
@@ -622,7 +620,7 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
                     <input type="number" min="1" max="999" value={quantity} onChange={e => setQuantity(e.target.value)} className={inputCls} />
                   </Field>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[#17cf54]" />
+                    <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
                     <span className="text-sm text-slate-600 dark:text-slate-300">{isEs ? 'Permitir códigos de descuento en el pago' : 'Allow promotion codes at checkout'}</span>
                   </label>
                 </div>
@@ -633,7 +631,7 @@ function CreateChargeModal({ isEs, onClose, onCreated }: { isEs: boolean; onClos
 
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
-          <button onClick={submit} disabled={saving} className="flex-1 px-4 py-2.5 rounded-xl bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+          <button onClick={submit} disabled={saving} style={brandStyle} className={`flex-1 px-4 py-2.5 rounded-xl ${brandBtnCls} font-semibold text-sm flex items-center justify-center gap-2`}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
             {isEs ? 'Crear cobro' : 'Create charge'}
           </button>
@@ -731,19 +729,21 @@ function ImportModal({ isEs, locale, onClose, onImported }: { isEs: boolean; loc
                     {done ? (
                       <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="w-4 h-4" /> {isEs ? 'Importada' : 'Imported'}</span>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={mapping[sub.stripe_subscription_id] || ''}
-                          onChange={e => setMapping(m => ({ ...m, [sub.stripe_subscription_id]: e.target.value }))}
-                          className="p-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white outline-none max-w-[160px]"
-                        >
-                          <option value="">{isEs ? 'Cliente…' : 'Client…'}</option>
-                          {clients.map(c => <option key={c.id} value={c.id}>{c.full_name || c.name || c.email}</option>)}
-                        </select>
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className="w-44">
+                          <ClientPicker
+                            clients={clients}
+                            value={mapping[sub.stripe_subscription_id] || ''}
+                            onChange={(id) => setMapping(m => ({ ...m, [sub.stripe_subscription_id]: id }))}
+                            isEs={isEs}
+                            compact
+                          />
+                        </div>
                         <button
                           onClick={() => doImport(sub)}
                           disabled={busy}
-                          className="px-3 py-2 rounded-lg bg-[#17cf54] hover:bg-[#15b84a] disabled:opacity-60 text-white text-xs font-bold transition flex items-center gap-1.5"
+                          style={brandStyle}
+                          className={`px-3 py-2 rounded-lg ${brandBtnCls} text-xs font-bold flex items-center gap-1.5 whitespace-nowrap`}
                         >
                           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <DownloadCloud className="w-3.5 h-3.5" />}
                           {isEs ? 'Importar' : 'Import'}
@@ -767,8 +767,126 @@ function ImportModal({ isEs, locale, onClose, onImported }: { isEs: boolean; loc
   );
 }
 
-const inputCls = 'w-full p-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:border-[#17cf54] focus:ring-0 outline-none';
+const inputCls = 'w-full p-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:border-[var(--brand-primary)] focus:ring-0 outline-none';
 const selectCls = inputCls;
+
+// Color de marca que el admin asigna a su SaaS. Para botones sólidos usamos
+// el CSS var inline (Tailwind no resuelve bg- desde una variable arbitraria de
+// forma fiable en todos los navegadores).
+const brandStyle: React.CSSProperties = { backgroundColor: 'var(--brand-primary)' };
+const brandBtnCls = 'text-white hover:brightness-95 transition-[filter,opacity] disabled:opacity-60';
+
+// Desplegable de cliente PROPIO (no <select> nativo): botón + panel inline
+// que se expande hacia abajo (nunca se recorta dentro de modales con scroll),
+// con buscador cuando hay muchos clientes. Cierra al elegir o al hacer clic
+// fuera. Funciona igual en claro/oscuro.
+function ClientPicker({ clients, value, onChange, isEs, compact }: {
+  clients: any[];
+  value: string;
+  onChange: (id: string) => void;
+  isEs: boolean;
+  compact?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Panel posicionado con position:fixed calculado desde el botón, para que
+  // NUNCA lo recorte el overflow del modal con scroll.
+  const place = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = Math.max(r.width, 240);
+    // Si no cabe a la derecha, lo alineamos para que no se salga del viewport.
+    const left = Math.min(r.left, window.innerWidth - width - 8);
+    setCoords({ top: r.bottom + 4, left: Math.max(8, left), width });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    place();
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    // Cerrar al hacer scroll (el panel fixed quedaría desanclado) o resize.
+    const onScroll = () => setOpen(false);
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [open]);
+
+  const nameOf = (c: any) => c?.full_name || c?.name || c?.email || (isEs ? 'Cliente' : 'Client');
+  const selected = clients.find(c => c.id === value);
+  const ql = q.trim().toLowerCase();
+  const filtered = ql
+    ? clients.filter(c => `${c.full_name || ''} ${c.name || ''} ${c.email || ''}`.toLowerCase().includes(ql))
+    : clients;
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className={`w-full flex items-center justify-between gap-2 ${compact ? 'px-2.5 py-2 text-xs' : 'p-2.5 text-sm'} rounded-lg border bg-slate-50 dark:bg-slate-800/50 text-left transition ${
+          open ? 'border-[var(--brand-primary)]' : 'border-slate-200 dark:border-slate-700'
+        } ${selected ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}
+      >
+        <span className="truncate">{selected ? nameOf(selected) : (isEs ? 'Selecciona cliente…' : 'Select client…')}</span>
+        <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && coords && (
+        <div
+          ref={panelRef}
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 60 }}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden"
+        >
+          {clients.length > 6 && (
+            <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800">
+                <Search className="w-3.5 h-3.5 text-slate-400" />
+                <input
+                  autoFocus
+                  value={q}
+                  onChange={e => setQ(e.target.value)}
+                  placeholder={isEs ? 'Buscar…' : 'Search…'}
+                  className="flex-1 bg-transparent text-xs outline-none text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+          )}
+          <div className="max-h-52 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-slate-400 text-center">{isEs ? 'Sin clientes' : 'No clients'}</div>
+            ) : filtered.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { onChange(c.id); setOpen(false); setQ(''); }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition ${c.id === value ? 'text-[var(--brand-primary)] font-semibold' : 'text-slate-700 dark:text-slate-200'}`}
+              >
+                <span className="truncate min-w-0">
+                  <span className="block truncate">{c.full_name || c.name || c.email}</span>
+                  {(c.full_name || c.name) && c.email && <span className="block text-[11px] text-slate-400 truncate">{c.email}</span>}
+                </span>
+                {c.id === value && <Check className="w-4 h-4 flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 function Field({ label, children }: { label: string; children?: React.ReactNode }) {
   return (
     <div>
