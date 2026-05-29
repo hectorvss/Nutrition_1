@@ -95,6 +95,25 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   const locale = language === 'es' ? 'es-ES' : 'en-US';
 
+  // El backend manda `time` como ISO crudo (p.ej. "2026-04-07T09:46:53.178+00:00").
+  // Lo formateamos a tiempo relativo ("hace 5 min") o, si es antiguo, a fecha
+  // legible en el idioma del coach — en vez de mostrar el timestamp en bruto.
+  const formatActivityTime = (raw: any): string => {
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return typeof raw === 'string' ? raw : '';
+    const es = language === 'es';
+    const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (mins < 0) return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    if (mins < 1) return es ? 'ahora mismo' : 'just now';
+    if (mins < 60) return es ? `hace ${mins} min` : `${mins} min ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return es ? `hace ${hours} h` : `${hours} h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return es ? `hace ${days} d` : `${days} d ago`;
+    return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="p-6 md:p-8 lg:p-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
@@ -335,7 +354,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                           <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{t(update.title)}</span> {update.sub}</p>
                           <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
                             <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                            {update.time}
+                            {formatActivityTime(update.time)}
                           </p>
                         </div>
                       </div>
