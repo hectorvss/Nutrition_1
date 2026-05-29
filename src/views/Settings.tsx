@@ -755,7 +755,8 @@ function ProfileSettings() {
 }
 
 function SecuritySettings() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEs = language === 'es';
   const { logout } = useAuth();
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
@@ -774,6 +775,12 @@ function SecuritySettings() {
   const [mfaModalError, setMfaModalError] = useState<string | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  // Por defecto solo se muestran las 3 últimas de cada lista; "Cargar más"
+  // despliega el resto.
+  const [showAllSessions, setShowAllSessions] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
+  const SESSIONS_PREVIEW = 3;
+  const HISTORY_PREVIEW = 3;
 
   // Reads the real MFA state from Supabase (verified TOTP factor = 2FA on).
   const refreshMfaState = async () => {
@@ -1162,7 +1169,7 @@ function SecuritySettings() {
           </button>
         </div>
         <div className="space-y-4">
-          {sessions.map((session) => (
+          {(showAllSessions ? sessions : sessions.slice(0, SESSIONS_PREVIEW)).map((session) => (
             <div key={session.id} className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${session.is_current ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
@@ -1193,6 +1200,16 @@ function SecuritySettings() {
               </div>
             </div>
           ))}
+          {sessions.length > SESSIONS_PREVIEW && (
+            <button
+              onClick={() => setShowAllSessions(v => !v)}
+              className="w-full py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              {showAllSessions
+                ? (isEs ? 'Mostrar menos' : 'Show less')
+                : (isEs ? `Cargar más (${sessions.length - SESSIONS_PREVIEW})` : `Load more (${sessions.length - SESSIONS_PREVIEW})`)}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1212,7 +1229,7 @@ function SecuritySettings() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {history.map((item) => (
+              {(showAllHistory ? history : history.slice(0, HISTORY_PREVIEW)).map((item) => (
                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="py-3 px-2 text-sm text-slate-900 dark:text-white font-medium">{item.device || t('unknown_device')}</td>
                   <td className="py-3 px-2 text-sm text-slate-500 dark:text-slate-400">{item.location || t('unknown_location')}</td>
@@ -1226,6 +1243,16 @@ function SecuritySettings() {
               ))}
             </tbody>
           </table>
+          {history.length > HISTORY_PREVIEW && (
+            <button
+              onClick={() => setShowAllHistory(v => !v)}
+              className="w-full mt-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              {showAllHistory
+                ? (isEs ? 'Mostrar menos' : 'Show less')
+                : (isEs ? `Cargar más (${history.length - HISTORY_PREVIEW})` : `Load more (${history.length - HISTORY_PREVIEW})`)}
+            </button>
+          )}
         </div>
       </div>
     </div>
