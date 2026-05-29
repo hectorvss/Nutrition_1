@@ -75,6 +75,9 @@ const PIE_PALETTE = [COLORS.emerald, COLORS.blue, COLORS.amber, COLORS.purple, C
 /* Estilo de ejes/grid/tooltip recharts — minimalista, compartido. */
 const axisProps = { axisLine: false as const, tickLine: false as const, tick: { fontSize: 12, fill: '#94a3b8' } };
 const gridProps = { strokeDasharray: '3 3', stroke: '#f1f5f9', vertical: false };
+// TODO(dark): recharts contentStyle is a plain JS object and can't read the `.dark`
+// class. White tooltip stays legible in dark (dark text on white) but is visually
+// inconsistent. For a true dark tooltip use bg #1e293b / text #f1f5f9 behind a theme hook.
 const tooltipStyle = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 };
 
 const CHART_HEIGHT = 280;
@@ -169,7 +172,7 @@ export default function BusinessAnalytics({ data, loading }: any) {
         subtitle={t('biz_cat_revenue_sub', { defaultValue: 'Métricas de facturación recurrente' })}
       />
       {!stripeConnected && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500 flex items-center gap-2">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {t('biz_stripe_disconnected', {
             defaultValue: 'Conecta Stripe en Integraciones para ver los KPIs de ingresos y suscripciones.',
@@ -603,10 +606,10 @@ export default function BusinessAnalytics({ data, loading }: any) {
             <div
               className={`w-11 h-11 rounded-xl flex items-center justify-center font-semibold text-base tabular-nums ${
                 (data?.complianceScore || 0) > 80
-                  ? 'bg-emerald-50 text-emerald-600'
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
                   : (data?.complianceScore || 0) > 60
-                  ? 'bg-amber-50 text-amber-600'
-                  : 'bg-red-50 text-red-600'
+                  ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
               }`}
             >
               {data?.complianceScore || 0}
@@ -658,7 +661,7 @@ export default function BusinessAnalytics({ data, loading }: any) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-center">
               <thead>
-                <tr className="text-xs text-slate-400 font-medium border-b border-slate-100">
+                <tr className="text-xs text-slate-400 font-medium border-b border-slate-100 dark:border-slate-800">
                   <th className="pb-3 text-left pl-4 font-normal">{t('cohort_label')}</th>
                   <th className="pb-3 font-normal">{t('analytics_month_1')}</th>
                   <th className="pb-3 font-normal">{t('analytics_month_2')}</th>
@@ -668,7 +671,7 @@ export default function BusinessAnalytics({ data, loading }: any) {
                   <th className="pb-3 font-normal">{t('analytics_month_6')}</th>
                 </tr>
               </thead>
-              <tbody className="text-slate-600">
+              <tbody className="text-slate-600 dark:text-slate-300">
                 {data?.cohorts && data.cohorts.length > 0 ? (
                   data.cohorts.map((c: any, i: number) => (
                     <CohortRow key={i} cohort={c.cohort} data={c.data} />

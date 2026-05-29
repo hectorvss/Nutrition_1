@@ -68,28 +68,28 @@ export default function PlanningPlanTemplates({ onBack, onEditTemplate }: Planni
 
   return (
     <div className="w-full p-6 md:p-8 lg:p-10">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <button onClick={onBack} className="text-slate-500 hover:text-emerald-500 flex items-center gap-1 text-sm font-medium mb-2">
+            <button onClick={onBack} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 flex items-center gap-1 text-sm font-medium mb-2">
               <ArrowLeft className="w-4 h-4" /> {t('planning_management', { defaultValue: 'Planificación' })}
             </button>
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Grid className="w-6 h-6 text-emerald-500" />
               {t('planning_templates_title', { defaultValue: 'Plantillas de Planificación' })}
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               {t('planning_templates_manage_desc', { defaultValue: 'Crea y gestiona hojas de ruta reutilizables para asignar a tus clientes.' })}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex bg-slate-100 rounded-xl p-1">
+            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
               <button onClick={() => setLayout('grid')} title={t('grid_view', { defaultValue: 'Cuadrícula' })}
-                className={`p-2 rounded-lg transition-colors ${layout === 'grid' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400'}`}>
+                className={`p-2 rounded-lg transition-colors ${layout === 'grid' ? 'bg-white dark:bg-slate-900 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button onClick={() => setLayout('rows')} title={t('rows_view', { defaultValue: 'Filas' })}
-                className={`p-2 rounded-lg transition-colors ${layout === 'rows' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400'}`}>
+                className={`p-2 rounded-lg transition-colors ${layout === 'rows' ? 'bg-white dark:bg-slate-900 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
                 <Rows3 className="w-4 h-4" />
               </button>
             </div>
@@ -122,14 +122,14 @@ export default function PlanningPlanTemplates({ onBack, onEditTemplate }: Planni
                 if (layout === 'rows') {
                   return (
                     <div key={tpl.id || tpl.key} onClick={open}
-                      className="group flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-colors">
-                      <div className="flex items-center gap-1.5 text-emerald-600 font-bold w-24 shrink-0">
+                      className="group flex items-center gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 cursor-pointer transition-colors">
+                      <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold w-24 shrink-0">
                         <Calendar className="w-4 h-4" /><span>{tpl.duration_weeks || 0}</span>
                         <span className="text-[9px] text-slate-400 uppercase font-bold">{t('weeks_label', { defaultValue: 'sem' })}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900 truncate">{tpl.name}</h3>
-                        <p className="text-xs text-slate-500 truncate">{tpl.description || '—'}</p>
+                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{tpl.name}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{tpl.description || '—'}</p>
                       </div>
                       {tpl.phases != null && <span className="text-[11px] font-bold text-slate-400 hidden md:flex items-center gap-1 shrink-0"><Layers className="w-3.5 h-3.5" />{tpl.phases}</span>}
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -141,16 +141,16 @@ export default function PlanningPlanTemplates({ onBack, onEditTemplate }: Planni
                 }
                 return (
                   <div key={tpl.id || tpl.key} onClick={open}
-                    className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer">
+                    className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-lg">
+                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-lg">
                           <Calendar className="w-5 h-5" />
                           {tpl.duration_weeks || 0}
                           <span className="text-[10px] text-slate-400 uppercase font-bold mt-1">{t('weeks_label', { defaultValue: 'semanas' })}</span>
                         </div>
-                        <h3 className="font-bold text-lg text-slate-900 leading-tight mt-1 truncate">{tpl.name}</h3>
-                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{tpl.description || '—'}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight mt-1 truncate">{tpl.name}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{tpl.description || '—'}</p>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); open(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>

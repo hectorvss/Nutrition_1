@@ -234,26 +234,26 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
   };
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-slate-50 font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="flex flex-col w-full min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-emerald-100 selection:text-emerald-900">
       {/* Breadcrumb & Header */}
       <div className="p-4 md:p-6 pb-2">
-        <nav className="flex text-sm text-slate-500 mb-4 font-medium">
+        <nav className="flex text-sm text-slate-500 dark:text-slate-400 mb-4 font-medium">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
-              <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-600 transition-colors">
+              <button onClick={onBack} className="inline-flex items-center text-slate-500 dark:text-slate-400 hover:text-emerald-600 transition-colors">
                 {t('planning_management')}
               </button>
             </li>
             <li>
               <div className="flex items-center">
                 <ArrowRight className="w-4 h-4 text-slate-400 mx-1" />
-                <span className="text-slate-800 font-bold">{client?.name || t('not_defined', { defaultValue: 'Client' })}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-bold">{client?.name || t('not_defined', { defaultValue: 'Client' })}</span>
               </div>
             </li>
           </ol>
         </nav>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 px-4 py-1 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-xl shadow-sm">{t('setup_required')}</div>
           
           <div className="relative flex-shrink-0">
@@ -263,26 +263,26 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                 style={{ backgroundImage: `url("${client.avatar}")` }}
               />
             ) : (
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center shadow-inner border-2 border-slate-50 text-slate-300">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shadow-inner border-2 border-slate-50 dark:border-slate-800 text-slate-300 dark:text-slate-600">
                 <Icon name="person" className="text-[32px]" />
               </div>
             )}
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
+            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight">{client?.name || t('not_defined', { defaultValue: 'Client' })}</h1>
-            <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 font-medium">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">{client?.name || t('not_defined', { defaultValue: 'Client' })}</h1>
+            <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400 font-medium">
               <span className="flex items-center gap-1">
                 <Icon name="target" className="text-slate-400" />
                 {t('no_strategic_plan')}
               </span>
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700"></span>
               <span className="flex items-center gap-1 uppercase tracking-widest text-[10px] font-bold">{t('planning_profile_placeholder')}</span>
             </div>
           </div>
-          <div className="px-5 py-2.5 bg-slate-50 rounded-2xl border border-slate-200">
+          <div className="px-5 py-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-800">
             <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1 text-center">{t('status')}</div>
-            <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+            <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
               {t('planning_ready_to_program')}
             </div>
@@ -295,7 +295,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
         {/* Left Column: Templates — scrolls with the page */}
         <div className="flex-1 lg:basis-[70%] flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 uppercase tracking-tight">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-tight">
               <Grid className="w-5 h-5 text-emerald-500" />
               {t('strategic_templates')}
             </h2>
@@ -305,15 +305,15 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
             {/* Create New Roadmap Card (Mirroring Nutrition's "Create New Plan") */}
             <button
               onClick={handleCreateCustom}
-              className="group w-full flex items-center justify-between p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 transition-all cursor-pointer"
+              className="group w-full flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-50/20 dark:hover:bg-emerald-900/20 transition-all cursor-pointer"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <Plus className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div className="text-left leading-tight">
-                  <h3 className="font-bold text-lg text-slate-700 uppercase tracking-tight">{t('custom_strategy')}</h3>
-                  <p className="text-sm text-slate-500 font-medium">{t('custom_strategy_desc')}</p>
+                  <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200 uppercase tracking-tight">{t('custom_strategy')}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{t('custom_strategy_desc')}</p>
                 </div>
               </div>
               <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
@@ -324,8 +324,8 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               <div 
                 key={template.id}
                 onClick={() => selectTemplate(template)}
-                className={`group w-full bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 ${
-                  selectedTemplateId === template.id ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'
+                className={`group w-full bg-white dark:bg-slate-900 rounded-2xl border p-6 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer relative flex flex-col sm:flex-row items-center gap-6 ${
+                  selectedTemplateId === template.id ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200 dark:border-slate-800'
                 }`}
               >
                 {selectedTemplateId === template.id && (
@@ -335,19 +335,19 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                 )}
                 
                 {/* Duration & Basic Info (Mirroring Nutrition Calories/Name) */}
-                <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-6">
-                  <div className="flex items-center gap-1.5 justify-center sm:justify-start text-emerald-600 font-bold text-xl mb-1">
+                <div className="w-full sm:w-1/4 flex-shrink-0 flex sm:block flex-col items-center text-center sm:text-left border-b sm:border-b-0 sm:border-r border-slate-100 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-6">
+                  <div className="flex items-center gap-1.5 justify-center sm:justify-start text-emerald-600 dark:text-emerald-400 font-bold text-xl mb-1">
                     <Calendar className="w-5 h-5" />
                     {template.duration} {t('weeks_label')}
                   </div>
-                  <h3 className="font-bold text-lg text-slate-900 leading-tight uppercase tracking-tight">{getTemplateText(template).name}</h3>
-                  <p className="text-[10px] text-slate-500 mt-1.5 font-bold uppercase tracking-widest">{getTemplateText(template).description}</p>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight uppercase tracking-tight">{getTemplateText(template).name}</h3>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 font-bold uppercase tracking-widest">{getTemplateText(template).description}</p>
                 </div>
 
                 {/* Strategy Summary Info (Mirroring Macros Bar) */}
                 <div className="flex-1 w-full space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-2.5 py-1 rounded-xl uppercase tracking-widest border border-emerald-100">
+                    <span className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-1 rounded-xl uppercase tracking-widest border border-emerald-100 dark:border-emerald-900/40">
                       {getTemplateText(template).badge || t('standard')}
                     </span>
                     <div className="flex gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -362,7 +362,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     </div>
                   </div>
                   <div className="relative">
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex shadow-inner">
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden flex shadow-inner">
                       {/* Simple visual preview based on phases */}
                       {Array.from({ length: template.phases }).map((_, idx) => (
                         <div 
@@ -375,7 +375,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                       ))}
                     </div>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-600 italic tracking-tight flex items-center gap-2">
+                  <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300 italic tracking-tight flex items-center gap-2">
                     <Icon name="route" className="text-slate-400" />
                     {getTemplateText(template).preview}
                   </p>
@@ -397,8 +397,8 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               week-by-week, KPI targets, goals) so the coach sees exactly what
               the plan contains before creating the draft. */}
           {selectedTemplate?.data?.blocks?.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col gap-4 text-left shrink-0">
-              <h3 className="font-bold text-slate-900 uppercase tracking-tight text-sm flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex flex-col gap-4 text-left shrink-0">
+              <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight text-sm flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-500" />
                 {t('plan_blueprint', { defaultValue: 'Estructura del plan' })}
               </h3>
@@ -407,8 +407,8 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               {selectedTemplate.data.kpiTargets && (
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(selectedTemplate.data.kpiTargets).map(([k, v]) => (
-                    <span key={k} className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg border border-emerald-100">
-                      {k}: <span className="font-medium text-emerald-600">{String(v)}</span>
+                    <span key={k} className="text-[10px] font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
+                      {k}: <span className="font-medium text-emerald-600 dark:text-emerald-400">{String(v)}</span>
                     </span>
                   ))}
                 </div>
@@ -417,18 +417,18 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               {/* Block-by-block */}
               <div className="flex flex-col gap-3">
                 {selectedTemplate.data.blocks.map((b: any, i: number) => (
-                  <div key={i} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                  <div key={i} className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/50 p-3">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="font-bold text-slate-800 text-sm">{b.name}</span>
-                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider shrink-0">
+                      <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">{b.name}</span>
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider shrink-0">
                         {t('weeks_label')} {b.weeks}
                       </span>
                     </div>
-                    {b.goal && <p className="text-xs text-slate-500 mb-2 leading-snug">{b.goal}</p>}
+                    {b.goal && <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 leading-snug">{b.goal}</p>}
                     {Array.isArray(b.weeklyFocus) && (
                       <ul className="space-y-0.5 mb-2">
                         {b.weeklyFocus.map((w: string, wi: number) => (
-                          <li key={wi} className="text-[11px] text-slate-600 flex gap-1.5">
+                          <li key={wi} className="text-[11px] text-slate-600 dark:text-slate-300 flex gap-1.5">
                             <span className="text-emerald-400">•</span>{w}
                           </li>
                         ))}
@@ -436,24 +436,24 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     )}
                     <div className="grid grid-cols-2 gap-2 text-[10px]">
                       {b.training && (
-                        <div className="bg-white rounded-lg border border-slate-100 p-2">
-                          <div className="font-bold text-amber-600 uppercase tracking-wider mb-0.5">{t('training_label', { defaultValue: 'Entreno' })}</div>
-                          <div className="text-slate-500">{b.training.frequency}x · {b.training.split}</div>
-                          <div className="text-slate-400">{b.training.intensity}</div>
+                        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
+                          <div className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-0.5">{t('training_label', { defaultValue: 'Entreno' })}</div>
+                          <div className="text-slate-500 dark:text-slate-400">{b.training.frequency}x · {b.training.split}</div>
+                          <div className="text-slate-400 dark:text-slate-500">{b.training.intensity}</div>
                         </div>
                       )}
                       {b.nutrition && (
-                        <div className="bg-white rounded-lg border border-slate-100 p-2">
-                          <div className="font-bold text-blue-600 uppercase tracking-wider mb-0.5">{t('nutrition_label', { defaultValue: 'Nutrición' })}</div>
-                          <div className="text-slate-500">{b.nutrition.approach}</div>
-                          <div className="text-slate-400">{b.nutrition.protein} prot.</div>
+                        <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
+                          <div className="font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-0.5">{t('nutrition_label', { defaultValue: 'Nutrición' })}</div>
+                          <div className="text-slate-500 dark:text-slate-400">{b.nutrition.approach}</div>
+                          <div className="text-slate-400 dark:text-slate-500">{b.nutrition.protein} prot.</div>
                         </div>
                       )}
                     </div>
                     {Array.isArray(b.kpis) && b.kpis.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {b.kpis.map((kp: any, ki: number) => (
-                          <span key={ki} className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                          <span key={ki} className="text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">
                             {kp.metric}: {kp.target}
                           </span>
                         ))}
@@ -464,7 +464,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
               </div>
 
               {selectedTemplate.data.coachNotes && (
-                <p className="text-[11px] text-slate-400 italic leading-snug border-t border-slate-100 pt-3">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 italic leading-snug border-t border-slate-100 dark:border-slate-800 pt-3">
                   {selectedTemplate.data.coachNotes}
                 </p>
               )}
@@ -474,12 +474,12 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
 
           {/* Always-visible config card — pinned, no scroll needed to reach
               the "create draft" button. */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col gap-6 shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 flex flex-col gap-6 shadow-sm flex-shrink-0">
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500">
                 <Settings2 className="w-5 h-5" />
               </div>
-              <h3 className="font-bold text-slate-900 uppercase tracking-tight">{t('planning_settings')}</h3>
+              <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-tight">{t('planning_settings')}</h3>
             </div>
             
             <div className="space-y-6">
@@ -490,7 +490,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     <Icon name="schedule" className="text-[20px]" />
                   </div>
                   <Select
-                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.duration}
                     onChange={(val) => setSettings({...settings, duration: Number(val)})}
                   >
@@ -510,7 +510,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     <Icon name="fitness_center" className="text-[20px]" />
                   </div>
                   <Select
-                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.trainingFreq}
                     onChange={(val) => setSettings({...settings, trainingFreq: val})}
                   >
@@ -530,7 +530,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     <Icon name="speed" className="text-[20px]" />
                   </div>
                   <Select
-                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.intensityLevel}
                     onChange={(val) => setSettings({...settings, intensityLevel: val})}
                   >
@@ -549,7 +549,7 @@ export default function PlanningTemplateSelector({ client, onBack, onSelect }: P
                     <Icon name="target" className="text-[20px]" />
                   </div>
                   <Select
-                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
+                    className="w-full pl-12 pr-3 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 outline-none transition-all font-bold"
                     value={settings.primaryGoal}
                     onChange={(val) => setSettings({...settings, primaryGoal: val})}
                   >

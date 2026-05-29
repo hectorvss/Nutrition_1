@@ -141,13 +141,13 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
     <div className="p-6 md:p-8 lg:p-10 w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('onboarding_monitoring')}</h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">{t('manage_new_client_intakes_and_questionnaire_assignments')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{t('onboarding_monitoring')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">{t('manage_new_client_intakes_and_questionnaire_assignments')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={onManageTemplates}
-            className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-700 bg-white rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
             {t('onboarding_templates')}
@@ -155,7 +155,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
@@ -163,10 +163,10 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
             placeholder={t('search_clients')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
           />
         </div>
-        <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full md:w-auto">
           {(['All', 'Pending', 'Completed'] as const).map((f) => {
             // Amber dot only when there are actually pending onboardings.
             const showDot = f === 'Pending' && hasPending;
@@ -176,8 +176,8 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                 onClick={() => setFilter(f)}
                 className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
                   filter === f
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
               >
                 {showDot && <div className="w-2 h-2 rounded-full bg-amber-500" />}
@@ -195,14 +195,14 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
       ) : (
         <div className="space-y-4">
           {filteredClients.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <p className="text-slate-400 font-medium text-sm">{t('no_clients_match_filter')}</p>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center">
+              <p className="text-slate-400 dark:text-slate-400 font-medium text-sm">{t('no_clients_match_filter')}</p>
             </div>
           ) : filteredClients.map((client) => (
             <div
               key={client.id}
               onClick={() => onViewHistory(client.id)}
-              className="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer overflow-hidden relative"
+              className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900/40 transition-all cursor-pointer overflow-hidden relative"
             >
               <div className="p-5 flex flex-col md:flex-row items-center gap-6">
                 <div className="flex items-center gap-4 flex-1 w-full">
@@ -215,17 +215,17 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg border-2 border-white shadow-sm">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 font-bold text-lg border-2 border-white dark:border-slate-700 shadow-sm">
                         {client.initials}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-lg font-bold text-slate-900 truncate">{client.name}</h3>
-                      <button 
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white truncate">{client.name}</h3>
+                      <button
                         onClick={(e) => handleOpenAssign(e, client)}
-                        className="ml-auto px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-100 flex items-center gap-1.5 shadow-sm"
+                        className="ml-auto px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border border-slate-100 dark:border-slate-700 flex items-center gap-1.5 shadow-sm"
                       >
                          <span className="material-symbols-outlined text-[14px]">assignment_add</span>
                          {assignments[client.id] || t('assign_onboarding')}
@@ -233,8 +233,8 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                     </div>
                     <div className="flex items-center gap-2">
                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
-                        client.hasCompleted ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
-                        client.hasOnboarding ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-slate-400 bg-slate-50 border-slate-200'
+                        client.hasCompleted ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-900/40' :
+                        client.hasOnboarding ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/40' : 'text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                        }`}>
                           {client.status}
                        </span>
@@ -243,7 +243,7 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-all">
+                  <div className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 transition-all">
                     <ChevronRight className="w-6 h-6" />
                   </div>
                 </div>
@@ -256,21 +256,21 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
       {/* Template Selector Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200 dark:border-slate-800">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">{t('assign_onboarding')}</h3>
-                <p className="text-xs text-slate-500 font-medium tracking-tight">{t('select_template_for_client', { name: selectedClient?.name || '' })}</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('assign_onboarding')}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-tight">{t('select_template_for_client', { name: selectedClient?.name || '' })}</p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                <span className="material-symbols-outlined text-slate-400">close</span>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                <span className="material-symbols-outlined text-slate-400 dark:text-slate-400">close</span>
               </button>
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto space-y-2">
               {availableTemplates.length === 0 ? (
                 <div className="text-center py-12">
                   <ClipboardList className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                  <p className="text-sm text-slate-400 font-medium">{t('no_templates_available')}</p>
+                  <p className="text-sm text-slate-400 dark:text-slate-400 font-medium">{t('no_templates_available')}</p>
                 </div>
               ) : (
                 availableTemplates.map((tpl) => (
@@ -280,11 +280,11 @@ export default function OnboardingList({ onViewHistory, onManageTemplates }: Onb
                     disabled={assigningClientId === selectedClient?.id}
                     className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all text-left group disabled:opacity-60
                       ${assignments[selectedClient?.id] === tpl.name
-                        ? 'bg-emerald-50 border-emerald-200 ring-1 ring-emerald-500/20'
-                        : 'bg-white border-slate-100 hover:border-emerald-200 hover:bg-slate-50'}`}
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-900/40 ring-1 ring-emerald-500/20'
+                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-900/40 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                   >
                     <div>
-                      <p className={`text-sm font-bold ${assignments[selectedClient?.id] === tpl.name ? 'text-emerald-900' : 'text-slate-900'}`}>
+                      <p className={`text-sm font-bold ${assignments[selectedClient?.id] === tpl.name ? 'text-emerald-900 dark:text-emerald-300' : 'text-slate-900 dark:text-white'}`}>
                         {tpl.name}
                       </p>
                       {tpl.is_default && <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">{t('recommended')}</span>}

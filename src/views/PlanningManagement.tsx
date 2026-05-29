@@ -33,13 +33,13 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
 
   return (
     <div className="w-full p-6 md:p-8 lg:p-10">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 space-y-6">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">{t('planning_management', { defaultValue: 'Planificación' })}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t('planning_desc', { defaultValue: 'Estructura bloques y define objetivos a largo plazo para tus clientes' })}</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('planning_management', { defaultValue: 'Planificación' })}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('planning_desc', { defaultValue: 'Estructura bloques y define objetivos a largo plazo para tus clientes' })}</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative hidden sm:block">
@@ -47,7 +47,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                 <input
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none w-56 placeholder-slate-400"
+                  className="pl-10 pr-4 py-2 bg-white dark:bg-slate-800 dark:text-white dark:border-slate-700 border border-slate-200 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none w-56 placeholder-slate-400"
                   placeholder={t('search_client_placeholder', { defaultValue: 'Buscar cliente por nombre...' })}
                   type="text"
                 />
@@ -64,7 +64,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
         </div>
 
         {/* Table Header */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
           <div className="col-span-4">{t('client_label', { defaultValue: 'Cliente' })}</div>
           <div className="col-span-3">{t('roadmap_label', { defaultValue: 'Hoja de ruta' })}</div>
           <div className="col-span-3">{t('plan_status_label', { defaultValue: 'Estado del plan' })}</div>
@@ -74,7 +74,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
         {/* Client List */}
         <div className="flex-1 overflow-y-auto">
           {clients.length === 0 && (
-            <div className="p-12 text-center text-slate-500">
+            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
               {t('no_clients_found', { defaultValue: 'No hay clientes.' })}
             </div>
           )}
@@ -82,7 +82,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
             <div
               key={client.id}
               onClick={() => go(client)}
-              className={`group p-5 md:px-6 md:py-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors relative ${client.statusType === 'warning' ? 'bg-amber-50/30' : ''}`}
+              className={`group p-5 md:px-6 md:py-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors relative ${client.statusType === 'warning' ? 'bg-amber-50/30 dark:bg-amber-900/20' : ''}`}
             >
               {client.statusType === 'warning' && (
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400 rounded-r-full"></div>
@@ -94,14 +94,14 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                     {client.avatar ? (
                       <div className="w-12 h-12 rounded-2xl bg-cover bg-center shadow-sm" style={{ backgroundImage: `url("${client.avatar}")` }} />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shadow-sm">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-lg shadow-sm">
                         {client.initials}
                       </div>
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-base text-slate-900 group-hover:text-emerald-600 transition-colors">{client.name}</h3>
-                    <p className={`text-xs flex items-center gap-1 ${client.statusType === 'warning' ? 'text-amber-600 font-medium' : 'text-slate-400'}`}>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{client.name}</h3>
+                    <p className={`text-xs flex items-center gap-1 ${client.statusType === 'warning' ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-400'}`}>
                       {client.statusType === 'warning' && <AlertCircle className="w-3 h-3" />}
                       {client.status}
                     </p>
@@ -110,7 +110,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
 
                 {/* Roadmap */}
                 <div className="col-span-3">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-600">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     <Map className="w-3 h-3" />
                     {client.roadmap}
                   </span>
@@ -119,7 +119,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                 {/* Plan status */}
                 <div className="col-span-3">
                   {client.planningAssigned ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       <Route className="w-4 h-4" /> {t('active_plan_status')}
                     </span>
                   ) : (
@@ -132,7 +132,7 @@ const PlanningManagement: React.FC<{ onNavigate: (view: string, clientId?: strin
                   {client.planningAssigned ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); go(client); }}
-                      className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-colors flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors flex items-center gap-1.5"
                     >
                       <Route className="w-3.5 h-3.5" />
                       {t('view_plan_btn', { defaultValue: 'Ver Plan' })}

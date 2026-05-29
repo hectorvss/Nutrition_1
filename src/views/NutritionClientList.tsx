@@ -65,13 +65,13 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
 
   return (
     <div className="w-full p-6 md:p-8 lg:p-10">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 space-y-6">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">{t('nutrition')}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t('nutrition_subtitle')}</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('nutrition')}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('nutrition_subtitle')}</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative hidden sm:block">
@@ -79,7 +79,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                 <input
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none w-56 placeholder-slate-400"
+                  className="pl-10 pr-4 py-2 bg-white dark:bg-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-emerald-500 focus:border-emerald-500 outline-none w-56 placeholder-slate-400 dark:placeholder-slate-500"
                   placeholder={t('search_client_placeholder', { defaultValue: 'Buscar cliente por nombre...' })}
                   type="text"
                 />
@@ -96,7 +96,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
         </div>
 
         {/* Table Header */}
-        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+        <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
           <div className="col-span-4">{t('client_label')}</div>
           <div className="col-span-3">{t('goal_short')}</div>
           <div className="col-span-3">{t('daily_macros_label')}</div>
@@ -109,7 +109,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
             <div 
               key={client.id}
               onClick={() => onNavigate('plan-detail', client)}
-              className={`group p-5 md:px-6 md:py-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors relative ${client.statusType === 'warning' ? 'bg-amber-50/30' : ''}`}
+              className={`group p-5 md:px-6 md:py-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors relative ${client.statusType === 'warning' ? 'bg-amber-50/30 dark:bg-amber-900/20' : ''}`}
             >
               {client.statusType === 'warning' && (
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400 rounded-r-full"></div>
@@ -124,14 +124,14 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                         style={{ backgroundImage: `url("${client.avatar}")` }} 
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg shadow-sm">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-lg shadow-sm">
                         {client.initials}
                       </div>
                     )}
                   </div>
                   <div>
-                    <h3 className="font-bold text-base text-slate-900 group-hover:text-emerald-600 transition-colors">{client.name}</h3>
-                    <p className={`text-xs flex items-center gap-1 ${client.statusType === 'warning' ? 'text-amber-600 font-medium' : 'text-slate-400'}`}>
+                    <h3 className="font-bold text-base text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">{client.name}</h3>
+                    <p className={`text-xs flex items-center gap-1 ${client.statusType === 'warning' ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-slate-400'}`}>
                       {client.statusType === 'warning' && <AlertCircle className="w-3 h-3" />}
                       {client.status}
                     </p>
@@ -142,11 +142,11 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                 <div className="col-span-3">
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${
-                      client.goalRaw === 'Weight Loss' ? 'bg-blue-50 text-blue-700' :
-                      client.goalRaw === 'Muscle Gain' ? 'bg-purple-50 text-purple-700' :
-                      client.goalRaw === 'Maintenance' ? 'bg-emerald-50 text-emerald-700' :
-                      client.goalRaw === 'Keto Diet' ? 'bg-orange-50 text-orange-700' :
-                      'bg-slate-100 text-slate-600'
+                      client.goalRaw === 'Weight Loss' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' :
+                      client.goalRaw === 'Muscle Gain' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400' :
+                      client.goalRaw === 'Maintenance' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' :
+                      client.goalRaw === 'Keto Diet' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' :
+                      'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                     }`}>
                       {client.goal}
                     </span>
@@ -161,7 +161,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                       <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
                         <span>P</span><span>C</span><span>F</span>
                       </div>
-                      <div className="flex w-full h-2 rounded-full overflow-hidden bg-slate-100">
+                      <div className="flex w-full h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                         <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${client.macros.p}%` }}></div>
                         <div className="bg-blue-400 h-full transition-all duration-500" style={{ width: `${client.macros.c}%` }}></div>
                         <div className="bg-amber-400 h-full transition-all duration-500" style={{ width: `${client.macros.f}%` }}></div>
@@ -182,7 +182,7 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
                   {client.nutritionPlanAssigned ? (
                     <button
                       onClick={(e) => { e.stopPropagation(); onNavigate('plan-detail', client); }}
-                      className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                      className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                     >
                       {t('view_plan_btn', { defaultValue: 'Ver Plan' })}
                     </button>
@@ -204,10 +204,10 @@ export default function NutritionClientList({ onNavigate }: NutritionClientListP
               blanco. Mismo patrón que PlanningManagement. */}
           {clients.length === 0 && (
             <div className="flex flex-col items-center justify-center text-center py-20 px-6">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
                 <ClipboardList className="w-6 h-6 text-slate-400" />
               </div>
-              <p className="text-sm font-bold text-slate-700 mb-1">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">
                 {search
                   ? t('no_clients_found', { defaultValue: 'No se encontraron clientes' })
                   : t('no_clients_yet', { defaultValue: 'Aún no tienes clientes' })}

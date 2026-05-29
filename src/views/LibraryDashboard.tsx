@@ -126,15 +126,15 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
   }, [activeTab, search]);
 
   return (
-    <div className="p-6 md:p-8 lg:p-10 w-full h-full flex flex-col overflow-hidden bg-slate-50">
+    <div className="p-6 md:p-8 lg:p-10 w-full h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
             <BookOpen className="w-8 h-8 text-emerald-500" />
             {t('library_title')}
           </h2>
-          <p className="text-slate-500 font-medium mt-1">{t('library_subtitle')}</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">{t('library_subtitle')}</p>
         </div>
         <button 
           onClick={() => {
@@ -150,7 +150,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-8 border-b border-slate-200 mb-8 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-8 border-b border-slate-200 dark:border-slate-800 mb-8 overflow-x-auto scrollbar-hide">
         {(['recipes', 'food', 'supplements'] as Tab[]).map((tab) => (
           <button
             key={tab}
@@ -160,7 +160,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               setActiveTab(tab);
             }}
             className={`pb-4 text-sm font-bold capitalize transition-all whitespace-nowrap ${
-              activeTab === tab ? 'text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-400 hover:text-slate-600'
+              activeTab === tab ? 'text-emerald-600 dark:text-emerald-400 border-b-2 border-emerald-600 dark:border-emerald-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
             {tab === 'recipes' ? t('recipes_tab') : tab === 'food' ? t('food_database') : t('supplements_tab')}
@@ -178,7 +178,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 setSearch(e.target.value);
                 setVisibleCount(30); // reset visible count on new search
             }}
-            className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm font-bold text-slate-700"
+            className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm font-bold text-slate-700 dark:text-white"
             placeholder={activeTab === 'recipes' ? t('search_recipes') : activeTab === 'food' ? t('search_food') : t('search_supplements')}
             type="text"
           />
@@ -187,8 +187,8 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
           onClick={() => setShowFilters(v => !v)}
           className={`flex items-center gap-2 px-6 py-3.5 border rounded-2xl text-sm font-bold transition-all shadow-sm ${
             showFilters || categoryFilter
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
           <Filter className="w-5 h-5" />
@@ -208,7 +208,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
           <button
             onClick={() => setCategoryFilter('')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-              !categoryFilter ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
+              !categoryFilter ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             {t('all', { defaultValue: 'Todas' })}
@@ -218,7 +218,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               key={cat}
               onClick={() => setCategoryFilter(categoryFilter === cat ? '' : cat)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                categoryFilter === cat ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                categoryFilter === cat ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               {categoryLabel(cat, language)}
@@ -247,21 +247,21 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
             ) : (
               <>
             {!recipesLoading && filteredRecipes.length === 0 && (
-              <div className="text-center py-20 bg-white rounded-3xl border border-slate-200">
-                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+                <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                   <BookOpen className="w-10 h-10 text-slate-300" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('no_foods_found')}</h3>
-                <p className="text-slate-500">{recipesError || t('library_empty_msg')}</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('no_foods_found')}</h3>
+                <p className="text-slate-500 dark:text-slate-400">{recipesError || t('library_empty_msg')}</p>
               </div>
             )}
             {filteredRecipes.map((recipe) => (
               <div
                 key={recipe.id}
                 onClick={() => onNavigate('recipe-detail', recipe.id)}
-                className="group bg-white border border-slate-200 rounded-3xl overflow-hidden flex flex-col sm:flex-row h-auto sm:h-52 hover:shadow-xl hover:border-emerald-500/30 transition-all cursor-pointer"
+                className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden flex flex-col sm:flex-row h-auto sm:h-52 hover:shadow-xl hover:border-emerald-500/30 transition-all cursor-pointer"
               >
-                <div className="relative w-full sm:w-72 h-52 sm:h-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center">
+                <div className="relative w-full sm:w-72 h-52 sm:h-full flex-shrink-0 overflow-hidden bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-900/10 flex items-center justify-center">
                   <BookOpen className="w-12 h-12 text-emerald-300" />
                   {recipe.image_url && (
                     <img
@@ -271,35 +271,35 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   )}
-                  <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
+                  <div className="absolute top-4 left-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
                     <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                    <span className="text-xs font-bold text-slate-700">{recipe.rating ?? '—'}</span>
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{recipe.rating ?? '—'}</span>
                   </div>
                 </div>
 
                 <div className="p-8 flex flex-col sm:flex-row flex-1 gap-8 items-start sm:items-center">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="font-bold text-2xl text-slate-900 tracking-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
-                      <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">{categoryLabel(recipe.category, language)}</span>
+                      <h3 className="font-bold text-2xl text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 transition-colors">{recipe.title}</h3>
+                      <span className="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">{categoryLabel(recipe.category, language)}</span>
                     </div>
-                    <p className="text-sm text-slate-500 font-medium line-clamp-2 mb-4">{recipe.description || t('recipe_card_sample_desc')}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium line-clamp-2 mb-4">{recipe.description || t('recipe_card_sample_desc')}</p>
                     <div className="flex flex-wrap gap-2">
                       {(recipe.tags || []).map(tag => (
-                        <span key={tag} className="px-3 py-1 rounded-lg bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{tag}</span>
+                        <span key={tag} className="px-3 py-1 rounded-lg bg-slate-50 dark:bg-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{tag}</span>
                       ))}
                     </div>
                   </div>
 
-                  <div className="flex flex-row sm:flex-col items-center sm:items-end gap-8 sm:gap-6 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-100 pt-6 sm:pt-0 sm:pl-8">
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end gap-8 sm:gap-6 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-6 sm:pt-0 sm:pl-8">
                     <div className="flex flex-row sm:flex-col gap-6 sm:gap-3 text-sm font-bold text-slate-400 mr-auto sm:mr-0 text-right">
                       <div className="flex items-center sm:justify-end gap-2">
                         <Flame className="w-5 h-5 text-orange-500" />
-                        <span className="text-slate-700">{recipe.calories} kcal</span>
+                        <span className="text-slate-700 dark:text-slate-300">{recipe.calories} kcal</span>
                       </div>
                       <div className="flex items-center sm:justify-end gap-2">
                         <Clock className="w-5 h-5 text-slate-400" />
-                        <span className="text-slate-700">{recipe.prep_time} min</span>
+                        <span className="text-slate-700 dark:text-slate-300">{recipe.prep_time} min</span>
                       </div>
                     </div>
                     <div className="flex gap-3">
@@ -312,7 +312,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDeleteRecipe(recipe.id); }}
-                        className="p-3 rounded-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+                        className="p-3 rounded-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-800"
                         title={t('delete_label')}
                       >
                         <Trash2 className="w-6 h-6" />
@@ -327,7 +327,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
 
             <div
               onClick={() => onNavigate('recipe-create')}
-              className="rounded-3xl border-2 border-dashed border-slate-200 bg-white/50 hover:bg-white hover:border-emerald-500/50 transition-all cursor-pointer group p-8 flex items-center justify-center h-24"
+              className="rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-900 hover:border-emerald-500/50 transition-all cursor-pointer group p-8 flex items-center justify-center h-24"
             >
               <div className="flex items-center gap-3 text-slate-400 group-hover:text-emerald-500 transition-all">
                 <Plus className="w-6 h-6" />
@@ -339,7 +339,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
 
         {activeTab === 'food' && (
           <div className="flex flex-col gap-6">
-            <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-3 bg-slate-50 sticky top-0 z-10 shadow-sm border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+            <div className="hidden md:grid grid-cols-12 gap-4 px-8 py-3 bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
               <div className="col-span-5">{t('food_item')}</div>
               <div className="col-span-7 grid grid-cols-5 gap-4 text-center">
                 <div>{t('kcal')}</div>
@@ -360,22 +360,22 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 .filter(food => matchFood(food, search) && matchesCat(food.category))
                 .slice(0, visibleCount)
                 .map((food) => (
-                <div key={food.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-4 md:p-6">
+                <div key={food.id} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-4 md:p-6">
                   <div className="flex flex-col md:grid md:grid-cols-12 gap-6 items-center">
                     <div className="col-span-5 w-full flex items-center gap-6">
-                      <div className="h-16 w-16 flex-shrink-0 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">
+                      <div className="h-16 w-16 flex-shrink-0 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl">
                         {food.emoji || (food.name.toLowerCase().includes('chicken') ? '🍗' : food.name.toLowerCase().includes('egg') ? '🥚' : food.name.toLowerCase().includes('avocado') ? '🥑' : food.name.toLowerCase().includes('salmon') ? '🐟' : '🥗')}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-xl text-slate-900 leading-tight truncate group-hover:text-emerald-600 transition-colors">{food.name}</h3>
+                        <h3 className="font-bold text-xl text-slate-900 dark:text-white leading-tight truncate group-hover:text-emerald-600 transition-colors">{food.name}</h3>
                         <p className="text-sm text-slate-400 font-bold mt-1">{food.servingSize}</p>
-                        {food.custom && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">{t('custom_label')}</span>}
+                        {food.custom && <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">{t('custom_label')}</span>}
                       </div>
                     </div>
-                    <div className="col-span-7 w-full grid grid-cols-4 md:grid-cols-5 gap-4 items-center border-t md:border-t-0 border-slate-50 pt-4 md:pt-0 mt-2 md:mt-0">
+                    <div className="col-span-7 w-full grid grid-cols-4 md:grid-cols-5 gap-4 items-center border-t md:border-t-0 border-slate-50 dark:border-slate-800 pt-4 md:pt-0 mt-2 md:mt-0">
                       <div className="flex flex-col md:block text-center">
                         <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('kcal_short')}</span>
-                        <span className="text-lg font-bold text-slate-700">{food.calories}</span>
+                        <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{food.calories}</span>
                       </div>
                       <div className="flex flex-col md:block text-center">
                         <span className="md:hidden text-[10px] uppercase font-bold text-slate-400 mb-1">{t('protein_short')}</span>
@@ -390,7 +390,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                         <span className="text-lg font-bold text-amber-600">{food.fats}g</span>
                       </div>
                       <div className="hidden md:flex justify-center gap-2">
-                        <button onClick={() => deleteFood(food.id)} className="p-3 rounded-2xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all" title={t('delete_label')}>
+                        <button onClick={() => deleteFood(food.id)} className="p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-400 hover:bg-red-500 hover:text-white transition-all" title={t('delete_label')}>
                           <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
@@ -400,12 +400,12 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
               ))}
               
               {!isCtxLoading && foodItems.length === 0 && (
-                <div className="text-center py-20 bg-white rounded-3xl border border-slate-200">
-                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+                  <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                     <BookOpen className="w-10 h-10 text-slate-300" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">{t('no_foods_found')}</h3>
-                  <p className="text-slate-500">{t('library_empty_msg')}</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('no_foods_found')}</h3>
+                  <p className="text-slate-500 dark:text-slate-400">{t('library_empty_msg')}</p>
                 </div>
               )}
               
@@ -417,13 +417,13 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
 
               <div 
                 onClick={() => onNavigate('food-create')}
-                className="bg-white border-2 border-dashed border-slate-200 rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all p-6 cursor-pointer flex items-center justify-center opacity-80 hover:opacity-100"
+                className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all p-6 cursor-pointer flex items-center justify-center opacity-80 hover:opacity-100"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
+                  <div className="h-12 w-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
                     <Plus className="text-slate-400 group-hover:text-emerald-500 w-6 h-6" />
                   </div>
-                  <span className="font-bold text-lg text-slate-500 group-hover:text-emerald-600 transition-colors">{t('create_custom_food')}</span>
+                  <span className="font-bold text-lg text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 transition-colors">{t('create_custom_food')}</span>
                 </div>
               </div>
             </div>
@@ -449,16 +449,16 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                 .filter(s => s.language === language)
                 .filter(s => matchFood(s, search) && matchesCat(s.category))
                 .map((supp) => (
-                <div key={supp.id} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-6">
+                <div key={supp.id} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden hover:shadow-xl hover:border-emerald-500/30 transition-all p-6">
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                     <div className="md:col-span-5 flex items-center gap-6">
-                      <div className="w-16 h-16 shrink-0 bg-emerald-50 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                      <div className="w-16 h-16 shrink-0 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                         {supp.emoji || '💊'}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-bold text-xl text-slate-900 truncate group-hover:text-emerald-600 transition-colors">{supp.name}</h3>
-                          {supp.category && <span className="hidden sm:inline-flex px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">{supp.category}</span>}
+                          <h3 className="font-bold text-xl text-slate-900 dark:text-white truncate group-hover:text-emerald-600 transition-colors">{supp.name}</h3>
+                          {supp.category && <span className="hidden sm:inline-flex px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">{supp.category}</span>}
                         </div>
                         {supp.purpose && <p className="text-sm text-slate-400 font-medium line-clamp-1">{supp.purpose}</p>}
                       </div>
@@ -466,14 +466,14 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
 
                     <div className="md:col-span-3 flex flex-col md:block">
                       <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('serving_col')}</span>
-                      <div className="text-sm font-bold text-slate-700">{supp.recommended_dose || '--'}</div>
+                      <div className="text-sm font-bold text-slate-700 dark:text-slate-300">{supp.recommended_dose || '--'}</div>
                     </div>
 
                     <div className="md:col-span-4 flex flex-col md:block">
                       <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1">{t('best_time')}</span>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span className="text-sm font-bold text-slate-700">{supp.timing || '--'}</span>
+                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{supp.timing || '--'}</span>
                       </div>
                     </div>
                   </div>
@@ -482,11 +482,11 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
 
               <div 
                 onClick={() => onNavigate('supplement-create')}
-                className="bg-white border-2 border-dashed border-slate-200 rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all p-6 cursor-pointer flex items-center justify-center opacity-80 hover:opacity-100"
+                className="bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden hover:border-emerald-500/50 transition-all p-6 cursor-pointer flex items-center justify-center opacity-80 hover:opacity-100"
               >
                 <div className="flex items-center gap-3">
                   <Plus className="text-slate-400 group-hover:text-emerald-500 w-6 h-6" />
-                  <span className="font-bold text-lg text-slate-500 group-hover:text-emerald-600 transition-colors">{t('add_custom_supplement')}</span>
+                  <span className="font-bold text-lg text-slate-500 dark:text-slate-400 group-hover:text-emerald-600 transition-colors">{t('add_custom_supplement')}</span>
                 </div>
               </div>
             </div>

@@ -275,8 +275,8 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
           volume: `${totalSetsNum} ${t('sets_label')}`,
           tag: isMobility ? t('mobility_label') : t('training_day'),
           tagColor: isMobility
-            ? 'bg-blue-50 text-blue-600 border-blue-100' 
-            : 'bg-emerald-50 text-emerald-600 border-emerald-100',
+            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900/40'
+            : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/40',
           exercises: allExercises,
           isRestDay: false
         };
@@ -287,11 +287,11 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       ...day,
       workoutName: t('rest_day_title'),
       intensity: t('intensity_low'),
-      intensityColor: 'bg-slate-200',
+      intensityColor: 'bg-slate-200 dark:bg-slate-700',
       duration: '-',
       volume: `0 ${t('sets_label')}`,
       tag: t('rest_day_label'),
-      tagColor: 'bg-slate-50 text-slate-400 border-slate-100',
+      tagColor: 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-800',
       exercises: [],
       isRestDay: true
     };
@@ -321,21 +321,21 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
     >
       <button
         onClick={() => onSelectDay(day.id)}
-        className={`w-full text-left bg-white rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
+        className={`w-full text-left bg-white dark:bg-slate-900 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-center gap-4 p-5 ${
           dragOverDayId === day.id ? 'border-emerald-500 shadow-xl ring-2 ring-emerald-500/20' :
-          day.isRestDay ? 'border-slate-100 opacity-80 hover:opacity-100' : 'border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
+          day.isRestDay ? 'border-slate-100 dark:border-slate-800 opacity-80 hover:opacity-100' : 'border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg hover:border-emerald-500/50'
         }`}
       >
         {drag && (
-          <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition-colors">
+          <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors">
             <span className="material-symbols-outlined text-[24px]">drag_indicator</span>
           </div>
         )}
-        <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 pb-4 sm:pb-0 sm:pr-4">
+        <div className="w-full sm:w-1/4 flex-shrink-0 border-b sm:border-b-0 sm:border-r border-slate-50 dark:border-slate-800 pb-4 sm:pb-0 sm:pr-4">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-bold text-lg text-slate-900 leading-tight">{day.name}</h3>
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">{day.name}</h3>
           </div>
-          <div className={`flex items-center gap-1.5 font-bold text-xl ${day.isRestDay ? 'text-slate-300' : 'text-emerald-600'}`}>
+          <div className={`flex items-center gap-1.5 font-bold text-xl ${day.isRestDay ? 'text-slate-300 dark:text-slate-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
             <span className="material-symbols-outlined text-lg">{day.isRestDay ? 'bedtime' : 'fitness_center'}</span>
             {day.duration}
           </div>
@@ -346,7 +346,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
             <span className={`${day.tagColor} text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wide border`}>
               {day.tag}
             </span>
-            <div className="flex gap-4 text-xs text-slate-500 font-medium">
+            <div className="flex gap-4 text-xs text-slate-500 dark:text-slate-400 font-medium">
               {!day.isRestDay && (
                 <>
                   <span className="flex items-center gap-1.5">
@@ -361,19 +361,19 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               )}
             </div>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex">
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden flex">
             {!day.isRestDay && <div className={`${day.intensityColor} h-full transition-all`} style={{ width: '100%' }}></div>}
           </div>
         </div>
 
-        <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-50 pt-4 sm:pt-0 flex justify-between items-center group/side">
+        <div className="w-full sm:w-1/4 flex-shrink-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l border-slate-50 dark:border-slate-800 pt-4 sm:pt-0 flex justify-between items-center group/side">
           <div>
             <div className="flex justify-between items-center mb-2">
                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{t('training')}</span>
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('training')}</span>
                </div>
             </div>
-            <div className={`text-sm font-bold truncate ${day.isRestDay ? 'text-slate-400' : 'text-slate-900'}`}>
+            <div className={`text-sm font-bold truncate ${day.isRestDay ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'}`}>
               {day.workoutName}
             </div>
             {!day.isRestDay && (
@@ -389,7 +389,7 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               setShowWorkoutPicker(showWorkoutPicker === pickerKey ? null : pickerKey);
             }}
             className={`p-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
-              showWorkoutPicker === pickerKey ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-emerald-50 hover:text-emerald-500'
+              showWorkoutPicker === pickerKey ? 'bg-emerald-500 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-500'
             }`}
           >
             <span className="material-symbols-outlined">edit_calendar</span>
@@ -398,14 +398,14 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       </button>
 
       {showWorkoutPicker === pickerKey && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in duration-200">
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2 border-b border-slate-50 mb-2">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 p-3 animate-in fade-in zoom-in duration-200">
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2 border-b border-slate-50 dark:border-slate-800 mb-2">
             {t('change_workout_title')}
           </div>
           <div className="space-y-1">
             <button
               onClick={() => { handleUpdateDay(day.id, null, week); setShowWorkoutPicker(null); }}
-              className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-500 transition-all flex items-center gap-3"
+              className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-red-500 transition-all flex items-center gap-3"
             >
               <span className="material-symbols-outlined text-[20px]">block</span>
               {t('rest_day_title')}
@@ -418,8 +418,8 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                 onClick={() => { handleUpdateDay(day.id, w.id, week); setShowWorkoutPicker(null); }}
                 className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between group/item ${
                   isCurrent
-                    ? 'bg-emerald-50 text-emerald-600'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-emerald-500'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-emerald-500'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -441,39 +441,39 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
       <div className="px-6 md:px-8 lg:px-10 py-4 md:py-6 pb-2">
-        <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 mb-4">
+        <nav aria-label="Breadcrumb" className="flex text-sm text-slate-500 dark:text-slate-400 mb-4">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
-              <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-500 transition-colors">
+              <button onClick={onBack} className="inline-flex items-center text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition-colors">
                 {t('training')}
               </button>
             </li>
             <li>
               <div className="flex items-center">
                 <span className="material-symbols-outlined text-slate-400 text-lg mx-1">chevron_right</span>
-                <span className="text-slate-800 font-medium">{client?.name}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">{client?.name}</span>
               </div>
             </li>
           </ol>
         </nav>
 
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           <div className="relative flex-shrink-0">
             <div 
               className="w-16 h-16 rounded-2xl bg-cover bg-center shadow-sm" 
               style={{ backgroundImage: `url("${client?.avatar || 'https://ui-avatars.com/api/?name=C&background=random'}")` }}
             ></div>
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
+            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-bold text-slate-900">{client?.name}</h1>
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{client?.name}</h1>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
                 <span className="material-symbols-outlined text-[16px]">flag</span>
                 {t('goal')}: {client?.goal || '--'}
               </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300 hidden sm:block"></span>
-              <span className="flex items-center gap-1 font-medium text-emerald-600">
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 hidden sm:block"></span>
+              <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
                 <span className="material-symbols-outlined text-[16px]">check_circle</span>
                 {t('active_plan_status_label')}
               </span>
@@ -492,9 +492,9 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               </button>
             )}
             {(planData?.data_json?.currentWeek && planData?.data_json?.totalWeeks) && (
-              <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200 mt-2 sm:mt-0">
-                <div className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
-                <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
+              <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-2 sm:mt-0">
+                <div className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-1 text-center">{t('plan_progress')}</div>
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   {t('week')} {planData.data_json.currentWeek} / {planData.data_json.totalWeeks}
                 </div>
@@ -507,14 +507,14 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
       <div className="flex-1 overflow-y-auto px-6 md:px-8 lg:px-10 pt-2 pb-20">
         <div className="flex flex-col gap-4">
           
-          <div className="bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 p-6 flex flex-col md:flex-row items-center justify-between gap-4 mb-2">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-sm text-emerald-500">
+              <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm text-emerald-500">
                 <span className="material-symbols-outlined text-2xl">calendar_view_week</span>
               </div>
               <div>
-                <h3 className="font-bold text-slate-900">{t('plan_distribution_label')}</h3>
-                <p className="text-sm text-slate-500">{t('plan_distribution_desc')}</p>
+                <h3 className="font-bold text-slate-900 dark:text-white">{t('plan_distribution_label')}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('plan_distribution_desc')}</p>
               </div>
             </div>
             
@@ -528,23 +528,23 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               {onReassign && (
                 <button 
                   onClick={onReassign}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-emerald-500 hover:border-emerald-500/50 transition-all font-bold text-xs shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:border-emerald-500/50 transition-all font-bold text-xs shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[20px]">sync</span>
                   {t('reassign_plan_btn')}
                 </button>
               )}
-              
-              <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200 min-w-[240px]">
-                <button 
+
+              <div className="flex bg-white dark:bg-slate-900 p-1 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 min-w-[240px]">
+                <button
                   onClick={() => setViewMode('weekly')}
-                  className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'weekly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'weekly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                 >
                   {t('weekly_view_btn')}
                 </button>
-                <button 
+                <button
                   onClick={() => setViewMode('monthly')}
-                  className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex-1 px-4 py-2 text-xs font-black rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                 >
                   {t('month_view_btn')}
                 </button>
@@ -567,16 +567,16 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
               {WEEKS.map((week) => {
                 const customised = isWeekCustomised(week);
                 return (
-                  <div key={`week-${week}`} className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                  <div key={`week-${week}`} className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
                     {/* Week block header */}
-                    <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-slate-50 border-b border-slate-100">
+                    <div className="flex items-center justify-between gap-3 px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-sm">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-sm">
                           {week}
                         </div>
                         <div>
-                          <h3 className="font-bold text-slate-900 text-sm leading-tight">{t('week')} {week}</h3>
-                          <span className={`text-[10px] font-bold uppercase tracking-wide ${week === 1 ? 'text-emerald-600' : customised ? 'text-amber-600' : 'text-slate-400'}`}>
+                          <h3 className="font-bold text-slate-900 dark:text-white text-sm leading-tight">{t('week')} {week}</h3>
+                          <span className={`text-[10px] font-bold uppercase tracking-wide ${week === 1 ? 'text-emerald-600 dark:text-emerald-400' : customised ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
                             {week === 1
                               ? t('planning_base_week', { defaultValue: 'Semana base' })
                               : customised
@@ -589,20 +589,20 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                         {customised && (
                           <button
                             onClick={() => resetWeek(week)}
-                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 hover:text-rose-500 hover:bg-rose-50 transition-all"
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-all"
                           >
                             {t('planning_reset_to_base', { defaultValue: 'Restablecer' })}
                           </button>
                         )}
                         <button
                           onClick={() => setCopyMenuWeek(copyMenuWeek === week ? null : week)}
-                          className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white border border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all flex items-center gap-1.5"
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all flex items-center gap-1.5"
                         >
                           <span className="material-symbols-outlined text-[16px]">content_copy</span>
                           {t('planning_copy_week', { defaultValue: 'Copiar a…' })}
                         </button>
                         {copyMenuWeek === week && (
-                          <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 p-2">
+                          <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 p-2">
                             <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 py-1.5">
                               {t('planning_copy_week_to', { defaultValue: 'Copiar esta semana a' })}
                             </div>
@@ -610,14 +610,14 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
                               <button
                                 key={w}
                                 onClick={() => { copyWeekTo(week, [w]); setCopyMenuWeek(null); }}
-                                className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+                                className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all"
                               >
                                 {t('week')} {w}
                               </button>
                             ))}
                             <button
                               onClick={() => { copyWeekTo(week, WEEKS.filter(w => w !== week)); setCopyMenuWeek(null); }}
-                              className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-emerald-600 hover:bg-emerald-50 transition-all border-t border-slate-50 mt-1"
+                              className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all border-t border-slate-50 dark:border-slate-800 mt-1"
                             >
                               {t('planning_copy_all_weeks', { defaultValue: 'Todas las demás semanas' })}
                             </button>

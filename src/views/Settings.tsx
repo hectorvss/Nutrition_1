@@ -96,8 +96,8 @@ export default function Settings({ initialTab }: { initialTab?: SettingsTab } = 
   return (
     <div className="p-6 md:p-8 lg:p-10 w-full">
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">{t('settings_header')}</h1>
-        <p className="text-slate-500 text-sm">{t('settings_desc')}</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{t('settings_header')}</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">{t('settings_desc')}</p>
       </header>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -110,8 +110,8 @@ export default function Settings({ initialTab }: { initialTab?: SettingsTab } = 
                 onClick={() => setActiveTab(tab.id as SettingsTab)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm font-medium ${
                   activeTab === tab.id
-                    ? 'bg-white shadow-sm border border-slate-200 text-emerald-600 font-semibold'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 font-semibold'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-emerald-600' : 'text-slate-400'}`} />
@@ -120,10 +120,10 @@ export default function Settings({ initialTab }: { initialTab?: SettingsTab } = 
             ))}
           </nav>
 
-          <div className="mt-8 pt-6 border-t border-slate-200">
+          <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             >
               <LogOut className="w-5 h-5" />
               {t('sign_out')}
@@ -155,32 +155,32 @@ function GeneralSettings() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('language_region')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('configure_language_format', { defaultValue: 'Configure your preferred language and regional formats.' })}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('language_region')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('configure_language_format', { defaultValue: 'Configure your preferred language and regional formats.' })}</p>
           </div>
           <Smartphone className="w-10 h-10 text-slate-200" />
         </div>
 
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">{t('select_language')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-3">{t('select_language')}</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={() => setLanguage('es')}
                 className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
                   language === 'es'
-                    ? 'border-emerald-500 bg-emerald-50/50 ring-4 ring-emerald-500/10'
-                    : 'border-slate-100 hover:border-slate-200 bg-white'
+                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 ring-4 ring-emerald-500/10'
+                    : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 bg-white dark:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🇪🇸</span>
                   <div className="text-left">
-                    <p className={`font-bold text-sm ${language === 'es' ? 'text-emerald-700' : 'text-slate-900'}`}>{t('spanish')}</p>
-                    <p className="text-xs text-slate-500">{t('spanish_spain')}</p>
+                    <p className={`font-bold text-sm ${language === 'es' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>{t('spanish')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('spanish_spain')}</p>
                   </div>
                 </div>
                 {language === 'es' && (
@@ -194,15 +194,15 @@ function GeneralSettings() {
                 onClick={() => setLanguage('en')}
                 className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
                   language === 'en'
-                    ? 'border-emerald-500 bg-emerald-50/50 ring-4 ring-emerald-500/10'
-                    : 'border-slate-100 hover:border-slate-200 bg-white'
+                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 ring-4 ring-emerald-500/10'
+                    : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 bg-white dark:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🇺🇸</span>
                   <div className="text-left">
-                    <p className={`font-bold text-sm ${language === 'en' ? 'text-emerald-700' : 'text-slate-900'}`}>{t('english')}</p>
-                    <p className="text-xs text-slate-500">{t('english_us_uk')}</p>
+                    <p className={`font-bold text-sm ${language === 'en' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>{t('english')}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('english_us_uk')}</p>
                   </div>
                 </div>
                 {language === 'en' && (
@@ -214,7 +214,7 @@ function GeneralSettings() {
             </div>
           </div>
 
-          <p className="text-xs text-slate-400 pt-4 border-t border-slate-100">
+          <p className="text-xs text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800">
             {t('language_drives_formats', { defaultValue: 'El idioma seleccionado también determina el formato de fechas y números. La hora se muestra en la zona horaria de tu dispositivo.' })}
           </p>
         </div>
@@ -397,33 +397,33 @@ function ProfileSettings() {
   return (
     <div className="space-y-8">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}
-      
+
       {success && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-600 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-lg text-sm">
           {t('profile_saved')}
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">{t('personal_details')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('personal_details_desc')}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('personal_details')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('personal_details_desc')}</p>
         </div>
 
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6 pb-6 border-b border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6 pb-6 border-b border-slate-100 dark:border-slate-800">
             <div className="relative">
               {profile.avatar_url ? (
                 <div
-                  className="w-24 h-24 rounded-full bg-slate-100 bg-center bg-cover border-4 border-white shadow-sm"
+                  className="w-24 h-24 rounded-full bg-slate-100 dark:bg-slate-800 bg-center bg-cover border-4 border-white dark:border-slate-900 shadow-sm"
                   style={{ backgroundImage: `url(${profile.avatar_url})` }}
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-emerald-50 border-4 border-white shadow-sm flex items-center justify-center text-emerald-500 font-bold text-3xl">
+                <div className="w-24 h-24 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border-4 border-white dark:border-slate-900 shadow-sm flex items-center justify-center text-emerald-500 font-bold text-3xl">
                   {(profile.full_name || profile.name || 'M').charAt(0).toUpperCase()}
                 </div>
               )}
@@ -442,12 +442,12 @@ function ProfileSettings() {
               </button>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-slate-900 mb-1">{t('profile_photo')}</h3>
-              <p className="text-xs text-slate-500 mb-3">{t('profile_photo_desc', { defaultValue: 'This will be displayed on your profile.' })}</p>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">{t('profile_photo')}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('profile_photo_desc', { defaultValue: 'This will be displayed on your profile.' })}</p>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   {t('change')}
                 </button>
@@ -456,7 +456,7 @@ function ProfileSettings() {
                     setProfile((p: any) => ({ ...p, avatar_url: '' }));
                     handleSave({ avatar_url: '' });
                   }}
-                  className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                 >
                   {t('remove')}
                 </button>
@@ -466,28 +466,28 @@ function ProfileSettings() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('full_name')}</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('full_name')}</label>
               <div className="relative">
                 <User className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
                 <input 
                   name="full_name"
                   value={profile.full_name}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
+                  className="w-full pl-10 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow" 
                   placeholder={t('full_name_placeholder')} 
                   type="text" 
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('professional_title')}</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('professional_title')}</label>
               <div className="relative">
                 <BadgeCheck className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
                 <input 
                   name="professional_title"
                   value={profile.professional_title}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
+                  className="w-full pl-10 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow" 
                   placeholder={t('professional_title_placeholder')} 
                   type="text" 
                 />
@@ -496,31 +496,31 @@ function ProfileSettings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('bio')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('bio')}</label>
             <textarea 
               name="bio"
               value={profile.bio}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow min-h-[100px]" 
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow min-h-[100px]" 
               placeholder={t('bio_placeholder')}
             />
-            <p className="text-xs text-slate-500 mt-1.5 text-right">{Math.max(0, 500 - (profile.bio?.length || 0))} {t('characters_left')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 text-right">{Math.max(0, 500 - (profile.bio?.length || 0))} {t('characters_left')}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">{t('contact_info')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('contact_info_desc')}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('contact_info')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('contact_info_desc')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('email_address')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('email_address')}</label>
             <div className="relative">
               <Mail className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
               <input 
-                className="w-full pl-10 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed" 
+                className="w-full pl-10 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed"
                 type="email" 
                 value={user?.email || ''}
                 disabled
@@ -529,28 +529,28 @@ function ProfileSettings() {
             <p className="text-[10px] text-slate-400 mt-1">{t('email_not_changeable', { defaultValue: 'Email cannot be changed here.' })}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('phone_number')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('phone_number')}</label>
             <div className="relative">
               <Phone className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
               <input 
                 name="phone_number"
                 value={profile.phone_number}
                 onChange={handleChange}
-                className="w-full pl-10 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
+                className="w-full pl-10 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow" 
                 type="tel" 
                 placeholder="+1 (555) 000-0000"
               />
             </div>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('professional_address')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('professional_address')}</label>
             <div className="relative">
               <MapPin className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
               <input 
                 name="address"
                 value={profile.address}
                 onChange={handleChange}
-                className="w-full pl-10 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
+                className="w-full pl-10 pr-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow" 
                 type="text" 
                 placeholder={t('address_placeholder')}
               />
@@ -559,10 +559,10 @@ function ProfileSettings() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">{t('social_profiles')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('social_profiles_desc')}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('social_profiles')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('social_profiles_desc')}</p>
         </div>
         <div className="space-y-4">
           <div className="flex items-center gap-4">
@@ -574,7 +574,7 @@ function ProfileSettings() {
                 name="linkedin_url"
                 value={profile.linkedin_url}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow" 
                 placeholder={t('linkedin_placeholder')} 
                 type="text" 
               />
@@ -589,7 +589,7 @@ function ProfileSettings() {
                 name="twitter_url"
                 value={profile.twitter_url}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow" 
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow" 
                 placeholder={t('twitter_placeholder')} 
                 type="text" 
               />
@@ -604,7 +604,7 @@ function ProfileSettings() {
                 name="instagram_url"
                 value={profile.instagram_url}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
                 placeholder={t('instagram_placeholder')}
                 type="text"
               />
@@ -619,7 +619,7 @@ function ProfileSettings() {
                 name="website_url"
                 value={profile.website_url}
                 onChange={handleChange}
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
                 placeholder="https://tu-web.com"
                 type="text"
               />
@@ -630,14 +630,14 @@ function ProfileSettings() {
 
       {/* Public coach profile — surfaced to your clients via the
           "Ver perfil del coach" modal in the chat. */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">{t('public_profile_title', { defaultValue: 'Perfil público' })}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('public_profile_desc', { defaultValue: 'Lo que tus clientes verán en su portal. Cuanto más completes, mejor te conocerán.' })}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('public_profile_title', { defaultValue: 'Perfil público' })}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('public_profile_desc', { defaultValue: 'Lo que tus clientes verán en su portal. Cuanto más completes, mejor te conocerán.' })}</p>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('years_experience', { defaultValue: 'Años de experiencia' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('years_experience', { defaultValue: 'Años de experiencia' })}</label>
             <input
               name="years_experience"
               type="number"
@@ -645,84 +645,84 @@ function ProfileSettings() {
               max={99}
               value={profile.years_experience}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
               placeholder="5"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('specialties', { defaultValue: 'Especialidades' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('specialties', { defaultValue: 'Especialidades' })}</label>
             <input
               name="specialties"
               value={profile.specialties}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
               placeholder={t('specialties_placeholder', { defaultValue: 'Pérdida de peso, hipertrofia, deporte de resistencia…' })}
             />
             <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('services_offered', { defaultValue: 'Servicios que ofreces' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('services_offered', { defaultValue: 'Servicios que ofreces' })}</label>
             <input
               name="services_offered"
               value={profile.services_offered}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
               placeholder={t('services_placeholder', { defaultValue: 'Planes de nutrición, seguimiento semanal, asesoría online…' })}
             />
             <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('certifications', { defaultValue: 'Certificaciones' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('certifications', { defaultValue: 'Certificaciones' })}</label>
             <input
               name="certifications"
               value={profile.certifications}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
               placeholder={t('certifications_placeholder', { defaultValue: 'CSCS, ISAK Nivel 1, Precision Nutrition…' })}
             />
             <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('education', { defaultValue: 'Formación' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('education', { defaultValue: 'Formación' })}</label>
             <textarea
               name="education"
               value={profile.education}
               onChange={handleChange}
               rows={3}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow resize-y"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow resize-y"
               placeholder={t('education_placeholder', { defaultValue: 'Grado en CCAFD, Universidad X (2020). Máster en Nutrición Deportiva, Universidad Y (2022).' })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('achievements', { defaultValue: 'Logros' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('achievements', { defaultValue: 'Logros' })}</label>
             <input
               name="achievements"
               value={profile.achievements}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
               placeholder={t('achievements_placeholder', { defaultValue: 'Coach del año 2024, ponente en X congreso…' })}
             />
             <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('languages_spoken', { defaultValue: 'Idiomas que hablas' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('languages_spoken', { defaultValue: 'Idiomas que hablas' })}</label>
             <input
               name="languages_spoken"
               value={profile.languages_spoken}
               onChange={handleChange}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow"
               placeholder={t('languages_placeholder', { defaultValue: 'Español, Inglés, Catalán' })}
             />
             <p className="text-xs text-slate-400 mt-1">{t('csv_hint', { defaultValue: 'Separa con comas.' })}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('philosophy', { defaultValue: 'Filosofía / Enfoque' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('philosophy', { defaultValue: 'Filosofía / Enfoque' })}</label>
             <textarea
               name="philosophy"
               value={profile.philosophy}
               onChange={handleChange}
               rows={4}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow resize-y"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow resize-y"
               placeholder={t('philosophy_placeholder', { defaultValue: 'Mi enfoque combina la evidencia científica con un acompañamiento humano para hacer sostenibles los cambios.' })}
             />
           </div>
@@ -732,7 +732,7 @@ function ProfileSettings() {
       <div className="flex justify-end gap-3 pt-4 pb-8">
         <button 
           onClick={() => window.location.reload()}
-          className="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
+          className="px-5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           {t('discard_changes')}
         </button>
@@ -952,30 +952,30 @@ function SecuritySettings() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {success && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-2 mb-4">
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-2 mb-4">
           <BadgeCheck className="w-5 h-5" />
           {t('password_updated')}
         </div>
       )}
       
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2 mb-4">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl flex items-center gap-2 mb-4">
           <Trash2 className="w-5 h-5" />
           {error}
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">{t('change_password')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('security_desc')}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('change_password')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('security_desc')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t('current_password', { defaultValue: 'Contraseña actual' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">{t('current_password', { defaultValue: 'Contraseña actual' })}</label>
             <div className="relative">
               <input
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                 placeholder="••••••••"
                 type={showCurrentPass ? 'text' : 'password'}
                 value={currentPassword}
@@ -992,10 +992,10 @@ function SecuritySettings() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t('new_password')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">{t('new_password')}</label>
             <div className="relative">
               <input 
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
                 placeholder="••••••••" 
                 type={showNewPass ? "text" : "password"}
                 value={newPassword}
@@ -1010,10 +1010,10 @@ function SecuritySettings() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t('confirm_password')}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">{t('confirm_password')}</label>
             <div className="relative">
               <input 
-                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all" 
                 placeholder="••••••••" 
                 type={showCurrentPass ? "text" : "password"}
                 value={confirmPassword}
@@ -1040,20 +1040,20 @@ function SecuritySettings() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between">
           <div className="flex gap-4">
-            <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
               <ShieldCheck className="text-emerald-500 w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">{t('two_factor')}</h2>
-              <p className="text-sm text-slate-500 mt-1 max-w-lg">{t('two_factor_desc')}</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('two_factor')}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-lg">{t('two_factor_desc')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {mfaEnabled && (
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-bold uppercase tracking-wide flex items-center gap-1">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wide flex items-center gap-1">
                 <BadgeCheck className="w-3.5 h-3.5" /> {t('mfa_active', { defaultValue: 'Activo' })}
               </span>
             )}
@@ -1061,7 +1061,7 @@ function SecuritySettings() {
               <button
                 onClick={handleDisableMfa}
                 disabled={mfaBusy}
-                className="px-4 py-2 rounded-lg border border-red-200 bg-red-50 text-red-600 font-medium text-sm hover:bg-red-100 transition-colors disabled:opacity-50"
+                className="px-4 py-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium text-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
               >
                 {t('mfa_disable', { defaultValue: 'Desactivar' })}
               </button>
@@ -1080,26 +1080,26 @@ function SecuritySettings() {
 
       {enrollData && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">{t('mfa_setup_title', { defaultValue: 'Configurar verificación en dos pasos' })}</h3>
-              <button onClick={handleCancelEnroll} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('mfa_setup_title', { defaultValue: 'Configurar verificación en dos pasos' })}</h3>
+              <button onClick={handleCancelEnroll} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
             <div className="p-6 space-y-5">
               {enrollData.qr && (
                 <>
-                  <p className="text-sm text-slate-500">{t('mfa_setup_step1', { defaultValue: 'Escanea este código QR con tu app de autenticación (Google Authenticator, Authy…).' })}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('mfa_setup_step1', { defaultValue: 'Escanea este código QR con tu app de autenticación (Google Authenticator, Authy…).' })}</p>
                   <div className="flex justify-center">
-                    <img src={enrollData.qr} alt="2FA QR" className="w-48 h-48 rounded-lg border border-slate-100" />
+                    <img src={enrollData.qr} alt="2FA QR" className="w-48 h-48 rounded-lg border border-slate-100 dark:border-slate-800" />
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
+                  <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-center">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('mfa_manual_key', { defaultValue: 'O introduce esta clave manualmente' })}</p>
-                    <p className="text-sm font-mono font-bold text-slate-700 break-all">{enrollData.secret}</p>
+                    <p className="text-sm font-mono font-bold text-slate-700 dark:text-slate-200 break-all">{enrollData.secret}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">{t('mfa_enter_code', { defaultValue: 'Introduce el código de 6 dígitos' })}</label>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">{t('mfa_enter_code', { defaultValue: 'Introduce el código de 6 dígitos' })}</label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -1107,20 +1107,20 @@ function SecuritySettings() {
                       autoFocus
                       value={mfaCode}
                       onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                      className="w-full px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-center tracking-[0.4em] font-bold text-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
+                      className="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-center tracking-[0.4em] font-bold text-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none"
                       placeholder="000000"
                     />
                   </div>
                 </>
               )}
               {mfaModalError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-3 py-2">{mfaModalError}</div>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm rounded-lg px-3 py-2">{mfaModalError}</div>
               )}
             </div>
-            <div className="p-6 border-t border-slate-100 flex gap-3">
+            <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex gap-3">
               <button
                 onClick={handleCancelEnroll}
-                className="flex-1 py-2.5 rounded-lg border border-slate-200 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
+                className="flex-1 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 {t('cancel', { defaultValue: 'Cancelar' })}
               </button>
@@ -1139,34 +1139,34 @@ function SecuritySettings() {
         </div>
       )}
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('active_sessions')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('sessions_desc')}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('active_sessions')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('sessions_desc')}</p>
           </div>
           <button
             onClick={handleLogoutEverywhere}
-            className="text-red-500 text-sm font-semibold hover:text-red-600 transition-colors border border-red-200 bg-red-50 px-3 py-1.5 rounded-lg"
+            className="text-red-500 dark:text-red-400 text-sm font-semibold hover:text-red-600 transition-colors border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg"
           >
             {t('logout_all')}
           </button>
         </div>
         <div className="space-y-4">
           {sessions.map((session) => (
-            <div key={session.id} className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${session.is_current ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 hover:bg-slate-50'}`}>
+            <div key={session.id} className={`flex items-center justify-between p-4 border rounded-lg transition-colors ${session.is_current ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-white shadow-sm border border-slate-200 flex items-center justify-center text-slate-400">
+                <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400">
                   {session.device_name?.toLowerCase().includes('phone') ? <Smartphone className="w-5 h-5" /> : <Laptop className="w-5 h-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900 text-sm">{session.device_name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{session.device_name}</h3>
                     {session.is_current && (
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-[10px] font-bold uppercase tracking-wide">{t('active_now')}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wide">{t('active_now')}</span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {session.location || t('unknown_location')} • {session.browser || 'Browser'} • {session.ip_address || '---'}
                   </p>
                 </div>
@@ -1175,7 +1175,7 @@ function SecuritySettings() {
                 {!session.is_current && (
                   <button 
                     onClick={() => handleRevokeSession(session.id)}
-                    className="text-slate-400 hover:text-red-500 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
+                    className="text-slate-400 hover:text-red-500 transition-colors p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                     title={t('revoke_session')}
                   >
                     <LogOut className="w-5 h-5" />
@@ -1187,29 +1187,29 @@ function SecuritySettings() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 overflow-hidden">
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-slate-900">{t('login_history')}</h2>
-          <p className="text-sm text-slate-500 mt-1">{t('login_history_desc')}</p>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('login_history')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('login_history_desc')}</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left bg-white border-collapse">
+          <table className="w-full text-left bg-white dark:bg-slate-900 border-collapse">
             <thead>
-              <tr className="border-b border-slate-100">
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('device')}</th>
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('location')}</th>
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('date')}</th>
-                <th className="py-3 px-2 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">{t('status')}</th>
+              <tr className="border-b border-slate-100 dark:border-slate-800">
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('device')}</th>
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('location')}</th>
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('date')}</th>
+                <th className="py-3 px-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">{t('status')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {history.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-2 text-sm text-slate-900 font-medium">{item.device || t('unknown_device')}</td>
-                  <td className="py-3 px-2 text-sm text-slate-500">{item.location || t('unknown_location')}</td>
-                  <td className="py-3 px-2 text-sm text-slate-500">{new Date(item.timestamp).toLocaleString()}</td>
+                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="py-3 px-2 text-sm text-slate-900 dark:text-white font-medium">{item.device || t('unknown_device')}</td>
+                  <td className="py-3 px-2 text-sm text-slate-500 dark:text-slate-400">{item.location || t('unknown_location')}</td>
+                  <td className="py-3 px-2 text-sm text-slate-500 dark:text-slate-400">{new Date(item.timestamp).toLocaleString()}</td>
                   <td className="py-3 px-2 text-right">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.status === 'Success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.status === 'Success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}>
                       {item.status}
                     </span>
                   </td>
@@ -1323,7 +1323,7 @@ function BillingSettings() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">{error}</div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm">{error}</div>
       )}
 
       {/* Acceso a la pantalla completa de suscripciones (mismo modulo que
@@ -1331,38 +1331,38 @@ function BillingSettings() {
           BillingSettings se renderiza anidado y no recibe setCurrentView. */}
       <button
         onClick={() => window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'subscriptions' }))}
-        className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 hover:from-amber-100 hover:to-orange-100 transition-colors group"
+        className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 hover:from-amber-100 hover:to-orange-100 dark:hover:from-amber-900/30 dark:hover:to-orange-900/30 transition-colors group"
       >
         <div className="flex items-center gap-3 text-left">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-white text-[20px]">auto_awesome</span>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900">{t('view_all_plans', { defaultValue: 'Ver planes y comparativa completa' })}</h3>
-            <p className="text-xs text-slate-500">{t('view_all_plans_desc', { defaultValue: 'Compara features, mira tu uso y mejora de plan.' })}</p>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">{t('view_all_plans', { defaultValue: 'Ver planes y comparativa completa' })}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('view_all_plans_desc', { defaultValue: 'Compara features, mira tu uso y mejora de plan.' })}</p>
           </div>
         </div>
         <span className="material-symbols-outlined text-amber-500 group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
       </button>
 
       {/* Current Plan */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('current_plan')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('manage_subscription')}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('current_plan')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('manage_subscription')}</p>
           </div>
           {sub && (
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold w-fit ${statusActive ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold w-fit ${statusActive ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400'}`}>
               <span className={`w-2 h-2 rounded-full ${statusActive ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
               {sub.status || t('active')}
             </div>
           )}
         </div>
         {hasStripeSub ? (
-          <div className="flex flex-col md:flex-row md:items-center justify-between bg-slate-50 rounded-xl p-6 border border-slate-100">
+          <div className="flex flex-col md:flex-row md:items-center justify-between bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border border-slate-100 dark:border-slate-800">
             <div className="mb-4 md:mb-0">
-              <h3 className="text-lg font-bold text-slate-900 capitalize">{t(`plan_${currentTier}`, { defaultValue: currentTier })}</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white capitalize">{t(`plan_${currentTier}`, { defaultValue: currentTier })}</h3>
               <p className="text-xs text-slate-400 mt-2">{t('renews_on', { date: fmtDate(billingStatus?.currentPeriodEnd || sub?.current_period_end) })}</p>
             </div>
             <button
@@ -1376,7 +1376,7 @@ function BillingSettings() {
           </div>
         ) : (
           <div className="space-y-6">
-            <p className="text-sm font-medium text-slate-600">
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
               {currentTier === 'trial'
                 ? (isEs
                     ? 'Estás en el periodo de prueba. Elige un plan para continuar sin interrupciones:'
@@ -1384,15 +1384,15 @@ function BillingSettings() {
                 : `${t('no_active_subscription', { defaultValue: 'No tienes una suscripción activa.' })} ${t('choose_plan_below', { defaultValue: 'Elige un plan para empezar:' })}`}
             </p>
             <div className="flex items-center justify-center gap-3">
-              <span className={`text-sm font-medium ${!isAnnual ? 'text-slate-900' : 'text-slate-400'}`}>{t('billing_monthly', { defaultValue: 'Mensual' })}</span>
+              <span className={`text-sm font-medium ${!isAnnual ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>{t('billing_monthly', { defaultValue: 'Mensual' })}</span>
               <button
                 type="button"
                 onClick={() => setIsAnnual(v => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${isAnnual ? 'bg-slate-900' : 'bg-slate-200'}`}
+                className={`relative w-11 h-6 rounded-full transition-colors ${isAnnual ? 'bg-slate-900 dark:bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
               >
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isAnnual ? 'translate-x-5' : ''}`} />
               </button>
-              <span className={`text-sm font-medium ${isAnnual ? 'text-slate-900' : 'text-slate-400'}`}>
+              <span className={`text-sm font-medium ${isAnnual ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
                 {t('billing_annual', { defaultValue: 'Anual' })} <span className="text-emerald-600 font-semibold">−20%</span>
               </span>
             </div>
@@ -1402,23 +1402,23 @@ function BillingSettings() {
                 return (
                   <div
                     key={plan.tier}
-                    className={`relative rounded-xl border p-5 flex flex-col transition-shadow hover:shadow-sm ${plan.popular ? 'border-slate-300' : 'border-slate-200'}`}
+                    className={`relative rounded-xl border p-5 flex flex-col transition-shadow hover:shadow-sm ${plan.popular ? 'border-slate-300 dark:border-slate-600' : 'border-slate-200 dark:border-slate-800'}`}
                   >
                     {plan.popular && (
-                      <span className="self-start text-[10px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full mb-2">
+                      <span className="self-start text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full mb-2">
                         {t('billing_popular', { defaultValue: 'Popular' })}
                       </span>
                     )}
-                    <h3 className="text-base font-bold text-slate-900 capitalize">{t(`plan_${plan.tier}`, { defaultValue: plan.tier })}</h3>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white capitalize">{t(`plan_${plan.tier}`, { defaultValue: plan.tier })}</h3>
                     <div className="mt-2 mb-1">
-                      <span className="text-3xl font-bold text-slate-900">{price}€</span>
+                      <span className="text-3xl font-bold text-slate-900 dark:text-white">{price}€</span>
                       <span className="text-sm text-slate-400">/{t('billing_month', { defaultValue: 'mes' })}</span>
                     </div>
-                    <p className="text-xs text-slate-500 mb-4">{t(`plan_${plan.tier}_desc`, { defaultValue: plan.desc })}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t(`plan_${plan.tier}_desc`, { defaultValue: plan.desc })}</p>
                     <button
                       onClick={() => handleSubscribe(plan.tier)}
                       disabled={!!subscribing}
-                      className={`mt-auto w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium text-sm transition-all active:scale-[0.99] disabled:opacity-50 ${plan.popular ? 'bg-slate-900 text-white hover:bg-slate-800' : 'border border-slate-200 text-slate-900 hover:border-slate-300 hover:bg-slate-50'}`}
+                      className={`mt-auto w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-lg font-medium text-sm transition-all active:scale-[0.99] disabled:opacity-50 ${plan.popular ? 'bg-slate-900 dark:bg-emerald-500 text-white hover:bg-slate-800 dark:hover:bg-emerald-600' : 'border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
                       {subscribing === plan.tier && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                       {t('billing_subscribe', { defaultValue: 'Suscribirme' })}
@@ -1433,11 +1433,11 @@ function BillingSettings() {
 
       {/* Plan Usage — live counters against the limits of the current tier */}
       {billingStatus && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">{t('plan_usage', { defaultValue: 'Uso del plan' })}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t('plan_usage_desc', { defaultValue: 'Consumo actual frente a los límites de tu plan.' })}</p>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('plan_usage', { defaultValue: 'Uso del plan' })}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('plan_usage_desc', { defaultValue: 'Consumo actual frente a los límites de tu plan.' })}</p>
             </div>
             <button
               onClick={() => refreshBilling()}
@@ -1461,14 +1461,14 @@ function BillingSettings() {
               const danger = !isUnlimited && pct >= 90;
               const warn = !isUnlimited && pct >= 70 && pct < 90;
               return (
-                <div key={row.key} className="border border-slate-200 rounded-xl p-4">
+                <div key={row.key} className="border border-slate-200 dark:border-slate-800 rounded-xl p-4">
                   <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{row.label}</span>
-                    <span className="text-sm font-bold text-slate-900">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{row.label}</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
                       {used}{isUnlimited ? ` / ${t('unlimited', { defaultValue: 'Ilimitado' })}` : ` / ${limit}`}
                     </span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all ${
                         isUnlimited ? 'bg-emerald-300' : danger ? 'bg-red-500' : warn ? 'bg-amber-500' : 'bg-emerald-500'
@@ -1484,22 +1484,22 @@ function BillingSettings() {
       )}
 
       {/* Payment Method */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('payment_method')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('update_billing')}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('payment_method')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('update_billing')}</p>
           </div>
         </div>
         {pm ? (
-          <div className="flex items-center justify-between p-4 border border-slate-200 rounded-xl">
+          <div className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-800 rounded-xl">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-8 rounded bg-slate-100 border border-slate-200 flex items-center justify-center">
+              <div className="w-12 h-8 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
                 <CreditCard className="w-5 h-5 text-slate-500" />
               </div>
               <div>
-                <span className="font-semibold text-slate-900 text-sm capitalize">{pm.brand} •••• {pm.last4}</span>
-                <p className="text-xs text-slate-500 mt-0.5">{t('expiry', { date: `${pm.expMonth}/${pm.expYear}` })}</p>
+                <span className="font-semibold text-slate-900 dark:text-white text-sm capitalize">{pm.brand} •••• {pm.last4}</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('expiry', { date: `${pm.expMonth}/${pm.expYear}` })}</p>
               </div>
             </div>
             <button onClick={openPortal} disabled={portalLoading} className="text-emerald-600 text-sm font-semibold hover:text-emerald-700 hover:underline disabled:opacity-50">
@@ -1507,24 +1507,24 @@ function BillingSettings() {
             </button>
           </div>
         ) : (
-          <div className="p-6 border border-dashed border-slate-200 rounded-xl text-center text-sm text-slate-500">
+          <div className="p-6 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-center text-sm text-slate-500 dark:text-slate-400">
             {t('no_payment_method', { defaultValue: 'No hay método de pago registrado.' })}
           </div>
         )}
       </div>
 
       {/* Billing History */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('billing_history')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('billing_history_desc')}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('billing_history')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('billing_history_desc')}</p>
           </div>
         </div>
         {invoices.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500">
+            <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-800 text-xs uppercase font-semibold text-slate-500 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 rounded-l-lg">{t('invoice_date')}</th>
                   <th className="px-4 py-3">{t('amount')}</th>
@@ -1532,22 +1532,22 @@ function BillingSettings() {
                   <th className="px-4 py-3 rounded-r-lg text-right">{t('invoice')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-4 font-medium text-slate-900">{fmtDate(inv.date)}</td>
-                    <td className="px-4 py-4 font-semibold text-slate-900">{inv.amount.toFixed(2)} {inv.currency}</td>
+                  <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="px-4 py-4 font-medium text-slate-900 dark:text-white">{fmtDate(inv.date)}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-900 dark:text-white">{inv.amount.toFixed(2)} {inv.currency}</td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${inv.status === 'paid' ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}`}>
                         {inv.status}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
                       {inv.pdf ? (
-                        <a href={inv.pdf} target="_blank" rel="noopener noreferrer" className="inline-block p-1.5 text-slate-400 hover:text-emerald-500 transition-colors rounded-full hover:bg-emerald-50">
+                        <a href={inv.pdf} target="_blank" rel="noopener noreferrer" className="inline-block p-1.5 text-slate-400 hover:text-emerald-500 transition-colors rounded-full hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
                           <Download className="w-5 h-5" />
                         </a>
-                      ) : <span className="text-slate-300">—</span>}
+                      ) : <span className="text-slate-300 dark:text-slate-600">—</span>}
                     </td>
                   </tr>
                 ))}
@@ -1555,7 +1555,7 @@ function BillingSettings() {
             </table>
           </div>
         ) : (
-          <div className="p-6 border border-dashed border-slate-200 rounded-xl text-center text-sm text-slate-500">
+          <div className="p-6 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-center text-sm text-slate-500 dark:text-slate-400">
             {t('no_invoices', { defaultValue: 'Todavía no hay facturas.' })}
           </div>
         )}
@@ -1693,28 +1693,28 @@ function IntegrationsSettings() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {success && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-2">
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-2">
           <BadgeCheck className="w-5 h-5" />
           {t('settings_saved', { defaultValue: '¡Configuración guardada correctamente!' })}
         </div>
       )}
 
       {/* Google Calendar Section */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden relative">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 overflow-hidden relative">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('google_calendar')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('google_calendar_desc')}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('google_calendar')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('google_calendar_desc')}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center">
             <img alt="Google Calendar" className="w-7 h-7 object-contain" src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" />
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
-              <p className="font-bold text-slate-900 text-sm">{t('connection_status')}</p>
+              <p className="font-bold text-slate-900 dark:text-white text-sm">{t('connection_status')}</p>
               <p className="text-xs text-slate-500 mt-1">
                 {localIntegrations.google_calendar_enabled ? t('sync_active') : t('not_connected')}
               </p>
@@ -1726,35 +1726,35 @@ function IntegrationsSettings() {
                 className="sr-only peer" 
                 type="checkbox" 
               />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('google_api_key')}</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('google_api_key')}</label>
               <input 
                 value={localIntegrations.google_calendar_api_key || ''}
                 onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_calendar_api_key: e.target.value })}
                 type="password"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow outline-none" 
                 placeholder="AIza..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('google_calendar_id')}</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('google_calendar_id')}</label>
               <input
                 value={localIntegrations.google_calendar_id || ''}
                 onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_calendar_id: e.target.value })}
                 type="text"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow outline-none"
                 placeholder="example@gmail.com"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('google_service_account', { defaultValue: 'Cuenta de servicio (JSON)' })}</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('google_service_account', { defaultValue: 'Cuenta de servicio (JSON)' })}</label>
             <textarea
               value={localIntegrations.google_service_account
                 ? (typeof localIntegrations.google_service_account === 'string'
@@ -1763,7 +1763,7 @@ function IntegrationsSettings() {
                 : ''}
               onChange={(e) => setLocalIntegrations({ ...localIntegrations, google_service_account: e.target.value })}
               rows={4}
-              className="w-full px-3 py-2 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 outline-none resize-none"
+              className="w-full px-3 py-2 text-xs font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none resize-none"
               placeholder='{ "type": "service_account", "project_id": "...", "private_key": "...", "client_email": "..." }'
             />
             <p className="text-xs text-slate-400 mt-1">
@@ -1805,13 +1805,13 @@ function IntegrationsSettings() {
       </div>
 
       {/* Stripe Section */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden relative">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 overflow-hidden relative">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('stripe_payments')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('stripe_payments_desc')}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('stripe_payments')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('stripe_payments_desc')}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center">
             {/* Official Stripe "S" mark — same treatment as the Google Calendar logo above */}
             <svg viewBox="0 0 32 32" className="w-7 h-7" xmlns="http://www.w3.org/2000/svg" aria-label="Stripe">
               <rect width="32" height="32" rx="6" fill="#635BFF" />
@@ -1824,9 +1824,9 @@ function IntegrationsSettings() {
         </div>
 
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
-              <p className="font-bold text-slate-900 text-sm">{t('stripe_status')}</p>
+              <p className="font-bold text-slate-900 dark:text-white text-sm">{t('stripe_status')}</p>
               <p className="text-xs text-slate-500 mt-1">
                 {localIntegrations.stripe_enabled ? t('connected_stripe') : t('not_connected')}
               </p>
@@ -1838,28 +1838,28 @@ function IntegrationsSettings() {
                 className="sr-only peer" 
                 type="checkbox" 
               />
-              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+              <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
             </label>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('publishable_key')}</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('publishable_key')}</label>
               <input 
                 value={localIntegrations.stripe_publishable_key || ''}
                 onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_publishable_key: e.target.value })}
                 type="text"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none" 
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow outline-none" 
                 placeholder="pk_test_..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('secret_key')}</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1.5">{t('secret_key')}</label>
               <input
                 value={localIntegrations.stripe_secret_key || ''}
                 onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_secret_key: e.target.value })}
                 type="password"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow outline-none"
                 placeholder="sk_test_..."
               />
             </div>
@@ -1868,37 +1868,37 @@ function IntegrationsSettings() {
           {/* Webhook en tiempo real (opcional pero recomendado): el coach pega
               esta URL en sus webhooks de Stripe y copia el signing secret aquí,
               para que pagos/renovaciones/cancelaciones se reflejen al instante. */}
-          <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+          <div className="mt-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">{t('realtime_webhook', { defaultValue: 'Webhook en tiempo real (recomendado)' })}</p>
+              <p className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">{t('realtime_webhook', { defaultValue: 'Webhook en tiempo real (recomendado)' })}</p>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {t('webhook_help', { defaultValue: 'En tu panel de Stripe → Desarrolladores → Webhooks, añade un endpoint con esta URL y eventos checkout.session.completed, customer.subscription.*, invoice.paid, invoice.payment_failed. Luego pega aquí el "Signing secret".' })}
             </p>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1">{t('webhook_url', { defaultValue: 'URL del endpoint' })}</label>
+              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('webhook_url', { defaultValue: 'URL del endpoint' })}</label>
               <div className="flex gap-2">
                 <input
                   readOnly
                   value={`${window.location.origin}/api/stripe/coach-webhook/${user?.id || ''}`}
-                  className="flex-1 px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg text-slate-700 font-mono outline-none"
+                  className="flex-1 px-3 py-2 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 font-mono outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/api/stripe/coach-webhook/${user?.id || ''}`).catch(() => {}); }}
-                  className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 transition"
+                  className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                 >
                   {t('copy', { defaultValue: 'Copiar' })}
                 </button>
               </div>
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 mb-1">{t('webhook_signing_secret', { defaultValue: 'Signing secret' })}</label>
+              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('webhook_signing_secret', { defaultValue: 'Signing secret' })}</label>
               <input
                 value={localIntegrations.stripe_webhook_secret || ''}
                 onChange={(e) => setLocalIntegrations({ ...localIntegrations, stripe_webhook_secret: e.target.value })}
                 type="password"
-                className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400 transition-shadow outline-none"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-shadow outline-none"
                 placeholder="whsec_..."
               />
             </div>
@@ -1939,11 +1939,11 @@ function IntegrationsSettings() {
       </div>
 
       {/* Notifications Section */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">{t('notification_preferences')}</h2>
-            <p className="text-sm text-slate-500 mt-1">{t('notification_prefs_desc')}</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('notification_preferences')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('notification_prefs_desc')}</p>
           </div>
           {pushSupported() && (
             <button
@@ -1970,10 +1970,10 @@ function IntegrationsSettings() {
         </div>
         {pushMsg && <div className="mb-4 text-xs font-semibold text-red-600">{pushMsg}</div>}
         <div className="mb-6" />
-        <div className="divide-y divide-slate-100">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 bg-slate-50 px-4 rounded-t-lg items-center">
-            <div className="md:col-span-9 font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('event_type')}</div>
-            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 uppercase tracking-wider">{t('push')}</div>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 bg-slate-50 dark:bg-slate-800 px-4 rounded-t-lg items-center">
+            <div className="md:col-span-9 font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('event_type')}</div>
+            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('push')}</div>
           </div>
           {[
             { id: 'new_client_check_ins', title: t('checkins'), desc: t('new_client_check_ins_desc') },
@@ -1982,15 +1982,15 @@ function IntegrationsSettings() {
           ].map((item, i) => (
             <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-4 py-4 px-4 items-center">
               <div className="md:col-span-9">
-                <h4 className="font-semibold text-slate-900 text-sm">{item.title}</h4>
-                <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+                <h4 className="font-semibold text-slate-900 dark:text-white text-sm">{item.title}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.desc}</p>
               </div>
               <div className="md:col-span-3 flex justify-center">
                 <input
                   type="checkbox"
                   checked={settings.notification_prefs?.[`${item.id}_push`] ?? true}
                   onChange={() => handleTogglePreference(`${item.id}_push`)}
-                  className="w-5 h-5 text-emerald-500 border-slate-300 rounded focus:ring-emerald-500/20"
+                  className="w-5 h-5 text-emerald-500 border-slate-300 dark:border-slate-600 dark:bg-slate-800 rounded focus:ring-emerald-500/20"
                 />
               </div>
             </div>

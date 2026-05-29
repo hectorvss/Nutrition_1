@@ -67,27 +67,27 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950">
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-        <div className="bg-white w-full rounded-3xl shadow-xl border border-slate-200 flex flex-col h-auto min-h-[calc(100vh-4rem)]">
+        <div className="bg-white dark:bg-slate-900 w-full rounded-3xl shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col h-auto min-h-[calc(100vh-4rem)]">
           {/* Header */}
-          <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
               <button
                 onClick={onBack}
-                className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors"
+                className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
               >
                 <span className="material-symbols-outlined">arrow_back</span>
               </button>
               <div>
-                <h2 className="text-xl font-bold text-slate-900 leading-tight">{t('edit_activity')}</h2>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{name || t('activity_name')}</p>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{t('edit_activity')}</h2>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{name || t('activity_name')}</p>
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={onBack}
-                className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors text-sm"
+                className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-sm"
               >
                 {t('cancel')}
               </button>
@@ -111,10 +111,10 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">{t('activity_name')}</label>
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest">{t('activity_name')}</label>
                     <div className="relative">
                       <input
-                        className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm"
+                        className="w-full pl-4 pr-12 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm"
                         type="text"
                         value={name}
                         onChange={e => setName(e.target.value)}
@@ -125,12 +125,12 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">{t('muscle_group')}</label>
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest">{t('muscle_group')}</label>
                     <div className="relative">
                       <Select
                         value={muscleGroup}
                         onChange={(v) => setMuscleGroup(v)}
-                        className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm"
+                        className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm"
                       >
                         <option>{t('legs_quadriceps')}</option>
                         <option>{t('legs_hamstrings')}</option>
@@ -139,12 +139,12 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">{t('equipment')}</label>
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-widest">{t('equipment')}</label>
                     <div className="relative">
                       <Select
                         value={equipment}
                         onChange={(v) => setEquipment(v)}
-                        className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm"
+                        className="w-full px-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all font-bold text-sm"
                       >
                         <option>{t('dumbbells')}</option>
                         <option>{t('barbell')}</option>
@@ -155,7 +155,7 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                 </div>
               </section>
 
-              <hr className="border-slate-100" />
+              <hr className="border-slate-100 dark:border-slate-800" />
 
               {/* Video & Media */}
               <section>
@@ -166,7 +166,7 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                 <div className="space-y-6">
                   <div className="relative">
                     <input
-                      className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all placeholder:text-slate-400 font-bold text-sm"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 font-bold text-sm"
                       placeholder={t('paste_video_link')}
                       type="text"
                       value={videoUrl}
@@ -174,7 +174,7 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                     />
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">link</span>
                   </div>
-                  <div className="relative w-full aspect-video rounded-3xl bg-slate-900 overflow-hidden group shadow-xl border border-slate-200 flex items-center justify-center">
+                  <div className="relative w-full aspect-video rounded-3xl bg-slate-900 overflow-hidden group shadow-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center">
                     {videoUrl.trim() ? (
                       <button
                         onClick={openVideo}
@@ -192,7 +192,7 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                 </div>
               </section>
 
-              <hr className="border-slate-100" />
+              <hr className="border-slate-100 dark:border-slate-800" />
 
               {/* Prescription */}
               <section>
@@ -217,8 +217,8 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                         onClick={() => applyPreset(card.key)}
                         className={`flex flex-col items-center justify-center p-6 rounded-3xl relative transition-all ${
                           active
-                            ? 'border-2 border-emerald-500 bg-emerald-50/50 text-emerald-600 shadow-sm'
-                            : 'border border-slate-200 hover:border-emerald-500/50 hover:bg-slate-50 text-slate-400 bg-white'
+                            ? 'border-2 border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                            : 'border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900'
                         }`}
                       >
                         {active && (
@@ -227,7 +227,7 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                           </div>
                         )}
                         <span className="font-black text-sm uppercase tracking-widest mb-1">{card.label}</span>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight ${active ? 'bg-white shadow-sm' : 'bg-slate-100'}`}>{card.scheme}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tight ${active ? 'bg-white dark:bg-slate-800 shadow-sm' : 'bg-slate-100 dark:bg-slate-800'}`}>{card.scheme}</span>
                       </button>
                     );
                   })}
@@ -235,14 +235,14 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
 
                 <div className="space-y-4">
                   {sets.map((set, idx) => (
-                    <div key={set.id} className="p-5 rounded-3xl border border-slate-100 bg-slate-50/50">
+                    <div key={set.id} className="p-5 rounded-3xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('set_label')} {idx + 1}</span>
+                          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('set_label')} {idx + 1}</span>
                           <button
                             onClick={() => updateSet(set.id, { warmup: !set.warmup })}
                             className={`text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest transition-colors ${
-                              set.warmup ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                              set.warmup ? 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
                             }`}
                           >
                             {t('warm_up')}
@@ -258,27 +258,27 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 mb-2 uppercase tracking-widest">{t('reps_label')}</label>
-                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.reps} onChange={e => updateSet(set.id, { reps: e.target.value })} />
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest">{t('reps_label')}</label>
+                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.reps} onChange={e => updateSet(set.id, { reps: e.target.value })} />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 mb-2 uppercase tracking-widest">{t('weight')} (kg)</label>
-                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.weight} onChange={e => updateSet(set.id, { weight: e.target.value })} />
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest">{t('weight')} (kg)</label>
+                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.weight} onChange={e => updateSet(set.id, { weight: e.target.value })} />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 mb-2 uppercase tracking-widest">RPE / {t('rir_label')}</label>
-                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.rpe} onChange={e => updateSet(set.id, { rpe: e.target.value })} />
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest">RPE / {t('rir_label')}</label>
+                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.rpe} onChange={e => updateSet(set.id, { rpe: e.target.value })} />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-black text-slate-400 mb-2 uppercase tracking-widest">{t('rest')}</label>
-                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.rest} onChange={e => updateSet(set.id, { rest: e.target.value })} />
+                          <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 mb-2 uppercase tracking-widest">{t('rest')}</label>
+                          <input className="w-full text-center py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none font-black text-sm" type="text" value={set.rest} onChange={e => updateSet(set.id, { rest: e.target.value })} />
                         </div>
                       </div>
                     </div>
                   ))}
                   <button
                     onClick={addSet}
-                    className="w-full py-4 rounded-3xl border-2 border-dashed border-slate-200 hover:border-emerald-500 hover:bg-emerald-50 text-slate-400 hover:text-emerald-500 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] group"
+                    className="w-full py-4 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-slate-400 dark:text-slate-500 hover:text-emerald-500 transition-all flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] group"
                   >
                     <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">add_circle</span>
                     {t('add_new_set')}
@@ -286,7 +286,7 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                 </div>
               </section>
 
-              <hr className="border-slate-100" />
+              <hr className="border-slate-100 dark:border-slate-800" />
 
               {/* Coach's Notes */}
               <section className="pb-10">
@@ -296,9 +296,9 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                     {t('coach_notes')}
                   </h3>
                 </div>
-                <div className="relative bg-slate-50 rounded-3xl border border-slate-200 transition-all focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500">
+                <div className="relative bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 transition-all focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500">
                   <textarea
-                    className="w-full min-h-[180px] p-6 rounded-3xl bg-transparent border-none text-slate-700 focus:ring-0 resize-none placeholder:text-slate-400 font-medium text-sm leading-relaxed"
+                    className="w-full min-h-[180px] p-6 rounded-3xl bg-transparent border-none text-slate-700 dark:text-slate-200 focus:ring-0 resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium text-sm leading-relaxed"
                     placeholder={t('coach_notes_placeholder')}
                     value={notes}
                     onChange={e => setNotes(e.target.value)}

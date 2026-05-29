@@ -32,6 +32,9 @@ const MUSCLE_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#a855f7', '#f97316', '#
 
 const AXIS_TICK = { fontSize: 12, fill: '#94a3b8' } as const;
 const GRID_PROPS = { strokeDasharray: '3 3', stroke: '#f1f5f9' } as const;
+// TODO(dark): recharts contentStyle is a plain JS object and can't read the `.dark`
+// class. White tooltip stays legible in dark; for a true dark tooltip use bg #1e293b /
+// text #f1f5f9 behind a theme hook.
 const TOOLTIP_STYLE = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 } as const;
 
 export default function TrainingAnalytics({ data, loading }: any) {
@@ -199,7 +202,7 @@ export default function TrainingAnalytics({ data, loading }: any) {
         <div className="h-[300px] w-full relative pb-6">
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-6">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="w-full h-px border-dashed border-t border-slate-100"></div>
+              <div key={i} className="w-full h-px border-dashed border-t border-slate-100 dark:border-slate-800"></div>
             ))}
           </div>
           <svg className="absolute inset-0 w-full h-full pb-6 overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 300">
@@ -371,8 +374,8 @@ export default function TrainingAnalytics({ data, loading }: any) {
                   })}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-slate-900">100%</span>
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wide">{t('breakdown_label')}</span>
+                  <span className="text-2xl font-bold text-slate-900 dark:text-white">100%</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('breakdown_label')}</span>
                 </div>
               </div>
               <div className="flex-1 space-y-3">

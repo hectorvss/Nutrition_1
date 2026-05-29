@@ -61,10 +61,10 @@ export default function Analytics() {
     return (
       <div className="p-10 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
             <AlertTriangle className="w-6 h-6 text-red-500" />
           </div>
-          <p className="text-slate-600 font-semibold">{t('error_loading_data')}</p>
+          <p className="text-slate-600 dark:text-slate-300 font-semibold">{t('error_loading_data')}</p>
           <button
             onClick={() => loadAnalytics()}
             className="px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition-colors"
@@ -80,8 +80,8 @@ export default function Analytics() {
     <div className="p-6 md:p-8 lg:p-10 space-y-6">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('analytics_title')}</h1>
-          <p className="text-slate-500 text-sm">{t('analytics_overview')}</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{t('analytics_title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">{t('analytics_overview')}</p>
         </div>
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 shadow-sm">
           <Calendar className="w-5 h-5 text-emerald-500 shrink-0" />
@@ -98,14 +98,14 @@ export default function Analytics() {
         </div>
       </header>
 
-      <div className="border-b border-slate-200">
+      <div className="border-b border-slate-200 dark:border-slate-800">
         <div className="flex space-x-8">
           <button
             onClick={() => setActiveTab('business')}
             className={`pb-3 border-b-2 transition-all text-sm flex items-center gap-2 ${
               activeTab === 'business'
                 ? 'border-emerald-500 text-emerald-600 font-semibold'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 font-medium'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 font-medium'
             }`}
           >
             <TrendingUp className="w-5 h-5" />
@@ -116,7 +116,7 @@ export default function Analytics() {
             className={`pb-3 border-b-2 transition-all text-sm flex items-center gap-2 ${
               activeTab === 'nutrition'
                 ? 'border-emerald-500 text-emerald-600 font-semibold'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 font-medium'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 font-medium'
             }`}
           >
             <Utensils className="w-5 h-5" />
@@ -127,7 +127,7 @@ export default function Analytics() {
             className={`pb-3 border-b-2 transition-all text-sm flex items-center gap-2 ${
               activeTab === 'training'
                 ? 'border-emerald-500 text-emerald-600 font-semibold'
-                : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 font-medium'
+                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-600 font-medium'
             }`}
           >
             <Dumbbell className="w-5 h-5" />

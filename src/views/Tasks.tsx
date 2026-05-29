@@ -110,15 +110,15 @@ export default function Tasks({ onNavigate }: TasksProps) {
   };
 
   return (
-    <div className="flex h-full bg-slate-50 overflow-hidden relative">
+    <div className="flex h-full bg-slate-50 dark:bg-slate-950 overflow-hidden relative">
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="w-full px-4 sm:px-8 lg:px-12 py-6 sm:py-10">
           <header className="mb-8 sm:mb-10">
             <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6 mb-8">
               <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight mb-2">{t('daily_focus')}</h1>
-                <p className="text-slate-500 max-w-md leading-relaxed text-sm sm:text-base">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">{t('daily_focus')}</h1>
+                <p className="text-slate-500 dark:text-slate-400 max-w-md leading-relaxed text-sm sm:text-base">
                   {t('daily_focus_desc')}
                 </p>
               </div>
@@ -131,12 +131,12 @@ export default function Tasks({ onNavigate }: TasksProps) {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={t('search')}
-                      className="w-full sm:w-64 pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-700 placeholder:text-slate-400 transition-all"
+                      className="w-full sm:w-64 pl-9 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-700 dark:text-white placeholder:text-slate-400 transition-all"
                     />
                   </div>
                   <button
                     onClick={() => onNavigate('task-intelligence')}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
                   >
                     <Zap className="w-4 h-4 text-emerald-500" />
                     <span>{t('configure')}</span>
@@ -148,33 +148,33 @@ export default function Tasks({ onNavigate }: TasksProps) {
             {/* Stat Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               {[
-                { label: t('overdue_label'), value: `${overdueCount} ${t('tasks_unit')}`, icon: AlertTriangle, color: 'text-red-500 bg-red-50' },
-                { label: t('due_today_label'), value: `${todayCount} ${t('tasks_unit')}`, icon: Calendar, color: 'text-emerald-500 bg-emerald-50' },
-                { label: t('completed_label'), value: `${completedTasks.length} ${t('done_unit')}`, icon: CheckCircle2, color: 'text-purple-500 bg-purple-50' },
+                { label: t('overdue_label'), value: `${overdueCount} ${t('tasks_unit')}`, icon: AlertTriangle, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
+                { label: t('due_today_label'), value: `${todayCount} ${t('tasks_unit')}`, icon: Calendar, color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' },
+                { label: t('completed_label'), value: `${completedTasks.length} ${t('done_unit')}`, icon: CheckCircle2, color: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20' },
               ].map((stat, idx) => (
-                <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-4 shadow-sm">
+                <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2 sm:mb-3">
                     <div className={`p-1.5 sm:p-2 rounded-lg ${stat.color}`}>
                       <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                   </div>
                   <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</p>
-                  <p className="text-base sm:text-xl font-bold text-slate-900">{stat.value}</p>
+                  <p className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">{stat.value}</p>
                 </div>
               ))}
             </div>
           </header>
 
-          <div className="flex items-center gap-2 mb-8 bg-slate-100/50 p-1 rounded-xl w-fit">
-            <button 
+          <div className="flex items-center gap-2 mb-8 bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl w-fit">
+            <button
               onClick={() => setActiveTab('pending')}
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
             >
               {t('active_tab')} ({tasks.length})
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('completed')}
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'completed' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'completed' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
             >
               {t('completed_tab')} ({completedTasks.length})
             </button>
@@ -258,8 +258,8 @@ export default function Tasks({ onNavigate }: TasksProps) {
                               }}
                               className={`group relative rounded-2xl p-4 sm:p-6 shadow-sm transition-colors duration-200 cursor-pointer border border-l-4 ${
                                 isCompleting
-                                  ? 'bg-emerald-50 border-emerald-300 border-l-emerald-500'
-                                  : `bg-white border-slate-200 hover:shadow-md ${config.borderInactive}`
+                                  ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 border-l-emerald-500'
+                                  : `bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md ${config.borderInactive}`
                               }`}
                             >
                               <div className="flex items-start gap-3 sm:gap-4">
@@ -275,10 +275,10 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                       </span>
                                     </div>
                                   </div>
-                                  <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1 truncate">{task.title}</h3>
-                                  <p className="text-xs sm:text-sm text-slate-500 mb-3 line-clamp-2">{task.desc}</p>
+                                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-1 truncate">{task.title}</h3>
+                                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">{task.desc}</p>
                                   {(task.date || task.timeLabel) && (
-                                    <div className="flex items-center gap-2 mb-3 text-[11px] sm:text-xs font-bold text-slate-500">
+                                    <div className="flex items-center gap-2 mb-3 text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">
                                       <Clock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                                       <span>
                                         {task.date && (() => {
@@ -296,9 +296,9 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                   <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-2 min-w-0">
                                       {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full" referrerPolicy="no-referrer" />}
-                                      <span className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">{task.client}</span>
-                                      <span className="text-[11px] sm:text-xs text-slate-400 shrink-0">•</span>
-                                      <span className="text-[11px] sm:text-xs text-slate-400 truncate">{task.program}</span>
+                                      <span className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{task.client}</span>
+                                      <span className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 shrink-0">•</span>
+                                      <span className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 truncate">{task.program}</span>
                                     </div>
                                     {!isCompleted && (
                                       <button
@@ -336,12 +336,12 @@ export default function Tasks({ onNavigate }: TasksProps) {
           ) : (
             <div className="space-y-4">
               {completedTasks.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-slate-300" />
+                <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                  <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle2 className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                   </div>
-                  <h3 className="text-slate-900 font-bold">{t('no_tasks_completed')}</h3>
-                  <p className="text-slate-500 text-sm mt-1">{t('no_tasks_completed_desc')}</p>
+                  <h3 className="text-slate-900 dark:text-white font-bold">{t('no_tasks_completed')}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{t('no_tasks_completed_desc')}</p>
                 </div>
               ) : (
                 completedTasks.map((task) => (
@@ -354,34 +354,34 @@ export default function Tasks({ onNavigate }: TasksProps) {
                     // affordance. The card still reads as completed (line-
                     // through title, muted slates, "Done today" pill) but
                     // without the dead-overlay vibe.
-                    className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 transition-all border-l-4 border-l-slate-400"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 transition-all border-l-4 border-l-slate-400"
                   >
                     <div className="flex items-start gap-3 sm:gap-4">
                       <div className="pt-1 hidden sm:block">
-                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 bg-slate-100 flex items-center justify-center">
-                          <CheckCircle2 className="w-3 h-3 text-slate-500" />
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                          <CheckCircle2 className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2 gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate text-slate-500">
+                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider truncate text-slate-500 dark:text-slate-400">
                               {t(task.type)}: {t('completed_status')}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 bg-slate-100 text-slate-500">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
                              <CheckCircle2 className="w-3 h-3" />
                              {t('done_today')}
                           </div>
                         </div>
-                        <h3 className="text-base sm:text-lg font-bold text-slate-500 mb-1 truncate line-through">{task.title}</h3>
-                        <p className="text-xs sm:text-sm text-slate-400 mb-4 line-clamp-2">{task.desc}</p>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-500 dark:text-slate-400 mb-1 truncate line-through">{task.title}</h3>
+                        <p className="text-xs sm:text-sm text-slate-400 dark:text-slate-500 mb-4 line-clamp-2">{task.desc}</p>
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-2 min-w-0">
                             {task.avatar && <img src={task.avatar} alt={task.client} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full opacity-70" referrerPolicy="no-referrer" />}
-                            <span className="text-[11px] sm:text-xs font-bold text-slate-500 truncate">{task.client}</span>
-                            <span className="text-[11px] sm:text-xs text-slate-400 shrink-0">•</span>
-                            <span className="text-[11px] sm:text-xs text-slate-400 truncate">{task.program}</span>
+                            <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 truncate">{task.client}</span>
+                            <span className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 shrink-0">•</span>
+                            <span className="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 truncate">{task.program}</span>
                           </div>
                           <button
                             onClick={(e) => {

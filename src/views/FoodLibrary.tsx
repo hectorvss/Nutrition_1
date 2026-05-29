@@ -50,12 +50,12 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-2">
             <button onClick={onBack} className="hover:text-emerald-600 transition-colors">{t('nutrition')}</button>
             <ChevronRight className="w-4 h-4" />
-            <span className="text-slate-900 font-medium">{t('food_library_btn')}</span>
+            <span className="text-slate-900 dark:text-white font-medium">{t('food_library_btn')}</span>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
             <BookOpen className="w-7 h-7 text-emerald-500" />
             {t('food_recipe_library')}
           </h2>
@@ -80,21 +80,21 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
                   key={idx}
                   onClick={() => setActiveCategory(idx === 0 ? 'all' : cat.name)}
                   className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                    activeCategory === (idx === 0 ? 'all' : cat.name) ? 'bg-emerald-50 text-emerald-600' : 'text-slate-600 hover:bg-slate-50'
+                    activeCategory === (idx === 0 ? 'all' : cat.name) ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <span>{cat.name}</span>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                    idx === 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                    idx === 0 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
                   }`}>{cat.count}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="p-5 bg-indigo-50 rounded-2xl border border-indigo-100">
-            <h4 className="text-sm font-bold text-indigo-900 mb-2">{t('smart_search_title')}</h4>
-            <p className="text-xs text-indigo-700 leading-relaxed">
+          <div className="p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800">
+            <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-300 mb-2">{t('smart_search_title')}</h4>
+            <p className="text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed">
               {t('smart_search_desc')}
             </p>
           </div>
@@ -132,13 +132,13 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {visibleFoods
                 .map((food) => (
-                <div key={food.id} className="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-xl hover:border-emerald-500/30 transition-all cursor-pointer relative overflow-hidden">
+                <div key={food.id} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:shadow-xl hover:border-emerald-500/30 transition-all cursor-pointer relative overflow-hidden">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-widest mb-2 inline-block">
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-md uppercase tracking-widest mb-2 inline-block">
                         {food.category}
                       </span>
-                      <h4 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">{food.name}</h4>
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">{food.name}</h4>
                       <p className="text-xs text-slate-400 font-medium">{food.servingSize}</p>
                     </div>
                     <button className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
@@ -149,23 +149,23 @@ export default function FoodLibrary({ onBack }: FoodLibraryProps) {
                   <div className="flex items-center gap-6 mb-4">
                     <div className="flex items-center gap-1.5">
                       <Flame className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-bold text-slate-700">{food.calories}</span>
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{food.calories}</span>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">kcal</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-slate-50 rounded-xl p-2 text-center border border-slate-100 group-hover:border-blue-100 transition-colors">
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2 text-center border border-slate-100 dark:border-slate-700 group-hover:border-blue-100 transition-colors">
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('protein_label')}</p>
-                      <p className="text-sm font-bold text-blue-600">{food.protein}g</p>
+                      <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{food.protein}g</p>
                     </div>
-                    <div className="bg-slate-50 rounded-xl p-2 text-center border border-slate-100 group-hover:border-emerald-100 transition-colors">
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2 text-center border border-slate-100 dark:border-slate-700 group-hover:border-emerald-100 transition-colors">
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('carbs_label')}</p>
-                      <p className="text-sm font-bold text-emerald-600">{food.carbs}g</p>
+                      <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{food.carbs}g</p>
                     </div>
-                    <div className="bg-slate-50 rounded-xl p-2 text-center border border-slate-100 group-hover:border-amber-100 transition-colors">
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2 text-center border border-slate-100 dark:border-slate-700 group-hover:border-amber-100 transition-colors">
                       <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('fats_label')}</p>
-                      <p className="text-sm font-bold text-amber-600">{food.fats}g</p>
+                      <p className="text-sm font-bold text-amber-600 dark:text-amber-400">{food.fats}g</p>
                     </div>
                   </div>
 

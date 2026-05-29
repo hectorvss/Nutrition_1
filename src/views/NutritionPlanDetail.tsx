@@ -661,14 +661,14 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   // The food library card — rendered near the top of the right column so
   // foods stay within easy drag-and-drop reach of the day's meal blocks.
   const LIBRARY_CARD = (
-          <div className="bg-white rounded-2xl border border-slate-200 p-0 shadow-sm flex flex-col overflow-hidden">
-            <div className="p-6 pb-4 border-b border-slate-100">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-0 shadow-sm flex flex-col overflow-hidden">
+            <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg">
                     <BookOpen className="w-5 h-5" />
                   </div>
-                  <h3 className="font-bold text-slate-900">
+                  <h3 className="font-bold text-slate-900 dark:text-white">
                     {mode === 'general' ? t('general_mode') : t('food_library')}
                   </h3>
                 </div>
@@ -683,7 +683,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <input
-                      className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none text-slate-700 placeholder:text-slate-400 transition-all"
+                      className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 dark:text-white border border-slate-100 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/50 outline-none text-slate-700 dark:placeholder:text-slate-500 placeholder:text-slate-400 transition-all"
                       placeholder={t('search_foods_placeholder')}
                       value={librarySearch}
                       onChange={e => setLibrarySearch(e.target.value)}
@@ -710,12 +710,12 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     key={item.id}
                     draggable
                     onDragStart={() => handleGeneralDragStart(item)}
-                    className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 flex items-center gap-3"
+                    className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 dark:hover:border-slate-700 flex items-center gap-3"
                   >
                     <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
                     <div className={`w-2 h-10 rounded-full shrink-0 ${item.color}`}></div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">{item.label}</h4>
+                      <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 transition-colors">{item.label}</h4>
                       <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{item.description}</p>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${item.bgColor}`}>
@@ -737,14 +737,14 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     key={food.id}
                     draggable
                     onDragStart={() => handleDragStart(food)}
-                    className="p-3 hover:bg-slate-50 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 flex items-center justify-between"
+                    className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all cursor-grab active:cursor-grabbing group border border-transparent hover:border-slate-200 dark:hover:border-slate-700 flex items-center justify-between"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       <GripVertical className="w-4 h-4 text-slate-300 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 transition-colors truncate">{food.name}</h4>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md uppercase tracking-widest shrink-0 ml-1">
+                          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-emerald-600 transition-colors truncate">{food.name}</h4>
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md uppercase tracking-widest shrink-0 ml-1">
                             {food.servingSize}
                           </span>
                         </div>
@@ -778,17 +778,17 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
     <div className="w-full p-6 md:p-8 lg:p-10 flex flex-col">
       {/* Breadcrumb & Client Header */}
       <div className="mb-6">
-        <nav className="flex text-sm text-slate-500 mb-4">
+        <nav className="flex text-sm text-slate-500 dark:text-slate-400 mb-4">
           <ol className="inline-flex items-center space-x-1 md:space-x-2">
             <li className="inline-flex items-center">
-              <button onClick={onBack} className="inline-flex items-center text-slate-500 hover:text-emerald-600 transition-colors">
+              <button onClick={onBack} className="inline-flex items-center text-slate-500 dark:text-slate-400 hover:text-emerald-600 transition-colors">
                 {t('nutrition')}
               </button>
             </li>
             <li>
               <div className="flex items-center">
                 <ArrowRight className="w-4 h-4 text-slate-400 mx-1" />
-                <span className="text-slate-800 font-medium">{client?.name || t('client', { defaultValue: 'Client' })}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">{client?.name || t('client', { defaultValue: 'Client' })}</span>
               </div>
             </li>
             {selectedDay && (
@@ -802,7 +802,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           </ol>
         </nav>
 
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
           <div className="relative flex-shrink-0">
             {client?.avatar ? (
               <div
@@ -810,15 +810,15 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 style={{ backgroundImage: `url("${client.avatar}")` }}
               />
             ) : (
-              <div className="w-16 h-16 rounded-2xl bg-emerald-50 shadow-sm flex items-center justify-center text-emerald-500 font-bold text-xl">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 shadow-sm flex items-center justify-center text-emerald-500 dark:text-emerald-400 font-bold text-xl">
                 {(client?.name || 'C').charAt(0).toUpperCase()}
               </div>
             )}
-            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
+            <div className="absolute -bottom-1 -right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 shadow-sm"></div>
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <h1 className="text-xl font-bold text-slate-900">{client?.name || t('client', { defaultValue: 'Client' })}</h1>
-            <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{client?.name || t('client', { defaultValue: 'Client' })}</h1>
+            <div className="flex items-center justify-center sm:justify-start gap-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1">
                 <ArrowRight className="w-4 h-4 rotate-[-45deg]" />
                 {t('goal')}: {client?.goal || 'Not Set'}
@@ -829,9 +829,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               <span className="flex items-center gap-1">{t('weight')}: {client?.weight ? `${client.weight}kg` : '--'}</span>
             </div>
           </div>
-          <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
-            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1 text-center">{t('status')}</div>
-            <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold mb-1 text-center">{t('status')}</div>
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold text-sm">
               <span className={`w-2 h-2 rounded-full ${totalItems === 0 ? 'bg-slate-400' : 'bg-emerald-500'}`}></span>
               {totalItems === 0 ? t('empty_plan') : (client?.nutritionPlanAssigned ? t('active_plan') : t('drafting'))}
             </div>
@@ -844,13 +844,13 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         {/* Left Column: Plan Content */}
         <div className="flex-1 w-full flex flex-col gap-6">
           {/* Actions Header: Print/Share + Save */}
-          <div className="bg-white rounded-2xl p-2 border border-slate-200 flex items-center justify-end shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-2 border border-slate-200 dark:border-slate-800 flex items-center justify-end shadow-sm">
             <div className="flex gap-2 pr-2">
-              <button 
+              <button
                 onClick={savePlan}
                 disabled={isSaving}
                 className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                  isSaving ? 'bg-slate-100 text-slate-400' : 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600'
+                  isSaving ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : 'bg-emerald-500 text-white shadow-sm hover:bg-emerald-600'
                 }`}
               >
                 {isSaving ? t('saving_dots') : <><Check className="w-4 h-4" /> {t('save_plan')}</>}
@@ -859,13 +859,13 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           </div>
 
           {/* Plan List */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                   {mode === 'general' ? t('daily_structure') : t('daily_meal_plan')}
                 </h2>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {mode === 'general'
                     ? `${meals.length} ${t('meals').toLowerCase()} · ${Math.round(totalCalories)} kcal ${t('target').toLowerCase()}`
                     : `${meals.length} ${t('meals').toLowerCase()} · ${Math.round(totalCalories)} kcal ${t('planned').toLowerCase()} · ${t('drag_foods_from_library')} →`
@@ -915,10 +915,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   >
                   {({ dragHandleProps, isDragging }) => (
                   <div
-                    className={`border rounded-xl p-5 transition-all bg-white shadow-sm ${isDragging ? 'opacity-50' : ''} ${
+                    className={`border rounded-xl p-5 transition-all bg-white dark:bg-slate-900 shadow-sm ${isDragging ? 'opacity-50' : ''} ${
                       isDropTarget
-                        ? 'border-emerald-400 bg-emerald-50/40 shadow-emerald-200 shadow-md'
-                        : 'border-slate-200 hover:border-emerald-500/50'
+                        ? 'border-emerald-400 bg-emerald-50/40 dark:bg-emerald-900/20 shadow-emerald-200 shadow-md'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500/50'
                     }`}
                     onDragLeave={handleDragLeave}
                   >
@@ -939,7 +939,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                                 value={editingBlockName}
                                 onChange={e => setEditingBlockName(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') commitEditBlock(); if (e.key === 'Escape') setEditingBlockId(null); }}
-                                className="text-lg font-bold text-slate-900 border-b-2 border-emerald-400 bg-transparent outline-none w-40"
+                                className="text-lg font-bold text-slate-900 dark:text-white border-b-2 border-emerald-400 bg-transparent outline-none w-40"
                                 placeholder={t('meal_name_placeholder')}
                               />
                               <div className="flex items-center gap-2">
@@ -948,7 +948,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                                   value={editingBlockTime}
                                   onChange={e => setEditingBlockTime(e.target.value)}
                                   onKeyDown={e => { if (e.key === 'Enter') commitEditBlock(); }}
-                                  className="text-sm font-medium text-slate-500 border-b border-slate-300 bg-transparent outline-none w-28"
+                                  className="text-sm font-medium text-slate-500 dark:text-slate-400 border-b border-slate-300 dark:border-slate-700 bg-transparent outline-none w-28"
                                   placeholder="e.g. 08:00 AM"
                                 />
                                 <button onClick={commitEditBlock} className="p-1 bg-emerald-500 text-white rounded-md">
@@ -961,18 +961,18 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                             </div>
                           ) : (
                             <>
-                              <h3 className="font-bold text-slate-900 text-lg">{meal.name}</h3>
-                              <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
+                              <h3 className="font-bold text-slate-900 dark:text-white text-lg">{meal.name}</h3>
+                              <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-1">
                                 <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {meal.time}</span>
                                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                <span className="font-bold text-slate-700">{Math.round(mealCals)} kcal</span>
+                                <span className="font-bold text-slate-700 dark:text-slate-300">{Math.round(mealCals)} kcal</span>
                               </div>
                             </>
                           )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="px-3 py-1.5 rounded-lg bg-slate-50 text-[10px] font-bold text-slate-600 border border-slate-200 flex items-center gap-1 uppercase tracking-widest">
+                        <span className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 uppercase tracking-widest">
                           <Flame className="w-3.5 h-3.5 text-orange-500" />
                           {`P${Math.round(meal.items.reduce((a, i) => a + i.protein * i.quantity, 0))} · C${Math.round(meal.items.reduce((a, i) => a + i.carbs * i.quantity, 0))} · F${Math.round(meal.items.reduce((a, i) => a + i.fats * i.quantity, 0))}`}
                         </span>
@@ -995,10 +995,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                     {mode === 'general' && (
                       <div className="pl-[68px] space-y-2 mt-1">
                         {meal.categories.map((cat) => (
-                          <div key={cat.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100 group/cat hover:border-slate-200 transition-all">
+                          <div key={cat.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700 group/cat hover:border-slate-200 dark:hover:border-slate-700 transition-all">
                             <div className={`w-1 h-10 rounded-full shrink-0 ${cat.color}`}></div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-slate-800">{cat.label}</p>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{cat.label}</p>
                               <p className="text-[10px] text-slate-400 font-medium truncate">{cat.example}</p>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
@@ -1007,9 +1007,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                                 min="0"
                                 value={cat.amount}
                                 onChange={e => updateCategoryAmount(meal.id, cat.id, parseFloat(e.target.value) || 0)}
-                                className="w-14 px-2 py-1 text-sm font-bold text-right border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
+                                className="w-14 px-2 py-1 text-sm font-bold text-right border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
                               />
-                              <span className="text-xs font-bold text-slate-500">g</span>
+                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">g</span>
                               <button
                                 onClick={() => removeCategory(meal.id, cat.id)}
                                 className="p-1 opacity-0 group-hover/cat:opacity-100 text-slate-300 hover:text-red-500 transition-all rounded-md hover:bg-red-50"
@@ -1021,7 +1021,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                         ))}
                         <button
                           onClick={() => addCategory(meal.id)}
-                          className="w-full p-2.5 border border-dashed border-slate-300 rounded-lg text-sm font-bold text-slate-400 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all flex items-center justify-center gap-2"
+                          className="w-full p-2.5 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-400 hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 transition-all flex items-center justify-center gap-2"
                         >
                           <Plus className="w-4 h-4" /> {t('add_macro_category')}
                         </button>
@@ -1037,7 +1037,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                       >
                       {meal.items.length === 0 && (
                         <div className={`p-4 rounded-lg border-2 border-dashed flex items-center justify-center gap-2 transition-all ${
-                          isDropTarget ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-slate-200 text-slate-400'
+                          isDropTarget ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700 text-slate-400'
                         }`}>
                           <Grid className="w-4 h-4" />
                           <span className="text-sm font-medium">
@@ -1054,13 +1054,13 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                         const effectiveFats = Math.round(item.fats * item.quantity * 10) / 10;
 
                         return (
-                          <div key={item.id} className="p-3 pr-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center gap-3 hover:shadow-md transition-shadow group/item">
+                          <div key={item.id} className="p-3 pr-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3 hover:shadow-md transition-shadow group/item">
                             <GripVertical className="w-4 h-4 text-slate-300 shrink-0 cursor-grab" />
-                            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
                               <span className="text-lg">🥗</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{item.name}</p>
                               <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
                                 <span className="text-orange-500">{effectiveCals} kcal</span>
                                 <span>·</span>
@@ -1085,9 +1085,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                                     onChange={e => setEditingQty(e.target.value)}
                                     onBlur={commitEditQty}
                                     onKeyDown={e => { if (e.key === 'Enter') commitEditQty(); }}
-                                    className="w-16 px-2 py-1 text-sm font-bold text-center border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                                    className="w-16 px-2 py-1 text-sm font-bold text-center border border-emerald-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-slate-800 dark:text-white"
                                   />
-                                  <span className="text-xs text-slate-500">g</span>
+                                  <span className="text-xs text-slate-500 dark:text-slate-400">g</span>
                                   <button onClick={commitEditQty} className="p-1 bg-emerald-500 text-white rounded-md">
                                     <Check className="w-3.5 h-3.5" />
                                   </button>
@@ -1095,7 +1095,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                               ) : (
                                 <button
                                   onClick={() => startEditQty(meal.id, item)}
-                                  className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:border-emerald-400 hover:text-emerald-600 transition-all"
+                                  className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-600 transition-all"
                                 >
                                   {formatPortion(item.quantity, item.servingSize)}
                                 </button>
@@ -1134,7 +1134,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               <div className="pt-4 flex justify-center">
                 <button 
                   onClick={addMealBlock}
-                  className="flex items-center gap-2 px-6 py-3 bg-emerald-50 text-emerald-600 rounded-xl font-bold hover:bg-emerald-100 transition-all border border-emerald-200"
+                  className="flex items-center gap-2 px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all border border-emerald-200 dark:border-emerald-900/40"
                 >
                   <Plus className="w-5 h-5" /> {t('add_meal_block')}
                 </button>
@@ -1144,10 +1144,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           </div>
 
           {/* Supplements */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col">
-            <div className="p-6 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">{t('supplements_card_title', { defaultValue: 'Suplementos' })}</h2>
-              <p className="text-sm text-slate-500">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('supplements_card_title', { defaultValue: 'Suplementos' })}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {supplements.length} {t('supplements_count_label', { defaultValue: 'suplementos en el plan' })}
               </p>
             </div>
@@ -1160,10 +1160,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                   value={supplementSearch}
                   onChange={e => setSupplementSearch(e.target.value)}
                   placeholder={t('search_supplement_db', { defaultValue: 'Buscar suplemento en la base de datos...' })}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                 />
                 {supplementSearch.trim() && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg max-h-64 overflow-y-auto">
                     {supplementResults.length === 0 ? (
                       <div className="px-4 py-3 text-sm text-slate-400">{t('no_supplements_found', { defaultValue: 'Sin resultados' })}</div>
                     ) : supplementResults.map(s => (
@@ -1171,11 +1171,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                         key={s.id || s.name}
                         type="button"
                         onClick={() => addSupplement(s)}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-emerald-50 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
                       >
                         <span className="text-lg shrink-0">{s.emoji || '💊'}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{s.name}</p>
                           <p className="text-[11px] text-slate-400 truncate">
                             {[s.category, s.recommended_dose, s.timing].filter(Boolean).join(' · ')}
                           </p>
@@ -1195,12 +1195,12 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 </div>
               ) : (
                 supplements.map(s => (
-                  <div key={s.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center gap-3 hover:shadow-md transition-shadow group/supp">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                  <div key={s.id} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3 hover:shadow-md transition-shadow group/supp">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
                       <span className="text-lg">{s.emoji || '💊'}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{s.name}</p>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{s.name}</p>
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
                         {editingSuppId === s.id ? (
                           <div className="flex items-center gap-1">
@@ -1211,7 +1211,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                               onBlur={commitEditSuppDose}
                               onKeyDown={e => { if (e.key === 'Enter') commitEditSuppDose(); }}
                               placeholder={t('dose', { defaultValue: 'Dosis' })}
-                              className="w-24 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 border border-emerald-400 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-400 normal-case"
+                              className="w-24 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 dark:bg-slate-800 border border-emerald-400 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-400 normal-case"
                             />
                             <button onMouseDown={e => e.preventDefault()} onClick={commitEditSuppDose} className="p-1 bg-emerald-500 text-white rounded-md">
                               <Check className="w-3 h-3" />
@@ -1249,14 +1249,14 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
         <div className="w-full lg:w-[380px] flex flex-col gap-6 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
 
           {/* Plan Config Card (TK-44) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
             <button
               onClick={() => setShowPlanConfig(p => !p)}
-              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+              className="w-full p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <SlidersHorizontal className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span className="text-sm font-bold text-slate-700">{t('plan_config_label', { defaultValue: 'Objetivo del plan' })}</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{t('plan_config_label', { defaultValue: 'Objetivo del plan' })}</span>
                 {targetCalories > 0 && (
                   <span className="text-[10px] font-bold text-slate-400 truncate ml-1">
                     {targetCalories} kcal · {targetMacros.p}P/{targetMacros.c}C/{targetMacros.f}F
@@ -1266,9 +1266,9 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
               <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ml-2 ${showPlanConfig ? 'rotate-90' : ''}`} />
             </button>
             {showPlanConfig && (
-              <div className="px-4 pb-4 border-t border-slate-100 space-y-4 pt-4">
+              <div className="px-4 pb-4 border-t border-slate-100 dark:border-slate-800 space-y-4 pt-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">
                     {t('target_calories_label', { defaultValue: 'Calorías objetivo' })}
                   </label>
                   <div className="flex items-center gap-2">
@@ -1278,13 +1278,13 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                       max={9999}
                       value={targetCalories || ''}
                       onChange={e => setTargetCalories(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+                      className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800"
                     />
                     <span className="text-xs font-bold text-slate-400">kcal</span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">
                     {t('macro_split_label', { defaultValue: 'Distribución de macros (%)' })}
                   </label>
                   <div className="grid grid-cols-3 gap-2">
@@ -1305,14 +1305,14 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                             const v = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
                             setTargetMacros(prev => ({ ...prev, [key]: v }));
                           }}
-                          className={`w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-center text-slate-900 focus:outline-none focus:ring-2 ${ring}`}
+                          className={`w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-center text-slate-900 dark:text-white focus:outline-none focus:ring-2 ${ring}`}
                         />
                         <span className="text-[10px] text-slate-400">%</span>
                       </div>
                     ))}
                   </div>
                   {(targetMacros.p + targetMacros.c + targetMacros.f) !== 100 && (
-                    <p className="text-[10px] text-amber-600 font-bold mt-2 flex items-center gap-1">
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-2 flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3 shrink-0" />
                       {t('macros_must_sum_100', { defaultValue: `Total: ${targetMacros.p + targetMacros.c + targetMacros.f}% — debe ser 100%` })}
                     </p>
@@ -1327,17 +1327,17 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           {LIBRARY_CARD}
 
           {/* Live Macro Totals Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex-shrink-0">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm flex-shrink-0">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-slate-900">{t('daily_macro_totals')}</h3>
-              <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-500 rounded-md uppercase tracking-widest">
+              <h3 className="font-bold text-slate-900 dark:text-white">{t('daily_macro_totals')}</h3>
+              <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md uppercase tracking-widest">
                 {totalItems === 0 ? t('empty_plan') : t('drafting')}
               </span>
             </div>
             
             <div className={`relative w-48 h-48 mx-auto mb-8 ${totalItems === 0 ? 'opacity-40 grayscale' : ''}`}>
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle className="stroke-slate-100" cx="50" cy="50" fill="transparent" r="40" strokeWidth="12"></circle>
+                <circle className="stroke-slate-100 dark:stroke-slate-800" cx="50" cy="50" fill="transparent" r="40" strokeWidth="12"></circle>
                 {totalCalories > 0 && (
                   <>
                     <circle
@@ -1365,7 +1365,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
                 )}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-3xl font-bold ${totalItems === 0 ? 'text-slate-300' : 'text-slate-900'}`}>
+                <span className={`text-3xl font-bold ${totalItems === 0 ? 'text-slate-300' : 'text-slate-900 dark:text-white'}`}>
                   {Math.round(totalCalories)}
                 </span>
                 {targetCalories > 0 ? (
@@ -1382,11 +1382,11 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
             <div className="space-y-4">
               {[
-                { label: t('protein'), value: totalProtein, kcalPerG: 4, color: totalItems === 0 ? 'bg-slate-300' : 'bg-blue-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
-                { label: t('carbs'), value: totalCarbs, kcalPerG: 4, color: totalItems === 0 ? 'bg-slate-300' : 'bg-emerald-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
-                { label: t('fats'), value: totalFats, kcalPerG: 9, color: totalItems === 0 ? 'bg-slate-300' : 'bg-amber-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900' },
+                { label: t('protein'), value: totalProtein, kcalPerG: 4, color: totalItems === 0 ? 'bg-slate-300' : 'bg-blue-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900 dark:text-white' },
+                { label: t('carbs'), value: totalCarbs, kcalPerG: 4, color: totalItems === 0 ? 'bg-slate-300' : 'bg-emerald-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900 dark:text-white' },
+                { label: t('fats'), value: totalFats, kcalPerG: 9, color: totalItems === 0 ? 'bg-slate-300' : 'bg-amber-500', textColor: totalItems === 0 ? 'text-slate-400' : 'text-slate-900 dark:text-white' },
               ].map((macro) => (
-                <div key={macro.label} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div key={macro.label} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${macro.color}`}></div>
                     <div>
@@ -1406,14 +1406,14 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
 
             {/* Calorie progress vs target (TK-44) */}
             {targetCalories > 0 && (
-              <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide">
+              <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wide">
                   <span>{t('calories_progress_label', { defaultValue: 'Progreso de calorías' })}</span>
                   <span className={totalCalories > targetCalories ? 'text-red-500' : 'text-emerald-600'}>
                     {Math.round(totalCalories)}/{targetCalories}
                   </span>
                 </div>
-                <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${totalCalories > targetCalories ? 'bg-red-500' : 'bg-emerald-500'}`}
                     style={{ width: `${Math.min(100, targetCalories > 0 ? (totalCalories / targetCalories) * 100 : 0)}%` }}
@@ -1435,39 +1435,39 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
       {/* New Meal Block Modal */}
       {showNewBlockModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900">{t('new_meal_block')}</h2>
-              <button onClick={() => setShowNewBlockModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('new_meal_block')}</h2>
+              <button onClick={() => setShowNewBlockModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('block_name')}</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">{t('block_name')}</label>
                 <input
                   autoFocus
                   value={newBlockName}
                   onChange={e => setNewBlockName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') confirmAddMealBlock(); }}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-colors"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                   placeholder="e.g. Pre-Workout Snack"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{t('time_short')}</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">{t('time_short')}</label>
                 <input
                   value={newBlockTime}
                   onChange={e => setNewBlockTime(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') confirmAddMealBlock(); }}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-colors"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:focus:bg-slate-800 transition-colors"
                   placeholder="e.g. 10:30 AM"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowNewBlockModal(false)}
-                  className="flex-1 py-2.5 font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors border border-slate-200"
+                  className="flex-1 py-2.5 font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl transition-colors border border-slate-200 dark:border-slate-700"
                 >
                   {t('cancel')}
                 </button>

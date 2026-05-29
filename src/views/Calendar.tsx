@@ -30,14 +30,14 @@ type ViewMode = 'Month' | 'Week' | 'Day';
 
 // Literal Tailwind classes per event type so the JIT compiler does not purge them.
 const MONTH_EVENT_CLASSES: Record<EventType, string> = {
-  'Video Call': 'bg-blue-50 border-blue-200 text-blue-700',
-  'In-Person': 'bg-emerald-50 border-emerald-200 text-emerald-700',
-  'Training': 'bg-emerald-50 border-emerald-200 text-emerald-700',
-  'Nutrition': 'bg-orange-50 border-orange-200 text-orange-700',
-  'Internal': 'bg-purple-50 border-purple-200 text-purple-700',
-  'Training Analysis': 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  'Video Call': 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400',
+  'In-Person': 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400',
+  'Training': 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400',
+  'Nutrition': 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/50 text-orange-700 dark:text-orange-400',
+  'Internal': 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800/50 text-purple-700 dark:text-purple-400',
+  'Training Analysis': 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400',
 };
-const MONTH_EVENT_FALLBACK = 'bg-slate-50 border-slate-200 text-slate-700';
+const MONTH_EVENT_FALLBACK = 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300';
 
 // --- New Deterministic Rendering Engine ---
 const ROW_HEIGHT_DAY = 128;
@@ -343,10 +343,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
     const calendarDays = getMonthDays(currentDate);
 
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full flex flex-col min-h-[600px]">
-        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/50">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden h-full flex flex-col min-h-[600px]">
+        <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
           {days.map(day => (
-            <div key={day} className="py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">{day}</div>
+            <div key={day} className="py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{day}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 flex-1 auto-rows-fr">
@@ -362,12 +362,12 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
                     setViewMode('Day');
                   }
                 }} 
-                className={`border-b border-r border-slate-100 p-2 min-h-[100px] transition-colors group relative cursor-pointer ${dayObj === null ? 'bg-slate-50/30' : 'hover:bg-slate-50'}`}
+                className={`border-b border-r border-slate-100 dark:border-slate-800 p-2 min-h-[100px] transition-colors group relative cursor-pointer ${dayObj === null ? 'bg-slate-50/30 dark:bg-slate-800/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
               >
                 {dayObj !== null && (
                   <>
                     <div className="flex justify-between items-start">
-                      <span className={`text-sm font-bold block mb-1 h-6 w-6 flex items-center justify-center rounded-full ${dayObj.isCurrent ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-900'}`}>{dayObj.date}</span>
+                      <span className={`text-sm font-bold block mb-1 h-6 w-6 flex items-center justify-center rounded-full ${dayObj.isCurrent ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-900 dark:text-white'}`}>{dayObj.date}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -397,7 +397,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
                         );
                       })}
                       {dayEvents.length > 3 && (
-                        <div className="text-[10px] text-slate-500 font-bold px-1.5">{t('more_count', { count: dayEvents.length - 3 })}</div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold px-1.5">{t('more_count', { count: dayEvents.length - 3 })}</div>
                       )}
                     </div>
                   </>
@@ -412,15 +412,15 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
 
   const renderWeekView = () => {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[800px]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full min-h-[800px]">
         {/* Week Header */}
-        <div className="grid grid-cols-[80px_1fr] border-b border-slate-100">
-          <div className="border-r border-slate-100 bg-slate-50/30"></div>
+        <div className="grid grid-cols-[80px_1fr] border-b border-slate-100 dark:border-slate-800">
+          <div className="border-r border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30"></div>
           <div className="grid grid-cols-7">
             {weekDates.map((d, idx) => (
-              <div key={idx} className={`py-4 text-center border-r border-slate-100 last:border-r-0 ${d.current ? 'bg-emerald-50/30' : ''}`}>
+              <div key={idx} className={`py-4 text-center border-r border-slate-100 dark:border-slate-800 last:border-r-0 ${d.current ? 'bg-emerald-50/30 dark:bg-emerald-900/20' : ''}`}>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{d.day}</p>
-                <p className={`text-xl font-bold ${d.current ? 'text-emerald-600 bg-emerald-100/50 w-10 h-10 flex items-center justify-center rounded-full mx-auto' : 'text-slate-900'}`}>{d.date}</p>
+                <p className={`text-xl font-bold ${d.current ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 w-10 h-10 flex items-center justify-center rounded-full mx-auto' : 'text-slate-900 dark:text-white'}`}>{d.date}</p>
               </div>
             ))}
           </div>
@@ -430,9 +430,9 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative scrollbar-hide">
           <div className="grid grid-cols-[80px_1fr] min-h-full">
             {/* Time Labels */}
-            <div className="border-r border-slate-100 bg-slate-50/30">
+            <div className="border-r border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30">
               {hours.map(hour => (
-                <div key={hour} className="h-24 border-b border-slate-100 flex items-start justify-center pt-2">
+                <div key={hour} className="h-24 border-b border-slate-100 dark:border-slate-800 flex items-start justify-center pt-2">
                   <span className="text-[11px] font-bold text-slate-400">{hour}</span>
                 </div>
               ))}
@@ -442,12 +442,12 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
             <div className="grid grid-cols-7 relative">
               {/* Vertical Lines */}
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="absolute top-0 bottom-0 border-r border-slate-100" style={{ left: `${(i + 1) * (100 / 7)}%` }}></div>
+                <div key={i} className="absolute top-0 bottom-0 border-r border-slate-100 dark:border-slate-800" style={{ left: `${(i + 1) * (100 / 7)}%` }}></div>
               ))}
-              
+
               {/* Horizontal Lines */}
               {hours.map((_, i) => (
-                <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i + 1) * 96}px` }}></div>
+                <div key={i} className="absolute left-0 right-0 border-b border-slate-100 dark:border-slate-800" style={{ top: `${(i + 1) * 96}px` }}></div>
               ))}
 
               {/* Current Time Indicator */}
@@ -504,13 +504,13 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
 
   const renderDayView = () => {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full min-h-[800px]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full min-h-[800px]">
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto relative scrollbar-hide">
           <div className="grid grid-cols-[100px_1fr] min-h-full">
             {/* Time Labels */}
-            <div className="border-r border-slate-100 bg-slate-50/30">
+            <div className="border-r border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30">
               {hours.map(hour => (
-                <div key={hour} className="h-32 border-b border-slate-100 flex items-start justify-center pt-4">
+                <div key={hour} className="h-32 border-b border-slate-100 dark:border-slate-800 flex items-start justify-center pt-4">
                   <span className="text-[12px] font-bold text-slate-400">{hour}</span>
                 </div>
               ))}
@@ -520,7 +520,7 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
             <div className="relative p-0 mb-8 overflow-hidden" style={{ height: '3072px' }}>
               {/* Horizontal Lines */}
               {hours.map((_, i) => (
-                <div key={i} className="absolute left-0 right-0 border-b border-slate-100" style={{ top: `${(i) * 128}px`, height: '1px' }}></div>
+                <div key={i} className="absolute left-0 right-0 border-b border-slate-100 dark:border-slate-800" style={{ top: `${(i) * 128}px`, height: '1px' }}></div>
               ))}
 
               {/* Lunch Break removed as requested */}
@@ -556,14 +556,14 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
                       {event.avatar ? (
                         <img src={event.avatar} alt="" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" referrerPolicy="no-referrer" />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-slate-500 font-bold text-sm border-2 border-white shadow-sm">
+                        <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-300 font-bold text-sm border-2 border-white dark:border-slate-700 shadow-sm">
                           {event.initials}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <h4 className={`font-bold truncate ${event.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{event.title}</h4>
+                        <h4 className={`font-bold truncate ${event.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-900 dark:text-white'}`}>{event.title}</h4>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{event.duration}</span>
                       </div>
                       <div className={`flex items-center gap-2 text-xs ${event.status === 'completed' ? 'text-slate-300' : 'text-slate-500'}`}>
@@ -620,30 +620,30 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-slate-50">
+    <div className="flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950">
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         <header className="px-6 md:px-8 lg:px-10 py-8 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0 z-10">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight capitalize">
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight capitalize">
               {viewMode === 'Day' && currentDate.toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' })}
               {viewMode === 'Week' && `${weekDates[0].dateObj.toLocaleDateString(locale, { month: 'short', day: 'numeric' })} - ${weekDates[6].dateObj.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })}`}
               {viewMode === 'Month' && currentDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
             </h1>
-            <p className="text-sm text-slate-500 font-medium mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
               {viewMode === 'Day' ? t('daily_schedule_desc') : t('manage_schedules_desc')}
             </p>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex bg-white rounded-xl p-1 border border-slate-200 shadow-sm">
+            <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 border border-slate-200 dark:border-slate-800 shadow-sm">
               {(['Day', 'Week', 'Month'] as ViewMode[]).map((mode) => (
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
                   className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                    viewMode === mode 
-                      ? 'bg-emerald-500 text-white shadow-md' 
-                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                    viewMode === mode
+                      ? 'bg-emerald-500 text-white shadow-md'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   {t(`calendar_${mode.toLowerCase()}`)}
@@ -653,10 +653,10 @@ export default function CalendarView({ onNavigate, initialView, initialDate, foc
             
             {/* Minimalist Date Controls */}
             <div className="flex items-center gap-1">
-              <button onClick={handlePrev} className="p-2 hover:bg-white rounded-lg text-slate-500 transition-colors border border-transparent hover:border-slate-200">
+              <button onClick={handlePrev} className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <button onClick={handleNext} className="p-2 hover:bg-white rounded-lg text-slate-500 transition-colors border border-transparent hover:border-slate-200">
+              <button onClick={handleNext} className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>

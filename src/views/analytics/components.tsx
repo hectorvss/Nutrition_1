@@ -66,7 +66,7 @@ export function StatCard({
   // primer instante en vez de mostrar un spinner global.
   if (isLoading) {
     return (
-      <div className="flex flex-col bg-white rounded-2xl border border-slate-200/70 p-5">
+      <div className="flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800 p-5">
         <div className="flex items-start justify-between gap-3">
           <Skeleton className="h-3 w-24" />
           <Skeleton className="h-5 w-5 rounded-md" />
@@ -83,17 +83,17 @@ export function StatCard({
   const showDelta = change !== undefined && change !== null && change !== '';
   const DeltaIcon = isNeutral ? Minus : isPositive ? ArrowUpRight : ArrowDownRight;
   const deltaTone = isNeutral
-    ? 'text-slate-500'
-    : isPositive ? 'text-emerald-600' : 'text-red-600';
+    ? 'text-slate-500 dark:text-slate-400'
+    : isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
 
   return (
-    <div className="group flex flex-col bg-white rounded-2xl border border-slate-200/70 p-5 transition-all duration-200 hover:border-slate-300 hover:shadow-[0_4px_16px_-4px_rgba(15,23,42,0.08)]">
+    <div className="group flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800 p-5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-[0_4px_16px_-4px_rgba(15,23,42,0.08)]">
       {/* Cabecera: etiqueta + icono sutil */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-1.5 min-w-0">
-          <p className="text-[13px] font-medium text-slate-500 leading-snug truncate">{title}</p>
+          <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400 leading-snug truncate">{title}</p>
           {hint && (
-            <span title={hint} className="shrink-0 text-slate-300 hover:text-slate-400 cursor-help">
+            <span title={hint} className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-slate-400 dark:hover:text-slate-500 cursor-help">
               <Info className="w-3.5 h-3.5" />
             </span>
           )}
@@ -107,10 +107,10 @@ export function StatCard({
 
       {/* Valor principal */}
       <div className="mt-3.5 flex items-baseline gap-1.5">
-        <span className="text-[28px] leading-none font-semibold tracking-tight text-slate-900 tabular-nums">
+        <span className="text-[28px] leading-none font-semibold tracking-tight text-slate-900 dark:text-white tabular-nums">
           {value}
         </span>
-        {unit && <span className="text-sm font-medium text-slate-400">{unit}</span>}
+        {unit && <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{unit}</span>}
       </div>
 
       {/* Delta + leyenda comparativa */}
@@ -149,7 +149,7 @@ export function ChartCard({
   const isLoading = loadingProp ?? ctxLoading;
 
   return (
-    <div className={`flex flex-col bg-white rounded-2xl border border-slate-200/70 p-6 transition-all duration-200 hover:border-slate-300 ${className}`}>
+    <div className={`flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800 p-6 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-700 ${className}`}>
       <div className="flex items-start justify-between gap-4 mb-5">
         {isLoading ? (
           <div className="space-y-2 flex-1 min-w-0">
@@ -159,8 +159,8 @@ export function ChartCard({
         ) : (
           <>
             <div className="min-w-0">
-              <h3 className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</h3>
-              {subtitle && <p className="text-[13px] text-slate-500 mt-0.5">{subtitle}</p>}
+              <h3 className="text-[15px] font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h3>
+              {subtitle && <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
             </div>
             {(legend || action) && (
               <div className="flex items-center gap-3 shrink-0">{legend}{action}</div>
@@ -180,9 +180,9 @@ export function ChartCard({
 export function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="flex items-baseline gap-3 pt-3">
-      <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400 shrink-0">{title}</h2>
-      {subtitle && <span className="text-xs text-slate-400 font-normal truncate">{subtitle}</span>}
-      <div className="h-px bg-slate-200/70 flex-1" />
+      <h2 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400 dark:text-slate-500 shrink-0">{title}</h2>
+      {subtitle && <span className="text-xs text-slate-400 dark:text-slate-500 font-normal truncate">{subtitle}</span>}
+      <div className="h-px bg-slate-200/70 dark:bg-slate-800 flex-1" />
     </div>
   );
 }
@@ -192,7 +192,7 @@ export function ChartLegend({ items }: { items: { color: string; label: string }
   return (
     <>
       {items.map((it, i) => (
-        <span key={i} className="flex items-center gap-1.5 text-xs text-slate-500">
+        <span key={i} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: it.color }} />
           {it.label}
         </span>
@@ -205,7 +205,7 @@ export function ChartLegend({ items }: { items: { color: string; label: string }
 export function EmptyChart({ label, height = 240 }: { label: string; height?: number }) {
   return (
     <div
-      className="w-full flex items-center justify-center text-sm text-slate-400 rounded-xl bg-slate-50/60"
+      className="w-full flex items-center justify-center text-sm text-slate-400 dark:text-slate-500 rounded-xl bg-slate-50/60 dark:bg-slate-800/40"
       style={{ height }}
     >
       {label}
@@ -221,10 +221,10 @@ export function ProgressBar({ label, value, percentage, color }: any) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-baseline text-sm">
-        <span className="font-medium text-slate-600">{label}</span>
-        <span className="font-semibold text-slate-900 tabular-nums">{value}</span>
+        <span className="font-medium text-slate-600 dark:text-slate-300">{label}</span>
+        <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{value}</span>
       </div>
-      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
         <div className={`h-full ${color} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -235,7 +235,7 @@ export function ProgressBar({ label, value, percentage, color }: any) {
 export function CohortRow({ cohort, data }: any) {
   return (
     <tr>
-      <td className="py-3 text-left pl-4 font-medium text-slate-900 text-sm">{cohort}</td>
+      <td className="py-3 text-left pl-4 font-medium text-slate-900 dark:text-white text-sm">{cohort}</td>
       {data.map((val: any, i: number) => (
         <td key={i} className="py-3">
           {val !== null ? (
@@ -247,7 +247,7 @@ export function CohortRow({ cohort, data }: any) {
               {val}%
             </div>
           ) : (
-            <span className="text-slate-300">—</span>
+            <span className="text-slate-300 dark:text-slate-600">—</span>
           )}
         </td>
       ))}
@@ -260,19 +260,19 @@ export function DeficitClient({ name, deficit, severity }: any) {
   const { t } = useLanguage();
   return (
     <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-      severity === 'high' ? 'bg-red-50/70 border-red-100' : 'bg-white border-slate-100 hover:bg-slate-50'
+      severity === 'high' ? 'bg-red-50/70 dark:bg-red-900/20 border-red-100 dark:border-red-800' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
     }`}>
-      <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-semibold text-sm shrink-0">
+      <div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-semibold text-sm shrink-0">
         {String(name || 'C').charAt(0).toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-semibold text-slate-900 truncate">{name}</h4>
-        <p className={`text-xs font-medium ${severity === 'high' ? 'text-red-500' : 'text-slate-400'}`}>{deficit}</p>
+        <h4 className="text-sm font-semibold text-slate-900 dark:text-white truncate">{name}</h4>
+        <p className={`text-xs font-medium ${severity === 'high' ? 'text-red-500 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'}`}>{deficit}</p>
       </div>
       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${
-        severity === 'high' ? 'bg-red-100 text-red-600'
-          : severity === 'med' ? 'bg-amber-100 text-amber-600'
-          : 'bg-slate-100 text-slate-500'
+        severity === 'high' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+          : severity === 'med' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
       }`}>
         {severity === 'high' ? t('analytics_high') : severity === 'med' ? t('analytics_med') : t('analytics_low')}
       </span>
@@ -286,9 +286,9 @@ export function DistributionItem({ color, label, value }: any) {
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2 min-w-0">
         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${color}`} />
-        <span className="text-sm text-slate-600 truncate">{label}</span>
+        <span className="text-sm text-slate-600 dark:text-slate-300 truncate">{label}</span>
       </div>
-      <span className="text-sm font-semibold text-slate-900 tabular-nums">{value}</span>
+      <span className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums">{value}</span>
     </div>
   );
 }
@@ -299,10 +299,10 @@ export function FrequencyItem({ label, percentage, color }: any) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-xs font-medium">
-        <span className="text-slate-600">{label}</span>
-        <span className="text-slate-900 tabular-nums">{percentage}%</span>
+        <span className="text-slate-600 dark:text-slate-300">{label}</span>
+        <span className="text-slate-900 dark:text-white tabular-nums">{percentage}%</span>
       </div>
-      <div className="w-full bg-slate-100 rounded-full h-2">
+      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
         <div className={`${color} h-2 rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -314,7 +314,7 @@ export function LegendItem({ color, label }: any) {
   return (
     <div className="flex items-center gap-2 text-xs">
       <span className={`w-2 h-2 rounded-full ${color}`} />
-      <span className="text-slate-500">{label}</span>
+      <span className="text-slate-500 dark:text-slate-400">{label}</span>
     </div>
   );
 }

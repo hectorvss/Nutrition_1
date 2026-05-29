@@ -191,18 +191,18 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center h-screen bg-slate-50 text-slate-500 font-bold">
+      <div className="flex-1 flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-bold">
         {t('loading_library')}
       </div>
     );
   }
 
-  const fieldCls = 'w-full rounded-2xl border-slate-200 bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all';
-  const labelCls = 'block text-sm font-bold text-slate-700 mb-2';
-  const cardCls = 'bg-white rounded-3xl shadow-sm border border-slate-200 p-8';
+  const fieldCls = 'w-full rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none p-4 text-sm font-medium transition-all';
+  const labelCls = 'block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2';
+  const cardCls = 'bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8';
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
       <div className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -210,12 +210,12 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
             <div>
               <button
                 onClick={onBack}
-                className="flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition-colors mb-2"
+                className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-emerald-600 transition-colors mb-2"
               >
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 {t('back_to_library')}
               </button>
-              <h2 className="text-3xl font-bold text-slate-900">
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
                 {isEditMode ? t('edit_recipe') : t('create_recipe')}
               </h2>
               {error && <p className="text-sm text-red-500 font-bold mt-2">{error}</p>}
@@ -223,7 +223,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
             <div className="flex gap-3">
               <button
                 onClick={onBack}
-                className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all font-bold"
+                className="px-6 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all font-bold"
               >
                 {isEs ? 'Cancelar' : 'Cancel'}
               </button>
@@ -243,7 +243,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
             <div className="flex-1 space-y-8 pb-20">
               {/* Basic Info */}
               <div className={cardCls}>
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                   <span className="material-symbols-outlined text-emerald-500">info</span>
                   {t('basic_information')}
                 </h3>
@@ -270,7 +270,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                     <div>
                       <label className={labelCls}>{t('category_label')}</label>
                       <Select value={category} onChange={setCategory}
-                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 outline-none p-4 text-sm font-medium">
+                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white outline-none p-4 text-sm font-medium">
                         {CATEGORY_KEYS.map(k => (
                           <option key={k} value={k}>{categoryLabel(k, language)}</option>
                         ))}
@@ -279,7 +279,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                     <div>
                       <label className={labelCls}>{isEs ? 'Dificultad' : 'Difficulty'}</label>
                       <Select value={difficulty} onChange={setDifficulty}
-                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 outline-none p-4 text-sm font-medium">
+                        className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white outline-none p-4 text-sm font-medium">
                         {DIFFICULTY_KEYS.map(k => (
                           <option key={k} value={k}>{difficultyLabel(k, language)}</option>
                         ))}
@@ -327,7 +327,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
               {/* Ingredients */}
               <div className={cardCls}>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-500">shopping_basket</span>
                     {t('ingredients_section')}
                   </h3>
@@ -341,18 +341,18 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                 </div>
                 <div className="space-y-3">
                   {ingredients.map((item, idx) => (
-                    <div key={idx} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 hover:border-emerald-500/30 transition-all space-y-3">
+                    <div key={idx} className="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 hover:border-emerald-500/30 transition-all space-y-3">
                       <div className="flex items-center gap-3">
                         <input
                           type="text"
-                          className="flex-1 bg-transparent border-none p-0 text-sm font-bold focus:ring-0 placeholder-slate-400"
+                          className="flex-1 bg-transparent border-none p-0 text-sm font-bold text-slate-900 dark:text-white focus:ring-0 placeholder-slate-400 dark:placeholder-slate-500"
                           value={item.name}
                           onChange={e => updateIngredient(idx, { name: e.target.value })}
                           placeholder={isEs ? 'Ingrediente' : 'Ingredient'}
                         />
                         <input
                           type="number"
-                          className="w-20 rounded-xl border-slate-200 bg-white py-2 text-sm text-center font-bold focus:ring-2 focus:ring-emerald-500"
+                          className="w-20 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white py-2 text-sm text-center font-bold focus:ring-2 focus:ring-emerald-500"
                           value={item.amount}
                           onChange={e => updateIngredient(idx, { amount: e.target.value })}
                           placeholder="0"
@@ -360,7 +360,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                         <Select
                           value={item.unit}
                           onChange={(v) => updateIngredient(idx, { unit: v })}
-                          className="w-28 rounded-xl border border-slate-200 bg-white py-2 px-3 text-sm font-bold"
+                          className="w-28 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white py-2 px-3 text-sm font-bold"
                         >
                           <option value="g">g</option>
                           <option value="ml">ml</option>
@@ -379,7 +379,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                       </div>
                       <input
                         type="text"
-                        className="w-full bg-white rounded-xl border-slate-200 py-2 px-3 text-xs font-medium focus:ring-2 focus:ring-emerald-500"
+                        className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white dark:placeholder-slate-500 rounded-xl border-slate-200 dark:border-slate-700 py-2 px-3 text-xs font-medium focus:ring-2 focus:ring-emerald-500"
                         value={item.note}
                         onChange={e => updateIngredient(idx, { note: e.target.value })}
                         placeholder={isEs ? 'Nota / preparación (ej. picado, a temperatura ambiente)' : 'Note / prep (e.g. diced, at room temperature)'}
@@ -392,7 +392,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
               {/* Preparation Guide */}
               <div className={cardCls}>
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-500">menu_book</span>
                     {t('preparation_guide')}
                   </h3>
@@ -406,16 +406,16 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                 </div>
                 <div className="space-y-6">
                   {steps.map((step, idx) => (
-                    <div key={idx} className="relative flex gap-6 p-6 rounded-2xl border border-slate-100 bg-slate-50/30">
+                    <div key={idx} className="relative flex gap-6 p-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30">
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold shadow-lg shadow-emerald-500/20">{idx + 1}</div>
-                        <div className="w-0.5 h-full bg-slate-200 rounded-full"></div>
+                        <div className="w-0.5 h-full bg-slate-200 dark:bg-slate-700 rounded-full"></div>
                       </div>
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center justify-between gap-2">
                           <input
                             type="text"
-                            className="w-full bg-transparent border-none p-0 text-lg font-bold text-slate-900 focus:ring-0"
+                            className="w-full bg-transparent border-none p-0 text-lg font-bold text-slate-900 dark:text-white focus:ring-0"
                             value={step.title}
                             onChange={e => updateStep(idx, { title: e.target.value })}
                             placeholder={isEs ? 'Título del paso' : 'Step title'}
@@ -428,7 +428,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                           </button>
                         </div>
                         <textarea
-                          className="w-full rounded-2xl border-slate-200 bg-white text-sm p-4 focus:ring-2 focus:ring-emerald-500 min-h-[90px] font-medium"
+                          className="w-full rounded-2xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white dark:placeholder-slate-500 text-sm p-4 focus:ring-2 focus:ring-emerald-500 min-h-[90px] font-medium"
                           value={step.text}
                           onChange={e => updateStep(idx, { text: e.target.value })}
                           placeholder={isEs ? 'Describe el paso con detalle…' : 'Describe the step in detail…'}
@@ -441,7 +441,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
 
               {/* Equipment, tips & storage */}
               <div className={cardCls}>
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
                   <span className="material-symbols-outlined text-emerald-500">blender</span>
                   {isEs ? 'Equipo, consejos y conservación' : 'Equipment, tips & storage'}
                 </h3>
@@ -480,19 +480,19 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
             {/* Right Column: Preview & Stats */}
             <div className="lg:w-96 space-y-8">
               {/* Nutrition Stats */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                  <h3 className="font-bold text-slate-900">{t('nutrition_per_serving')}</h3>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                  <h3 className="font-bold text-slate-900 dark:text-white">{t('nutrition_per_serving')}</h3>
                 </div>
                 <div className="p-8">
                   <div className="flex justify-center mb-8">
                     <div className="relative w-40 h-40 flex items-center justify-center">
                       <svg className="w-full h-full transform -rotate-90">
-                        <circle className="text-slate-100" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" strokeWidth="12" />
+                        <circle className="text-slate-100 dark:text-slate-800" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" strokeWidth="12" />
                         <circle className="text-emerald-500" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" strokeWidth="12" strokeDasharray="439.8" strokeDashoffset={donutOffset} />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                        <span className="text-4xl font-bold text-slate-900 tracking-tight">{calNum}</span>
+                        <span className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{calNum}</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('kcal_short')}</span>
                       </div>
                     </div>
@@ -501,7 +501,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('kcal_short')}</label>
                       <input type="number" value={calories} onChange={e => setCalories(e.target.value)}
-                        className="w-full rounded-xl border-slate-200 bg-slate-50 py-2 px-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500" />
+                        className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white py-2 px-3 text-sm font-bold focus:ring-2 focus:ring-emerald-500" />
                     </div>
                     {[
                       { label: t('protein'), value: protein, setter: setProtein, color: 'bg-emerald-500', percent: pct(macroProtein) },
@@ -510,18 +510,18 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                     ].map((macro, idx) => (
                       <div key={idx}>
                         <div className="flex justify-between items-center text-sm font-bold mb-2">
-                          <span className="text-slate-500">{macro.label}</span>
+                          <span className="text-slate-500 dark:text-slate-400">{macro.label}</span>
                           <input type="number" value={macro.value} onChange={e => macro.setter(e.target.value)}
-                            className="w-20 rounded-xl border-slate-200 bg-slate-50 py-1.5 px-2 text-sm text-right font-bold focus:ring-2 focus:ring-emerald-500" />
+                            className="w-20 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white py-1.5 px-2 text-sm text-right font-bold focus:ring-2 focus:ring-emerald-500" />
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2">
                           <div className={`${macro.color} h-2 rounded-full`} style={{ width: `${macro.percent}%` }}></div>
                         </div>
                       </div>
                     ))}
                   </div>
                   {/* Micronutrientes */}
-                  <div className="mt-8 pt-6 border-t border-slate-100">
+                  <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
                     <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
                       {isEs ? 'Micronutrientes (por ración)' : 'Micronutrients (per serving)'}
                     </h4>
@@ -535,7 +535,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                         <div key={i}>
                           <label className="block text-[10px] font-bold text-slate-400 mb-1">{m.label}</label>
                           <input type="number" value={m.value} onChange={e => m.setter(e.target.value)}
-                            className="w-full rounded-xl border-slate-200 bg-slate-50 py-1.5 px-2 text-sm font-bold focus:ring-2 focus:ring-emerald-500" />
+                            className="w-full rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white py-1.5 px-2 text-sm font-bold focus:ring-2 focus:ring-emerald-500" />
                         </div>
                       ))}
                     </div>
@@ -545,7 +545,7 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
 
               {/* Diet labels & allergens */}
               <div className={cardCls}>
-                <h3 className="text-sm font-bold text-slate-900 mb-4">{isEs ? 'Apto para' : 'Suitable for'}</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">{isEs ? 'Apto para' : 'Suitable for'}</h3>
                 <div className="flex flex-wrap gap-2 mb-6">
                   {DIET_KEYS.map(k => (
                     <button
@@ -554,14 +554,14 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
                       className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
                         dietLabels.includes(k)
                           ? 'bg-emerald-500 text-white border-emerald-500'
-                          : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'
+                          : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-emerald-300'
                       }`}
                     >
                       {dietLabel(k, language)}
                     </button>
                   ))}
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 mb-4">{isEs ? 'Contiene alérgenos' : 'Contains allergens'}</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">{isEs ? 'Contiene alérgenos' : 'Contains allergens'}</h3>
                 <div className="flex flex-wrap gap-2">
                   {ALLERGEN_KEYS.map(k => (
                     <button

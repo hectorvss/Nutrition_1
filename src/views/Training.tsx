@@ -159,10 +159,10 @@ export default function Training() {
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
       {assignError && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl shadow-lg">
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl shadow-lg">
           <span className="material-symbols-outlined text-[20px]">error</span>
           <span className="text-sm font-medium">{assignError}</span>
-          <button onClick={() => setAssignError(null)} className="text-red-400 hover:text-red-600 font-bold">
+          <button onClick={() => setAssignError(null)} className="text-red-400 hover:text-red-600 dark:hover:text-red-300 font-bold">
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>

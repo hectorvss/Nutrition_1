@@ -24,6 +24,9 @@ const PALETTE = {
 
 const AXIS_TICK = { fontSize: 12, fill: '#94a3b8' };
 const GRID_PROPS = { strokeDasharray: '3 3', stroke: '#f1f5f9' };
+// TODO(dark): recharts contentStyle is a plain JS object and can't read the `.dark`
+// class. White tooltip stays legible in dark; for a true dark tooltip use bg #1e293b /
+// text #f1f5f9 behind a theme hook.
 const TOOLTIP_STYLE = { borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 12 };
 
 export default function NutritionAnalytics({ data, loading }: any) {
@@ -228,10 +231,10 @@ export default function NutritionAnalytics({ data, loading }: any) {
           { color: '#94a3b8', label: t('goal_label') },
         ]} />}
       >
-        <div className="h-[300px] w-full relative pb-6 border-b border-slate-100 overflow-hidden">
+        <div className="h-[300px] w-full relative pb-6 border-b border-slate-100 dark:border-slate-800 overflow-hidden">
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="w-full h-px bg-slate-50"></div>
+              <div key={i} className="w-full h-px bg-slate-50 dark:bg-slate-800"></div>
             ))}
           </div>
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" preserveAspectRatio="none" viewBox="0 0 700 300">
@@ -414,13 +417,13 @@ export default function NutritionAnalytics({ data, loading }: any) {
 
       {/* ===================== Clientes a vigilar ===================== */}
       <SectionHeader title={t('nutri_cat_watch', { defaultValue: 'Clientes a vigilar' })} />
-      <div className="bg-white rounded-2xl border border-slate-200/70 p-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/70 dark:border-slate-800 p-6">
         {isLoading ? (
           <>
             <Skeleton className="h-4 w-48 mb-4" />
             <div className="space-y-3">
               {[0,1,2,3].map(i => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                   <Skeleton className="h-9 w-9 rounded-full" />
                   <div className="flex-1 space-y-2">
                     <Skeleton className="h-3 w-32" />
@@ -433,7 +436,7 @@ export default function NutritionAnalytics({ data, loading }: any) {
           </>
         ) : (
           <>
-            <h3 className="text-[15px] font-semibold tracking-tight text-slate-900 mb-4">{t('top_deficit_clients')}</h3>
+            <h3 className="text-[15px] font-semibold tracking-tight text-slate-900 dark:text-white mb-4">{t('top_deficit_clients')}</h3>
             <div className="flex flex-col gap-3">
               {data?.topDeficits && data.topDeficits.length > 0 ? (
                 data.topDeficits.map((client: any, idx: number) => (

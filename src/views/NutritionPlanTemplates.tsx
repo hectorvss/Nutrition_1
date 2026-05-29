@@ -79,28 +79,28 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
 
   return (
     <div className="w-full p-6 md:p-8 lg:p-10">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-h-[calc(100vh-160px)]">
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <button onClick={onBack} className="text-slate-500 hover:text-emerald-500 flex items-center gap-1 text-sm font-medium mb-2">
+            <button onClick={onBack} className="text-slate-500 dark:text-slate-400 hover:text-emerald-500 flex items-center gap-1 text-sm font-medium mb-2">
               <ArrowLeft className="w-4 h-4" /> {t('nutrition')}
             </button>
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Grid className="w-6 h-6 text-emerald-500" />
               {t('plan_templates_title', { defaultValue: 'Plantillas de Plan' })}
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               {t('plan_templates_manage_desc', { defaultValue: 'Crea y gestiona plantillas reutilizables para asignar a tus clientes.' })}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex bg-slate-100 rounded-xl p-1">
+            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
               <button onClick={() => setLayout('grid')} title={t('grid_view', { defaultValue: 'Cuadrícula' })}
-                className={`p-2 rounded-lg transition-colors ${layout === 'grid' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400'}`}>
+                className={`p-2 rounded-lg transition-colors ${layout === 'grid' ? 'bg-white dark:bg-slate-900 shadow-sm text-emerald-600' : 'text-slate-400'}`}>
                 <LayoutGrid className="w-4 h-4" />
               </button>
               <button onClick={() => setLayout('rows')} title={t('rows_view', { defaultValue: 'Filas' })}
-                className={`p-2 rounded-lg transition-colors ${layout === 'rows' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-400'}`}>
+                className={`p-2 rounded-lg transition-colors ${layout === 'rows' ? 'bg-white dark:bg-slate-900 shadow-sm text-emerald-600' : 'text-slate-400'}`}>
                 <Rows3 className="w-4 h-4" />
               </button>
             </div>
@@ -117,7 +117,7 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
             <div className={layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' : 'flex flex-col gap-2'}>
               {Array.from({ length: layout === 'grid' ? 9 : 8 }).map((_, i) => (
                 layout === 'rows' ? (
-                  <div key={`sk-${i}`} className="flex items-center gap-4 p-4 border border-slate-200/70 rounded-xl">
+                  <div key={`sk-${i}`} className="flex items-center gap-4 p-4 border border-slate-200/70 dark:border-slate-800 rounded-xl">
                     <Skeleton className="h-4 w-20 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <Skeleton className="h-4 w-3/4" />
@@ -126,7 +126,7 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
                     <Skeleton className="h-3 w-10 hidden md:block" />
                   </div>
                 ) : (
-                  <div key={`sk-${i}`} className="bg-white border border-slate-200/70 rounded-2xl p-5 shadow-sm">
+                  <div key={`sk-${i}`} className="bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
                     <Skeleton className="h-5 w-24" />
                     <Skeleton className="h-4 w-3/4 mt-3" />
                     <Skeleton className="h-3 w-1/2 mt-2" />
@@ -156,16 +156,16 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
                 if (layout === 'rows') {
                   return (
                     <div key={tpl.id || tpl.key} onClick={edit}
-                      className="group flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-colors">
+                      className="group flex items-center gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-emerald-300 hover:bg-emerald-50/30 dark:hover:bg-emerald-900/20 cursor-pointer transition-colors">
                       <div className="flex items-center gap-1.5 text-orange-500 font-bold w-24 shrink-0">
                         <Flame className="w-4 h-4" /><span>{(tpl.target_calories || 0).toLocaleString()}</span>
                         <span className="text-[9px] text-slate-400 uppercase font-bold">kcal</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900 truncate">{tpl.name}</h3>
+                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{tpl.name}</h3>
                         {macros && (
                           <div className="flex items-center gap-2 mt-1">
-                            <div className="flex-1 max-w-[120px] bg-slate-100 rounded-full h-1.5 overflow-hidden flex">
+                            <div className="flex-1 max-w-[120px] bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden flex">
                               <div className="bg-blue-500 h-full" style={{ width: `${macros.p}%` }} />
                               <div className="bg-emerald-500 h-full" style={{ width: `${macros.c}%` }} />
                               <div className="bg-amber-500 h-full" style={{ width: `${macros.f}%` }} />
@@ -184,7 +184,7 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
                 }
                 return (
                   <div key={tpl.id || tpl.key} onClick={edit}
-                    className="group bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer">
+                    className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all cursor-pointer">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 text-orange-500 font-bold text-lg">
@@ -192,8 +192,8 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
                           {(tpl.target_calories || 0).toLocaleString()}
                           <span className="text-[10px] text-slate-400 uppercase font-bold mt-1">kcal</span>
                         </div>
-                        <h3 className="font-bold text-lg text-slate-900 leading-tight mt-1 truncate">{tpl.name}</h3>
-                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{tpl.description || '—'}</p>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight mt-1 truncate">{tpl.name}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{tpl.description || '—'}</p>
                       </div>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => { e.stopPropagation(); edit(); }} className="p-1.5 text-slate-400 hover:text-emerald-500"><Pencil className="w-4 h-4" /></button>
@@ -201,7 +201,7 @@ export default function NutritionPlanTemplates({ onBack, onEditTemplate }: Nutri
                       </div>
                     </div>
                     {macros && (
-                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden flex mt-3">
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden flex mt-3">
                         <div className="bg-blue-500 h-full" style={{ width: `${macros.p}%` }}></div>
                         <div className="bg-emerald-500 h-full" style={{ width: `${macros.c}%` }}></div>
                         <div className="bg-amber-500 h-full" style={{ width: `${macros.f}%` }}></div>

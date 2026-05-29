@@ -108,17 +108,17 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-screen bg-slate-50 gap-4">
+      <div className="flex-1 flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-slate-950 gap-4">
         <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
-        <p className="text-slate-500 font-bold">{t('loading_library')}</p>
+        <p className="text-slate-500 dark:text-slate-400 font-bold">{t('loading_library')}</p>
       </div>
     );
   }
 
   if (error || !recipe) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center h-screen bg-slate-50 gap-4 p-10">
-        <h2 className="text-xl font-bold text-slate-900">{error || t('no_foods_found')}</h2>
+      <div className="flex-1 flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-slate-950 gap-4 p-10">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">{error || t('no_foods_found')}</h2>
         <button
           onClick={onBack}
           className="px-6 py-3 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-600 transition-all"
@@ -147,11 +147,11 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
   ].filter(m => m.value != null && m.value !== ('' as any));
 
   const sectionTitle = (icon: React.ReactNode, text: string) => (
-    <h2 className="text-2xl font-bold text-slate-900 mb-8 flex items-center gap-3">{icon}{text}</h2>
+    <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-8 flex items-center gap-3">{icon}{text}</h2>
   );
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 relative">
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 relative">
       <div className="flex-1 h-full overflow-y-auto scrollbar-hide">
         {/* Hero Section */}
         <div className="w-full relative h-[400px] lg:h-[500px]">
@@ -236,11 +236,11 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
                 { icon: <Flame className="w-5 h-5 text-orange-500" />, label: isEs ? 'Cocción' : 'Cook', value: `${cook} min` },
                 { icon: <Clock className="w-5 h-5 text-blue-500" />, label: isEs ? 'Total' : 'Total', value: `${totalTime} min` },
               ].map((b, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-3">
+                <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 flex items-center gap-3">
                   {b.icon}
                   <div>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{b.label}</div>
-                    <div className="text-lg font-bold text-slate-900">{b.value}</div>
+                    <div className="text-lg font-bold text-slate-900 dark:text-white">{b.value}</div>
                   </div>
                 </div>
               ))}
@@ -251,17 +251,17 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
             {/* Left Column */}
             <div className="lg:col-span-2 space-y-12">
               {/* Ingredients */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                 {sectionTitle(<Zap className="w-6 h-6 text-emerald-500" />, t('ingredients_section'))}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(recipe.ingredients || []).map((ing, idx) => (
-                    <div key={idx} className="flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
+                    <div key={idx} className="flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-800">
                       <div className={`w-12 h-12 shrink-0 rounded-full ${INGREDIENT_COLORS[idx % INGREDIENT_COLORS.length]} flex items-center justify-center font-bold text-sm`}>
                         {(ing.name || '?').charAt(0).toUpperCase()}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-900">{ing.name}</span>
-                        <span className="text-xs text-slate-500 font-medium">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{ing.name}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                           {[ing.amount, ing.unit].filter(Boolean).join(' ')}
                         </span>
                         {ing.note && (
@@ -274,16 +274,16 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
               </div>
 
               {/* Preparation */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                 {sectionTitle(<Edit3 className="w-6 h-6 text-emerald-500" />, t('preparation_guide'))}
                 <div className="space-y-8">
                   {(recipe.steps || []).map((step, idx) => (
                     <div key={idx} className="flex gap-6">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center text-sm border border-emerald-100">{idx + 1}</div>
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-sm border border-emerald-100 dark:border-emerald-800">{idx + 1}</div>
                       <div className="flex-1">
-                        {step.title && <h3 className="font-bold text-slate-900 mb-2">{step.title}</h3>}
-                        <p className="text-sm text-slate-500 leading-relaxed font-medium">{step.text}</p>
-                        {idx < (recipe.steps || []).length - 1 && <div className="w-full h-px bg-slate-100 mt-8"></div>}
+                        {step.title && <h3 className="font-bold text-slate-900 dark:text-white mb-2">{step.title}</h3>}
+                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{step.text}</p>
+                        {idx < (recipe.steps || []).length - 1 && <div className="w-full h-px bg-slate-100 dark:bg-slate-800 mt-8"></div>}
                       </div>
                     </div>
                   ))}
@@ -292,13 +292,13 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
 
               {/* Chef's tips */}
               {(recipe.tips || []).length > 0 && (
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                   {sectionTitle(<Lightbulb className="w-6 h-6 text-amber-500" />, isEs ? 'Consejos del chef' : "Chef's tips")}
                   <ul className="space-y-3">
                     {(recipe.tips || []).map((tip, idx) => (
-                      <li key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50/60 border border-amber-100">
+                      <li key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
                         <Lightbulb className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                        <span className="text-sm text-slate-700 font-medium leading-relaxed">{tip}</span>
+                        <span className="text-sm text-slate-700 dark:text-slate-200 font-medium leading-relaxed">{tip}</span>
                       </li>
                     ))}
                   </ul>
@@ -307,9 +307,9 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
 
               {/* Storage & meal-prep */}
               {recipe.storage && (
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                   {sectionTitle(<Refrigerator className="w-6 h-6 text-blue-500" />, isEs ? 'Conservación y meal-prep' : 'Storage & meal-prep')}
-                  <p className="text-sm text-slate-600 leading-relaxed font-medium">{recipe.storage}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">{recipe.storage}</p>
                 </div>
               )}
             </div>
@@ -317,37 +317,37 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
             {/* Right Column */}
             <div className="space-y-8">
               {/* Macronutrients */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                 <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">{t('macronutrients')}</h3>
                 <div className="flex justify-between items-end mb-4">
-                  <div className="text-4xl font-bold text-slate-900 tracking-tight">{recipe.calories || 0} <span className="text-sm font-bold text-slate-400">kcal</span></div>
+                  <div className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">{recipe.calories || 0} <span className="text-sm font-bold text-slate-400">kcal</span></div>
                 </div>
-                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex mb-6">
+                <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex mb-6">
                   <div className="h-full bg-emerald-500" style={{ width: `${pct(protein)}%` }}></div>
                   <div className="h-full bg-blue-400" style={{ width: `${pct(carbs)}%` }}></div>
                   <div className="h-full bg-amber-400" style={{ width: `${pct(fats)}%` }}></div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 text-center border border-slate-100 dark:border-slate-800">
                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('protein')}</div>
                     <div className="text-sm font-bold text-emerald-600">{protein}g</div>
                   </div>
-                  <div className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 text-center border border-slate-100 dark:border-slate-800">
                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('carbs')}</div>
                     <div className="text-sm font-bold text-blue-500">{carbs}g</div>
                   </div>
-                  <div className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 text-center border border-slate-100 dark:border-slate-800">
                     <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">{t('fats')}</div>
                     <div className="text-sm font-bold text-amber-500">{fats}g</div>
                   </div>
                 </div>
                 {/* Micronutrients */}
                 {micros.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 gap-3">
+                  <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-3">
                     {micros.map((m, i) => (
                       <div key={i} className="flex justify-between items-baseline">
-                        <span className="text-xs font-medium text-slate-500">{m.label}</span>
-                        <span className="text-sm font-bold text-slate-900">{m.value}{m.unit}</span>
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{m.label}</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">{m.value}{m.unit}</span>
                       </div>
                     ))}
                   </div>
@@ -356,7 +356,7 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
 
               {/* Diet labels & allergens */}
               {((recipe.diet_labels || []).length > 0 || (recipe.allergens || []).length > 0) && (
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 space-y-5">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8 space-y-5">
                   {(recipe.diet_labels || []).length > 0 && (
                     <div>
                       <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -364,7 +364,7 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {(recipe.diet_labels || []).map(k => (
-                          <span key={k} className="px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          <span key={k} className="px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">
                             {dietLabel(k, language)}
                           </span>
                         ))}
@@ -378,7 +378,7 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {(recipe.allergens || []).map(k => (
-                          <span key={k} className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                          <span key={k} className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800">
                             {allergenLabel(k, language)}
                           </span>
                         ))}
@@ -390,14 +390,14 @@ export default function RecipeDetail({ recipeId, onBack, onEdit }: RecipeDetailP
 
               {/* Equipment */}
               {(recipe.equipment || []).length > 0 && (
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <Blend className="w-4 h-4 text-slate-500" /> {isEs ? 'Equipo necesario' : 'Equipment needed'}
                   </h3>
                   <ul className="space-y-2">
                     {(recipe.equipment || []).map((eq, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                      <li key={idx} className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
                         {eq}
                       </li>
                     ))}

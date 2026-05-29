@@ -111,7 +111,7 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onU
     setDetails.length > 0 && setDetails.length !== (parseInt(exercise.sets, 10) || 0);
 
   return (
-    <div className="px-6 py-6 bg-slate-50/50 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
+    <div className="px-6 py-6 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 animate-in slide-in-from-top-2 duration-200">
       <div className="flex flex-col gap-6">
         {/* Per-set distribution editor */}
         <div className="flex flex-col gap-3">
@@ -125,7 +125,7 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onU
             {countMismatch && (
               <button
                 onClick={syncFromSetsCount}
-                className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-lg transition-colors"
+                className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg transition-colors"
               >
                 <span className="material-symbols-outlined text-[14px]">sync</span>
                 {tt('sync_set_rows', 'Sincronizar con series', 'Sync to sets count')}
@@ -146,13 +146,13 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onU
               </div>
               {setDetails.map((row, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                  <div className="col-span-1 text-center text-xs font-bold text-slate-400">#{row.set}</div>
-                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.reps} onChange={(e) => updateSetField(idx, 'reps', e.target.value)} />
-                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.weight || ''} onChange={(e) => updateSetField(idx, 'weight', e.target.value)} />
-                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.rir} onChange={(e) => updateSetField(idx, 'rir', e.target.value)} />
-                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.intensity} onChange={(e) => updateSetField(idx, 'intensity', e.target.value)} />
-                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.rest} onChange={(e) => updateSetField(idx, 'rest', e.target.value)} />
-                  <button onClick={() => removeSetRow(idx)} className="col-span-1 flex items-center justify-center p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                  <div className="col-span-1 text-center text-xs font-bold text-slate-400 dark:text-slate-500">#{row.set}</div>
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.reps} onChange={(e) => updateSetField(idx, 'reps', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.weight || ''} onChange={(e) => updateSetField(idx, 'weight', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.rir} onChange={(e) => updateSetField(idx, 'rir', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.intensity} onChange={(e) => updateSetField(idx, 'intensity', e.target.value)} />
+                  <input className="col-span-2 w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={row.rest} onChange={(e) => updateSetField(idx, 'rest', e.target.value)} />
+                  <button onClick={() => removeSetRow(idx)} className="col-span-1 flex items-center justify-center p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors">
                     <span className="material-symbols-outlined text-[16px]">close</span>
                   </button>
                 </div>
@@ -162,7 +162,7 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onU
 
           <button
             onClick={addSetRow}
-            className="self-start text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 px-3 py-1.5 bg-emerald-50 rounded-xl transition-colors"
+            className="self-start text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl transition-colors"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
             {tt('add_set_row', 'Añadir serie', 'Add set row')}
@@ -181,7 +181,7 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onU
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">{t('exercise_explanation')}</span>
           </div>
           <textarea
-            className="w-full p-4 rounded-2xl bg-white border border-slate-200 min-h-[100px] text-sm text-slate-600 outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500/50 resize-none font-medium placeholder:text-slate-300 transition-all shadow-sm"
+            className="w-full p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 min-h-[100px] text-sm text-slate-600 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/10 focus:border-emerald-500/50 resize-none font-medium placeholder:text-slate-300 dark:placeholder:text-slate-500 transition-all shadow-sm"
             placeholder={t('exercise_explanation_placeholder')}
             value={exercise.explanation || ""}
             onChange={(e) => onUpdateExplanation(e.target.value)}
@@ -503,20 +503,20 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   // Workout summary card — rendered below the exercise library so the library
   // stays within easy drag-and-drop reach of the workout blocks.
   const WORKOUT_SUMMARY = (
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm p-8 shrink-0">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm p-8 shrink-0">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-bold text-slate-900">{t('workout_summary')}</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white">{t('workout_summary')}</h3>
               </div>
               <div className="flex flex-col items-center">
                 <div className={`relative w-44 h-44 ${totalExercises === 0 ? 'opacity-40 grayscale' : ''}`}>
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                    <circle className="text-slate-100" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" />
+                    <circle className="text-slate-100 dark:text-slate-800" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" />
                     {totalExercises > 0 && (
                       <circle className="text-emerald-500" cx="18" cy="18" r="15.9155" fill="transparent" stroke="currentColor" strokeWidth="3.5" strokeDasharray="100 100" strokeLinecap="round" />
                     )}
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center flex-col">
-                    <span className={`text-3xl font-black leading-none ${totalExercises === 0 ? 'text-slate-400' : 'text-slate-900'}`}>{totalExercises}</span>
+                    <span className={`text-3xl font-black leading-none ${totalExercises === 0 ? 'text-slate-400' : 'text-slate-900 dark:text-white'}`}>{totalExercises}</span>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
                   </div>
                 </div>
@@ -525,16 +525,16 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{t('add_exercises_for_breakdown')}</p>
                   ) : (
                     <div className="grid grid-cols-3 gap-3 w-full">
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-2xl font-black text-slate-900 leading-none">{blocks.length}</span>
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                        <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{blocks.length}</span>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('blocks_label', { defaultValue: 'Bloques' })}</span>
                       </div>
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-2xl font-black text-slate-900 leading-none">{totalExercises}</span>
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                        <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{totalExercises}</span>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('exercises')}</span>
                       </div>
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-2xl font-black text-slate-900 leading-none">{totalSets}</span>
+                      <div className="flex flex-col items-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                        <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{totalSets}</span>
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('sets_label', { defaultValue: 'Series' })}</span>
                       </div>
                     </div>
@@ -545,21 +545,21 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between shrink-0">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 py-5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
+          <button onClick={onBack} className="p-2 -ml-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <div className="h-10 w-px bg-slate-100 mx-2"></div>
+          <div className="h-10 w-px bg-slate-100 dark:bg-slate-800 mx-2"></div>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-cover bg-center border border-slate-100" style={{ backgroundImage: `url("${client.avatar}")` }}></div>
-              {client.online && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>}
+              <div className="w-10 h-10 rounded-full bg-cover bg-center border border-slate-100 dark:border-slate-800" style={{ backgroundImage: `url("${client.avatar}")` }}></div>
+              {client.online && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900"></div>}
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 leading-tight">{client.name}</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">{client.name}</h2>
               <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 <span>{t('training')}</span>
                 <span className="material-symbols-outlined text-[12px]">chevron_right</span>
@@ -590,9 +590,9 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
           {/* Left Column: Workout Blocks */}
           <div className="flex-1 flex flex-col gap-6 pr-2 pb-20">
             {loadError && (
-              <div className="bg-red-50 border border-red-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center gap-3">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-3xl p-8 flex flex-col items-center justify-center text-center gap-3">
                 <span className="material-symbols-outlined text-4xl text-red-400">error</span>
-                <p className="text-sm font-bold text-red-600">{loadError}</p>
+                <p className="text-sm font-bold text-red-600 dark:text-red-400">{loadError}</p>
               </div>
             )}
             <SortableList<WorkoutBlock>
@@ -612,11 +612,11 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                 >
                   {({ dragHandleProps, isDragging }) => (
                   <div
-                    className={`bg-white rounded-3xl border transition-all overflow-hidden ${isDragging ? 'opacity-50' : ''} ${isDropTarget ? 'border-emerald-400 shadow-emerald-100 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 shadow-sm'}`}
+                    className={`bg-white dark:bg-slate-900 rounded-3xl border transition-all overflow-hidden ${isDragging ? 'opacity-50' : ''} ${isDropTarget ? 'border-emerald-400 shadow-emerald-100 shadow-md ring-2 ring-emerald-500/20' : 'border-slate-200 dark:border-slate-800 shadow-sm'}`}
                   >
-                  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
                     <div className="flex items-center gap-3">
-                      <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 mr-2 focus-visible:outline-2 focus-visible:outline-emerald-500 focus-visible:rounded">
+                      <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 mr-2 focus-visible:outline-2 focus-visible:outline-emerald-500 focus-visible:rounded">
                          <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
                       </div>
                       <div className={`w-10 h-10 rounded-xl ${block.iconBg} flex items-center justify-center`}>
@@ -626,16 +626,16 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                         {editingBlockId === block.id ? (
                            <input
                              autoFocus
-                             className="text-sm font-bold text-slate-900 bg-transparent border-b-2 border-emerald-500 outline-none w-48"
+                             className="text-sm font-bold text-slate-900 dark:text-white bg-transparent border-b-2 border-emerald-500 outline-none w-48"
                              value={editingBlockName}
                              onChange={(e) => setEditingBlockName(e.target.value)}
                              onBlur={commitEditBlockName}
                              onKeyDown={(e) => { if (e.key === 'Enter') commitEditBlockName(); }}
                            />
                         ) : (
-                          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                          <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
                             {block.name}
-                            <button onClick={() => startEditBlockName(block)} className="text-slate-300 hover:text-emerald-500 transition-colors">
+                            <button onClick={() => startEditBlockName(block)} className="text-slate-300 dark:text-slate-600 hover:text-emerald-500 transition-colors">
                               <span className="material-symbols-outlined text-[14px]">edit</span>
                             </button>
                           </h3>
@@ -646,13 +646,13 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => removeBlock(block.id)} className="p-2 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                      <button onClick={() => removeBlock(block.id)} className="p-2 rounded-xl text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                         <span className="material-symbols-outlined text-[20px]">delete</span>
                       </button>
                     </div>
                   </div>
-                  
-                  <div className="px-6 py-2 bg-slate-50/50 border-b border-slate-100 grid grid-cols-12 gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-[4.5rem] hidden md:grid">
+
+                  <div className="px-6 py-2 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 grid grid-cols-12 gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest pl-[4.5rem] hidden md:grid">
                     <div className="col-span-4">{t('exercise')}</div>
                     <div className="col-span-8 grid grid-cols-5 gap-2 text-center pr-24">
                       <div>{t('weight')}</div><div>{t('sets')}</div><div>{t('reps_label')}</div><div>{t('rir_label')}</div><div>{t('rest')}</div>
@@ -667,7 +667,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                   >
                     {block.exercises.length === 0 ? (
                       <div className={`py-12 flex flex-col items-center justify-center text-center transition-colors ${isDropTarget ? 'bg-emerald-50' : ''}`}>
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${isDropTarget ? 'bg-emerald-100 text-emerald-500' : 'bg-slate-50 text-slate-300'}`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${isDropTarget ? 'bg-emerald-100 text-emerald-500' : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600'}`}>
                           <span className="material-symbols-outlined text-[24px]">assignment_add</span>
                         </div>
                         <p className={`text-sm font-bold uppercase tracking-widest ${isDropTarget ? 'text-emerald-600' : 'text-slate-400'}`}>
@@ -675,36 +675,36 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                         </p>
                       </div>
                     ) : (
-                      <div className={`divide-y divide-slate-100 ${isDropTarget ? 'bg-emerald-50/30' : ''}`}>
+                      <div className={`divide-y divide-slate-100 dark:divide-slate-800 ${isDropTarget ? 'bg-emerald-50/30 dark:bg-emerald-900/10' : ''}`}>
                         {block.exercises.map((ex) => {
                           const isExpanded = expandedExerciseId === ex.id;
                           return (
-                            <div key={ex.id} className="border-b border-slate-50 last:border-0">
-                              <div 
+                            <div key={ex.id} className="border-b border-slate-50 dark:border-slate-800 last:border-0">
+                              <div
                                 onClick={() => setExpandedExerciseId(isExpanded ? null : ex.id)}
-                                className={`p-4 hover:bg-slate-50/80 transition-all cursor-pointer group ${isExpanded ? 'bg-slate-50/50' : ''}`}
+                                className={`p-4 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-all cursor-pointer group ${isExpanded ? 'bg-slate-50/50 dark:bg-slate-800/50' : ''}`}
                               >
                                 <div className="grid grid-cols-12 gap-4 items-center">
                                   <div className="col-span-4 flex items-center gap-3">
                                     <div className="min-w-0 flex flex-col gap-1 flex-1">
-                                      <h4 className="text-sm font-bold text-slate-900 truncate flex items-center gap-2">
+                                      <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate flex items-center gap-2">
                                         {ex.name}
                                       </h4>
                                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{ex.type}</p>
                                     </div>
                                   </div>
                                   <div className="col-span-8 grid grid-cols-5 gap-2 relative pr-24" onClick={(e) => e.stopPropagation()}>
-                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.weight} onChange={(e) => updateExerciseField(block.id, ex.id, 'weight', e.target.value)} />
-                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.sets} onChange={(e) => updateExerciseField(block.id, ex.id, 'sets', e.target.value)} />
-                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.reps} onChange={(e) => updateExerciseField(block.id, ex.id, 'reps', e.target.value)} />
-                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.rir} onChange={(e) => updateExerciseField(block.id, ex.id, 'rir', e.target.value)} />
-                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.rest} onChange={(e) => updateExerciseField(block.id, ex.id, 'rest', e.target.value)} />
+                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.weight} onChange={(e) => updateExerciseField(block.id, ex.id, 'weight', e.target.value)} />
+                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.sets} onChange={(e) => updateExerciseField(block.id, ex.id, 'sets', e.target.value)} />
+                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.reps} onChange={(e) => updateExerciseField(block.id, ex.id, 'reps', e.target.value)} />
+                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.rir} onChange={(e) => updateExerciseField(block.id, ex.id, 'rir', e.target.value)} />
+                                    <input className="w-full text-center text-xs p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none" value={ex.rest} onChange={(e) => updateExerciseField(block.id, ex.id, 'rest', e.target.value)} />
                                     
                                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => onEditActivity(ex.exerciseId, ex.name)} className="p-1 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-full transition-colors mr-1">
+                                        <button onClick={() => onEditActivity(ex.exerciseId, ex.name)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-full transition-colors mr-1">
                                           <span className="material-symbols-outlined text-[16px]">info</span>
                                         </button>
-                                        <button onClick={() => removeExercise(block.id, ex.id)} className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
+                                        <button onClick={() => removeExercise(block.id, ex.id)} className="p-1 text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors">
                                           <span className="material-symbols-outlined text-[16px]">close</span>
                                         </button>
                                     </div>
@@ -732,7 +732,7 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             })}
             </SortableList>
 
-            <button onClick={addBlock} className="w-full py-6 rounded-3xl border-2 border-dashed border-slate-300 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 transition-all flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs shrink-0">
+            <button onClick={addBlock} className="w-full py-6 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all flex items-center justify-center gap-2 font-bold uppercase tracking-widest text-xs shrink-0">
               <span className="material-symbols-outlined">add_circle</span> {t('add_training_block')}
             </button>
           </div>
@@ -741,15 +741,15 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
               so the exercise library stays in view while the workout cards scroll. */}
           <div className="w-full lg:w-[400px] flex flex-col gap-8 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
             {/* Exercise Library */}
-            <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-xl flex flex-col relative">
-              <div className="px-6 py-6 border-b border-slate-100 flex flex-col gap-4 shrink-0">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl flex flex-col relative">
+              <div className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-4 shrink-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-lg text-slate-900">{t('exercise_library')}</h3>
+                  <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t('exercise_library')}</h3>
                 </div>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">search</span>
-                  <input 
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium placeholder:text-slate-400" 
+                  <input
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 dark:text-white border-none rounded-2xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     placeholder={t('search_exercises')}
                     type="text"
                     value={searchQuery}
@@ -758,27 +758,27 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                 </div>
               </div>
               
-              <div className="p-4 bg-slate-50/20 max-h-[600px] overflow-y-auto custom-scrollbar">
+              <div className="p-4 bg-slate-50/20 dark:bg-slate-800/20 max-h-[600px] overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col gap-2">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-2 mt-2">{t('master_list')}</h4>
                   {filteredExercises.map((ex, idx) => (
                     <div 
                       key={idx} 
-                      className="w-full text-left p-3.5 bg-white hover:bg-slate-50 border border-transparent hover:border-emerald-500/20 rounded-2xl flex items-center justify-between group transition-all shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing"
+                      className="w-full text-left p-3.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 border border-transparent hover:border-emerald-500/20 rounded-2xl flex items-center justify-between group transition-all shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing"
                       draggable
                       onDragStart={() => handleDragStart(ex)}
                     >
                       <div className="flex items-center gap-3 min-w-0 w-full">
-                        <div className="w-8 h-8 flex items-center justify-center text-slate-300 group-hover:text-emerald-500 transition-colors shrink-0">
+                        <div className="w-8 h-8 flex items-center justify-center text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors shrink-0">
                           <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
                         </div>
-                        <div className={`w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0`}>
+                        <div className={`w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0`}>
                           <span className="material-symbols-outlined text-[20px]">{ex.icon || 'fitness_center'}</span>
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
-                           <span className="text-sm font-bold text-slate-900 truncate pr-2">{ex.name}</span>
+                           <span className="text-sm font-bold text-slate-900 dark:text-white truncate pr-2">{ex.name}</span>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-tight">{ex.muscleGroups?.[0] || 'VARIOUS'}</span>
+                            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded uppercase tracking-tight">{ex.muscleGroups?.[0] || 'VARIOUS'}</span>
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">• {ex.type || t('exercise')}</span>
                           </div>
                         </div>

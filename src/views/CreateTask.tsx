@@ -290,13 +290,13 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <div className="flex-1 overflow-y-auto px-4 md:px-6 lg:px-8 py-8">
-        <div className="w-full mx-auto flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-          <header className="flex items-center justify-between p-6 md:px-8 border-b border-slate-200 bg-white sticky top-0 z-10">
+        <div className="w-full mx-auto flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+          <header className="flex items-center justify-between p-6 md:px-8 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">{editId ? t('edit_event') : t('create_event')}</h1>
-              <p className="text-sm text-slate-500">{editId ? t('edit_event_desc') : t('create_event_desc')}</p>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">{editId ? t('edit_event') : t('create_event')}</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{editId ? t('edit_event_desc') : t('create_event_desc')}</p>
             </div>
             <div className="flex items-center gap-3">
               {editId && (
@@ -304,7 +304,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                   type="button"
                   onClick={handleDelete}
                   disabled={isDeleting || loading}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors border border-transparent hover:border-red-200 flex items-center gap-2"
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-transparent hover:border-red-200 dark:hover:border-red-800/50 flex items-center gap-2"
                 >
                   <Trash2 className="w-[18px] h-[18px]" />
                   {isDeleting ? t('deleting') : t('delete_btn')}
@@ -313,7 +313,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
               <button 
                 type="button"
                 onClick={() => onNavigate('calendar')}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-200"
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
               >
                 {t('cancel')}
               </button>
@@ -332,35 +332,35 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
           {!isEditLoaded ? (
             <div className="p-20 flex flex-col items-center justify-center gap-4">
               <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm font-medium text-slate-500">{t('loading')}</p>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('loading')}</p>
             </div>
           ) : (
-          <div className="p-4 md:p-10 bg-slate-50/50">
+          <div className="p-4 md:p-10 bg-slate-50/50 dark:bg-slate-950/50">
             <form className="w-full space-y-8" onSubmit={handleSave}>
               {/* General Details */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('general_details')}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{t('general_details_note')}</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{t('general_details')}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t('general_details_note')}</p>
                 </div>
-                <div className="md:col-span-10 space-y-5 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
+                <div className="md:col-span-10 space-y-5 bg-white dark:bg-slate-900 p-6 md:p-10 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('task_title')}</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">{t('task_title')}</label>
                     <input
                       required
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                       placeholder={t('task_title_placeholder')} 
                       type="text" 
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('task_description')}</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">{t('task_description')}</label>
                     <textarea
                       value={description}
                       onChange={e => setDescription(e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                       placeholder={t('task_description_placeholder')} 
                       rows={4}
                     />
@@ -368,22 +368,22 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 </div>
               </section>
 
-              <hr className="border-slate-200" />
+              <hr className="border-slate-200 dark:border-slate-800" />
 
               {/* Assignment */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('assignment_section')}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{t('assignment_note')}</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{t('assignment_section')}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t('assignment_note')}</p>
                 </div>
-                <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
-                  <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">{t('assign_to')}</label>
+                <div className="md:col-span-10 bg-white dark:bg-slate-900 p-6 md:p-10 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">{t('assign_to')}</label>
                   <div className="relative mb-3">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
                     <input 
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 placeholder:text-slate-400" 
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-slate-900 dark:text-white placeholder:text-slate-400"
                       placeholder={t('search_clients')} 
                       type="text" 
                     />
@@ -394,7 +394,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                       className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold cursor-pointer transition-all ${
                         selectedClientId === null 
                           ? 'bg-slate-800 text-white border-slate-800' 
-                          : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
                     >
                       <ShieldCheck className="w-3.5 h-3.5" />
@@ -409,13 +409,13 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                           className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold cursor-pointer transition-all ${
                             isSelected 
                               ? 'bg-emerald-500 text-white border-emerald-500' 
-                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
                           }`}
                         >
                           {client.avatar ? (
                             <div className="h-4 w-4 rounded-full bg-cover bg-center border border-white/20" style={{ backgroundImage: `url("${client.avatar}")` }} />
                           ) : (
-                            <div className="h-4 w-4 rounded-full bg-slate-300 flex items-center justify-center text-[8px] text-slate-600">{client.name.substring(0,2).toUpperCase()}</div>
+                            <div className="h-4 w-4 rounded-full bg-slate-300 dark:bg-slate-600 flex items-center justify-center text-[8px] text-slate-600 dark:text-slate-200">{client.name.substring(0,2).toUpperCase()}</div>
                           )}
                           {client.name}
                         </div>
@@ -425,15 +425,15 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 </div>
               </section>
 
-              <hr className="border-slate-200" />
+              <hr className="border-slate-200 dark:border-slate-800" />
 
               {/* Activity Category */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('activity_category')}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{t('activity_category_note')}</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{t('activity_category')}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t('activity_category_note')}</p>
                 </div>
-                <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
+                <div className="md:col-span-10 bg-white dark:bg-slate-900 p-6 md:p-10 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
                     {[
                       { id: 'Training', label: t('category_training'), icon: Dumbbell, activeClass: 'peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 hover:border-emerald-200', iconClass: 'peer-checked:text-emerald-600 group-hover:text-emerald-500' },
@@ -456,17 +456,17 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                             setLinkUrl('');
                           }}
                         />
-                        <div className={`flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 bg-slate-50 transition-all h-24 ${cat.activeClass}`}>
+                        <div className={`flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 transition-all h-24 ${cat.activeClass}`}>
                           <cat.icon className={`w-6 h-6 mb-2 text-slate-400 transition-colors ${cat.iconClass}`} />
-                          <span className="text-xs font-semibold text-slate-600 peer-checked:text-current">{cat.label}</span>
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 peer-checked:text-current">{cat.label}</span>
                         </div>
                       </label>
                     ))}
                   </div>
 
                   {category !== 'Admin' && (
-                    <div className="pt-4 border-t border-slate-100">
-                      <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wide">
                         {category === 'Call' ? t('meeting_url') : t('resource_assigned')}
                       </label>
                       <div className="flex items-center gap-2">
@@ -475,13 +475,13 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                             value={linkUrl}
                             onChange={e => setLinkUrl(e.target.value)}
                             placeholder={t('meeting_url_placeholder')}
-                            className="w-full rounded-lg border border-slate-200 bg-slate-50 text-sm py-2.5 px-3 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm py-2.5 px-3 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                           />
                         ) : (
                           <div className={`flex items-center gap-3 px-4 py-2.5 rounded-full border shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2 ${
-                            category === 'Training' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                            category === 'Nutrition' ? 'bg-orange-50 border-orange-200 text-orange-700' :
-                            'bg-blue-50 border-blue-200 text-blue-700'
+                            category === 'Training' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-400' :
+                            category === 'Nutrition' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800/50 text-orange-700 dark:text-orange-400' :
+                            'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50 text-blue-700 dark:text-blue-400'
                           }`}>
                             <div className={`w-2 h-2 rounded-full ${
                               category === 'Training' ? 'bg-emerald-500' :
@@ -501,21 +501,21 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 </div>
               </section>
 
-              <hr className="border-slate-200" />
+              <hr className="border-slate-200 dark:border-slate-800" />
 
               {/* Schedule */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('schedule_frequency')}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{t('schedule_note')}</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{t('schedule_frequency')}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t('schedule_note')}</p>
                 </div>
-                <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm">
+                <div className="md:col-span-10 bg-white dark:bg-slate-900 p-6 md:p-10 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('date')}</label>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">{t('date')}</label>
                       <div className="relative">
                         <input 
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3" 
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                           type="date" 
                           value={date}
                           onChange={e => setDate(e.target.value)}
@@ -524,25 +524,25 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                     </div>
                     <div className="flex gap-3">
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('start_time')}</label>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">{t('start_time')}</label>
                         <TimeSelect
                           value={startTime}
                           onChange={setStartTime}
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('end_time')}</label>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">{t('end_time')}</label>
                         <TimeSelect
                           value={endTime}
                           onChange={setEndTime}
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                         />
                       </div>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">{t('repeat_label')}</label>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">{t('repeat_label')}</label>
                     <Select
                       value={repeat}
                       onChange={(val) => {
@@ -553,7 +553,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                         if (val === 'Custom') setCustomModalOpen(true);
                         else { setCustomRule(null); setCustomUntil(null); }
                       }}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
                     >
                       <option>{t('does_not_repeat')}</option>
                       <option>{t('daily')}</option>
@@ -574,15 +574,15 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 </div>
               </section>
 
-              <hr className="border-slate-200" />
+              <hr className="border-slate-200 dark:border-slate-800" />
 
               {/* Priority */}
               <section className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-12 pb-8">
                 <div className="md:col-span-2">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t('priority_label')}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{t('priority_note')}</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{t('priority_label')}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t('priority_note')}</p>
                 </div>
-                <div className="md:col-span-10 bg-white p-6 md:p-10 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                <div className="md:col-span-10 bg-white dark:bg-slate-900 p-6 md:p-10 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
                   {[
                     { level: 'Low', activeClass: 'peer-checked:bg-slate-100 peer-checked:border-slate-400 text-slate-600' },
                     { level: 'Medium', activeClass: 'peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 text-slate-600' },
@@ -596,7 +596,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                         checked={priority === p.level}
                         onChange={() => setPriority(p.level as any)}
                       />
-                      <span className={`px-4 py-2 rounded-lg border border-slate-200 text-sm font-semibold transition-all block text-center ${p.activeClass}`}>
+                      <span className={`px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 dark:text-slate-300 text-sm font-semibold transition-all block text-center ${p.activeClass}`}>
                         {p.level === 'Low' ? t('low') : p.level === 'Medium' ? t('medium') : t('high')}
                       </span>
                     </label>
@@ -604,9 +604,9 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 </div>
               </section>
 
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-xl p-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-700 leading-relaxed">
+                <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
                   <strong>{t('info_label')}</strong> {t('sync_info')}
                 </p>
               </div>

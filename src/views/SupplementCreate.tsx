@@ -58,7 +58,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
       <div className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
         <div className="max-w-5xl mx-auto">
           {/* Header & Navigation */}
@@ -71,13 +71,13 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 {t('library_title')}
               </button>
-              <h2 className="text-3xl font-bold text-slate-900">{t('create_supplement')}</h2>
-              <p className="text-slate-500 text-sm mt-2 font-medium">{t('supplement_form_desc')}</p>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{t('create_supplement')}</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">{t('supplement_form_desc')}</p>
             </div>
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 onClick={onBack}
-                className="px-6 py-3 rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all"
+                className="px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-bold transition-all"
               >
                 {t('cancel')}
               </button>
@@ -92,7 +92,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
             </div>
           </div>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm font-medium mb-6">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm font-medium mb-6">
               {error}
             </div>
           )}
@@ -101,8 +101,8 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
             {/* Left Column: Form */}
             <div className="lg:col-span-2 space-y-8 pb-20">
               {/* Basic Information */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">edit_note</span>
                   {t('basic_information')}
                 </h3>
@@ -114,7 +114,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                         type="text"
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                         placeholder={t('supplement_name_placeholder')}
                       />
                     </div>
@@ -124,14 +124,14 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                         type="text"
                         value={brand}
                         onChange={e => setBrand(e.target.value)}
-                        className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                         placeholder={t('brand_placeholder')}
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('supplement_type')}</label>
-                    <Select value={category} onChange={(val: any) => setCategory(val)} placeholder={t('select_type')} className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
+                    <Select value={category} onChange={(val: any) => setCategory(val)} placeholder={t('select_type')} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
                       <option value="">{t('select_type')}</option>
                       <option value="protein">{t('protein_powder')}</option>
                       <option value="vitamin">{t('vitamin_mineral')}</option>
@@ -147,7 +147,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                     <textarea
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
                       placeholder={t('supplement_notes_placeholder')}
                     ></textarea>
                   </div>
@@ -155,8 +155,8 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
               </div>
 
               {/* Tracking Details */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">timer</span>
                   {t('tracking_details')}
                 </h3>
@@ -168,7 +168,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                         type="text"
                         value={dose}
                         onChange={e => setDose(e.target.value)}
-                        className="w-full pl-4 pr-20 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                        className="w-full pl-4 pr-20 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                         placeholder="5 g"
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-6 pointer-events-none">
@@ -178,7 +178,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('recommended_timing')}</label>
-                    <Select value={timing} onChange={(val: any) => setTiming(val)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
+                    <Select value={timing} onChange={(val: any) => setTiming(val)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
                       <option value="anytime">{t('timing_anytime')}</option>
                       <option value="morning">{t('timing_morning')}</option>
                       <option value="pre-workout">{t('timing_pre_workout')}</option>
@@ -194,7 +194,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                       type="text"
                       value={primaryIngredient}
                       onChange={e => setPrimaryIngredient(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder={t('primary_ingredient_placeholder')}
                     />
                   </div>
@@ -204,27 +204,27 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
 
             {/* Right Column: Technical Data */}
             <div className="lg:col-span-1 space-y-8">
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">analytics</span>
                   {t('technical_data')}
                 </h3>
                 <div className="space-y-5">
-                  <p className="text-xs text-slate-400 font-medium">{t('values_per_serving_help')}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{t('values_per_serving_help')}</p>
                   {[
                     { label: t('calories'), value: calories, setter: setCalories },
                     { label: t('protein_g'), value: protein, setter: setProtein },
                     { label: t('carbs_g'), value: carbs, setter: setCarbs },
                     { label: t('fat_g'), value: fats, setter: setFats }
                   ].map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <span className="text-sm font-bold text-slate-600">{item.label}</span>
+                    <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                      <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{item.label}</span>
                       <div className="w-24">
                         <input
                           type="number"
                           value={item.value}
                           onChange={e => item.setter(e.target.value)}
-                          className="w-full px-2 py-1 text-right text-sm bg-transparent border-b border-slate-300 focus:border-emerald-500 outline-none text-slate-900 font-bold"
+                          className="w-full px-2 py-1 text-right text-sm bg-transparent border-b border-slate-300 dark:border-slate-600 focus:border-emerald-500 outline-none text-slate-900 dark:text-white font-bold"
                           placeholder="0"
                         />
                       </div>
@@ -234,8 +234,8 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
               </div>
 
               {/* Quality Rating */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">star</span>
                   {t('quality_rating')}
                 </h3>
@@ -246,7 +246,7 @@ export default function SupplementCreate({ onBack }: SupplementCreateProps) {
                         key={i}
                         type="button"
                         onClick={() => setQuality(quality === i ? 0 : i)}
-                        className={`hover:scale-110 transition-all ${i <= quality ? 'text-amber-400' : 'text-slate-200 hover:text-amber-400'}`}
+                        className={`hover:scale-110 transition-all ${i <= quality ? 'text-amber-400' : 'text-slate-200 dark:text-slate-700 hover:text-amber-400'}`}
                       >
                         <span className={`material-symbols-outlined text-[32px] ${i <= quality ? 'fill-1' : ''}`}>star</span>
                       </button>

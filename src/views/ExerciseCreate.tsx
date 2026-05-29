@@ -53,7 +53,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
     }
   };
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50">
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
       <div className="flex-1 h-full overflow-y-auto p-6 lg:p-10">
         <div className="max-w-5xl mx-auto">
           {/* Header & Navigation */}
@@ -66,13 +66,13 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                 <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                 {t('training_library_title')}
               </button>
-              <h2 className="text-3xl font-bold text-slate-900">{t('create_exercise')}</h2>
-              <p className="text-slate-500 text-sm mt-2 font-medium">{t('exercise_form_desc')}</p>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{t('create_exercise')}</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">{t('exercise_form_desc')}</p>
             </div>
             <div className="flex items-center gap-4">
-              <button 
+              <button
                 onClick={onBack}
-                className="px-6 py-3 rounded-2xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-bold transition-all"
+                className="px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-bold transition-all"
               >
                 {t('cancel')}
               </button>
@@ -87,8 +87,8 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
             {/* Left Column: Form */}
             <div className="lg:col-span-2 space-y-8 pb-20">
               {/* Basic Information */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">info</span>
                   {t('basic_information')}
                 </h3>
@@ -99,14 +99,14 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                       type="text" 
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder={t('exercise_name_placeholder')}
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('category_label')}</label>
-                      <Select value={category} onChange={(val) => setCategory(val as any)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
+                      <Select value={category} onChange={(val) => setCategory(val as any)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
                         <option value="Strength">{t('strength_cat')}</option>
                         <option value="Mobility">{t('mobility_cat')}</option>
                         <option value="Warm-up">{t('warmup_cat')}</option>
@@ -116,7 +116,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('type_label')}</label>
-                      <Select value={type} onChange={(val) => setType(val as any)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
+                      <Select value={type} onChange={(val) => setType(val as any)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all">
                         <option value="Compound">{t('compound_type')}</option>
                         <option value="Isolation">{t('isolation_type')}</option>
                       </Select>
@@ -128,7 +128,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                       type="text"
                       value={subcategory}
                       onChange={e => setSubcategory(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder={t('subcategory_placeholder', { defaultValue: 'p. ej. Tracción horizontal' })}
                     />
                   </div>
@@ -138,7 +138,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                       type="text"
                       value={videoUrl}
                       onChange={e => setVideoUrl(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder="https://..."
                     />
                   </div>
@@ -147,7 +147,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                     <textarea
                       value={description}
                       onChange={e => setDescription(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
                       placeholder={t('exercise_instructions_placeholder')}
                     ></textarea>
                   </div>
@@ -156,7 +156,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                     <textarea
                       value={instructions}
                       onChange={e => setInstructions(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
                       placeholder={t('exercise_instructions_section_placeholder', { defaultValue: 'Describe paso a paso cómo ejecutar el ejercicio…' })}
                     ></textarea>
                   </div>
@@ -165,7 +165,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                     <textarea
                       value={commonMistakes}
                       onChange={e => setCommonMistakes(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
                       placeholder={t('exercise_common_mistakes_placeholder', { defaultValue: 'Describe los errores típicos que cometen los clientes…' })}
                     ></textarea>
                   </div>
@@ -174,7 +174,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                     <textarea
                       value={tips}
                       onChange={e => setTips(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-medium min-h-[120px] transition-all"
                       placeholder={t('exercise_tips_placeholder', { defaultValue: 'Añade cues y consejos para mejorar la técnica…' })}
                     ></textarea>
                   </div>
@@ -182,8 +182,8 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               </div>
 
               {/* Muscle Groups */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">activity</span>
                   {t('muscle_groups')}
                 </h3>
@@ -194,7 +194,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                       type="text" 
                       value={primaryMuscle}
                       onChange={e => setPrimaryMuscle(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder={t('primary_muscle_placeholder')}
                     />
                   </div>
@@ -204,7 +204,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                       type="text" 
                       value={secondaryMuscles}
                       onChange={e => setSecondaryMuscles(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder={t('secondary_muscles_placeholder')}
                     />
                   </div>
@@ -214,8 +214,8 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
 
             {/* Right Column: Technical Data */}
             <div className="lg:col-span-1 space-y-8">
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">bolt</span>
                   {t('technical_data')}
                 </h3>
@@ -226,7 +226,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                       type="text" 
                       value={tools}
                       onChange={e => setTools(e.target.value)}
-                      className="w-full px-4 py-3 rounded-2xl border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white dark:placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                       placeholder={t('required_tools_placeholder')}
                     />
                   </div>
@@ -235,7 +235,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                     <Select
                       value={level}
                       onChange={(val) => setLevel(val as any)}
-                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
+                      className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm font-bold transition-all"
                     >
                       <option value="Beginner">{t('beginner_level')}</option>
                       <option value="Intermediate">{t('intermediate_level')}</option>
@@ -246,8 +246,8 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               </div>
 
               {/* Quality Rating */}
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
                   <span className="material-symbols-outlined text-emerald-500">verified_user</span>
                   {t('safety_rating')}
                 </h3>
@@ -258,7 +258,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                         key={i}
                         type="button"
                         onClick={() => setSafetyRating(safetyRating === i ? 0 : i)}
-                        className={`hover:scale-110 transition-all ${i <= safetyRating ? 'text-amber-400' : 'text-slate-200 hover:text-amber-400'}`}
+                        className={`hover:scale-110 transition-all ${i <= safetyRating ? 'text-amber-400' : 'text-slate-200 dark:text-slate-700 hover:text-amber-400'}`}
                       >
                         <span className={`material-symbols-outlined text-4xl ${i <= safetyRating ? 'fill-1' : ''}`}>star</span>
                       </button>
