@@ -111,6 +111,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const [showImportPlans, setShowImportPlans] = useState(false);
   const [editPlan, setEditPlan] = useState<Plan | null>(null);
   const [assignPlan, setAssignPlan] = useState<Plan | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Plan | null>(null);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
   const [copiedPlanId, setCopiedPlanId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'canceled'>('all');
@@ -161,8 +162,9 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     }
   };
 
-  const archivePlan = async (plan: Plan) => {
-    if (!window.confirm(isEs ? '¿Archivar este plan? No podrás asignarlo a nuevos clientes.' : 'Archive this plan? You won’t be able to assign it to new clients.')) return;
+  // Archivar abre un modal de aviso (no un confirm seco): explica el impacto
+  // sobre los suscriptores antes de confirmar.
+  const doArchivePlan = async (plan: Plan) => {
     setBusyPlanId(plan.id);
     try {
       await fetchWithAuth(`/manager/client-billing/plans/${plan.id}/archive`, { method: 'POST', body: JSON.stringify({}) });
@@ -410,7 +412,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           onCreate={() => setShowCreatePlan(true)}
           onAssign={(p) => setAssignPlan(p)}
           onEdit={(p) => setEditPlan(p)}
-          onArchive={archivePlan}
+          onArchive={(p) => setArchiveTarget(p)}
           onCopyLink={copyPlanLink}
         />
       )}
@@ -650,6 +652,64 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
           onImported={() => { setShowImportPlans(false); loadPlans(); }}
         />
       )}
+
+      {archiveTarget && (
+        <ArchivePlanModal
+          isEs={isEs}
+          plan={archiveTarget}
+          busy={busyPlanId === archiveTarget.id}
+          onClose={() => setArchiveTarget(null)}
+          onConfirm={async () => { await doArchivePlan(archiveTarget); setArchiveTarget(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Modal de aviso al archivar un plan ─────────────────────────────────────
+// Archivar NO cancela las suscripciones vivas (los clientes siguen pagando),
+// pero desactiva el enlace (no entran nuevos), y el plan deja de poder editarse
+// o asignarse. El modal lo deja explícito antes de confirmar.
+function ArchivePlanModal({ isEs, plan, busy, onClose, onConfirm }: { isEs: boolean; plan: Plan; busy?: boolean; onClose: () => void; onConfirm: () => void }) {
+  const active = plan.subscribers?.active ?? 0;
+  const total = plan.subscribers?.total ?? 0;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Archivar plan' : 'Archive plan'}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{plan.name}</p>
+          </div>
+        </div>
+
+        <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+          {active > 0 && (
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-300">
+              {isEs
+                ? <><b>{active}</b> {active === 1 ? 'cliente tiene' : 'clientes tienen'} una suscripción activa a este plan. <b>No se cancelarán</b>: seguirán cobrándose con normalidad.</>
+                : <><b>{active}</b> {active === 1 ? 'client has' : 'clients have'} an active subscription to this plan. <b>They won’t be canceled</b> — they keep billing as usual.</>}
+            </div>
+          )}
+          <ul className="space-y-1.5 list-disc pl-5">
+            <li>{isEs ? 'Se desactiva el enlace de pago: no se podrán suscribir clientes nuevos.' : 'The payment link is disabled: no new clients can subscribe.'}</li>
+            <li>{isEs ? 'El plan ya no se podrá editar ni asignar.' : 'The plan can no longer be edited or assigned.'}</li>
+            {total > 0 && <li>{isEs ? `Las ${total} asignaciones existentes se conservan en la pestaña Suscripciones.` : `The ${total} existing assignments stay in the Subscriptions tab.`}</li>}
+          </ul>
+          <p className="text-xs text-slate-400">{isEs ? 'Si quieres dejar de cobrar a un cliente, cancela su suscripción desde la pestaña Suscripciones.' : 'To stop billing a specific client, cancel their subscription from the Subscriptions tab.'}</p>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">{isEs ? 'Cancelar' : 'Cancel'}</button>
+          <button onClick={onConfirm} disabled={busy} className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white font-semibold text-sm transition flex items-center justify-center gap-2">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+            {isEs ? 'Archivar plan' : 'Archive plan'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
