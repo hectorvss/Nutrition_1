@@ -4,7 +4,7 @@ import {
   TrendingUp, Users, AlertTriangle, CheckCircle2, X, Loader2, Pencil,
   DownloadCloud, ChevronDown, ChevronUp, Search, Check, FileDown,
   Wallet, CalendarClock, Repeat, Archive, Package, Trash2,
-  Settings2, UserCog, Pause, Play, RotateCcw, Ban,
+  Settings2, UserCog, Pause, Play, RotateCcw, Ban, MoreVertical,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
@@ -614,18 +614,22 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                         {it.created_at ? new Date(it.created_at).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                       </td>
                       <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {it.payment_url && (
-                            <>
-                              <IconBtn title={copiedId === it.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar link' : 'Copy link')} onClick={() => copyLink(it.payment_url, it.id)} icon={copiedId === it.id ? CheckCircle2 : Link2} accent={copiedId === it.id ? 'emerald' : undefined} />
-                              <IconBtn title={isEs ? 'Abrir link' : 'Open link'} onClick={() => window.open(it.payment_url!, '_blank')} icon={ExternalLink} />
-                              <IconBtn title={sentId === it.id ? (isEs ? '¡Enviado al chat!' : 'Sent to chat!') : (isEs ? 'Enviar enlace de pago al chat' : 'Send payment link to chat')} onClick={() => remind(it.id)} icon={sentId === it.id ? CheckCircle2 : Send} busy={busy} accent="emerald" />
-                            </>
-                          )}
-                          <IconBtn title={isEs ? 'Sincronizar estado' : 'Sync status'} onClick={() => sync(it.id)} icon={RefreshCw} busy={busy} />
-                          {!['canceled', 'void'].includes(it.status) && (
-                            <IconBtn title={isEs ? 'Gestionar suscripción' : 'Manage subscription'} onClick={() => setEditItem(it)} icon={Settings2} accent="emerald" />
-                          )}
+                        <div className="flex items-center justify-end">
+                          <RowActionsMenu
+                            isEs={isEs}
+                            busy={busy}
+                            actions={[
+                              ...(it.payment_url ? [
+                                { key: 'copy', icon: copiedId === it.id ? CheckCircle2 : Link2, label: copiedId === it.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar enlace de pago' : 'Copy payment link'), onClick: () => copyLink(it.payment_url, it.id), accent: copiedId === it.id ? 'emerald' as const : undefined },
+                                { key: 'open', icon: ExternalLink, label: isEs ? 'Abrir enlace de pago' : 'Open payment link', onClick: () => window.open(it.payment_url!, '_blank') },
+                                { key: 'send', icon: sentId === it.id ? CheckCircle2 : Send, label: sentId === it.id ? (isEs ? '¡Enviado al chat!' : 'Sent to chat!') : (isEs ? 'Enviar enlace por el chat' : 'Send link via chat'), onClick: () => remind(it.id), accent: 'emerald' as const },
+                              ] : []),
+                              { key: 'sync', icon: RefreshCw, label: isEs ? 'Sincronizar estado' : 'Sync status', onClick: () => sync(it.id) },
+                              ...(!['canceled', 'void'].includes(it.status) ? [
+                                { key: 'manage', icon: Settings2, label: isEs ? 'Gestionar suscripción' : 'Manage subscription', onClick: () => setEditItem(it), accent: 'emerald' as const },
+                              ] : []),
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -1095,6 +1099,96 @@ function IconBtn({ icon: Icon, onClick, title, busy, accent }: { icon: any; onCl
     >
       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
     </button>
+  );
+}
+
+// ── Menú de acciones de fila (kebab ⋮) ──────────────────────────────────────
+// Colapsa todas las acciones de una fila en un botón de tres puntos. El panel
+// usa position:fixed calculado desde el botón para que NUNCA lo recorte el
+// overflow de la tabla; se abre hacia abajo o hacia arriba según el espacio.
+type RowAction = { key: string; icon: any; label: string; onClick: () => void; accent?: 'emerald' | 'rose'; disabled?: boolean };
+function RowActionsMenu({ actions, isEs, busy }: { actions: RowAction[]; isEs: boolean; busy?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const place = () => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    const width = 244;
+    const left = Math.min(r.right - width, window.innerWidth - width - 8);
+    const estH = actions.length * 40 + 8;
+    const spaceBelow = window.innerHeight - r.bottom - 8;
+    const openUp = spaceBelow < estH && r.top - 8 > spaceBelow;
+    const top = openUp ? Math.max(8, r.top - 4 - estH) : r.bottom + 4;
+    setCoords({ top, left: Math.max(8, left), width });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    place();
+    const onDoc = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onScroll = (e: Event) => {
+      const target = e.target as Node | null;
+      if (target && panelRef.current?.contains(target)) return;
+      place();
+    };
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', place);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        title={isEs ? 'Acciones' : 'Actions'}
+        disabled={busy}
+        className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 transition disabled:opacity-50 ${open ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+      >
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreVertical className="w-4 h-4" />}
+      </button>
+      {open && coords && (
+        <div
+          ref={panelRef}
+          style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 60 }}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl overflow-hidden py-1"
+        >
+          {actions.map(a => {
+            const Icon = a.icon;
+            const tone = a.accent === 'emerald'
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : a.accent === 'rose'
+              ? 'text-rose-600 dark:text-rose-400'
+              : 'text-slate-500 dark:text-slate-400';
+            return (
+              <button
+                key={a.key}
+                type="button"
+                disabled={a.disabled}
+                onClick={() => { setOpen(false); a.onClick(); }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50"
+              >
+                <Icon className={`w-4 h-4 flex-shrink-0 ${tone}`} />
+                <span className="truncate">{a.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1854,23 +1948,51 @@ function CreatePlanModal({ isEs, locale, onClose, onCreated }: { isEs: boolean; 
 }
 
 // ── Modal: editar plan ──────────────────────────────────────────────────────
+// Permite editar TODO lo que se define al crear el plan. Los cambios se
+// aplican de verdad en Stripe: nombre/descripción actualizan el Producto, y
+// cualquier cambio de precio (importe, moneda, tipo, frecuencia, prueba)
+// regenera el Price + Payment Link. El aviso lo deja explícito.
 function EditPlanModal({ isEs, locale, plan, onClose, onSaved }: { isEs: boolean; locale: string; plan: Plan; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(plan.name || '');
   const [description, setDescription] = useState(plan.description || '');
-  const [editAmount, setEditAmount] = useState(false);
+  const [kind, setKind] = useState<'recurring' | 'one_time'>(plan.kind === 'one_time' ? 'one_time' : 'recurring');
   const [amount, setAmount] = useState(String((plan.amount_cents / 100).toFixed(2)));
+  const [currency, setCurrency] = useState((plan.currency || 'eur').toLowerCase());
+  const [interval, setInterval] = useState<'month' | 'year'>(plan.interval === 'year' ? 'year' : 'month');
+  const [intervalCount, setIntervalCount] = useState(String(plan.interval_count || 1));
+  const [trialDays, setTrialDays] = useState(String(plan.trial_days || ''));
+  const [allowPromos, setAllowPromos] = useState(!!plan.allow_promotion_codes);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Detecta si cambió algo que obliga a regenerar el Price + link en Stripe.
+  const priceChanged =
+    Math.round(Number(amount) * 100) !== plan.amount_cents ||
+    currency !== (plan.currency || 'eur').toLowerCase() ||
+    kind !== plan.kind ||
+    (kind === 'recurring' && (
+      interval !== (plan.interval === 'year' ? 'year' : 'month') ||
+      (Number(intervalCount) || 1) !== (plan.interval_count || 1) ||
+      (Number(trialDays) || 0) !== (plan.trial_days || 0)
+    )) ||
+    allowPromos !== !!plan.allow_promotion_codes;
 
   const submit = async () => {
     setErr(null);
     if (!name.trim()) { setErr(isEs ? 'Pon un nombre al plan.' : 'Give the plan a name.'); return; }
-    const body: any = { name: name.trim(), description: description.trim() || null };
-    if (editAmount) {
-      const amt = Number(amount);
-      if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
-      body.amount = amt;
-    }
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) { setErr(isEs ? 'Importe inválido.' : 'Invalid amount.'); return; }
+    const body: any = {
+      name: name.trim(),
+      description: description.trim() || null,
+      kind,
+      amount: amt,
+      currency,
+      interval: kind === 'recurring' ? interval : undefined,
+      interval_count: kind === 'recurring' ? (Number(intervalCount) || 1) : undefined,
+      trial_days: kind === 'recurring' && Number(trialDays) > 0 ? Number(trialDays) : 0,
+      allow_promotion_codes: allowPromos,
+    };
     setSaving(true);
     try {
       await fetchWithAuth(`/manager/client-billing/plans/${plan.id}`, { method: 'PATCH', body: JSON.stringify(body) });
@@ -1884,7 +2006,7 @@ function EditPlanModal({ isEs, locale, plan, onClose, onSaved }: { isEs: boolean
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[88vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEs ? 'Editar plan' : 'Edit plan'}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
@@ -1896,26 +2018,73 @@ function EditPlanModal({ isEs, locale, plan, onClose, onSaved }: { isEs: boolean
           <Field label={isEs ? 'Nombre' : 'Name'}>
             <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputCls} maxLength={120} autoFocus />
           </Field>
-          <Field label={isEs ? 'Descripción' : 'Description'}>
+          <Field label={isEs ? 'Descripción (opcional)' : 'Description (optional)'}>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className={inputCls} maxLength={500} />
           </Field>
 
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-            <label className="flex items-center gap-2 cursor-pointer mb-2">
-              <input type="checkbox" checked={editAmount} onChange={e => setEditAmount(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{isEs ? 'Cambiar importe' : 'Change amount'}</span>
-            </label>
-            {editAmount && (
-              <>
-                <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} className={inputCls} />
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                  {isEs ? 'Cambiar el precio regenera el precio y el enlace de pago en Stripe.' : 'Changing the price regenerates the price and payment link in Stripe.'}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-1">{isEs ? 'Actual' : 'Current'}: {fmtMoney(plan.amount_cents, plan.currency, locale)}</p>
-              </>
-            )}
+          <Field label={isEs ? 'Tipo' : 'Type'}>
+            <div className="grid grid-cols-2 gap-2">
+              {([['recurring', isEs ? 'Suscripción' : 'Subscription'], ['one_time', isEs ? 'Pago único' : 'One-time']] as const).map(([k, lbl]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setKind(k as any)}
+                  style={kind === k ? brandStyle : undefined}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
+                >{lbl}</button>
+              ))}
+            </div>
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={isEs ? 'Importe' : 'Amount'}>
+              <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className={inputCls} />
+            </Field>
+            <Field label={isEs ? 'Moneda' : 'Currency'}>
+              <select value={currency} onChange={e => setCurrency(e.target.value)} className={selectCls}>
+                <option value="eur">EUR €</option>
+                <option value="usd">USD $</option>
+                <option value="gbp">GBP £</option>
+                <option value="mxn">MXN $</option>
+              </select>
+            </Field>
           </div>
+
+          {kind === 'recurring' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={isEs ? 'Frecuencia' : 'Frequency'}>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([['month', isEs ? 'Mensual' : 'Monthly'], ['year', isEs ? 'Anual' : 'Yearly']] as const).map(([k, lbl]) => (
+                      <button key={k} type="button" onClick={() => setInterval(k as any)} className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${interval === k ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>{lbl}</button>
+                    ))}
+                  </div>
+                </Field>
+                <Field label={isEs ? 'Cada N períodos' : 'Every N periods'}>
+                  <input type="number" min="1" max="52" value={intervalCount} onChange={e => setIntervalCount(e.target.value)} className={inputCls} />
+                </Field>
+              </div>
+              <Field label={isEs ? 'Días de prueba' : 'Trial days'}>
+                <input type="number" min="0" max="365" value={trialDays} onChange={e => setTrialDays(e.target.value)} placeholder="0" className={inputCls} />
+              </Field>
+            </>
+          )}
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={allowPromos} onChange={e => setAllowPromos(e.target.checked)} className="w-4 h-4 rounded accent-[var(--brand-primary)]" />
+            <span className="text-sm text-slate-600 dark:text-slate-300">{isEs ? 'Permitir códigos de descuento en el pago' : 'Allow promotion codes at checkout'}</span>
+          </label>
+          {allowPromos && <PromoCodesManager isEs={isEs} locale={locale} currency={currency} />}
+
+          {priceChanged && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              {isEs
+                ? 'Has cambiado algo del precio: se regenerará el precio y el enlace de pago en Stripe. Las suscripciones ya activas mantienen su precio; los nuevos pagos usarán el actualizado.'
+                : 'You changed pricing: the price and payment link will be regenerated in Stripe. Active subscriptions keep their price; new payments use the updated one.'}
+            </p>
+          )}
+          <p className="text-[11px] text-slate-400">{isEs ? 'Actual' : 'Current'}: {fmtMoney(plan.amount_cents, plan.currency, locale)}{plan.kind === 'recurring' ? `/${plan.interval === 'year' ? (isEs ? 'año' : 'yr') : (isEs ? 'mes' : 'mo')}` : ''}</p>
         </div>
 
         <div className="flex gap-3 mt-6">

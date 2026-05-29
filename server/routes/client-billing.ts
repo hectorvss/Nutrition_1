@@ -1231,9 +1231,13 @@ router.post('/plans', async (req: any, res) => {
   }
 });
 
-// PATCH /plans/:id — edita nombre/descripcion/activo. Si cambia el importe,
-// crea un Price + Payment Link nuevos y desactiva el link antiguo (Stripe no
-// permite editar un precio existente).
+// PATCH /plans/:id — edita TODOS los campos del plan y los aplica en Stripe:
+//  - nombre/descripción → actualiza el Producto en Stripe.
+//  - cualquier cambio de precio (importe, moneda, tipo, frecuencia, cada-N,
+//    prueba) o de códigos promo → crea un Price + Payment Link nuevos y
+//    desactiva el link antiguo (Stripe no permite editar un Price existente).
+// Las suscripciones ya activas conservan su precio; los nuevos pagos usan el
+// actualizado. (`active` sigue soportado para archivar/restaurar.)
 router.patch('/plans/:id', async (req: any, res) => {
   try {
     const { id } = req.params;
@@ -1243,32 +1247,91 @@ router.patch('/plans/:id', async (req: any, res) => {
 
     const updates: any = {};
     if (typeof req.body.name === 'string' && req.body.name.trim()) updates.name = req.body.name.trim().slice(0, 120);
-    if (typeof req.body.description === 'string') updates.description = req.body.description.slice(0, 500);
+    if (typeof req.body.description === 'string') updates.description = req.body.description.slice(0, 500) || null;
     if (typeof req.body.active === 'boolean') updates.active = req.body.active;
 
-    const newAmount = req.body.amount !== undefined ? Number(req.body.amount) : null;
-    if (newAmount !== null && Number.isFinite(newAmount) && newAmount > 0 && Math.round(newAmount * 100) !== plan.amount_cents) {
+    // Valores nuevos (con tope sano) para detectar cambios que afectan al Price.
+    const hasKind = req.body.kind === 'recurring' || req.body.kind === 'one_time';
+    const newKind: 'recurring' | 'one_time' = hasKind ? req.body.kind : plan.kind;
+    const amountNum = req.body.amount !== undefined ? Number(req.body.amount) : (plan.amount_cents / 100);
+    const newAmountCents = Number.isFinite(amountNum) && amountNum > 0 ? Math.round(amountNum * 100) : plan.amount_cents;
+    const newCurrency = (typeof req.body.currency === 'string' && /^[a-z]{3}$/i.test(req.body.currency)) ? req.body.currency.toLowerCase() : (plan.currency || 'eur');
+    const newInterval = newKind === 'recurring'
+      ? (['day', 'week', 'month', 'year'].includes(req.body.interval) ? req.body.interval : (plan.interval || 'month'))
+      : null;
+    const icNum = Number(req.body.interval_count);
+    const newIntervalCount = Number.isFinite(icNum) && icNum >= 1 && icNum <= 52 ? Math.round(icNum) : (plan.interval_count || 1);
+    const tdNum = Number(req.body.trial_days);
+    const newTrialDays = Number.isFinite(tdNum) && tdNum > 0 && tdNum <= 365 ? Math.round(tdNum) : 0;
+    const newAllowPromos = req.body.allow_promotion_codes === undefined ? !!plan.allow_promotion_codes : req.body.allow_promotion_codes === true;
+
+    const priceChanged =
+      newAmountCents !== plan.amount_cents ||
+      newCurrency !== (plan.currency || 'eur') ||
+      newKind !== plan.kind ||
+      (newKind === 'recurring' && (
+        newInterval !== (plan.interval || 'month') ||
+        newIntervalCount !== (plan.interval_count || 1) ||
+        newTrialDays !== (plan.trial_days || 0)
+      ));
+    const promosChanged = newAllowPromos !== !!plan.allow_promotion_codes;
+    const nameOrDescChanged = (updates.name !== undefined && updates.name !== plan.name) || (updates.description !== undefined && (updates.description || null) !== (plan.description || null));
+
+    if (priceChanged || promosChanged || nameOrDescChanged) {
       const conn = await getCoachStripe(req.user.id);
-      if ('error' in conn) return res.status(conn.code).json({ error: conn.error });
+      if ('error' in conn) return res.status(conn.code).json({ error: conn.error, message: 'Conecta tu cuenta de Stripe en Ajustes → Integraciones.' });
       const { stripe } = conn;
-      const amountCents = Math.round(newAmount * 100);
-      const price = await stripe.prices.create({
-        product: plan.stripe_product_id,
-        unit_amount: amountCents,
-        currency: plan.currency,
-        ...(plan.kind === 'recurring' ? { recurring: { interval: (plan.interval || 'month') as any, interval_count: plan.interval_count || 1 } } : {}),
-      });
-      try { if (plan.stripe_payment_link_id) await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
-      const link = await stripe.paymentLinks.create({
-        line_items: [{ price: price.id, quantity: 1 }],
-        allow_promotion_codes: !!plan.allow_promotion_codes,
-        metadata: { manager_id: req.user.id, plan: '1' },
-        after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
-      });
-      updates.amount_cents = amountCents;
-      updates.stripe_price_id = price.id;
-      updates.stripe_payment_link_id = link.id;
-      updates.payment_url = link.url;
+
+      // Nombre/descripción → actualiza el Producto en Stripe (no requiere Price nuevo).
+      if (nameOrDescChanged && plan.stripe_product_id) {
+        try {
+          await stripe.products.update(plan.stripe_product_id, {
+            name: updates.name ?? plan.name,
+            description: (updates.description ?? plan.description) || undefined,
+          });
+        } catch (e) { console.error('Stripe product update failed (non-fatal):', e); }
+      }
+
+      // Cualquier cambio de precio o de promos → Price + Payment Link nuevos.
+      if (priceChanged || promosChanged) {
+        let productId = plan.stripe_product_id;
+        if (!productId) {
+          const product = await stripe.products.create({ name: updates.name ?? plan.name, description: (updates.description ?? plan.description) || undefined });
+          productId = product.id;
+          updates.stripe_product_id = productId;
+        }
+        // Solo necesitamos un Price nuevo si cambió el precio en sí. Si solo
+        // cambiaron las promos, reutilizamos el Price actual en el link nuevo.
+        let priceId = plan.stripe_price_id;
+        if (priceChanged) {
+          const price = await stripe.prices.create({
+            product: productId,
+            unit_amount: newAmountCents,
+            currency: newCurrency,
+            ...(newKind === 'recurring'
+              ? { recurring: { interval: newInterval as any, interval_count: newIntervalCount, ...(newTrialDays > 0 ? { trial_period_days: newTrialDays } : {}) } }
+              : {}),
+          });
+          priceId = price.id;
+          updates.amount_cents = newAmountCents;
+          updates.currency = newCurrency;
+          updates.kind = newKind;
+          updates.interval = newKind === 'recurring' ? newInterval : null;
+          updates.interval_count = newIntervalCount;
+          updates.trial_days = newTrialDays;
+          updates.stripe_price_id = priceId;
+        }
+        try { if (plan.stripe_payment_link_id) await stripe.paymentLinks.update(plan.stripe_payment_link_id, { active: false }); } catch { /* noop */ }
+        const link = await stripe.paymentLinks.create({
+          line_items: [{ price: priceId, quantity: 1 }],
+          allow_promotion_codes: newAllowPromos,
+          metadata: { manager_id: req.user.id, plan: '1' },
+          after_completion: { type: 'redirect', redirect: { url: `${frontendUrl()}/?payment=success` } },
+        });
+        updates.allow_promotion_codes = newAllowPromos;
+        updates.stripe_payment_link_id = link.id;
+        updates.payment_url = link.url;
+      }
     }
 
     if (Object.keys(updates).length > 0) await supabaseAdmin.from('billing_plans').update(updates).eq('id', id);
