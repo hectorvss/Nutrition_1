@@ -183,25 +183,22 @@ export default function ClientList({ onViewDetail, onAddClient }: ClientListProp
                 {showImportMenu && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowImportMenu(false)} />
-                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-20 overflow-hidden">
+                    {/* Mismo lenguaje visual que el menú de acciones (kebab) de Cobros:
+                        panel blanco rounded-xl, filas de una línea con icono + texto. */}
+                    <div className="absolute right-0 mt-2 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-20 overflow-hidden py-1">
                       {([
-                        { method: 'csv' as ImportMethod,    icon: FileDown,        title: 'CSV',                 desc: t('import_csv_desc', { defaultValue: 'Archivo .csv (Excel, Sheets, Numbers…)' }) },
-                        { method: 'excel' as ImportMethod,  icon: FileSpreadsheet, title: 'Excel',               desc: t('import_excel_desc', { defaultValue: 'Sube un .xlsx o .xls directamente' }) },
-                        { method: 'paste' as ImportMethod,  icon: ClipboardPaste,  title: t('import_paste', { defaultValue: 'Pegar desde hoja de cálculo' }), desc: t('import_paste_desc', { defaultValue: 'Copia/pega filas desde Excel o Sheets' }) },
-                        { method: 'gsheet' as ImportMethod, icon: Link2,           title: 'Google Sheets',       desc: t('import_gsheet_desc', { defaultValue: 'Pega el enlace de una hoja pública' }) },
+                        { method: 'csv' as ImportMethod,    icon: FileDown,        label: 'CSV' },
+                        { method: 'excel' as ImportMethod,  icon: FileSpreadsheet, label: 'Excel' },
+                        { method: 'paste' as ImportMethod,  icon: ClipboardPaste,  label: t('import_paste', { defaultValue: 'Texto (tabuladores o comas)' }) },
+                        { method: 'gsheet' as ImportMethod, icon: Link2,           label: 'Google Sheets' },
                       ]).map(opt => (
                         <button
                           key={opt.method}
                           onClick={() => { setShowImportMenu(false); setImportMethod(opt.method); }}
-                          className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
                         >
-                          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                            <opt.icon className="w-5 h-5" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="font-semibold text-slate-900 dark:text-white text-sm">{opt.title}</div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400">{opt.desc}</div>
-                          </div>
+                          <opt.icon className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--brand-primary)' }} />
+                          <span className="truncate">{opt.label}</span>
                         </button>
                       ))}
                     </div>

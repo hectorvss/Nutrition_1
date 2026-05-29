@@ -23,8 +23,10 @@ interface Props {
 
 interface ImportRowResult {
   email: string;
+  full_name?: string;
   status: 'created' | 'duplicate' | 'limit' | 'error';
   reason?: string;
+  password?: string;
 }
 interface ImportResponse {
   created: number;
@@ -38,7 +40,7 @@ type Step = 'input' | 'mapping' | 'result';
 const METHOD_META: Record<ImportMethod, { icon: any; es: string; en: string }> = {
   csv:    { icon: FileDown,        es: 'CSV',                en: 'CSV' },
   excel:  { icon: FileSpreadsheet, es: 'Excel',              en: 'Excel' },
-  paste:  { icon: ClipboardPaste,  es: 'Pegar datos',        en: 'Paste data' },
+  paste:  { icon: ClipboardPaste,  es: 'Texto (tabuladores o comas)', en: 'Text (tabs or commas)' },
   gsheet: { icon: Link2,           es: 'Google Sheets',      en: 'Google Sheets' },
 };
 
@@ -49,7 +51,6 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
   const [step, setStep] = useState<Step>('input');
   const [table, setTable] = useState<ParsedTable | null>(null);
   const [mapping, setMapping] = useState<Record<ClientFieldKey, number | null>>({} as any);
-  const [sendEmail, setSendEmail] = useState(true);
   const [pasteText, setPasteText] = useState('');
   const [sheetUrl, setSheetUrl] = useState('');
   const [busy, setBusy] = useState(false);
@@ -62,7 +63,6 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
     setStep('input');
     setTable(null);
     setMapping({} as any);
-    setSendEmail(true);
     setPasteText('');
     setSheetUrl('');
     setBusy(false);
@@ -150,8 +150,7 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
       XLSX.writeFile(wb, filename);
       return;
     }
-    const delim = method === 'paste' ? '\t' : ',';
-    const csv = buildTemplate(isEs, delim as any);
+    const csv = buildTemplate(isEs, ',');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -174,15 +173,38 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
     try {
       const data: ImportResponse = await fetchWithAuth('/manager/clients/import', {
         method: 'POST',
-        body: JSON.stringify({ rows: built.valid, sendEmail }),
+        body: JSON.stringify({ rows: built.valid }),
       });
       setResult(data);
       setStep('result');
     } catch (e: any) {
+      // 402 = plan cap would be exceeded / trial ended. api.ts already fired the
+      // `billing:limit` event, so the global paywall is opening — close this
+      // modal so it isn't stacked behind an inline error.
+      if (e?.code === 'plan_limit_reached' || e?.code === 'subscription_required' || e?.billing) {
+        onClose();
+        return;
+      }
       setError(e?.message || (isEs ? 'Error al importar.' : 'Import failed.'));
     } finally {
       setBusy(false);
     }
+  };
+
+  const downloadCredentials = () => {
+    if (!result) return;
+    const createdRows = result.results.filter(r => r.status === 'created' && r.password);
+    if (!createdRows.length) return;
+    const rows = [
+      [isEs ? 'nombre' : 'name', 'email', isEs ? 'contraseña' : 'password'],
+      ...createdRows.map(r => [r.full_name || '', r.email, r.password || '']),
+    ];
+    const csv = '﻿' + rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'credenciales-clientes.csv'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   const downloadErrorReport = () => {
@@ -269,7 +291,7 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
                 </div>
                 <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 text-[11px] text-slate-500 dark:text-slate-400">
                   {method === 'paste'
-                    ? (isEs ? 'Separa las columnas por tabulador (copia/pega directo desde Excel o Google Sheets). La primera fila son los encabezados.' : 'Separate columns by tab (copy/paste straight from Excel or Google Sheets). First row is the header.')
+                    ? (isEs ? 'Introduce las filas con las columnas separadas por tabuladores o por comas. La primera fila son los encabezados.' : 'Enter the rows with columns separated by tabs or commas. First row is the header.')
                     : method === 'excel'
                     ? (isEs ? 'Primera hoja del libro. La primera fila debe ser los encabezados. El orden de columnas da igual: lo mapeas en el paso 2.' : 'First sheet of the workbook. First row must be the headers. Column order does not matter: you map it in step 2.')
                     : method === 'gsheet'
@@ -303,7 +325,7 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
                     value={pasteText}
                     onChange={e => setPasteText(e.target.value)}
                     rows={8}
-                    placeholder={isEs ? 'Pega aquí las filas copiadas desde Excel / Google Sheets…' : 'Paste rows copied from Excel / Google Sheets here…'}
+                    placeholder={isEs ? 'Filas con columnas separadas por tabuladores o comas…' : 'Rows with columns separated by tabs or commas…'}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm p-3 font-mono focus:border-emerald-500 focus:ring-emerald-500"
                   />
                   <button
@@ -437,19 +459,12 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
                 </div>
               )}
 
-              {/* Send-email option */}
-              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 py-3">
-                <div>
-                  <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{isEs ? 'Enviar email de invitación' : 'Send invite email'}</span>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{isEs ? 'Se enviarán las credenciales a cada cliente importado.' : 'Credentials will be emailed to each imported client.'}</p>
-                </div>
-                <button
-                  type="button" role="switch" aria-checked={sendEmail}
-                  onClick={() => setSendEmail(v => !v)}
-                  className={`w-12 h-6 rounded-full relative shrink-0 transition-colors ${sendEmail ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-                >
-                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${sendEmail ? 'right-1' : 'left-1'}`} />
-                </button>
+              {/* Credentials note — passwords are generated per client and can be
+                  downloaded after the import so the coach can share them. */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl px-4 py-3 text-xs text-slate-500 dark:text-slate-400">
+                {isEs
+                  ? 'Se generará una contraseña temporal para cada cliente nuevo. Podrás descargar la lista de credenciales al terminar para compartirlas.'
+                  : 'A temporary password is generated for each new client. You can download the credentials list when done to share them.'}
               </div>
             </div>
           )}
@@ -484,6 +499,23 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
                       </span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {result.created > 0 && (
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/20 p-4">
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{isEs ? 'Credenciales de acceso' : 'Access credentials'}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 mb-3">
+                    {isEs
+                      ? 'Descarga la lista con la contraseña temporal de cada cliente para compartirla. Podrán cambiarla con "He olvidado mi contraseña".'
+                      : 'Download the list with each client\'s temporary password to share it. They can change it via "Forgot password".'}
+                  </p>
+                  <button
+                    onClick={downloadCredentials}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-sm hover:bg-emerald-600 transition-colors"
+                  >
+                    <Download className="w-4 h-4" /> {isEs ? 'Descargar credenciales (CSV)' : 'Download credentials (CSV)'}
+                  </button>
                 </div>
               )}
 

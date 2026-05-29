@@ -835,7 +835,7 @@ router.post('/clients', enforceClientLimit, async (req: any, res) => {
 // emails, and return a per-row result so the UI can show created/skipped/failed.
 router.post('/clients/import', async (req: any, res) => {
   const managerId = req.user.id;
-  const { rows, sendEmail } = req.body || {};
+  const { rows } = req.body || {};
   if (!Array.isArray(rows) || rows.length === 0) {
     return res.status(400).json({ error: 'No rows to import' });
   }
@@ -847,10 +847,23 @@ router.post('/clients/import', async (req: any, res) => {
     // Compute how many more clients this plan allows.
     const { data: sub } = await supabaseAdmin
       .from('manager_subscriptions')
-      .select('plan_tier')
+      .select('plan_tier, status, trial_ends_at')
       .eq('user_id', managerId)
       .maybeSingle();
     const tier = (sub?.plan_tier as PlanTier) || 'trial';
+
+    // Trial expired / subscription in a terminal state → full paywall, same as
+    // the single-create middleware. Returns 402 so the frontend shows the
+    // Paywall and creates nothing.
+    if (isAccessBlocked({ tier: sub?.plan_tier, status: sub?.status, trialEndsAt: sub?.trial_ends_at })) {
+      return res.status(402).json({
+        error: 'subscription_required',
+        message: 'Your trial has ended. Subscribe to keep adding clients.',
+        tier,
+        accessBlocked: true,
+      });
+    }
+
     const limit = limitsForTier(tier).activeClients; // number | null (null = unlimited)
     const { count } = await supabaseAdmin
       .from('users')
@@ -858,21 +871,43 @@ router.post('/clients/import', async (req: any, res) => {
       .eq('manager_id', managerId)
       .eq('role', 'CLIENT')
       .neq('status', 'inactive');
-    let remaining = limit == null ? Number.POSITIVE_INFINITY : Math.max(0, limit - (count ?? 0));
+    const currentClients = count ?? 0;
+
+    // Hard gate: if importing these rows would push the manager OVER their plan
+    // cap (existing + to-import > limit), block the WHOLE import and trigger the
+    // upgrade paywall. Nothing is created — it's all-or-nothing so the coach
+    // upgrades first instead of getting a confusing partial import.
+    if (limit != null && currentClients + rows.length > limit) {
+      return res.status(402).json({
+        error: 'plan_limit_reached',
+        message: `Importing ${rows.length} clients would exceed your ${tier} plan limit of ${limit} (you already have ${currentClients}).`,
+        resource: 'activeClients',
+        tier,
+        limit,
+        used: currentClients,
+        accessBlocked: false,
+      });
+    }
+
+    let remaining = limit == null ? Number.POSITIVE_INFINITY : Math.max(0, limit - currentClients);
 
     const genPassword = () => 'Nutri' + Math.floor(Math.random() * 9000 + 1000) + '$xp';
-    const results: Array<{ email: string; status: 'created' | 'duplicate' | 'limit' | 'error'; reason?: string }> = [];
+    // `password` is returned ONLY for freshly-created clients so the coach can
+    // download the credentials and share them (same idea as the single-create
+    // form, which shows the temp password on screen).
+    const results: Array<{ email: string; full_name?: string; status: 'created' | 'duplicate' | 'limit' | 'error'; reason?: string; password?: string }> = [];
     let created = 0, skipped = 0, failed = 0;
 
     for (const row of rows) {
       const email = String(row?.email || '').trim().toLowerCase();
+      const fullName = (row?.full_name || '').toString().trim() || undefined;
       if (!email) { failed++; results.push({ email: '', status: 'error', reason: 'Missing email' }); continue; }
-      if (remaining <= 0) { skipped++; results.push({ email, status: 'limit' }); continue; }
+      if (remaining <= 0) { skipped++; results.push({ email, full_name: fullName, status: 'limit' }); continue; }
 
+      const password = genPassword();
       const r = await createClientForManager(managerId, {
         email,
-        password: genPassword(),
-        sendEmail: !!sendEmail,
+        password,
         profile: {
           full_name: row.full_name,
           phone: row.phone,
@@ -885,9 +920,9 @@ router.post('/clients/import', async (req: any, res) => {
         },
       });
 
-      if (r.ok) { created++; remaining--; results.push({ email, status: 'created' }); }
-      else if (r.code === 'duplicate') { skipped++; results.push({ email, status: 'duplicate' }); }
-      else { failed++; results.push({ email, status: 'error', reason: r.message }); }
+      if (r.ok) { created++; remaining--; results.push({ email, full_name: fullName, status: 'created', password }); }
+      else if (r.code === 'duplicate') { skipped++; results.push({ email, full_name: fullName, status: 'duplicate' }); }
+      else { failed++; results.push({ email, full_name: fullName, status: 'error', reason: r.message }); }
     }
 
     res.json({ created, skipped, failed, results });
