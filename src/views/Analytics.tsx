@@ -3,6 +3,7 @@ import { fetchWithAuth } from '../api';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { TrendingUp, Utensils, Dumbbell, Calendar, AlertTriangle } from 'lucide-react';
+import Select from '../components/ui/Select';
 import BusinessAnalytics from './analytics/BusinessAnalytics';
 import NutritionAnalytics from './analytics/NutritionAnalytics';
 import TrainingAnalytics from './analytics/TrainingAnalytics';
@@ -82,17 +83,18 @@ export default function Analytics() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('analytics_title')}</h1>
           <p className="text-slate-500 text-sm">{t('analytics_overview')}</p>
         </div>
-        <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-slate-200 shadow-sm">
-          <Calendar className="w-5 h-5 text-emerald-500" />
-          <select
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-lg px-3 py-2 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <Calendar className="w-5 h-5 text-emerald-500 shrink-0" />
+          <Select
             value={days}
-            onChange={e => setDays(Number(e.target.value))}
-            className="text-sm text-slate-600 font-medium bg-transparent outline-none cursor-pointer pr-1"
+            onChange={(v) => setDays(Number(v))}
+            className="text-sm text-slate-600 dark:text-slate-300 font-medium bg-transparent outline-none pr-1"
+            aria-label={t('analytics_title')}
           >
             {RANGE_OPTIONS.map(o => (
               <option key={o.days} value={o.days}>{t(o.labelKey)}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </header>
 
