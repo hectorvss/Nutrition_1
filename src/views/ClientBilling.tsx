@@ -118,6 +118,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
   const [kindFilter, setKindFilter] = useState<'all' | 'recurring' | 'one_time' | 'invoice'>('all');
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sentId, setSentId] = useState<string | null>(null);
   const [upcoming, setUpcoming] = useState<UpcomingRenewal[]>([]);
   const [balance, setBalance] = useState<{ balance: number; mrr: number; recent_revenue: number[]; currency: string } | null>(null);
 
@@ -234,11 +235,38 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
     a.click(); URL.revokeObjectURL(url);
   };
 
+  // Construye un mensaje directo y claro para el cliente según el tipo de cobro,
+  // de modo que junto a la tarjeta de pago reciba un texto que explique que ese
+  // es su enlace para pagar (la suscripción de este mes, el pago, o la factura).
+  const buildReminderMessage = (it?: { kind?: string; interval?: string | null }): string => {
+    const kind = it?.kind;
+    if (kind === 'recurring') {
+      const periodo = it?.interval === 'year'
+        ? (isEs ? 'tu suscripción de este año' : 'your subscription for this year')
+        : (isEs ? 'tu suscripción de este mes' : 'your subscription for this month');
+      return isEs
+        ? `Aquí tienes tu enlace de pago para ${periodo}. Pulsa el botón para pagar de forma segura con Stripe.`
+        : `Here's your payment link for ${periodo}. Tap the button to pay securely with Stripe.`;
+    }
+    if (kind === 'invoice') {
+      return isEs
+        ? 'Aquí tienes tu enlace de pago para abonar tu factura. Pulsa el botón para pagar de forma segura con Stripe.'
+        : "Here's your payment link to settle your invoice. Tap the button to pay securely with Stripe.";
+    }
+    return isEs
+      ? 'Aquí tienes tu enlace de pago. Pulsa el botón para pagar de forma segura con Stripe.'
+      : "Here's your payment link. Tap the button to pay securely with Stripe.";
+  };
+
   const remind = async (id: string) => {
     setBusyId(id);
     try {
-      await fetchWithAuth(`/manager/client-billing/${id}/remind`, { method: 'POST', body: JSON.stringify({}) });
+      const it = items.find(x => x.id === id) || upcoming.find(x => x.id === id);
+      const message = buildReminderMessage(it as any);
+      await fetchWithAuth(`/manager/client-billing/${id}/remind`, { method: 'POST', body: JSON.stringify({ message }) });
       await load();
+      setSentId(id);
+      setTimeout(() => setSentId(s => (s === id ? null : s)), 2000);
     } catch (e: any) {
       setError(e?.message || 'Error');
     } finally {
@@ -482,8 +510,8 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                     disabled={busyId === u.id}
                     className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5 whitespace-nowrap"
                   >
-                    {busyId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    {isEs ? 'Recordar' : 'Remind'}
+                    {busyId === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : sentId === u.id ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Send className="w-3.5 h-3.5" />}
+                    {sentId === u.id ? (isEs ? 'Enviado' : 'Sent') : (isEs ? 'Recordar' : 'Remind')}
                   </button>
                 )}
               </div>
@@ -592,7 +620,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
                             <>
                               <IconBtn title={copiedId === it.id ? (isEs ? '¡Copiado!' : 'Copied!') : (isEs ? 'Copiar link' : 'Copy link')} onClick={() => copyLink(it.payment_url, it.id)} icon={copiedId === it.id ? CheckCircle2 : Link2} accent={copiedId === it.id ? 'emerald' : undefined} />
                               <IconBtn title={isEs ? 'Abrir link' : 'Open link'} onClick={() => window.open(it.payment_url!, '_blank')} icon={ExternalLink} />
-                              <IconBtn title={isEs ? 'Enviar tarjeta de pago al chat' : 'Send payment card to chat'} onClick={() => remind(it.id)} icon={Send} busy={busy} accent="emerald" />
+                              <IconBtn title={sentId === it.id ? (isEs ? '¡Enviado al chat!' : 'Sent to chat!') : (isEs ? 'Enviar enlace de pago al chat' : 'Send payment link to chat')} onClick={() => remind(it.id)} icon={sentId === it.id ? CheckCircle2 : Send} busy={busy} accent="emerald" />
                             </>
                           )}
                           <IconBtn title={isEs ? 'Sincronizar estado' : 'Sync status'} onClick={() => sync(it.id)} icon={RefreshCw} busy={busy} />
