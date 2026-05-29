@@ -27,9 +27,17 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
   // los clientes — con un cross-fade cada 5s. La captura se sirve en el idioma
   // actual de la interfaz (ES/EN).
   const lang = language === 'en' ? 'en' : 'es';
+  const isEs = lang === 'es';
+  // Capturas PROFUNDAS y características del SaaS (no las listas de nivel
+  // superior): el plan de comidas montado, el plan de entreno por días, la
+  // ficha 360º del cliente, la analítica de negocio y el editor visual de
+  // automatizaciones. Servidas en el idioma actual.
   const showcase = [
-    { src: `/landing/feature-nutrition-${lang}.png`, label: t('login_showcase_nutrition', { defaultValue: 'Planes de nutrición' }) },
-    { src: `/landing/feature-training-${lang}.png`, label: t('login_showcase_training', { defaultValue: 'Planes de entrenamiento' }) },
+    { src: `/landing/deep-nutrition-plan-${lang}.png`, label: isEs ? 'Plan de nutrición' : 'Nutrition plan' },
+    { src: `/landing/deep-training-${lang}.png`,       label: isEs ? 'Plan de entrenamiento' : 'Training plan' },
+    { src: `/landing/deep-client-${lang}.png`,         label: isEs ? 'Ficha de cliente' : 'Client profile' },
+    { src: `/landing/deep-analytics-${lang}.png`,      label: isEs ? 'Analítica' : 'Analytics' },
+    { src: `/landing/deep-workflow-${lang}.png`,       label: isEs ? 'Automatizaciones' : 'Automations' },
   ];
   const [slide, setSlide] = useState(0);
   useEffect(() => {
@@ -156,8 +164,6 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
 
   return (
     <div className="min-h-screen bg-white font-body text-black flex overflow-hidden relative">
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-50 z-50" />
-      
       {onBackToLanding && (
         <motion.button 
           initial={{ opacity: 0, scale: 0.8 }}
@@ -350,7 +356,7 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
           Fondo totalmente blanco; la tarjeta sólo lleva una sombra suave y
           difusa — sin panel de color ni línea dura. */}
       <div className="hidden lg:flex w-[55%] bg-white relative items-center justify-center p-8">
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-3xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={showcase[slide].src}
