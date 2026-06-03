@@ -6,53 +6,51 @@
 import React, { useState, Suspense } from 'react';
 import { lazyWithRetry } from './lazyWithRetry';
 import Sidebar from './components/Sidebar';
-import Dashboard from './views/Dashboard';
-import Tasks from './views/Tasks';
 import Login from './views/Login';
 import { useAuth } from './context/AuthContext';
 import { useProfile } from './context/ProfileContext';
 
 import { useClient } from './context/ClientContext';
-import CalendarView from './views/Calendar';
-import CreateTask from './views/CreateTask';
-import PlanningManagement from './views/PlanningManagement';
-import PlanningPlanTemplates from './views/PlanningPlanTemplates';
-// Vistas pesadas con `React.lazy()` para que no entren al bundle principal.
-// Cada una se descarga la primera vez que el usuario navega a ella.
-// Justificacion (LOC): PlanningDetail 1922, Settings 1663, NutritionPlanDetail
-// 1332, Messages 1183, Analytics 774, ClientProgress 773, WorkoutEditor 677.
+// Manager/client app screens are lazy so the public landing/login bundle stays
+// small. Each screen downloads the first time the user opens it.
+const Dashboard             = lazyWithRetry(() => import('./views/Dashboard'));
+const Tasks                 = lazyWithRetry(() => import('./views/Tasks'));
+const CalendarView          = lazyWithRetry(() => import('./views/Calendar'));
+const CreateTask            = lazyWithRetry(() => import('./views/CreateTask'));
+const PlanningManagement    = lazyWithRetry(() => import('./views/PlanningManagement'));
+const PlanningPlanTemplates = lazyWithRetry(() => import('./views/PlanningPlanTemplates'));
 const PlanningDetail        = lazyWithRetry(() => import('./views/PlanningDetail'));
 const Analytics             = lazyWithRetry(() => import('./views/Analytics'));
 const Settings              = lazyWithRetry(() => import('./views/Settings'));
 const OnboardingFlowEditor  = lazyWithRetry(() => import('./views/OnboardingFlowEditor'));
-import PlanningTemplateSelector from './views/PlanningTemplateSelector';
-import TaskIntelligence from './views/TaskIntelligence';
-import Clients from './views/Clients';
-import CheckIns from './views/CheckIns';
-import Messages from './views/Messages';
-import Automations from './views/Automations';
-import Nutrition from './views/Nutrition';
-import LibraryDashboard from './views/LibraryDashboard';
-import RecipeCreate from './views/RecipeCreate';
-import RecipeDetail from './views/RecipeDetail';
-import FoodCreate from './views/FoodCreate';
-import SupplementCreate from './views/SupplementCreate';
-import TrainingLibrary from './views/TrainingLibrary';
-import ExerciseCreate from './views/ExerciseCreate';
-import Training from './views/Training';
-import ExerciseDetail from './views/ExerciseDetail';
-import OnboardingDashboard from './views/OnboardingDashboard';
-import Subscriptions from './views/Subscriptions';
-import ClientBilling from './views/ClientBilling';
-import ClientApp from './ClientApp';
+const PlanningTemplateSelector = lazyWithRetry(() => import('./views/PlanningTemplateSelector'));
+const TaskIntelligence      = lazyWithRetry(() => import('./views/TaskIntelligence'));
+const Clients               = lazyWithRetry(() => import('./views/Clients'));
+const CheckIns              = lazyWithRetry(() => import('./views/CheckIns'));
+const Messages              = lazyWithRetry(() => import('./views/Messages'));
+const Automations           = lazyWithRetry(() => import('./views/Automations'));
+const Nutrition             = lazyWithRetry(() => import('./views/Nutrition'));
+const LibraryDashboard      = lazyWithRetry(() => import('./views/LibraryDashboard'));
+const RecipeCreate          = lazyWithRetry(() => import('./views/RecipeCreate'));
+const RecipeDetail          = lazyWithRetry(() => import('./views/RecipeDetail'));
+const FoodCreate            = lazyWithRetry(() => import('./views/FoodCreate'));
+const SupplementCreate      = lazyWithRetry(() => import('./views/SupplementCreate'));
+const TrainingLibrary       = lazyWithRetry(() => import('./views/TrainingLibrary'));
+const ExerciseCreate        = lazyWithRetry(() => import('./views/ExerciseCreate'));
+const Training              = lazyWithRetry(() => import('./views/Training'));
+const ExerciseDetail        = lazyWithRetry(() => import('./views/ExerciseDetail'));
+const OnboardingDashboard   = lazyWithRetry(() => import('./views/OnboardingDashboard'));
+const Subscriptions         = lazyWithRetry(() => import('./views/Subscriptions'));
+const ClientBilling         = lazyWithRetry(() => import('./views/ClientBilling'));
+const ClientApp             = lazyWithRetry(() => import('./ClientApp'));
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
 import LandingPage from './views/LandingPage';
 import { useLanguage } from './context/LanguageContext';
 import { useBilling } from './context/BillingContext';
 import TrialBanner from './components/TrialBanner';
-import Paywall from './components/Paywall';
 import PaywallLimitModal from './components/PaywallLimitModal';
+const Paywall = lazyWithRetry(() => import('./components/Paywall'));
 
 type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'planning-template-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions' | 'client-billing';
 
@@ -155,7 +153,15 @@ export default function App() {
 
   // Route to the dedicated client portal if the user is a client
   if (user.role === 'CLIENT') {
-    return <ClientApp />;
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-[#f6f8f6] dark:bg-[#112116] flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-[#17cf54] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <ClientApp />
+      </Suspense>
+    );
   }
 
   const renderView = () => {
@@ -170,14 +176,25 @@ export default function App() {
       case 'dashboard':
         return <Dashboard onNavigate={(view, data) => {
           if (data?.clientId) setSelectedClientId(data.clientId);
-          if (data?.checkInId) setSelectedCheckInId(data.checkInId);
+          if (Object.prototype.hasOwnProperty.call(data || {}, 'checkInId')) {
+            setSelectedCheckInId(data?.checkInId || null);
+          } else if (view === 'check-ins') {
+            setSelectedCheckInId(null);
+          }
+          if (data?.calendarDate) setCalendarDate(new Date(data.calendarDate + 'T12:00:00'));
+          if (data?.calendarView) setCalendarViewMode(data.calendarView);
+          setFocusCalendarEventId(data?.focusEventId ?? null);
           setCurrentView(view as View);
         }} />;
       case 'tasks':
         return <Tasks onNavigate={(view, data) => {
           if (data?.taskId) setSelectedTaskId(data.taskId);
           if (data?.clientId) setSelectedClientId(data.clientId);
-          if (data?.checkInId) setSelectedCheckInId(data.checkInId);
+          if (Object.prototype.hasOwnProperty.call(data || {}, 'checkInId')) {
+            setSelectedCheckInId(data?.checkInId || null);
+          } else if (view === 'check-ins') {
+            setSelectedCheckInId(null);
+          }
           // Clic en una tarea que es un evento del calendario: ir al calendario
           // en la fecha exacta del evento, en vista Día, y resaltarlo.
           if (data?.calendarDate) setCalendarDate(new Date(data.calendarDate + 'T12:00:00'));
@@ -282,9 +299,9 @@ export default function App() {
       case 'automations':
         return <Automations />;
       case 'nutrition':
-        return <Nutrition />;
+        return <Nutrition initialClientId={selectedClientId || undefined} />;
       case 'training':
-        return <Training />;
+        return <Training initialClientId={selectedClientId || undefined} />;
       case 'library':
         return <LibraryDashboard onNavigate={(view, recipeId) => {
           if (view === 'recipe-detail') {
@@ -375,7 +392,15 @@ export default function App() {
   // the paywall flow (they're already on the Pricing grid, so this is mostly
   // a safety net if they cancel mid-upgrade).
   if (billingStatus?.accessBlocked && currentView !== 'settings') {
-    return <Paywall />;
+    return (
+      <Suspense fallback={
+        <div className="min-h-screen bg-surface flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }>
+        <Paywall />
+      </Suspense>
+    );
   }
 
   return (

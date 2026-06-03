@@ -104,7 +104,7 @@ export const WORKFLOW_CATALOG = [
   { type: 'trigger', key: 'trigger.weight_change', label: 'Weight change', category: 'Triggers',
     icon: 'Scale', description: 'Fires when a check-in records a weight change above the threshold (kg).',
     configFields: [
-      { name: 'directionn', label: 'Direction', type: 'select', options: ['any', 'gain', 'loss'] },
+      { name: 'direction', label: 'Direction', type: 'select', options: ['any', 'gain', 'loss'] },
       { name: 'minKg', label: 'Min change (kg)', type: 'number' },
     ] },
   { type: 'trigger', key: 'trigger.plan_assigned', label: 'Plan assigned', category: 'Triggers',
@@ -698,9 +698,11 @@ async function runLoop(p: {
             const { error } = await insertWithRetry('tasks', {
               manager_id: managerId, client_id: ctx.client?.id || null,
               title: renderTemplate(cfg.title || 'Workflow task', ctx),
+              description: cfg.description ? renderTemplate(cfg.description, ctx) : null,
               type: cfg.type || 'workflow', date: new Date().toISOString().split('T')[0],
               time: '09:00', status: 'pending',
-              priority: ['low', 'medium', 'high'].includes(cfg.priority) ? cfg.priority : 'medium' });
+              priority: ['low', 'medium', 'high'].includes(cfg.priority) ? cfg.priority : 'medium',
+              link_url: cfg.linkUrl || cfg.link_url || null });
             await logStep(node, error ? 'failed' : 'completed', { title: cfg.title }, error?.message);
             if (error) { status = 'failed'; return { status, steps, ctx }; }
           }
@@ -1369,13 +1371,30 @@ export async function resumeWaitingWorkflows(): Promise<number> {
 }
 
 /** Fire every enabled published workflow of a manager whose trigger matches an event. */
+function shouldRunEventTrigger(triggerKey: string, triggerConfig: any, payload: any): boolean {
+  if (triggerKey === 'trigger.weight_change') {
+    const delta = Number(payload?.delta);
+    if (Number.isFinite(delta)) {
+      const minKg = Math.max(0, Number(triggerConfig?.minKg) || 0);
+      if (Math.abs(delta) < minKg) return false;
+      const direction = triggerConfig?.direction || 'any';
+      if (direction === 'gain' && delta <= 0) return false;
+      if (direction === 'loss' && delta >= 0) return false;
+    }
+  }
+  return true;
+}
+
 export async function runWorkflowsForEvent(managerId: string, triggerKey: string, payload: any) {
   try {
     const versions = await loadPublishedTriggerVersions(managerId);
     for (const v of versions) {
       if (v.triggerKey !== triggerKey) continue;
+      if (!shouldRunEventTrigger(triggerKey, v.triggerConfig, payload)) continue;
       // Idempotency: events carrying a stable id only ever produce one run.
-      const stableId = payload?.checkinId || payload?.messageId
+      const stableId = payload?.checkinId || payload?.submissionId || payload?.messageId
+        || payload?.workoutId || payload?.mealLogId || payload?.mealId || payload?.activityId
+        || payload?.billingId || payload?.refundId || payload?.eventId
         || (triggerKey === 'trigger.new_client' ? payload?.clientId : null);
       const dedupeKey = stableId ? `${v.versionId}:${triggerKey}:${stableId}` : undefined;
       await executeWorkflowVersion({
@@ -1593,7 +1612,7 @@ async function loadPublishedTriggerVersions(managerId: string) {
   const { data: defs } = await supabaseAdmin
     .from('workflow_definitions')
     .select('id, current_version_id').eq('manager_id', managerId).eq('enabled', true);
-  const out: { versionId: string; triggerKey: string; nodes: WorkflowNode[]; edges: WorkflowEdge[] }[] = [];
+  const out: { versionId: string; triggerKey: string; triggerConfig: any; nodes: WorkflowNode[]; edges: WorkflowEdge[] }[] = [];
   for (const def of defs || []) {
     if (!def.current_version_id) continue;
     const { data: version } = await supabaseAdmin
@@ -1603,7 +1622,7 @@ async function loadPublishedTriggerVersions(managerId: string) {
     const nodes: WorkflowNode[] = version.nodes || [];
     const trig = nodes.find(n => n.type === 'trigger');
     if (!trig) continue;
-    out.push({ versionId: version.id, triggerKey: trig.key, nodes, edges: version.edges || [] });
+    out.push({ versionId: version.id, triggerKey: trig.key, triggerConfig: trig.config || {}, nodes, edges: version.edges || [] });
   }
   return out;
 }

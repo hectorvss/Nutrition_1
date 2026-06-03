@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
+import WizardStepper from '../components/automations/WizardStepper';
 
 // Mapping string -> componente. El backend solo manda el `icon` como string.
 const ICONS: Record<string, React.ElementType> = {
@@ -99,25 +100,7 @@ export default function AutomationCreateTrigger({ onBack, onNext }: AutomationCr
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('create_new_automation')}</h1>
           </div>
 
-          {/* Step indicator (sin cambios respecto a la version anterior) */}
-          <div className="flex items-center">
-            <div className="flex items-center relative">
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">1</div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('trigger_label')}</span>
-              </div>
-              <div className="w-16 md:w-24 h-1 bg-slate-200 dark:bg-slate-800 -ml-2 -mr-2 relative z-0"></div>
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center font-semibold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">2</div>
-                <span className="text-xs font-medium mt-2 text-slate-400">{t('message_label')}</span>
-              </div>
-              <div className="w-16 md:w-24 h-1 bg-slate-200 dark:bg-slate-800 -ml-2 -mr-2 relative z-0"></div>
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center font-semibold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">3</div>
-                <span className="text-xs font-medium mt-2 text-slate-400">{t('review')}</span>
-              </div>
-            </div>
-          </div>
+          <WizardStepper currentStep={1} labels={[t('trigger_label'), t('message_label'), t('review')]} />
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1 p-6 md:p-8">

@@ -26,6 +26,7 @@ import { useAutomation } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
 import { AutomationDeliveryRules } from '../context/AutomationContext';
 import { useLanguage } from '../context/LanguageContext';
+import WizardStepper from '../components/automations/WizardStepper';
 
 interface WizardData {
   triggerId: string;
@@ -146,29 +147,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
             </div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{wizardData.editingId ? t('edit_automation') : t('create_new_automation')}</h1>
           </div>
-          {/* Step indicator */}
-          <div className="flex items-center">
-            <div className="flex items-center relative">
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">
-                  <Check className="w-4 h-4 md:w-5 md:h-5" />
-                </div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('trigger_label')}</span>
-              </div>
-              <div className="w-16 md:w-24 h-1 bg-emerald-500 -ml-2 -mr-2 relative z-0"></div>
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">
-                  <Check className="w-4 h-4 md:w-5 md:h-5" />
-                </div>
-                <span className="text-xs font-medium mt-2 text-emerald-500">{t('message_label')}</span>
-              </div>
-              <div className="w-16 md:w-24 h-1 bg-emerald-500 -ml-2 -mr-2 relative z-0"></div>
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">3</div>
-                <span className="text-xs font-bold mt-2 text-emerald-500">{t('review')}</span>
-              </div>
-            </div>
-          </div>
+          <WizardStepper currentStep={3} labels={[t('trigger_label'), t('message_label'), t('review')]} />
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col flex-1 p-0">

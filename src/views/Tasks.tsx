@@ -218,6 +218,13 @@ export default function Tasks({ onNavigate }: TasksProps) {
                                 opacity: { duration: 0.2 }
                               }}
                               onClick={() => {
+                                if (task.target) {
+                                  onNavigate(task.target.view, {
+                                    ...task.target.data,
+                                    clientId: task.target.data?.clientId ?? task.clientId,
+                                  });
+                                  return;
+                                }
                                 // Direct-message tasks open the conversation with that client.
                                 if (task.type === 'DIRECT MESSAGE') {
                                   if (task.clientId) onNavigate('messages', { clientId: task.clientId });

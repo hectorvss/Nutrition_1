@@ -3,6 +3,7 @@ import { fetchWithAuth } from '../../api';
 import { unwrapList } from '../../api/unwrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { computeCheckinAdherence } from '../../lib/checkinAdherence';
 import WeeklyCheckinFlow from './WeeklyCheckinFlow';
 import CheckInDetailView from './CheckInDetailView';
 

@@ -64,7 +64,7 @@ const ES_EN: Record<string, string[]> = {
   'beginner': ['principiante'], 'intermediate': ['intermedio'], 'advanced': ['avanzado'],
   'strength': ['fuerza'], 'mobility': ['movilidad'],
   'chest': ['pecho'], 'back': ['espalda'], 'shoulders': ['hombros'],
-  'arms': ['brazos'], 'biceps': ['bíceps'], 'triceps': ['tríceps'],
+  'arms': ['brazos'],
   'legs': ['piernas'], 'quads': ['cuádriceps', 'cuadriceps'],
   'hamstring': ['femoral', 'isquios'], 'hamstrings': ['femorales', 'isquios'],
   'glutes': ['glúteos', 'gluteos', 'glúteo'], 'glute': ['glúteo'],

@@ -83,6 +83,142 @@ function evalConditions(conditions: any[], values: Record<string, any>): boolean
   return true;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function triggerNumberParam(automation: any, key: string): number | null {
+  const rules = automation?.delivery_rules || {};
+  const raw = rules.trigger_params?.[key] ?? rules.triggerParams?.[key] ?? rules.params?.[key];
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed)) return parsed;
+  const def = TRIGGER_BY_ID[automation?.trigger_id]?.params?.find(p => p.key === key)?.defaultValue;
+  const fallback = Number(def);
+  return Number.isFinite(fallback) ? fallback : null;
+}
+
+async function lastAutomationSentAt(automationId: string, clientId: string): Promise<Date | null> {
+  const { data } = await supabaseAdmin
+    .from('automation_logs')
+    .select('sent_at')
+    .eq('automation_id', automationId)
+    .eq('client_id', clientId)
+    .order('sent_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.sent_at ? new Date(data.sent_at) : null;
+}
+
+async function hasSentWithin(automationId: string, clientId: string, ms: number): Promise<boolean> {
+  const last = await lastAutomationSentAt(automationId, clientId);
+  return Boolean(last && Date.now() - last.getTime() < ms);
+}
+
+async function countAutomationLogsSince(automationId: string, clientId: string, sinceIso: string): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from('automation_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('automation_id', automationId)
+    .eq('client_id', clientId)
+    .gte('sent_at', sinceIso);
+  return count || 0;
+}
+
+function normalizeCheckinRows(legacyRows: any[] = [], submissionRows: any[] = []) {
+  const rows = [
+    ...legacyRows.map(row => ({
+      data: row.data_json || {},
+      at: row.created_at || row.date,
+      reviewed_at: row.reviewed_at || null,
+    })),
+    ...submissionRows.map(row => ({
+      data: row.answers_json || {},
+      at: row.submitted_at,
+      reviewed_at: row.reviewed_at || null,
+    })),
+  ];
+  return rows
+    .filter(row => row.at)
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+}
+
+function readWeight(data: any): number | null {
+  const raw = data?.weight ?? data?.Weight ?? data?.current_weight ?? data?.['Current Weight']
+    ?? data?.peso ?? data?.avgWeight ?? data?.bodyWeight;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function countCheckinsInRange(clientId: string, startIso: string, endIso: string): Promise<number> {
+  const [{ count: legacy }, { count: dynamic }] = await Promise.all([
+    supabaseAdmin
+      .from('check_ins')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId)
+      .gte('created_at', startIso)
+      .lt('created_at', endIso),
+    supabaseAdmin
+      .from('client_checkin_submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId)
+      .gte('submitted_at', startIso)
+      .lt('submitted_at', endIso),
+  ]);
+  return (legacy || 0) + (dynamic || 0);
+}
+
+async function hasAnyActivePlan(clientId: string): Promise<boolean> {
+  const [nutrition, training] = await Promise.all([
+    supabaseAdmin.from('nutrition_plans').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
+    supabaseAdmin.from('training_programs').select('id', { count: 'exact', head: true }).eq('client_id', clientId),
+  ]);
+  return (nutrition.count || 0) > 0 || (training.count || 0) > 0;
+}
+
+async function latestPlanUpdatedAt(clientId: string): Promise<string | null> {
+  const [nutrition, training] = await Promise.all([
+    supabaseAdmin.from('nutrition_plans').select('updated_at, created_at').eq('client_id', clientId).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+    supabaseAdmin.from('training_programs').select('updated_at, created_at').eq('client_id', clientId).order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  const dates = [nutrition.data?.updated_at || nutrition.data?.created_at, training.data?.updated_at || training.data?.created_at]
+    .filter(Boolean)
+    .map(d => new Date(d as string).getTime())
+    .filter(Number.isFinite);
+  if (!dates.length) return null;
+  return new Date(Math.max(...dates)).toISOString();
+}
+
+async function hasFutureAppointment(managerId: string, clientId: string, todayIso: string): Promise<boolean> {
+  const { count } = await supabaseAdmin
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .eq('manager_id', managerId)
+    .eq('client_id', clientId)
+    .gte('date', todayIso)
+    .not('status', 'in', '(completed,cancelled,canceled)');
+  return (count || 0) > 0;
+}
+
+async function recentWorkoutStats(clientId: string, now = new Date()) {
+  const [{ data: latest }, { count }] = await Promise.all([
+    supabaseAdmin
+      .from('workout_logs')
+      .select('logged_at')
+      .eq('client_id', clientId)
+      .order('logged_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('workout_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId),
+  ]);
+  const daysSinceLastWorkout = latest?.logged_at
+    ? Math.floor((now.getTime() - new Date(latest.logged_at).getTime()) / DAY_MS)
+    : 999;
+  return { daysSinceLastWorkout, totalWorkouts: count || 0 };
+}
+
 /**
  * Ejecuta los steps de una automation a partir de `fromStep`. Devuelve:
  *   - 'completed' si terminamos toda la cadena.
@@ -151,11 +287,13 @@ async function executeAutomationSteps(opts: {
         manager_id: ctx.managerId,
         client_id: ctx.clientId,
         title: renderMessage(step.title, ctx.renderCtx),
+        description: step.description ? renderMessage(step.description, ctx.renderCtx) : null,
         type: step.type || 'Admin',
         date,
         time: '09:00',
         status: 'pending',
         priority: step.priority || 'medium',
+        link_url: step.linkUrl || null,
       });
       if (error) {
         console.error(`[automation ${ctx.automation.id}] create_task step ${i} failed:`, error);
@@ -198,11 +336,13 @@ async function executeAutomationSteps(opts: {
         manager_id: ctx.managerId,
         client_id: ctx.clientId,
         title: renderMessage(step.title, ctx.renderCtx),
+        description: step.description ? renderMessage(step.description, ctx.renderCtx) : null,
         type: step.eventType || 'Call',
         date,
         time: step.time || '09:00',
         status: 'pending',
         priority: 'medium',
+        link_url: step.linkUrl || null,
       });
       if (error) console.error(`[automation ${ctx.automation.id}] create_event step ${i} failed:`, error);
       continue;
@@ -307,6 +447,12 @@ export async function processTrigger(managerId: string, triggerId: string, data:
       let clientIds: string[] = [];
       const rules = automation.delivery_rules || {};
 
+      if (triggerId === 'weight-dropped' || triggerId === 'weight-gained') {
+        const delta = Math.abs(Number(data?.delta ?? data?.weightDelta));
+        const thresholdKg = Math.max(0, triggerNumberParam(automation, 'kg') || 2);
+        if (Number.isFinite(delta) && delta < thresholdKg) continue;
+      }
+
       if (rules.audience === 'Specific Clients') {
         clientIds = rules.selected_client_ids || [];
         // If data.clientId is provided, only process if it's in the selected list
@@ -352,31 +498,39 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           .select(`
             id, email, status, created_at,
             profiles(full_name),
-            clients_profiles(goal_weight, check_in_day, last_login, weight, notes)
+            clients_profiles(goal_weight, check_in_day, last_login, weight, notes, metadata)
           `)
           .eq('id', clientId)
           .maybeSingle();
 
         if (clientError || !client) continue;
 
-        // Fetch latest 2 check-ins (last + previous, para weight_diff)
-        const { data: lastTwo } = await supabaseAdmin
-          .from('check_ins')
-          .select('data_json, date, created_at, reviewed_at')
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
-          .limit(2);
-        const latestCheckIn = lastTwo?.[0] || null;
-        const prevCheckIn   = lastTwo?.[1] || null;
+        const [{ data: legacyCheckins }, { data: dynamicCheckins }] = await Promise.all([
+          supabaseAdmin
+            .from('check_ins')
+            .select('data_json, date, created_at, reviewed_at')
+            .eq('client_id', clientId)
+            .order('created_at', { ascending: false })
+            .limit(2),
+          supabaseAdmin
+            .from('client_checkin_submissions')
+            .select('answers_json, submitted_at, reviewed_at')
+            .eq('client_id', clientId)
+            .order('submitted_at', { ascending: false })
+            .limit(2),
+        ]);
+        const checkins = normalizeCheckinRows(legacyCheckins || [], dynamicCheckins || []);
+        const latestCheckIn = checkins[0] || null;
+        const prevCheckIn = checkins[1] || null;
 
-        const ciData: any = latestCheckIn?.data_json || {};
-        const prevData: any = prevCheckIn?.data_json || {};
+        const ciData: any = latestCheckIn?.data || {};
+        const prevData: any = prevCheckIn?.data || {};
 
         const profile = Array.isArray(client.profiles) ? client.profiles[0] : (client.profiles as any);
         const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : (client.clients_profiles as any);
 
-        const currentWeight = Number(ciData.weight ?? ciData.avgWeight ?? ciData.bodyWeight ?? cProfile?.weight) || 0;
-        const prevWeight    = Number(prevData.weight ?? prevData.avgWeight ?? prevData.bodyWeight) || currentWeight;
+        const currentWeight = readWeight(ciData) ?? (Number(cProfile?.weight) || 0);
+        const prevWeight    = readWeight(prevData) ?? currentWeight;
         const weightDiff    = Math.abs(currentWeight - prevWeight);
         const goalWeight    = Number(cProfile?.goal_weight) || 0;
         const goalWeightDiff = goalWeight ? Math.abs(currentWeight - goalWeight) : 0;
@@ -385,7 +539,7 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         const daysInactive = Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 3600 * 24));
         const daysSinceLogin = daysInactive;
 
-        const lastCheckinRaw = latestCheckIn?.created_at || latestCheckIn?.date || null;
+        const lastCheckinRaw = latestCheckIn?.at || null;
         const lastCheckinDate = lastCheckinRaw ? new Date(lastCheckinRaw) : null;
         const daysSinceCheckin = lastCheckinDate
           ? Math.floor((Date.now() - lastCheckinDate.getTime()) / (1000 * 3600 * 24))
@@ -401,13 +555,49 @@ export async function processTrigger(managerId: string, triggerId: string, data:
         const bodyFat = Number(ciData.body_fat ?? ciData.bodyFat) || 0;
 
         // Anti-spam helpers: ¿hubo mensaje reciente? ¿el coach respondio?
-        const sixHoursAgo = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
-        const { count: recentMsgCount } = await supabaseAdmin
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .or(`and(sender_id.eq.${managerId},receiver_id.eq.${clientId}),and(sender_id.eq.${clientId},receiver_id.eq.${managerId})`)
-          .gte('created_at', sixHoursAgo);
-        const hoursSinceLastMsg = (recentMsgCount || 0) > 0 ? 0 : 999;
+        const weekAgo = new Date(Date.now() - 7 * DAY_MS).toISOString();
+        const [
+          { data: latestAnyMessage },
+          { count: unreadCount },
+          { data: latestCoachMessage },
+          planActive,
+          workouts,
+          sendsThisWeek,
+        ] = await Promise.all([
+          supabaseAdmin
+            .from('messages')
+            .select('created_at')
+            .or(`and(sender_id.eq.${managerId},receiver_id.eq.${clientId}),and(sender_id.eq.${clientId},receiver_id.eq.${managerId})`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabaseAdmin
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('sender_id', clientId)
+            .eq('receiver_id', managerId)
+            .or('is_read.eq.false,is_read.is.null'),
+          supabaseAdmin
+            .from('messages')
+            .select('created_at')
+            .eq('sender_id', managerId)
+            .eq('receiver_id', clientId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          hasAnyActivePlan(clientId),
+          recentWorkoutStats(clientId),
+          countAutomationLogsSince(automation.id, clientId, weekAgo),
+        ]);
+        const hoursSinceLastMsg = latestAnyMessage?.created_at
+          ? (Date.now() - new Date(latestAnyMessage.created_at).getTime()) / HOUR_MS
+          : 999;
+        const hoursSinceCoachReply = latestCoachMessage?.created_at
+          ? (Date.now() - new Date(latestCoachMessage.created_at).getTime()) / HOUR_MS
+          : 999;
+        const metadata = cProfile?.metadata || {};
+        const tags = Array.isArray(metadata?.tags) ? metadata.tags.map((x: any) => String(x).toLowerCase()) : [];
+        const notes = String(cProfile?.notes || '').toLowerCase();
 
         // Diccionario unico — el evaluator de conditions solo consulta esto.
         const conditionValues: Record<string, any> = {
@@ -427,20 +617,20 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           last_login_days: daysSinceLogin,
           activity: daysInactive,
           days_as_client: daysAsClient,
-          streak_workouts: 0, // TODO: calcular desde workout_logs
-          unread_messages_count: 0, // TODO
-          has_active_plan: true, // TODO: leer de nutrition_plans/training_programs
+          streak_workouts: workouts.totalWorkouts,
+          unread_messages_count: unreadCount || 0,
+          has_active_plan: planActive ? 'true' : 'false',
           // Stop conditions (event-based + anti-spam)
           reply: (triggerId === 'client-reply') ? 0 : 999, // 'within' compara: 0 = "ahora", 999 = "hace mucho"
           checkin: (triggerId === 'checkin-submitted') ? 0 : daysSinceCheckin,
           weight_goal_reached: goalWeight && currentWeight <= goalWeight ? 'true' : 'false',
           client_archived: ((client as any).status === 'Archived' || (client as any).status === 'archived') ? 'true' : 'false',
-          coach_replied: hoursSinceLastMsg,
+          coach_replied: hoursSinceCoachReply,
           last_message_recent: hoursSinceLastMsg,
-          max_sends_per_week: 0, // TODO: count automation_logs ultima semana
+          max_sends_per_week: sendsThisWeek,
           workflow_paused: 'false', // si llegamos aqui es porque enabled=true
-          on_vacation: 'false',
-          plan_completed: 'false',
+          on_vacation: (tags.includes('vacaciones') || tags.includes('pausa') || notes.includes('vacaciones')) ? 'true' : 'false',
+          plan_completed: metadata?.plan_completed === true ? 'true' : 'false',
         };
 
         // 4a. Activation conditions
@@ -775,7 +965,9 @@ const cronHandler = async (req: any, res: any) => {
       .eq('enabled', true)
       .in('trigger_id', ['weekly-checkin', 'birthday', 'inactivity', 'checkin-overdue', 'app-setup',
         'adherence-high', 'adherence-low', 'anniversary', 'onboarding-stalled', 'checkin-pending-review',
-        'subscription-renewal-soon']);
+        'subscription-renewal-soon', 'consecutive-checkins-missed', 'client-message-stale',
+        'weight-plateau', 'workout-streak-broken', 'workout-streak-milestone',
+        'plan-update-due', 'no-appointment']);
     
     if (!automations) return res.json({ processed: 0 });
 
@@ -785,9 +977,10 @@ const cronHandler = async (req: any, res: any) => {
         .select(`
           id,
           email,
+          status,
           created_at,
           profiles (full_name, birthday),
-          clients_profiles (last_login, check_in_day, height, weight, goal)
+          clients_profiles (last_login, check_in_day, height, weight, goal, goal_weight)
         `)
         .eq('manager_id', automation.manager_id)
         .eq('role', 'CLIENT');
@@ -827,15 +1020,12 @@ const cronHandler = async (req: any, res: any) => {
           const yesterdayName = yesterday.toLocaleDateString('en-US', { weekday: 'long' });
 
           if (cProfile?.check_in_day === yesterdayName) {
-            const { data: checkIn } = await supabaseAdmin
-              .from('check_ins')
-              .select('id')
-              .eq('client_id', client.id)
-              .gte('date', yesterday.toISOString().split('T')[0])
-              .limit(1)
-              .maybeSingle();
+            const start = new Date(yesterday);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(start.getTime() + 2 * DAY_MS);
+            const checkInCount = await countCheckinsInRange(client.id, start.toISOString(), end.toISOString());
 
-            if (!checkIn) {
+            if (checkInCount === 0) {
               const { data: lastSent } = await supabaseAdmin
                 .from('automation_logs')
                 .select('sent_at')
@@ -860,11 +1050,12 @@ const cronHandler = async (req: any, res: any) => {
           }
         }
         else if (automation.trigger_id === 'inactivity') {
+          const inactiveAfterDays = Math.max(1, triggerNumberParam(automation, 'days') || 3);
           const lastActivity = cProfile?.last_login;
           if (lastActivity) {
             const lastDate = new Date(lastActivity);
             const diffDays = (today.getTime() - lastDate.getTime()) / (1000 * 3600 * 24);
-            if (diffDays >= 3) {
+            if (diffDays >= inactiveAfterDays) {
               const { data: lastSent } = await supabaseAdmin
                 .from('automation_logs')
                 .select('sent_at')
@@ -873,7 +1064,7 @@ const cronHandler = async (req: any, res: any) => {
                 .order('sent_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
-              if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / (1000 * 3600 * 24) >= 3) {
+              if (!lastSent || (today.getTime() - new Date(lastSent.sent_at).getTime()) / (1000 * 3600 * 24) >= inactiveAfterDays) {
                 shouldTrigger = true;
               }
             }
@@ -898,15 +1089,19 @@ const cronHandler = async (req: any, res: any) => {
         else if (automation.trigger_id === 'adherence-high' || automation.trigger_id === 'adherence-low') {
           // Adherence from the latest check-in (nutrition_adherence_score is 0-10
           // → x10 for a %). High fires ≥90%, low fires <70%.
-          const { data: ci } = await supabaseAdmin
-            .from('check_ins').select('data_json, created_at')
-            .eq('client_id', client.id)
-            .order('created_at', { ascending: false }).limit(1).maybeSingle();
-          const adh = ci ? Number((ci.data_json as any)?.nutrition_adherence_score
-            ?? (ci.data_json as any)?.adherence_score) : NaN;
+          const [{ data: legacy }, { data: dynamic }] = await Promise.all([
+            supabaseAdmin.from('check_ins').select('data_json, created_at')
+              .eq('client_id', client.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+            supabaseAdmin.from('client_checkin_submissions').select('answers_json, submitted_at')
+              .eq('client_id', client.id).order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
+          ]);
+          const latest = normalizeCheckinRows(legacy ? [legacy] : [], dynamic ? [dynamic] : [])[0];
+          const adh = latest ? Number((latest.data as any)?.nutrition_adherence_score
+            ?? (latest.data as any)?.adherence_score) : NaN;
           if (Number.isFinite(adh)) {
             const pct = adh * 10;
-            const hit = automation.trigger_id === 'adherence-high' ? pct >= 90 : pct < 70;
+            const threshold = Math.max(0, triggerNumberParam(automation, 'pct') || (automation.trigger_id === 'adherence-high' ? 90 : 70));
+            const hit = automation.trigger_id === 'adherence-high' ? pct >= threshold : pct < threshold;
             if (hit) {
               const { data: lastSent } = await supabaseAdmin
                 .from('automation_logs').select('sent_at')
@@ -936,12 +1131,13 @@ const cronHandler = async (req: any, res: any) => {
         }
         else if (automation.trigger_id === 'onboarding-stalled') {
           // Active onboarding assignment older than 48 h with no submission.
+          const stalledHours = Math.max(1, triggerNumberParam(automation, 'hours') || 48);
           const { data: assign } = await supabaseAdmin
             .from('client_onboarding_assignments').select('assigned_at')
             .eq('client_id', client.id).eq('is_active', true)
             .order('assigned_at', { ascending: false }).limit(1).maybeSingle();
           if (assign?.assigned_at
-              && (today.getTime() - new Date(assign.assigned_at).getTime()) / 3600000 >= 48) {
+              && (today.getTime() - new Date(assign.assigned_at).getTime()) / 3600000 >= stalledHours) {
             const { count: subs } = await supabaseAdmin
               .from('client_onboarding_submissions').select('id', { count: 'exact', head: true })
               .eq('client_id', client.id);
@@ -956,12 +1152,21 @@ const cronHandler = async (req: any, res: any) => {
         }
         else if (automation.trigger_id === 'checkin-pending-review') {
           // The coach has an unreviewed check-in older than 24 h.
-          const cutoff = new Date(today.getTime() - 24 * 3600000).toISOString();
-          const { data: pending } = await supabaseAdmin
-            .from('check_ins').select('id, created_at')
-            .eq('client_id', client.id).is('reviewed_at', null)
-            .lte('created_at', cutoff)
-            .order('created_at', { ascending: false }).limit(1).maybeSingle();
+          const pendingHours = Math.max(1, triggerNumberParam(automation, 'hours') || 24);
+          const cutoff = new Date(today.getTime() - pendingHours * HOUR_MS).toISOString();
+          const [{ data: legacyPending }, { data: dynamicPending }] = await Promise.all([
+            supabaseAdmin
+              .from('check_ins').select('id, created_at')
+              .eq('client_id', client.id).is('reviewed_at', null)
+              .lte('created_at', cutoff)
+              .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+            supabaseAdmin
+              .from('client_checkin_submissions').select('id, submitted_at')
+              .eq('client_id', client.id).is('reviewed_at', null)
+              .lte('submitted_at', cutoff)
+              .order('submitted_at', { ascending: false }).limit(1).maybeSingle(),
+          ]);
+          const pending = legacyPending || dynamicPending;
           if (pending) {
             const { data: lastSent } = await supabaseAdmin
               .from('automation_logs').select('sent_at')
@@ -973,11 +1178,111 @@ const cronHandler = async (req: any, res: any) => {
           }
         }
 
+        else if (automation.trigger_id === 'consecutive-checkins-missed') {
+          const targetMisses = Math.max(1, triggerNumberParam(automation, 'count') || 2);
+          const dayName = String(cProfile?.check_in_day || '').toLowerCase();
+          const dayIdx = WEEKDAYS.indexOf(dayName);
+          if (dayIdx >= 0) {
+            let missed = 0;
+            for (let i = 0; i < targetMisses; i++) {
+              const diff = (today.getDay() - dayIdx + 7) % 7;
+              const scheduled = new Date(today);
+              scheduled.setDate(today.getDate() - diff - (i * 7));
+              scheduled.setHours(0, 0, 0, 0);
+              const windowEnd = new Date(scheduled.getTime() + 7 * DAY_MS);
+              if (today.getTime() - scheduled.getTime() < DAY_MS) break;
+              const count = await countCheckinsInRange(client.id, scheduled.toISOString(), windowEnd.toISOString());
+              if (count > 0) break;
+              missed++;
+            }
+            if (missed >= targetMisses && !(await hasSentWithin(automation.id, client.id, 6 * DAY_MS))) {
+              shouldTrigger = true;
+            }
+          }
+        }
+
+        else if (automation.trigger_id === 'client-message-stale') {
+          const hours = Math.max(1, triggerNumberParam(automation, 'hours') || 2);
+          const cutoff = new Date(today.getTime() - hours * HOUR_MS).toISOString();
+          const { data: lastClientMsg } = await supabaseAdmin
+            .from('messages')
+            .select('id, created_at')
+            .eq('sender_id', client.id)
+            .eq('receiver_id', automation.manager_id)
+            .lte('created_at', cutoff)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (lastClientMsg?.created_at) {
+            const { count: replies } = await supabaseAdmin
+              .from('messages')
+              .select('id', { count: 'exact', head: true })
+              .eq('sender_id', automation.manager_id)
+              .eq('receiver_id', client.id)
+              .gte('created_at', lastClientMsg.created_at);
+            if ((replies || 0) === 0 && !(await hasSentWithin(automation.id, client.id, DAY_MS))) {
+              shouldTrigger = true;
+            }
+          }
+        }
+
+        else if (automation.trigger_id === 'weight-plateau') {
+          const weeks = Math.max(1, triggerNumberParam(automation, 'weeks') || 3);
+          const since = new Date(today.getTime() - weeks * 7 * DAY_MS).toISOString();
+          const [{ data: legacy }, { data: dynamic }] = await Promise.all([
+            supabaseAdmin.from('check_ins').select('data_json, created_at, date')
+              .eq('client_id', client.id).gte('created_at', since).order('created_at', { ascending: true }),
+            supabaseAdmin.from('client_checkin_submissions').select('answers_json, submitted_at')
+              .eq('client_id', client.id).gte('submitted_at', since).order('submitted_at', { ascending: true }),
+          ]);
+          const rows = normalizeCheckinRows(legacy || [], dynamic || []).reverse();
+          const weights = rows.map(row => readWeight(row.data)).filter((n): n is number => n != null);
+          if (weights.length >= 2) {
+            const delta = Math.abs(weights[weights.length - 1] - weights[0]);
+            if (delta <= 0.5 && !(await hasSentWithin(automation.id, client.id, 7 * DAY_MS))) {
+              shouldTrigger = true;
+            }
+          }
+        }
+
+        else if (automation.trigger_id === 'workout-streak-broken') {
+          const days = Math.max(1, triggerNumberParam(automation, 'days') || 5);
+          const stats = await recentWorkoutStats(client.id, today);
+          if (stats.daysSinceLastWorkout >= days && !(await hasSentWithin(automation.id, client.id, days * DAY_MS))) {
+            shouldTrigger = true;
+          }
+        }
+
+        else if (automation.trigger_id === 'workout-streak-milestone') {
+          const targetCount = Math.max(1, triggerNumberParam(automation, 'count') || 10);
+          const stats = await recentWorkoutStats(client.id, today);
+          if (stats.totalWorkouts >= targetCount && !(await lastAutomationSentAt(automation.id, client.id))) {
+            shouldTrigger = true;
+          }
+        }
+
+        else if (automation.trigger_id === 'plan-update-due') {
+          const weeks = Math.max(1, triggerNumberParam(automation, 'weeks') || 4);
+          const latestPlan = await latestPlanUpdatedAt(client.id);
+          if (latestPlan && today.getTime() - new Date(latestPlan).getTime() >= weeks * 7 * DAY_MS
+              && !(await hasSentWithin(automation.id, client.id, 7 * DAY_MS))) {
+            shouldTrigger = true;
+          }
+        }
+
+        else if (automation.trigger_id === 'no-appointment') {
+          const todayIso = today.toISOString().slice(0, 10);
+          const hasFuture = await hasFutureAppointment(automation.manager_id, client.id, todayIso);
+          if (!hasFuture && !(await hasSentWithin(automation.id, client.id, 7 * DAY_MS))) {
+            shouldTrigger = true;
+          }
+        }
+
         else if (automation.trigger_id === 'subscription-renewal-soon') {
           // El cliente tiene un cobro recurrente activo cuyo periodo termina
           // dentro de N días (3 por defecto). Inyectamos el link de pago en
           // el payload para que `{Payment Link}` lo resuelva en el mensaje.
-          const horizonDays = 3;
+          const horizonDays = Math.max(1, triggerNumberParam(automation, 'days') || 7);
           const horizon = new Date(today.getTime() + horizonDays * 86400000).toISOString();
           const { data: billing } = await supabaseAdmin
             .from('client_billing')

@@ -54,6 +54,10 @@ describe('TRIGGERS catalog', () => {
     }
   });
 
+  it('every catalog trigger is wired to a real backend event or cron sweep', () => {
+    expect(TRIGGERS.filter(t => !t.wired).map(t => t.id)).toEqual([]);
+  });
+
   it('params, when present, is an array with at least one field', () => {
     const withParams = TRIGGERS.filter(t => t.params !== undefined);
     expect(withParams.length).toBeGreaterThan(0);

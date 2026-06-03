@@ -55,7 +55,9 @@ export default function ResourceArticle({ article, onBack, categoryLabel }: Prop
         {/* Cuerpo */}
         <div className="space-y-6">
           {article.blocks.map((b, i) => (
-            <BlockView key={i} block={b} tx={tx} isEs={isEs} />
+            <div key={i}>
+              <BlockView block={b} tx={tx} isEs={isEs} />
+            </div>
           ))}
         </div>
       </article>

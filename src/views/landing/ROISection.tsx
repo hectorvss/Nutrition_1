@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import { TrendingUp, Clock, Wallet, UserPlus, Calculator } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -256,7 +256,7 @@ function Slider({
   onChange: (n: number) => void;
 }) {
   const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
-  const fillStyle: React.CSSProperties = {
+  const fillStyle: CSSProperties = {
     background: `linear-gradient(to right, #10b981 0%, #10b981 ${pct}%, #e5e7eb ${pct}%, #e5e7eb 100%)`,
   };
   return (

@@ -172,7 +172,7 @@ router.post('/:managerId', async (req: any, res) => {
       }
     }
 
-    await supabaseAdmin.from('stripe_processed_events').insert({ event_id: event.id });
+    await supabaseAdmin.from('stripe_processed_events').insert({ event_id: dedupKey });
     // Marca de salud: último evento recibido (lo muestra Ajustes → Integraciones).
     await supabaseAdmin.from('integrations').update({ stripe_webhook_last_event_at: new Date().toISOString() }).eq('user_id', managerId);
     logger.info('coach_webhook.processed', { managerId, eventId: event.id, type: event.type });

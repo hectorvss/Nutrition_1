@@ -4194,6 +4194,7 @@ router.post('/tasks', async (req: any, res) => {
         client_id: req.body.client_id,
         status: req.body.status || 'pending',
         priority,
+        link_url: req.body.link_url || null,
         manager_id: req.user.id,
         recurrence_rule: derivedRule,
         recurrence_end: recurrenceEnd,

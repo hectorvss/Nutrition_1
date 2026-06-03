@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ArrowLeft, ArrowRight, Check, Zap, Send, Clock, ClipboardList, Edit2,
+  ArrowLeft, ArrowRight, Zap, Send, Clock, ClipboardList, Edit2,
   AlertCircle, Plus, Sunrise, Sun, Moon, Search, X, CheckCheck, Pause,
   ChevronDown, Bell, CalendarPlus, ClipboardCheck, Filter,
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import TimeSelect from '../components/ui/TimeSelect';
 import { fetchWithAuth } from '../api';
 import { AutomationStep } from '../components/automations/StepSequence';
 import AutomationCard, { FlowConnector } from '../components/automations/AutomationCard';
+import WizardStepper from '../components/automations/WizardStepper';
 
 interface AutomationFlowBuilderProps {
   triggerId: string;
@@ -268,26 +269,14 @@ export default function AutomationFlowBuilder({
               {isEditing ? t('edit_automation') : t('create_new_automation')}
             </h1>
           </div>
-          <div className="flex items-center">
-            <div className="flex items-center relative">
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">
-                  <Check className="w-4 h-4 md:w-5 md:h-5" />
-                </div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('trigger_label', { defaultValue: 'Disparador' })}</span>
-              </div>
-              <div className="w-16 md:w-24 h-1 bg-emerald-500 -ml-2 -mr-2 relative z-0"></div>
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">2</div>
-                <span className="text-xs font-semibold mt-2 text-emerald-500">{t('message_label', { defaultValue: 'Flujo' })}</span>
-              </div>
-              <div className="w-16 md:w-24 h-1 bg-slate-200 dark:bg-slate-800 -ml-2 -mr-2 relative z-0"></div>
-              <div className="flex flex-col items-center relative z-10">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 flex items-center justify-center font-semibold shadow-sm ring-4 ring-white dark:ring-slate-900 text-sm">3</div>
-                <span className="text-xs font-medium mt-2 text-slate-400">{t('review', { defaultValue: 'Revisar' })}</span>
-              </div>
-            </div>
-          </div>
+          <WizardStepper
+            currentStep={2}
+            labels={[
+              t('trigger_label', { defaultValue: 'Disparador' }),
+              t('message_label', { defaultValue: 'Flujo' }),
+              t('review', { defaultValue: 'Revisar' }),
+            ]}
+          />
         </div>
 
         {/* Everything sits inside one white panel, like the trigger step */}

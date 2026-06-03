@@ -3,10 +3,6 @@ import { lazyWithRetry } from './lazyWithRetry';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './context/AuthContext';
 import ClientSidebar from './components/client/ClientSidebar';
-import ClientDashboard from './views/client/ClientDashboard';
-import ClientCheckIns from './views/client/ClientCheckIns';
-import ClientNutrition from './views/client/ClientNutrition';
-import ClientTraining from './views/client/ClientTraining';
 // Heavy or rarely-visited views are lazy so they don't sit in the initial
 // client bundle. Progress imports recharts (~120 KB), Roadmap pulls motion
 // + animations, Settings is the shared settings shell (1.7k LOC).
@@ -16,16 +12,20 @@ import ClientTraining from './views/client/ClientTraining';
 // old index.html in memory and asks for a chunk hash that no longer
 // exists on Vercel. The helper triggers one reload to pick up the fresh
 // hashes — without it the whole client portal dies after every deploy.
+const ClientDashboard = lazyWithRetry(() => import('./views/client/ClientDashboard'));
+const ClientCheckIns  = lazyWithRetry(() => import('./views/client/ClientCheckIns'));
+const ClientNutrition = lazyWithRetry(() => import('./views/client/ClientNutrition'));
+const ClientTraining  = lazyWithRetry(() => import('./views/client/ClientTraining'));
 const ClientRoadmap = lazyWithRetry(() => import('./views/client/ClientRoadmap'));
 const ClientProgress = lazyWithRetry(() => import('./views/client/ClientProgress'));
 const Settings = lazyWithRetry(() => import('./views/Settings'));
 import { Menu } from 'lucide-react';
-import Messages from './views/Messages';
 // Client-only read-only view of an exercise. Replaces the manager-side
 // ActivityEditor that used to be wired here — that screen had a fake
 // "Save" button and exposed prescription editing the client must not touch.
-import ClientActivityView from './views/client/ClientActivityView';
-import ClientBilling from './views/client/ClientBilling';
+const Messages = lazyWithRetry(() => import('./views/Messages'));
+const ClientActivityView = lazyWithRetry(() => import('./views/client/ClientActivityView'));
+const ClientBilling = lazyWithRetry(() => import('./views/client/ClientBilling'));
 import OnboardingPopup from './components/OnboardingPopup';
 import { fetchWithAuth } from './api';
 import WeeklyCheckinFlow from './views/client/WeeklyCheckinFlow';

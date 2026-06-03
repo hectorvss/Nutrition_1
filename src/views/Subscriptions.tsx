@@ -171,16 +171,17 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
               const limit = (status.limits as any)[key];
               const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
               return (
-                <UsageCard
-                  key={key}
-                  icon={icon}
-                  color={color}
-                  label={label}
-                  used={used}
-                  limit={limit}
-                  pct={pct}
-                  unlimitedLabel={isEs ? 'Ilimitado' : 'Unlimited'}
-                />
+                <div key={key}>
+                  <UsageCard
+                    icon={icon}
+                    color={color}
+                    label={label}
+                    used={used}
+                    limit={limit}
+                    pct={pct}
+                    unlimitedLabel={isEs ? 'Ilimitado' : 'Unlimited'}
+                  />
+                </div>
               );
             })}
           </div>

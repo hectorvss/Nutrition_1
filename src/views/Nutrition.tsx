@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import NutritionClientList from './NutritionClientList';
 import NutritionPlanTemplates from './NutritionPlanTemplates';
@@ -6,10 +6,16 @@ import NutritionPlanDetail from './NutritionPlanDetail';
 import NutritionNoPlan from './NutritionNoPlan';
 import NutritionWeeklyView from './NutritionWeeklyView';
 import FoodLibrary from './FoodLibrary';
+import { useClient } from '../context/ClientContext';
 
 type NutritionView = 'client-list' | 'plan-templates' | 'plan-detail' | 'food-library' | 'no-plan' | 'weekly-view';
 
-export default function Nutrition() {
+interface NutritionProps {
+  initialClientId?: string;
+}
+
+export default function Nutrition({ initialClientId }: NutritionProps = {}) {
+  const { clients } = useClient();
   const [currentView, setCurrentView] = useState<NutritionView>('client-list');
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [isNewPlan, setIsNewPlan] = useState(false);
@@ -18,6 +24,15 @@ export default function Nutrition() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [editingTemplate, setEditingTemplate] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!initialClientId) return;
+    const client = clients.find(c => c.id === initialClientId);
+    if (!client) return;
+    setSelectedClient(client);
+    setEditingTemplate(null);
+    setCurrentView(client.nutritionPlanAssigned ? 'weekly-view' : 'no-plan');
+  }, [clients, initialClientId]);
 
   const handleNavigate = (view: 'plan-templates' | 'plan-detail' | 'food-library' | 'weekly-view', client?: any) => {
     if (client) {

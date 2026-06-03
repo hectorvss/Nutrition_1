@@ -35,6 +35,10 @@ export interface TaskItem {
     compliance: string;
   };
   clientId?: string;
+  target?: {
+    view: string;
+    data?: Record<string, unknown>;
+  };
   actionItems?: string[];
   notes?: string;
 }
@@ -91,6 +95,33 @@ export function buildAutomatedTasksPure(
   const DAY = HOUR * 24;
   const nowMs = Date.now();
 
+  const parseCheckInData = (ci: any): Record<string, any> => {
+    if (!ci?.data_json) return {};
+    if (typeof ci.data_json !== 'string') return ci.data_json;
+    try {
+      return JSON.parse(ci.data_json);
+    } catch {
+      return {};
+    }
+  };
+
+  const checkInTime = (ci: any): number => {
+    const value = ci?.date || ci?.submitted_at || ci?.created_at;
+    const time = value ? new Date(value).getTime() : 0;
+    return Number.isFinite(time) ? time : 0;
+  };
+
+  const latestCheckInId = (client: ClientData, predicate: (ci: any) => boolean = () => true): string | undefined => (
+    [...(client.check_ins || [])]
+      .filter(predicate)
+      .sort((a, b) => checkInTime(b) - checkInTime(a))[0]?.id
+  );
+
+  const latestUnreviewedCheckInId = (client: ClientData): string | undefined => latestCheckInId(client, (ci) => {
+    const data = parseCheckInData(ci);
+    return !ci?.reviewed_at && !data?.reviewed_at && !data?.reviewedAt && data?.reviewed !== true;
+  });
+
   clientList.forEach(client => {
     const createdMs = client.created_at ? new Date(client.created_at).getTime() : null;
     const daysSinceCreated = createdMs != null ? (nowMs - createdMs) / DAY : null;
@@ -115,6 +146,7 @@ export function buildAutomatedTasksPure(
         timeLabel: t('Overdue 2d'),
         priority: checkinRule.priority.toLowerCase() as any,
         clientId: client.id,
+        target: { view: 'check-ins', data: { clientId: client.id } },
       });
     }
 
@@ -135,6 +167,7 @@ export function buildAutomatedTasksPure(
         timeLabel: t('Alert'),
         priority: adherenceRule.priority.toLowerCase() as any,
         clientId: client.id,
+        target: { view: 'check-ins', data: { clientId: client.id, checkInId: latestCheckInId(client) } },
       });
     }
 
@@ -155,6 +188,7 @@ export function buildAutomatedTasksPure(
         timeLabel: t('Due Today'),
         priority: planRule.priority.toLowerCase() as any,
         clientId: client.id,
+        target: { view: 'planning-template-selector', data: { clientId: client.id } },
       });
     }
 
@@ -176,6 +210,7 @@ export function buildAutomatedTasksPure(
           timeLabel: t('Alert'),
           priority: unreadRule.priority.toLowerCase() as any,
           clientId: client.id,
+          target: { view: 'messages', data: { clientId: client.id } },
         });
       }
     }
@@ -196,6 +231,7 @@ export function buildAutomatedTasksPure(
         timeLabel: t('Due Today'),
         priority: leadRule.priority.toLowerCase() as any,
         clientId: client.id,
+        target: { view: 'clients', data: { clientId: client.id } },
       });
     }
 
@@ -204,10 +240,13 @@ export function buildAutomatedTasksPure(
     if (weightRule?.enabled && client.status === 'Active') {
       const weighed = (client.check_ins || [])
         .map((ci: any) => {
-          let d = ci.data_json;
-          if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+          const d = parseCheckInData(ci);
           const w = Number(d?.weight);
-          return { date: ci.date, weight: Number.isFinite(w) && w > 0 ? w : null };
+          return {
+            id: ci.id,
+            date: ci.date || ci.submitted_at || ci.created_at,
+            weight: Number.isFinite(w) && w > 0 ? w : null,
+          };
         })
         .filter((x: any) => x.weight !== null && x.date)
         .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -229,6 +268,7 @@ export function buildAutomatedTasksPure(
             timeLabel: t('Alert'),
             priority: weightRule.priority.toLowerCase() as any,
             clientId: client.id,
+            target: { view: 'check-ins', data: { clientId: client.id, checkInId: weighed[0].id } },
           });
         }
       }
@@ -252,6 +292,7 @@ export function buildAutomatedTasksPure(
           timeLabel: t('Alert'),
           priority: loginRule.priority.toLowerCase() as any,
           clientId: client.id,
+          target: { view: 'clients', data: { clientId: client.id } },
         });
       }
     }
@@ -272,6 +313,7 @@ export function buildAutomatedTasksPure(
         timeLabel: t('Win'),
         priority: milestoneRule.priority.toLowerCase() as any,
         clientId: client.id,
+        target: { view: 'clients', data: { clientId: client.id } },
       });
     }
 
@@ -293,6 +335,7 @@ export function buildAutomatedTasksPure(
           timeLabel: t('Overdue 2d'),
           priority: onboardingRule.priority.toLowerCase() as any,
           clientId: client.id,
+          target: { view: 'clients', data: { clientId: client.id } },
         });
       }
     }
@@ -313,6 +356,7 @@ export function buildAutomatedTasksPure(
         timeLabel: t('Alert'),
         priority: reviewRule.priority.toLowerCase() as any,
         clientId: client.id,
+        target: { view: 'check-ins', data: { clientId: client.id, checkInId: latestUnreviewedCheckInId(client) } },
       });
     }
 
@@ -321,10 +365,13 @@ export function buildAutomatedTasksPure(
     if (weightGainRule?.enabled && client.status === 'Active') {
       const weighed = (client.check_ins || [])
         .map((ci: any) => {
-          let d = ci.data_json;
-          if (typeof d === 'string') { try { d = JSON.parse(d); } catch { d = {}; } }
+          const d = parseCheckInData(ci);
           const w = Number(d?.weight);
-          return { date: ci.date, weight: Number.isFinite(w) && w > 0 ? w : null };
+          return {
+            id: ci.id,
+            date: ci.date || ci.submitted_at || ci.created_at,
+            weight: Number.isFinite(w) && w > 0 ? w : null,
+          };
         })
         .filter((x: any) => x.weight !== null && x.date)
         .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -346,6 +393,7 @@ export function buildAutomatedTasksPure(
             timeLabel: t('Alert'),
             priority: weightGainRule.priority.toLowerCase() as any,
             clientId: client.id,
+            target: { view: 'check-ins', data: { clientId: client.id, checkInId: weighed[0].id } },
           });
         }
       }
@@ -369,6 +417,7 @@ export function buildAutomatedTasksPure(
           timeLabel: t('Due Today'),
           priority: stalePlanRule.priority.toLowerCase() as any,
           clientId: client.id,
+          target: { view: 'planning-detail', data: { clientId: client.id } },
         });
       }
     }
@@ -389,6 +438,14 @@ export function buildAutomatedTasksPure(
         timeLabel: t('Due Today'),
         priority: apptRule.priority.toLowerCase() as any,
         clientId: client.id,
+        target: {
+          view: 'calendar',
+          data: {
+            clientId: client.id,
+            calendarDate: new Date(nowMs).toISOString().slice(0, 10),
+            calendarView: 'Day',
+          },
+        },
       });
     }
 
@@ -411,6 +468,7 @@ export function buildAutomatedTasksPure(
           timeLabel: t('Win'),
           priority: firstCheckinRule.priority.toLowerCase() as any,
           clientId: client.id,
+          target: { view: 'check-ins', data: { clientId: client.id, checkInId: ci?.id } },
         });
       }
     }
@@ -433,6 +491,7 @@ export function buildAutomatedTasksPure(
           timeLabel: t('Alert'),
           priority: missedWorkoutRule.priority.toLowerCase() as any,
           clientId: client.id,
+          target: { view: 'training', data: { clientId: client.id } },
         });
       }
     }
@@ -509,6 +568,15 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
           priority: ev.priority || 'medium',
           type: ev.type,
           clientId: ev.clientId,
+          target: {
+            view: 'calendar',
+            data: {
+              clientId: ev.clientId,
+              calendarDate: ev.date,
+              calendarView: 'Day',
+              focusEventId: ev.id,
+            },
+          },
         };
       });
   }, [events]);

@@ -1,4 +1,4 @@
-import React from 'react';
+import type { HTMLAttributes } from 'react';
 
 /* ============================================================================
  * Skeleton — primitivos de carga compartidos por TODA la app.
@@ -19,19 +19,25 @@ import React from 'react';
 
 const BASE = 'bg-slate-200/70 dark:bg-slate-700/40 animate-pulse';
 
-export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`${BASE} rounded-md ${className}`} aria-hidden="true" />;
+type SkeletonProps = HTMLAttributes<HTMLDivElement> & {
+  className?: string;
+};
+
+export function Skeleton({ className = '', ...props }: SkeletonProps) {
+  return <div className={`${BASE} rounded-md ${className}`} aria-hidden="true" {...props} />;
 }
 
 export function SkeletonBlock({
   height = 240,
   className = '',
-}: { height?: number; className?: string }) {
+  ...props
+}: SkeletonProps & { height?: number }) {
   return (
     <div
       className={`w-full ${BASE} rounded-xl ${className}`}
       style={{ height }}
       aria-hidden="true"
+      {...props}
     />
   );
 }
@@ -39,12 +45,14 @@ export function SkeletonBlock({
 export function SkeletonCircle({
   size = 40,
   className = '',
-}: { size?: number; className?: string }) {
+  ...props
+}: SkeletonProps & { size?: number }) {
   return (
     <div
       className={`${BASE} rounded-full shrink-0 ${className}`}
       style={{ width: size, height: size }}
       aria-hidden="true"
+      {...props}
     />
   );
 }
@@ -52,9 +60,10 @@ export function SkeletonCircle({
 export function SkeletonText({
   lines = 3,
   className = '',
-}: { lines?: number; className?: string }) {
+  ...props
+}: SkeletonProps & { lines?: number }) {
   return (
-    <div className={`space-y-2 ${className}`} aria-hidden="true">
+    <div className={`space-y-2 ${className}`} aria-hidden="true" {...props}>
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}

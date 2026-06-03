@@ -1804,7 +1804,7 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
 
     if (clientData?.manager_id) {
       await processTrigger(clientData.manager_id, 'checkin-submitted', { clientId, submissionId: data.id });
-      runWorkflowsForEvent(clientData.manager_id, 'trigger.checkin_submitted', { clientId }).catch(err => {
+      runWorkflowsForEvent(clientData.manager_id, 'trigger.checkin_submitted', { clientId, checkinId: data.id }).catch(err => {
         console.error('Workflow trigger error (checkin_submitted):', err);
       });
 
@@ -1840,6 +1840,7 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
           const delta = Number.isFinite(prevWeight) ? +(newWeight - prevWeight).toFixed(2) : null;
           runWorkflowsForEvent(clientData.manager_id, 'trigger.weight_change', {
             clientId,
+            checkinId: data.id,
             weight: newWeight,
             previousWeight: Number.isFinite(prevWeight) ? prevWeight : null,
             delta,
@@ -1849,7 +1850,7 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
           // Simple automations: weight-dropped / weight-gained on a notable
           // change vs the previous check-in (>1 kg in either direction).
           if (delta != null && Math.abs(delta) >= 1) {
-            processTrigger(clientData.manager_id, delta < 0 ? 'weight-dropped' : 'weight-gained', { clientId })
+            processTrigger(clientData.manager_id, delta < 0 ? 'weight-dropped' : 'weight-gained', { clientId, delta })
               .catch(err => console.error('Automation trigger error (weight change):', err));
           }
 

@@ -290,21 +290,25 @@ describe('sudden-weight rule', () => {
   beforeEach(() => { vi.setSystemTime(NOW); });
   afterEach(() => { vi.useRealTimers(); });
 
-  function makeWeightCheckIn(date: string, weight: number) {
-    return { date, data_json: { weight } };
+  function makeWeightCheckIn(date: string, weight: number, id = `ci-${date}`) {
+    return { id, date, data_json: { weight } };
   }
 
   it('fires when latest weight dropped > 2kg within 10 days', () => {
     const client = makeClient({
       status: 'Active',
       check_ins: [
-        makeWeightCheckIn(daysAgo(1), 76),
-        makeWeightCheckIn(daysAgo(7), 80),
+        makeWeightCheckIn(daysAgo(1), 76, 'latest-ci'),
+        makeWeightCheckIn(daysAgo(7), 80, 'previous-ci'),
       ],
     });
     const tasks = buildAutomatedTasksPure([client], [makeRule('sudden-weight')], t);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].id).toBe('auto:sudden-weight:c1');
+    expect(tasks[0].target).toEqual({
+      view: 'check-ins',
+      data: { clientId: 'c1', checkInId: 'latest-ci' },
+    });
   });
 
   it('does NOT fire for a drop ≤ 2kg', () => {
@@ -360,13 +364,17 @@ describe('sudden-weight-gain rule', () => {
     const client = makeClient({
       status: 'Active',
       check_ins: [
-        { date: daysAgo(1), data_json: { weight: 84 } },
-        { date: daysAgo(7), data_json: { weight: 80 } },
+        { id: 'latest-gain-ci', date: daysAgo(1), data_json: { weight: 84 } },
+        { id: 'previous-gain-ci', date: daysAgo(7), data_json: { weight: 80 } },
       ],
     });
     const tasks = buildAutomatedTasksPure([client], [makeRule('sudden-weight-gain')], t);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].id).toBe('auto:sudden-weight-gain:c1');
+    expect(tasks[0].target).toEqual({
+      view: 'check-ins',
+      data: { clientId: 'c1', checkInId: 'latest-gain-ci' },
+    });
   });
 
   it('does NOT fire for a gain ≤ 2kg', () => {
@@ -455,10 +463,20 @@ describe('checkin-to-review rule', () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it('fires when client has unreviewed check-in', () => {
-    const client = makeClient({ isUnreviewed: true });
+    const client = makeClient({
+      isUnreviewed: true,
+      check_ins: [
+        { id: 'reviewed-ci', date: daysAgo(1), reviewed_at: daysAgo(1), data_json: {} },
+        { id: 'pending-ci', date: daysAgo(2), data_json: {} },
+      ],
+    });
     const tasks = buildAutomatedTasksPure([client], [makeRule('checkin-to-review')], t);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].id).toBe('auto:checkin-to-review:c1');
+    expect(tasks[0].target).toEqual({
+      view: 'check-ins',
+      data: { clientId: 'c1', checkInId: 'pending-ci' },
+    });
   });
 
   it('does NOT fire when isUnreviewed is false', () => {
@@ -620,5 +638,35 @@ describe('multiple clients', () => {
     const tasks = buildAutomatedTasksPure([matching, nonMatch], [makeRule('weekly-overdue')], t);
     expect(tasks).toHaveLength(1);
     expect(tasks[0].clientId).toBe('match');
+  });
+});
+
+describe('task navigation targets', () => {
+  beforeEach(() => { vi.setSystemTime(NOW); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const cases: Array<[string, Partial<ClientData>, string]> = [
+    ['weekly-overdue', { lastCheckIn: 'Never', created_at: daysAgo(10) }, 'check-ins'],
+    ['low-adherence', { progress: 20, check_ins: [{ id: 'ci-1', date: daysAgo(1), data_json: {} }, { id: 'ci-2', date: daysAgo(2), data_json: {} }] }, 'check-ins'],
+    ['plan-update', { plan: 'No Plan', created_at: hoursAgo(72) }, 'planning-template-selector'],
+    ['unread-dm', { unreadMessages: 1, oldestUnreadAt: hoursAgo(3) }, 'messages'],
+    ['new-leads', { status: 'Pending' }, 'clients'],
+    ['sudden-weight', { check_ins: [{ id: 'ci-new', date: daysAgo(1), data_json: { weight: 76 } }, { id: 'ci-old', date: daysAgo(7), data_json: { weight: 80 } }] }, 'check-ins'],
+    ['no-login', { lastActivityAt: daysAgo(5) }, 'clients'],
+    ['goal-milestone', { progress: 96 }, 'clients'],
+    ['onboarding-not-finished', { status: 'Invited', created_at: hoursAgo(72) }, 'clients'],
+    ['checkin-to-review', { isUnreviewed: true, check_ins: [{ id: 'pending-ci', date: daysAgo(1), data_json: {} }] }, 'check-ins'],
+    ['sudden-weight-gain', { check_ins: [{ id: 'gain-new', date: daysAgo(1), data_json: { weight: 84 } }, { id: 'gain-old', date: daysAgo(7), data_json: { weight: 80 } }] }, 'check-ins'],
+    ['stale-plan', { planUpdatedAt: daysAgo(30) }, 'planning-detail'],
+    ['no-appointment', { nextAppointment: 'Not Scheduled' }, 'calendar'],
+    ['first-checkin', { check_ins: [{ id: 'first-ci', date: daysAgo(1), data_json: {} }] }, 'check-ins'],
+    ['missed-workout', { trainingPlanAssigned: true, lastWorkoutAt: daysAgo(7) }, 'training'],
+  ];
+
+  it.each(cases)('sets an exact navigation target for %s', (ruleId, clientOverrides, expectedView) => {
+    const tasks = buildAutomatedTasksPure([makeClient(clientOverrides)], [makeRule(ruleId)], t);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].target?.view).toBe(expectedView);
+    expect(tasks[0].target?.data?.clientId).toBe('c1');
   });
 });

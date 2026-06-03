@@ -1,22 +1,25 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { motion } from "motion/react";
 import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
-import Pricing from "../components/Pricing";
+import { lazyWithRetry } from "../lazyWithRetry";
 import { useLanguage } from "../context/LanguageContext";
 import HowItWorks from "./landing/HowItWorks";
 import TestimonialsSection from "./landing/TestimonialsSection";
 import FAQSection from "./landing/FAQSection";
-import DemoPage from "./landing/DemoPage";
-import LegalPage, { type LegalKind } from "./landing/LegalPage";
+import type { LegalKind } from "./landing/LegalPage";
 import StatsSection from "./landing/StatsSection";
 import ComparisonSection from "./landing/ComparisonSection";
-import FeaturesPage from "./landing/FeaturesPage";
-import SolutionsPage from "./landing/SolutionsPage";
-import ResourcesPage from "./landing/ResourcesPage";
-import AboutPage from "./landing/AboutPage";
-import ChangelogPage from "./landing/ChangelogPage";
 import ImpactSection from "./landing/ImpactSection";
 import ROISection from "./landing/ROISection";
+
+const Pricing = lazyWithRetry(() => import("../components/Pricing"));
+const DemoPage = lazyWithRetry(() => import("./landing/DemoPage"));
+const LegalPage = lazyWithRetry(() => import("./landing/LegalPage"));
+const FeaturesPage = lazyWithRetry(() => import("./landing/FeaturesPage"));
+const SolutionsPage = lazyWithRetry(() => import("./landing/SolutionsPage"));
+const ResourcesPage = lazyWithRetry(() => import("./landing/ResourcesPage"));
+const AboutPage = lazyWithRetry(() => import("./landing/AboutPage"));
+const ChangelogPage = lazyWithRetry(() => import("./landing/ChangelogPage"));
 
 interface LandingPageProps {
   onGetStarted?: () => void;
@@ -138,27 +141,29 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
         </div>
       </div>
 
-      {currentPage === 'demo' && <DemoPage onBack={() => setCurrentPage('home')} />}
-      {currentPage === 'privacy' && <LegalPage kind="privacy" onBack={() => setCurrentPage('home')} />}
-      {currentPage === 'terms' && <LegalPage kind="terms" onBack={() => setCurrentPage('home')} />}
-      {currentPage === 'security' && <LegalPage kind="security" onBack={() => setCurrentPage('home')} />}
-      {currentPage === 'features' && (
-        <FeaturesPage onBack={() => setCurrentPage('home')} onDemo={() => setCurrentPage('demo')} />
-      )}
-      {currentPage === 'solutions' && (
-        <SolutionsPage
-          onBack={() => setCurrentPage('home')}
-          onDemo={() => setCurrentPage('demo')}
-          onStart={() => onGetStarted?.()}
-        />
-      )}
-      {currentPage === 'resources' && <ResourcesPage onBack={() => setCurrentPage('home')} />}
-      {currentPage === 'about' && (
-        <AboutPage onBack={() => setCurrentPage('home')} onDemo={() => setCurrentPage('demo')} />
-      )}
-      {currentPage === 'changelog' && <ChangelogPage onBack={() => setCurrentPage('home')} />}
+      <Suspense fallback={<div className="min-h-[60vh]" />}>
+        {currentPage === 'demo' && <DemoPage onBack={() => setCurrentPage('home')} />}
+        {currentPage === 'privacy' && <LegalPage kind="privacy" onBack={() => setCurrentPage('home')} />}
+        {currentPage === 'terms' && <LegalPage kind="terms" onBack={() => setCurrentPage('home')} />}
+        {currentPage === 'security' && <LegalPage kind="security" onBack={() => setCurrentPage('home')} />}
+        {currentPage === 'features' && (
+          <FeaturesPage onBack={() => setCurrentPage('home')} onDemo={() => setCurrentPage('demo')} />
+        )}
+        {currentPage === 'solutions' && (
+          <SolutionsPage
+            onBack={() => setCurrentPage('home')}
+            onDemo={() => setCurrentPage('demo')}
+            onStart={() => onGetStarted?.()}
+          />
+        )}
+        {currentPage === 'resources' && <ResourcesPage onBack={() => setCurrentPage('home')} />}
+        {currentPage === 'about' && (
+          <AboutPage onBack={() => setCurrentPage('home')} onDemo={() => setCurrentPage('demo')} />
+        )}
+        {currentPage === 'changelog' && <ChangelogPage onBack={() => setCurrentPage('home')} />}
 
-      {currentPage === 'pricing' && <Pricing onGetStarted={onGetStarted} />}
+        {currentPage === 'pricing' && <Pricing onGetStarted={onGetStarted} />}
+      </Suspense>
 
       {currentPage === 'home' && (
         <>

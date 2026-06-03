@@ -23,7 +23,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
 
 interface DashboardProps {
-  onNavigate: (view: string, data?: { clientId?: string; checkInId?: string }) => void;
+  onNavigate: (view: string, data?: Record<string, any>) => void;
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
@@ -94,6 +94,36 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const scheduleItems = getEventsForDate(todayDateStr).sort((a, b) => a.time.localeCompare(b.time));
 
   const locale = language === 'es' ? 'es-ES' : 'en-US';
+
+  const navigateAttentionItem = (item: any) => {
+    if (item.type === 'CHECK_IN') {
+      onNavigate('check-ins', { clientId: item.clientId, checkInId: item.id });
+      return;
+    }
+    if (item.type === 'MESSAGE') {
+      onNavigate('messages', { clientId: item.clientId });
+      return;
+    }
+    if (item.type === 'TASK') {
+      if (item.target) {
+        onNavigate(item.target.view, {
+          ...item.target.data,
+          clientId: item.target.data?.clientId ?? item.clientId,
+        });
+        return;
+      }
+      if (item.date) {
+        onNavigate('calendar', {
+          calendarDate: item.date,
+          calendarView: 'Day',
+          focusEventId: item.id,
+          clientId: item.clientId,
+        });
+        return;
+      }
+    }
+    onNavigate('tasks');
+  };
 
   // El backend manda `time` como ISO crudo (p.ej. "2026-04-07T09:46:53.178+00:00").
   // Lo formateamos a tiempo relativo ("hace 5 min") o, si es antiguo, a fecha
@@ -195,12 +225,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <div 
                   key={item.id} 
                   className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
-                  onClick={() => {
-                    if (item.type === 'CHECK_IN') onNavigate('check-ins', { clientId: item.clientId, checkInId: item.id });
-                    else if (item.type === 'MESSAGE') onNavigate('messages', { clientId: item.clientId });
-                    else if (item.type === 'TASK') onNavigate('tasks');
-                    else onNavigate('tasks');
-                  }}
+                  onClick={() => navigateAttentionItem(item)}
                 >
                   <div className="relative">
                     {item.avatar ? (

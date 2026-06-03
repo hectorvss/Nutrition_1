@@ -88,11 +88,8 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
     setBusy(true); setError(null);
     try {
       if (method === 'excel') {
-        const buf = await file.arrayBuffer();
-        const XLSX = await import('xlsx'); // lazy — keeps it out of the main bundle
-        const wb = XLSX.read(buf, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const aoa = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1, raw: false, defval: '' });
+        const { readSheet } = await import('read-excel-file/browser');
+        const aoa = await readSheet(file);
         const nonEmpty = aoa.filter(r => Array.isArray(r) && r.some(c => String(c ?? '').trim().length));
         if (!nonEmpty.length) { setError(isEs ? 'La hoja está vacía.' : 'The sheet is empty.'); return; }
         ingestTable({
@@ -142,12 +139,13 @@ export default function ImportClientsModal({ open, method, onClose, onImported }
   const downloadTemplate = async () => {
     const filename = `plantilla-clientes${method === 'excel' ? '.xlsx' : '.csv'}`;
     if (method === 'excel') {
-      const XLSX = await import('xlsx');
+      const writeXlsxFile = (await import('write-excel-file/browser')).default;
       const aoa = [templateHeaders(isEs), templateExampleRow(isEs)];
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
-      XLSX.writeFile(wb, filename);
+      const blob = await writeXlsxFile(aoa, { sheet: 'Clientes' }).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
       return;
     }
     const csv = buildTemplate(isEs, ',');

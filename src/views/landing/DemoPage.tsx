@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { CheckCircle2, Calendar, Users, Sparkles } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -23,7 +23,7 @@ export default function DemoPage({ onBack }: DemoPageProps) {
   const [form, setForm] = useState({ name: '', email: '', clients: '', message: '' });
   const [sent, setSent] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.email || !form.name) return;
     const subject = encodeURIComponent(

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import TrainingDashboard from './TrainingDashboard';
 import TrainingNoPlan from './TrainingNoPlan';
@@ -8,10 +8,16 @@ import { fetchWithAuth } from '../api';
 import AssignProgram from './AssignProgram';
 import ActivityEditor from './ActivityEditor';
 import TrainingPlanTemplates from './TrainingPlanTemplates';
+import { useClient } from '../context/ClientContext';
 
 type TrainingView = 'client-list' | 'no-plan' | 'weekly-view' | 'workout-editor' | 'assign-program' | 'activity-editor' | 'plan-templates';
 
-export default function Training() {
+interface TrainingProps {
+  initialClientId?: string;
+}
+
+export default function Training({ initialClientId }: TrainingProps = {}) {
+  const { clients } = useClient();
   const [currentView, setCurrentView] = useState<TrainingView>('client-list');
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
@@ -19,6 +25,15 @@ export default function Training() {
   const [initialPlanData, setInitialPlanData] = useState<any>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (!initialClientId) return;
+    const client = clients.find(c => c.id === initialClientId);
+    if (!client) return;
+    setSelectedClient(client);
+    setEditingTemplate(null);
+    setCurrentView(client.trainingPlanAssigned ? 'weekly-view' : 'no-plan');
+  }, [clients, initialClientId]);
 
   const handleNavigate = (view: TrainingView, clientId?: string | any) => {
     if (clientId) {
