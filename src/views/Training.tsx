@@ -41,6 +41,9 @@ export default function Training({ initialClientId }: TrainingProps = {}) {
       const client = typeof clientId === 'object' ? clientId : { id: clientId };
       setSelectedClient(client);
       setEditingTemplate(null);  // navigating to a real client exits template mode
+      // Reset day/activity selection so a stale ID from the previous client never leaks
+      setSelectedDayId(null);
+      setSelectedActivityName(null);
 
       if (view === 'weekly-view' || view === 'workout-editor') {
         if (!client.trainingPlanAssigned) {

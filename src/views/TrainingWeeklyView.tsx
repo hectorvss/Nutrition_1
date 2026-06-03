@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../components/ui/Toast';
 
 interface DayTraining {
   id: string;
@@ -31,6 +32,7 @@ interface TrainingWeeklyViewProps {
 
 export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReassign, initialPlanData, templateId }: TrainingWeeklyViewProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
   const [planData, setPlanData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -159,16 +161,17 @@ export default function TrainingWeeklyView({ client, onBack, onSelectDay, onReas
         await fetchWithAuth(`/manager/clients/${client.id}/training-program`, {
           method: 'POST',
           body: JSON.stringify({
-            name: planData.name,
+            // Fallback name so it never saves as undefined (backend upserts by client_id)
+            name: planData.name || planData.data_json?.name || t('training_program', { defaultValue: 'Training Program' }),
             data_json: planData.data_json
           })
         });
       }
       setHasChanges(false);
-      alert(t('plan_saved_alert'));
+      showToast(t('plan_saved_alert'), 'success');
     } catch (e) {
       console.error('Error saving training program:', e);
-      alert(t('plan_save_error_alert'));
+      showToast(t('plan_save_error_alert'), 'error');
     } finally {
       setIsSaving(false);
     }

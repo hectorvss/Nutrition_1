@@ -47,7 +47,8 @@ interface AutomationCreateReviewProps {
 }
 
 const iconMap: Record<string, React.ElementType> = {
-  Hand, Repeat, AlertTriangle, PartyPopper, Cake, FileText, UserPlus, Smartphone, TrendingUp, Plus, ClipboardCheck: Check
+  Hand, Repeat, AlertTriangle, PartyPopper, Cake, FileText, UserPlus, Smartphone, TrendingUp, Plus,
+  ClipboardCheck: Check, Check,
 };
 
 function getPreviewText(text: string) {
@@ -66,11 +67,16 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
   const { clients } = useClient();
   const [automationName, setAutomationName] = useState(wizardData.automationName);
   const [isEditingName, setIsEditingName] = useState(false);
-  const activeClients = clients.filter(c => c.status === 'Active');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const activeClients = clients.filter(c => c.status === 'Active' || c.status === 'active');
 
   const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const handleActivate = () => {
+  const handleActivate = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    setSaveError(null);
     const payload = {
       name: automationName || wizardData.triggerName,
       description: wizardData.triggerName,
@@ -84,12 +90,18 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
         iconColor: wizardData.iconColor,
       },
     };
-    if (wizardData.editingId) {
-      updateAutomation(wizardData.editingId, payload);
-    } else {
-      addAutomation(payload);
+    try {
+      if (wizardData.editingId) {
+        await updateAutomation(wizardData.editingId, payload);
+      } else {
+        await addAutomation(payload);
+      }
+      onActivate();
+    } catch (err: any) {
+      setSaveError(err?.message || t('error_saving', { defaultValue: 'Error al guardar. Inténtalo de nuevo.' }));
+    } finally {
+      setIsSaving(false);
     }
-    onActivate();
   };
 
   const {
@@ -355,19 +367,25 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
               </div>
             </div>
 
-            <div className="px-6 md:px-8 py-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex justify-between items-center">
-              <button onClick={onBack} className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-800 transition-colors">
-                {t('back')}
-              </button>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-slate-500 dark:text-slate-500 hidden sm:inline-block">{t('ready_to_go_live')}</span>
-                <button 
-                  onClick={handleActivate}
-                  className="px-8 py-2.5 rounded-xl bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5 flex items-center gap-2"
-                >
-                  <Rocket className="w-5 h-5" />
-                  {wizardData.editingId ? t('save_changes') : t('activate_automation')}
+            <div className="px-6 md:px-8 py-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col gap-2">
+              {saveError && (
+                <p className="text-sm text-red-600 dark:text-red-400 text-center">{saveError}</p>
+              )}
+              <div className="flex justify-between items-center">
+                <button onClick={onBack} disabled={isSaving} className="px-6 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-800 transition-colors disabled:opacity-50">
+                  {t('back')}
                 </button>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-slate-500 dark:text-slate-500 hidden sm:inline-block">{t('ready_to_go_live')}</span>
+                  <button
+                    onClick={handleActivate}
+                    disabled={isSaving}
+                    className="px-8 py-2.5 rounded-xl bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 hover:shadow-emerald-500/30 transition-all transform hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Rocket className="w-5 h-5" />
+                    {isSaving ? t('saving', { defaultValue: 'Guardando…' }) : (wizardData.editingId ? t('save_changes') : t('activate_automation'))}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

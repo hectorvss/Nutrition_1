@@ -84,10 +84,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   });
 
   const quickActions = [
-    { id: 'add-client', label: t('add_new_client'), icon: UserPlus, color: 'bg-emerald-50 text-emerald-600' },
-    { id: 'schedule', label: t('schedule_appointment'), icon: Calendar, color: 'bg-blue-50 text-blue-600' },
-    { id: 'automations', label: t('manage_automations'), icon: Zap, color: 'bg-amber-50 text-amber-600' },
-    { id: 'broadcast', label: t('broadcast_message'), icon: Send, color: 'bg-purple-50 text-purple-600' },
+    { id: 'add-client', label: t('add_new_client'), icon: UserPlus, color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600' },
+    { id: 'schedule', label: t('schedule_appointment'), icon: Calendar, color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600' },
+    { id: 'automations', label: t('manage_automations'), icon: Zap, color: 'bg-amber-50 dark:bg-amber-900/20 text-amber-600' },
+    { id: 'broadcast', label: t('broadcast_message'), icon: Send, color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600' },
   ];
 
   const todayDateStr = new Date().toISOString().split('T')[0];
@@ -148,9 +148,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     <div className="p-6 md:p-8 lg:p-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
-          <p className="text-slate-500 text-sm font-medium mb-1">{t('today')}, {new Date().toLocaleDateString(locale, { month: 'long', day: 'numeric'})}</p>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('welcome_manager')}</h1>
-          <p className="text-slate-500 mt-2 text-sm max-w-xl">{t('pending_attention', { count: combinedAttention.length })}</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">{t('today')}, {new Date().toLocaleDateString(locale, { month: 'long', day: 'numeric'})}</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{t('welcome_manager')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm max-w-xl">{t('pending_attention', { count: combinedAttention.length })}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Global Search and Settings buttons removed as requested */}
@@ -158,7 +158,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </header>
 
       <div className="mb-8">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">{t('quick_actions')}</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{t('quick_actions')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action) => (
             <button 
@@ -169,12 +169,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 else if (action.id === 'add-client') onNavigate('clients');
                 else if (action.id === 'broadcast') onNavigate('messages');
               }}
-              className="flex flex-col items-start gap-2 p-5 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group text-left"
+              className="flex flex-col items-start gap-2 p-5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group text-left"
             >
               <div className={`p-2 rounded-lg ${action.color} group-hover:bg-emerald-600 group-hover:text-white transition-colors`}>
                 <action.icon className="w-5 h-5" />
               </div>
-              <span className="font-bold text-slate-900 text-sm">{action.label}</span>
+              <span className="font-bold text-slate-900 dark:text-white text-sm">{action.label}</span>
             </button>
           ))}
         </div>
@@ -182,17 +182,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded bg-red-50 text-red-500">
+                <div className="p-1.5 rounded bg-red-50 dark:bg-red-900/20 text-red-500">
                   <Bell className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-lg text-slate-900">{t('attention_required')}</h3>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t('attention_required')}</h3>
               </div>
-              <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 text-slate-500">{combinedAttention.length} {t('items')}</span>
+              <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">{combinedAttention.length} {t('items')}</span>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <>
                   {Array.from({ length: 4 }).map((_, i) => (
@@ -207,10 +207,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </>
               ) : analyticsError ? (
                 <div className="p-8 flex flex-col items-center justify-center gap-3 text-center">
-                  <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
                     <Bell className="w-5 h-5 text-red-400" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-600">{t('error_loading_data')}</p>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t('error_loading_data')}</p>
                   <button
                     onClick={() => window.location.reload()}
                     className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline"
@@ -219,37 +219,37 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </button>
                 </div>
               ) : combinedAttention.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 italic">{t('no_pending_items')}</div>
+                <div className="p-8 text-center text-slate-500 dark:text-slate-400 italic">{t('no_pending_items')}</div>
               ) : null}
               {!loading && combinedAttention.slice(0, 5).map((item) => (
                 <div 
                   key={item.id} 
-                  className="p-4 flex items-center gap-4 hover:bg-slate-50 transition-colors cursor-pointer group" 
+                  className="p-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
                   onClick={() => navigateAttentionItem(item)}
                 >
                   <div className="relative">
                     {item.avatar ? (
                       <div className="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style={{ backgroundImage: `url("${item.avatar}")` }} />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs uppercase">{item.client?.substring(0, 2)}</div>
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-xs uppercase">{item.client?.substring(0, 2)}</div>
                     )}
                     {item.status === 'overdue' && (
-                      <div className="absolute -bottom-1 -right-1 bg-red-500 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
+                      <div className="absolute -bottom-1 -right-1 bg-red-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
                         <span className="text-[10px] text-white font-bold">!</span>
                       </div>
                     )}
                     {item.type === 'CHECK_IN' && (
-                      <div className="absolute -bottom-1 -right-1 bg-amber-400 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center">
+                      <div className="absolute -bottom-1 -right-1 bg-amber-400 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
                         <FilePlus className="text-[8px] text-white" />
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-sm text-slate-900 truncate">{item.client} <span className="font-normal text-slate-500 ml-1">{t(item.title)}</span></h4>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">{item.client} <span className="font-normal text-slate-500 dark:text-slate-400 ml-1">{t(item.title)}</span></h4>
                       <span className="text-xs text-slate-400 shrink-0">{item.timeLabel}</span>
                     </div>
-                    <p className="text-sm text-slate-500 truncate">{item.desc}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{item.desc}</p>
                   </div>
                   <button className="text-emerald-600 opacity-0 group-hover:opacity-100 font-semibold text-sm transition-opacity capitalize">
                     {item.type === 'CHECK_IN' ? t('review') : t('resolve')}
@@ -257,36 +257,36 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
               ))}
             </div>
-            <div className="p-3 bg-slate-50 text-center border-t border-slate-100">
-              <button onClick={() => onNavigate('tasks')} className="text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors">{t('view_all_items')}</button>
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 text-center border-t border-slate-100 dark:border-slate-800">
+              <button onClick={() => onNavigate('tasks')} className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">{t('view_all_items')}</button>
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-slate-900">{t('schedule_today')}</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('schedule_today')}</h3>
               <button onClick={() => onNavigate('calendar')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">{t('view_calendar')}</button>
             </div>
             <div className="space-y-4">
               {scheduleItems.length === 0 && (
-                <div className="text-slate-500 text-sm italic">{t('no_events_today')}</div>
+                <div className="text-slate-500 dark:text-slate-400 text-sm italic">{t('no_events_today')}</div>
               )}
               {scheduleItems.map((item) => {
                 const info = getEventPresentationInfo(item.type);
                 return (
                   <div key={item.id} className="flex gap-4 group/item">
                     <div className="w-16 flex flex-col items-end pt-1 shrink-0">
-                      <span className="text-sm font-bold text-slate-700">{item.time.split(' ')[0]}</span>
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{item.time.split(' ')[0]}</span>
                       <span className="text-xs text-slate-400">{item.time.includes(' ') ? item.time.split(' ')[1] : ''}</span>
                     </div>
                     <div 
                       onClick={() => onNavigate('calendar')}
-                      className={`flex-1 p-4 rounded-xl border-l-4 ${info.color} relative border-t border-r border-b border-r-slate-100 border-t-slate-100 border-b-slate-100 shadow-sm transition-all cursor-pointer hover:shadow-md ${item.status === 'completed' ? 'opacity-60 grayscale' : ''}`}
+                      className={`flex-1 p-4 rounded-xl border-l-4 ${info.color} relative border-t border-r border-b border-r-slate-100 dark:border-r-slate-800 border-t-slate-100 dark:border-t-slate-800 border-b-slate-100 dark:border-b-slate-800 shadow-sm transition-all cursor-pointer hover:shadow-md ${item.status === 'completed' ? 'opacity-60 grayscale' : ''}`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="min-w-0 flex-1">
-                          <h4 className={`font-bold text-sm truncate mr-2 ${item.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'}`}>{item.title}</h4>
-                          <p className={`text-xs mt-1 truncate ${item.status === 'completed' ? 'text-slate-300' : 'text-slate-600'}`}>{t('with')} {item.client || item.initials} • {t(item.type)}</p>
+                          <h4 className={`font-bold text-sm truncate mr-2 ${item.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800 dark:text-white'}`}>{item.title}</h4>
+                          <p className={`text-xs mt-1 truncate ${item.status === 'completed' ? 'text-slate-300 dark:text-slate-600' : 'text-slate-600 dark:text-slate-400'}`}>{t('with')} {item.client || item.initials} • {t(item.type)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <button 
@@ -295,14 +295,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                               const newStatus = item.status === 'completed' ? 'pending' : 'completed';
                               updateEvent(item.id, { status: newStatus });
                             }}
-                            className={`p-1.5 rounded-lg transition-all ${item.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-white text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 border border-slate-100'}`}
+                            className={`p-1.5 rounded-lg transition-all ${item.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-slate-800 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border border-slate-100 dark:border-slate-700'}`}
                           >
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                           {item.avatar ? (
-                            <div className="w-8 h-8 rounded-full bg-cover bg-center border-2 border-white shadow-sm shrink-0" style={{ backgroundImage: `url("${item.avatar}")` }} />
+                            <div className="w-8 h-8 rounded-full bg-cover bg-center border-2 border-white dark:border-slate-700 shadow-sm shrink-0" style={{ backgroundImage: `url("${item.avatar}")` }} />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-slate-500 font-bold text-xs border-2 border-slate-100 shrink-0">{item.initials}</div>
+                            <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-xs border-2 border-slate-100 dark:border-slate-700 shrink-0">{item.initials}</div>
                           )}
                         </div>
                       </div>
@@ -344,8 +344,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-[520px]">
-            <h3 className="text-lg font-bold text-slate-900 mb-4 shrink-0">{t('latest_updates')}</h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col h-[520px]">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 shrink-0">{t('latest_updates')}</h3>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6 py-2 relative">
               {loading ? (
                 <>
@@ -370,15 +370,15 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                             if (update.type === 'CHECK_IN') onNavigate('check-ins', { clientId: update.clientId, checkInId: update.checkInId });
                             else if (update.type === 'MESSAGE') onNavigate('messages', { clientId: update.clientId });
                         }}
-                        className={`flex gap-4 relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 last:before:hidden py-1 ${ (update.type === 'CHECK_IN' || update.type === 'MESSAGE') ? 'cursor-pointer hover:bg-slate-50 p-2 -m-2 rounded-xl transition-colors' : ''}`}
+                        className={`flex gap-4 relative before:absolute before:left-[19px] before:top-10 before:h-full before:w-[2px] before:bg-slate-100 dark:before:bg-slate-800 last:before:hidden py-1 ${ (update.type === 'CHECK_IN' || update.type === 'MESSAGE') ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 p-2 -m-2 rounded-xl transition-colors' : ''}`}
                       >
-                        <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white shadow-sm`}>
+                        <div className={`w-10 h-10 rounded-full ${update.color} flex items-center justify-center shrink-0 z-10 ring-4 ring-white dark:ring-slate-900 shadow-sm`}>
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="min-w-0 pt-0.5">
-                          <p className="text-sm text-slate-900 leading-snug font-medium"><span className="font-bold text-slate-950">{t(update.title)}</span> {update.sub}</p>
+                          <p className="text-sm text-slate-900 dark:text-slate-300 leading-snug font-medium"><span className="font-bold text-slate-950 dark:text-white">{t(update.title)}</span> {update.sub}</p>
                           <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                            <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                            <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700"></span>
                             {formatActivityTime(update.time)}
                           </p>
                         </div>
@@ -386,14 +386,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     );
                   })}
                   {activity.length === 0 && (
-                    <p className="text-sm text-slate-500 italic">{t('no_recent_activity')}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">{t('no_recent_activity')}</p>
                   )}
                 </>
               )}
             </div>
             <button 
               onClick={() => onNavigate('tasks')}
-              className="w-full mt-6 py-2.5 text-sm font-bold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-[0.98] shrink-0"
+              className="w-full mt-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-[0.98] shrink-0"
             >
               {t('view_activity_history')}
             </button>

@@ -209,7 +209,8 @@ export default function CheckInHistory({ clientId, onBack, onViewReview, hideHea
         ) : visibleCheckIns.map((item, idx) => {
           const dj = item.data_json || {};
           const compliance = getComplianceScore(dj);
-          const reviewedAt = item.reviewed_at || item.data_json?.reviewed_at;
+          // reviewed_at is a top-level column, not inside data_json
+          const reviewedAt = item.reviewed_at;
           const isPending = !reviewedAt;
           const isNew = isPending && idx === 0;
           return (

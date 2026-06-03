@@ -144,6 +144,10 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
   };
 
   const handleSave = async () => {
+    if (!title.trim()) {
+      setError(t('recipe_title_required', { defaultValue: 'El nombre de la receta es obligatorio.' }));
+      return;
+    }
     setSaving(true);
     setError(null);
     const payload = {
@@ -229,8 +233,8 @@ export default function RecipeCreate({ recipeId, onBack }: RecipeCreateProps) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving}
-                className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white px-6 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-bold"
+                disabled={saving || !title.trim()}
+                className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2 font-bold"
               >
                 <span className="material-symbols-outlined text-[20px]">save</span>
                 {saving ? '...' : t('save_recipe')}

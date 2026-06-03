@@ -2,9 +2,20 @@ import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
 
+export interface ActivityEditorData {
+  name: string;
+  muscleGroup: string;
+  equipment: string;
+  videoUrl: string;
+  notes: string;
+  sets: SetRow[];
+}
+
 interface ActivityEditorProps {
   onBack: () => void;
   activityName?: string;
+  /** Called with the edited data when the user clicks Save. If omitted, Save just calls onBack. */
+  onSave?: (data: ActivityEditorData) => void;
 }
 
 interface SetRow {
@@ -22,7 +33,7 @@ const PRESCRIPTION_PRESETS: Record<string, { reps: string; rest: string }> = {
   endurance: { reps: '15', rest: '45s' },
 };
 
-export default function ActivityEditor({ onBack, activityName = '' }: ActivityEditorProps) {
+export default function ActivityEditor({ onBack, activityName = '', onSave }: ActivityEditorProps) {
   const { t } = useLanguage();
 
   const [name, setName] = useState(activityName);
@@ -92,7 +103,12 @@ export default function ActivityEditor({ onBack, activityName = '' }: ActivityEd
                 {t('cancel')}
               </button>
               <button
-                onClick={onBack}
+                onClick={() => {
+                  if (onSave) {
+                    onSave({ name, muscleGroup, equipment, videoUrl, notes, sets });
+                  }
+                  onBack();
+                }}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 font-bold text-sm"
               >
                 <span className="material-symbols-outlined text-[20px]">check</span>

@@ -57,39 +57,39 @@ const InsightsTab: React.FC<InsightsTabProps> = ({
   return (
   <>
   {/* Upcoming Appointments — live from CalendarContext, no reload needed */}
-  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-8">
-    <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-      <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mt-8">
+    <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
         <Calendar className="w-5 h-5 text-emerald-500" />
         {t('upcoming_appointments', { defaultValue: 'Próximas citas' })}
       </h3>
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
         {upcomingAppointments.length} {upcomingAppointments.length === 1 ? t('item', { defaultValue: 'cita' }) : t('items', { defaultValue: 'citas' })}
       </span>
     </div>
     {upcomingAppointments.length === 0 ? (
       <div className="p-8 text-center">
-        <Calendar className="w-10 h-10 mx-auto mb-3 text-slate-200" />
-        <p className="text-sm font-medium text-slate-500">{t('no_upcoming_appointments', { defaultValue: 'Este cliente no tiene citas próximas agendadas.' })}</p>
+        <Calendar className="w-10 h-10 mx-auto mb-3 text-slate-200 dark:text-slate-700" />
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('no_upcoming_appointments', { defaultValue: 'Este cliente no tiene citas próximas agendadas.' })}</p>
       </div>
     ) : (
-      <ul className="divide-y divide-slate-100">
+      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
         {upcomingAppointments.map(ev => {
           const presentation = getEventPresentationInfo(ev.type as EventType);
           const EventIcon = presentation.icon;
           return (
-            <li key={ev.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+            <li key={ev.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 flex items-center justify-center shrink-0">
                 <EventIcon className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 truncate">{ev.title}</p>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{ev.title}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   {formatAppointmentDate(ev.date)} · {ev.time || '--:--'}
                   {ev.duration ? ` · ${ev.duration}` : ''}
                 </p>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 shrink-0">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 shrink-0">
                 {t(ev.type)}
               </span>
             </li>
@@ -100,20 +100,20 @@ const InsightsTab: React.FC<InsightsTabProps> = ({
   </div>
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
     {/* Latest Measurements */}
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-        <h3 className="text-lg font-bold text-slate-900">{t('latest_measurements')}</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full">
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('latest_measurements')}</h3>
       </div>
       <div className="flex-1 overflow-auto">
         <table className="w-full text-left">
-          <thead className="bg-slate-50 text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+          <thead className="bg-slate-50 dark:bg-slate-800/50 text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider">
             <tr>
               <th className="px-6 py-4">{t('metric')}</th>
               <th className="px-6 py-4">{t('value')}</th>
               <th className="px-6 py-4 text-right">{t('change')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-50 text-sm">
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-800 text-sm">
             {[
               { metric: t('waist'), value: stats?.measurements?.waist ? `${stats.measurements.waist} cm` : '--', change: stats?.measurements?.waistChange || '0', icon: '' },
               { metric: t('hip'), value: stats?.measurements?.hip ? `${stats.measurements.hip} cm` : '--', change: stats?.measurements?.hipChange || '0', icon: '' },
@@ -124,9 +124,9 @@ const InsightsTab: React.FC<InsightsTabProps> = ({
               const colorClass = numericChange < 0 ? 'text-emerald-600' : numericChange > 0 ? 'text-red-500' : 'text-slate-400';
               const sign = numericChange > 0 ? '+' : '';
               return (
-                <tr key={idx} className="group hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-slate-700">{row.metric}</td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">{row.value}</td>
+                <tr key={idx} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">{row.metric}</td>
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium">{row.value}</td>
                   <td className={`px-6 py-4 text-right font-bold ${colorClass}`}>
                     <div className="flex justify-end items-center gap-1">
                       {numericChange !== 0 ? `${sign}${row.change} cm` : <span className="text-slate-400 font-medium">0 cm</span>}
@@ -141,50 +141,50 @@ const InsightsTab: React.FC<InsightsTabProps> = ({
     </div>
 
     {/* Recent Activity */}
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-        <h3 className="text-lg font-bold text-slate-900">{t('recent_activity')}</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full">
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('recent_activity')}</h3>
       </div>
       <div className="p-6 flex-1 overflow-auto">
-        <div className="relative pl-6 border-l-2 border-slate-100 space-y-8">
+        <div className="relative pl-6 border-l-2 border-slate-100 dark:border-slate-800 space-y-8">
           {stats?.activity?.map((act: any, idx: number) => (
             <div key={idx} className="relative">
-              <div className="absolute -left-[31px] bg-white p-1">
-                <div className={`h-3 w-3 rounded-full ${act.type === 'CHECK_IN' ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-blue-400 ring-4 ring-blue-50'}`}></div>
+              <div className="absolute -left-[31px] bg-white dark:bg-slate-900 p-1">
+                <div className={`h-3 w-3 rounded-full ${act.type === 'CHECK_IN' ? 'bg-emerald-500 ring-4 ring-emerald-50 dark:ring-emerald-900/20' : 'bg-blue-400 ring-4 ring-blue-50 dark:ring-blue-900/20'}`}></div>
               </div>
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-900">{act.title}</span>
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">{new Date(act.time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{act.title}</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">{new Date(act.time).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <p className="text-xs text-slate-600">{act.sub}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{act.sub}</p>
               </div>
             </div>
           ))}
           {(!stats?.activity || stats.activity.length === 0) && (
-            <p className="text-center text-slate-400 text-sm py-4">{t('no_recent_activity')}</p>
+            <p className="text-center text-slate-400 dark:text-slate-500 text-sm py-4">{t('no_recent_activity')}</p>
           )}
         </div>
       </div>
     </div>
 
     {/* Account Access & Security */}
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-        <h3 className="text-lg font-bold text-slate-900">{t('account_access_security')}</h3>
-        <ShieldCheck className="w-5 h-5 text-slate-400" />
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full">
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('account_access_security')}</h3>
+        <ShieldCheck className="w-5 h-5 text-slate-400 dark:text-slate-500" />
       </div>
       <div className="p-6 flex-1 flex flex-col gap-6">
         <div>
-          <p className="text-sm font-bold text-slate-900">{t('grant_app_access')}</p>
-          <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{t('allow_client_login')}</p>
+          <p className="text-sm font-bold text-slate-900 dark:text-white">{t('grant_app_access')}</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase mt-1">{t('allow_client_login')}</p>
         </div>
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{t('access_expiration_date')}</label>
+          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">{t('access_expiration_date')}</label>
           <div className="relative">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
-              className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm text-slate-600 focus:ring-emerald-500 focus:border-emerald-500 outline-none disabled:opacity-50"
+              className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-slate-600 dark:text-slate-300 focus:ring-emerald-500 focus:border-emerald-500 outline-none disabled:opacity-50"
               type="date"
               value={accessExpiration}
               disabled={savingExpiration}
@@ -193,10 +193,10 @@ const InsightsTab: React.FC<InsightsTabProps> = ({
             />
           </div>
         </div>
-        <div className="mt-auto pt-6 border-t border-slate-100">
+        <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800">
           <button
             onClick={onShowDeleteModal}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors font-bold text-sm border border-transparent hover:border-red-200"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 rounded-xl transition-colors font-bold text-sm border border-transparent hover:border-red-200 dark:hover:border-red-800"
           >
             <Trash2 className="w-4 h-4" />
             {t('delete_client_permanently')}
@@ -206,9 +206,9 @@ const InsightsTab: React.FC<InsightsTabProps> = ({
     </div>
 
     {/* Client Documents */}
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
-      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100">
-        <h3 className="text-lg font-bold text-slate-900">{t('client_documents')}</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full">
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('client_documents')}</h3>
       </div>
       <div className="p-6 flex-1 overflow-auto">
         <div className="flex flex-col gap-3">

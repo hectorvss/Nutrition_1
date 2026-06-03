@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { safeErr } from '../lib/http.js';
 import { supabase, supabaseAdmin } from '../db/index.js';
+import { verifyManager as _verifyManagerCanonical } from '../middleware/auth.js';
 import Stripe from 'stripe';
 import { newStripeClient } from '../lib/stripe.js';
 import { google } from 'googleapis';
@@ -31,47 +32,10 @@ const enforceClientLimit = makeEnforceLimit(supabaseAdmin, 'activeClients', asyn
 const router = Router();
 // ... (rest of the code until POST /clients)
 
-// Middleware to verify MANAGER role using Supabase Auth
-const verifyManager = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
-
-  try {
-    const { data, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !data?.user) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    const user = data.user;
-
-    // Verificar rol MANAGER desde la tabla de usuarios
-    const { data: userData, error: dbError } = await supabaseAdmin
-      .from('users')
-      .select('role, id')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (dbError) {
-      console.error('verifyManager: DB error', dbError);
-      return res.status(500).json({ error: 'Error verifying user role' });
-    }
-
-    // DB is the source of truth — never fall back to user_metadata (it is user-mutable
-    // via supabase.auth.updateUser and would allow privilege escalation).
-    if (!userData || userData.role !== 'MANAGER') {
-      return res.status(403).json({ error: 'Forbidden: se requiere rol MANAGER' });
-    }
-
-    req.user = user;
-    next();
-  } catch (err) {
-    console.error('verifyManager: Unexpected crash', err);
-    return res.status(401).json({ error: 'Authentication failed' });
-  }
-};
-
-router.use(verifyManager);
+// Use the canonical verifyManager from middleware/auth.ts.
+// It validates the JWT, checks role from the DB (source of truth), and assigns
+// req.user.role so downstream handlers can inspect it safely.
+router.use(_verifyManagerCanonical);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KEY_RE = /^[a-z0-9_-]{1,64}$/i;
@@ -720,7 +684,8 @@ router.post('/clients/:id/reset-password', async (req: any, res) => {
       .maybeSingle();
     if (!clientOwner) return res.status(404).json({ error: 'Client not found or access denied' });
 
-    const newPassword = 'Nutri' + Math.floor(Math.random() * 9000 + 1000) + '$xp';
+    const { randomInt } = await import('node:crypto');
+    const newPassword = 'Nutri' + randomInt(1000, 9999) + '$xp';
     const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(id, { password: newPassword });
     if (updErr) throw updErr;
 
@@ -1187,15 +1152,17 @@ router.post('/clients/:id/training-program', async (req: any, res) => {
   }
 });
 
-// Get master plan by slug
+// Get master plan by slug — only returns plans owned by this manager or global ones
 router.get('/master-plans/:slug', async (req: any, res) => {
   const { slug } = req.params;
+  const managerId = req.user.id;
   try {
     const { data: plan, error: planError } = await supabaseAdmin
       .from('nutrition_master_plans')
       .select('*')
       .eq('slug', slug)
-      .single();
+      .or(`manager_id.is.null,manager_id.eq.${managerId}`)
+      .maybeSingle();
 
     if (planError || !plan) {
       return res.status(404).json({ error: 'Master plan not found' });
@@ -3707,18 +3674,20 @@ router.get('/clients/:id/profile-stats', async (req: any, res) => {
       }
     }
 
-    // 12. Active Plans
+    // 12. Active Plans — filter by created_by (managerId) to prevent cross-manager data leakage
     const { data: nutritionPlans } = await supabaseAdmin
       .from('nutrition_plans')
       .select('*')
       .eq('client_id', id)
+      .eq('created_by', managerId)
       .order('created_at', { ascending: false })
       .limit(1);
-    
+
     const { data: trainingPrograms } = await supabaseAdmin
       .from('training_programs')
       .select('*')
       .eq('client_id', id)
+      .eq('created_by', managerId)
       .order('created_at', { ascending: false })
       .limit(1);
 

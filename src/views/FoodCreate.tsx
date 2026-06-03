@@ -20,7 +20,9 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
   const [carbs, setCarbs] = useState('');
   const [fats, setFats] = useState('');
 
+  const [brand, setBrand] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
     if (!name.trim() || isSaving) return;
@@ -29,6 +31,7 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
       await addFood({
         name: name.trim(),
         category,
+        brand: brand.trim() || undefined,
         calories: parseFloat(calories) || 0,
         protein: parseFloat(protein) || 0,
         carbs: parseFloat(carbs) || 0,
@@ -36,9 +39,10 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
         servingSize: `${servingAmount}${servingUnit}`,
       });
       onBack();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving food:', err);
-      alert(t('error_loading_data'));
+      // Generic alert replaced with inline error state to avoid blocking the UI
+      setError(err?.message || t('food_save_error', { defaultValue: 'Error al guardar el alimento. Inténtalo de nuevo.' }));
     } finally {
       setIsSaving(false);
     }
@@ -108,6 +112,8 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
                     </label>
                     <input
                       type="text"
+                      value={brand}
+                      onChange={e => setBrand(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm text-sm"
                       placeholder={t('brand_label')}
                     />
@@ -208,6 +214,9 @@ export default function FoodCreate({ onBack }: FoodCreateProps) {
                   {isSaving ? t('saving_dots') : t('save_to_database')}
                 </button>
               </div>
+              {error && (
+                <p className="text-sm text-red-600 dark:text-red-400 text-right mt-2">{error}</p>
+              )}
             </div>
           </div>
         </div>

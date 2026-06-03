@@ -266,18 +266,22 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
     }
   }, [user, selectedClientId]);
 
+  // Keep a stable ref to loadMessages so the polling interval never has a stale closure.
+  const loadMessagesRef = useRef(loadMessages);
+  useEffect(() => { loadMessagesRef.current = loadMessages; });
+
   useEffect(() => {
     // Cambio de chat: reset del cursor + flag de "user has loaded older".
     setOlderCursor(null);
     setHasOlder(false);
     userLoadedOlderRef.current = false;
-    loadMessages();
+    loadMessagesRef.current();
     // Polling agresivo (5s) solo cuando la pestana esta activa.
-    // El polling solo refresca la primera pagina (mensajes nuevos al final);
-    // no toca los olderCursor ya cargados.
-    const tick = () => { if (!document.hidden) loadMessages(); };
+    // Usamos la ref para que el tick siempre llame a la version mas reciente
+    // de loadMessages (evita stale closure cuando cambia activeRecipient).
+    const tick = () => { if (!document.hidden) loadMessagesRef.current(); };
     const interval = setInterval(tick, 5000);
-    const onVisible = () => { if (!document.hidden) loadMessages(); };
+    const onVisible = () => { if (!document.hidden) loadMessagesRef.current(); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(interval);
@@ -377,12 +381,10 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
   };
 
   const uploadToStorage = async (file: File | Blob, path: string): Promise<string> => {
-    const token = getAuthToken();
-
-    if (token) {
-      await supabase.auth.setSession({ access_token: token, refresh_token: '' });
-    }
-
+    // Do NOT call setSession here — passing an empty refresh_token invalidates the
+    // Supabase session, causing a silent logout seconds after the upload.
+    // The storage bucket is configured with a permissive policy for authenticated users,
+    // so the Supabase client's own persisted session (auto-refreshed) is sufficient.
     const uploadPath = `${user?.id || 'anonymous'}/${Date.now()}-${path}`;
 
     const { data, error } = await supabase.storage

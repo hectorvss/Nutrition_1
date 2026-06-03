@@ -152,10 +152,12 @@ export default function OnboardingTemplates({ onEdit }: OnboardingTemplatesProps
     setAssigningTemplateId(id);
     setLoadingClients(true);
     try {
-      const data = await fetchWithAuth('/manager/clients');
-      setClients(data);
+      const { unwrapList } = await import('../api/unwrap');
+      const data = unwrapList(await fetchWithAuth('/manager/clients?limit=200'));
+      setClients(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching clients:', err);
+      setClients([]);
     } finally {
       setLoadingClients(false);
     }

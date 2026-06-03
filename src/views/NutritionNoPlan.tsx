@@ -6,6 +6,7 @@ import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
 import { useLanguage } from '../context/LanguageContext';
 import Select from '../components/ui/Select';
+import { useToast } from '../components/ui/Toast';
 
 interface NutritionNoPlanProps {
   client: any;
@@ -17,6 +18,7 @@ interface NutritionNoPlanProps {
 
 export default function NutritionNoPlan({ client, onBack, onStartPlan }: NutritionNoPlanProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   
   const PRESETS = [
     {
@@ -571,7 +573,7 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
       onStartPlan(null, finalPlanData);
     } catch (err) {
       console.error('Error saving plan:', err);
-      alert(t('plan_save_error_alert', { defaultValue: 'Error al guardar el plan' }));
+      showToast(t('plan_save_error_alert', { defaultValue: 'Error al guardar el plan' }), 'error');
     }
   };
 

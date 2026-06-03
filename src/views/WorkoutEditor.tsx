@@ -7,6 +7,7 @@ import { matchExercise } from '../lib/search';
 import { arrayMove } from '@dnd-kit/sortable';
 import { SortableList } from '../components/dnd/SortableList';
 import { SortableItem } from '../components/dnd/SortableItem';
+import { useToast } from '../components/ui/Toast';
 
 interface WorkoutEditorProps {
   onBack: () => void;
@@ -195,6 +196,7 @@ const WorkoutLogExpansion: React.FC<WorkoutLogExpansionProps> = ({ exercise, onU
 
 export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId, mode = 'default', initialPlanData, templateId }: WorkoutEditorProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const { clients } = useClient();
   const { exercises } = useExerciseContext();
   const client = clients.find(c => c.id === clientId as any) || {
@@ -327,10 +329,10 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
           body: JSON.stringify({ data_json: dj }),
         });
         setFullPlanData(dj);
-        alert(t('program_saved_success'));
+        showToast(t('program_saved_success'), 'success');
       } catch (err) {
         console.error('Error saving training template:', err);
-        alert(t('save_program_error'));
+        showToast(t('save_program_error'), 'error');
       } finally {
         setIsSaving(false);
       }

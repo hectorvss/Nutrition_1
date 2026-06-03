@@ -35,6 +35,7 @@ import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../components/ui/Toast';
 import { matchFood } from '../lib/search';
 import { formatPortion, quantityToGrams, gramsToQuantity } from '../lib/portionDisplay';
 
@@ -98,6 +99,7 @@ interface GeneralItem {
 
 export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData, onBack, selectedDay, weekIndex, templateId }: NutritionPlanDetailProps) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   
   const defaultCategories = useCallback((): MacroCategory[] => [
     { id: 'p', label: t('lean_protein_source'), example: 'e.g., Egg whites, Greek Yogurt, Whey', amount: 30, color: 'bg-blue-500' },
@@ -238,10 +240,13 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           const icons: Record<string, React.ElementType> = { Sunrise, Sun, Moon, Cookie };
           const loadedMeals = targetMeals.map((m: any) => ({
             ...m,
-            items: m.items.map((i: any) => ({
+            // Guard against legacy/corrupted meals that lack the items array
+            items: (m.items || []).map((i: any) => ({
               ...i,
               quantity: i.multiplier || i.quantity || 1
             })),
+            // Guard against meals without categories (example-mode plans)
+            categories: m.categories || [],
             icon: icons[m.iconName] || Sunrise
           }));
           setMeals(loadedMeals);
@@ -325,10 +330,10 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
           body: JSON.stringify({ data_json: finalDataJson, target_calories: targetCalories }),
         });
         setFullPlanData(finalDataJson);
-        alert(t('plan_saved_success'));
+        showToast(t('plan_saved_success'), 'success');
       } catch (err) {
         console.error('Error saving template:', err);
-        alert(t('plan_save_error'));
+        showToast(t('plan_save_error'), 'error');
       } finally {
         setIsSaving(false);
       }
@@ -435,7 +440,7 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
   const updateCategoryAmount = (mealId: number, catId: string, amount: number) => {
     setMeals(prev => prev.map(m =>
       m.id === mealId
-        ? { ...m, categories: m.categories.map(c => c.id === catId ? { ...c, amount } : c) }
+        ? { ...m, categories: (m.categories || []).map((c: any) => c.id === catId ? { ...c, amount } : c) }
         : m
     ));
   };
@@ -444,20 +449,21 @@ export default function NutritionPlanDetail({ client, isNewPlan, initialPlanData
     const colors = MACRO_COLORS;
     setMeals(prev => prev.map(m => {
       if (m.id !== mealId) return m;
+      const cats = m.categories || [];
       const newCat: MacroCategory = {
         id: `${Date.now()}`,
         label: t('add_macro_category'),
         example: 'e.g., description',
         amount: 0,
-        color: colors[m.categories.length % colors.length]
+        color: colors[cats.length % colors.length]
       };
-      return { ...m, categories: [...m.categories, newCat] };
+      return { ...m, categories: [...cats, newCat] };
     }));
   };
 
   const removeCategory = (mealId: number, catId: string) => {
     setMeals(prev => prev.map(m =>
-      m.id === mealId ? { ...m, categories: m.categories.filter(c => c.id !== catId) } : m
+      m.id === mealId ? { ...m, categories: (m.categories || []).filter((c: any) => c.id !== catId) } : m
     ));
   };
 

@@ -89,7 +89,9 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
     loadSupplements();
   }, []);
 
-  const handleDeleteRecipe = async (id: string) => {
+  const handleDeleteRecipe = async (id: string, title?: string) => {
+    const recipeName = title || t('this_recipe', { defaultValue: 'esta receta' });
+    if (!window.confirm(t('confirm_delete_recipe', { defaultValue: `¿Borrar "${recipeName}"? Esta acción no se puede deshacer.` }))) return;
     try {
       await fetchWithAuth('/recipes/' + id, { method: 'DELETE' });
       setRecipes(prev => prev.filter(r => r.id !== id));
@@ -311,7 +313,7 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                         <ChevronRight className="w-6 h-6" />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteRecipe(recipe.id); }}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteRecipe(recipe.id, recipe.title); }}
                         className="p-3 rounded-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border border-transparent hover:border-red-100 dark:hover:border-red-800"
                         title={t('delete_label')}
                       >

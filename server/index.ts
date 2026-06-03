@@ -123,9 +123,12 @@ app.use((err: any, req: any, res: any, next: any) => {
   if (process.env.SENTRY_DSN) {
     Sentry.captureException(err);
   }
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
-  });
+  // In production, never expose raw DB/ORM error messages (they can leak schema info).
+  const isProduction = process.env.NODE_ENV === 'production';
+  const safeMessage = isProduction
+    ? (err.status < 500 ? err.message : 'Internal server error')
+    : (err.message || 'Internal server error');
+  res.status(err.status || 500).json({ error: safeMessage });
 });
 
 // Export for Vercel

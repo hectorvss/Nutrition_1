@@ -50,6 +50,7 @@ import { ProfileProvider } from './context/ProfileContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { IntegrationsProvider } from './context/IntegrationsContext';
+import { ToastProvider } from './components/ui/Toast';
 
 // --- Production Diagnostic Logging ---
 interface ErrorBoundaryState {
@@ -191,7 +192,9 @@ createRoot(document.getElementById('root')!).render(
                       <AutomationProvider>
                         <FoodProvider>
                           <ExerciseProvider>
-                            <App />
+                            <ToastProvider>
+                              <App />
+                            </ToastProvider>
                           </ExerciseProvider>
                         </FoodProvider>
                       </AutomationProvider>
