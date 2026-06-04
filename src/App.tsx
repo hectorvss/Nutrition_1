@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, Suspense } from 'react';
+import React, { useLayoutEffect, useRef, useState, Suspense } from 'react';
 import { lazyWithRetry } from './lazyWithRetry';
 import Sidebar from './components/Sidebar';
 import Login from './views/Login';
@@ -56,6 +56,7 @@ const Paywall = lazyWithRetry(() => import('./components/Paywall'));
 type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'planning-template-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions' | 'client-billing';
 
 export default function App() {
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const [currentView, setCurrentView] = useState<View>('landing');
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -81,6 +82,11 @@ export default function App() {
   const { user, isLoading } = useAuth();
   const { profile } = useProfile();
   const { status: billingStatus } = useBilling();
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [currentView]);
 
   // Redirect to dashboard once authenticated if still on a pre-auth view.
   // Must cover 'login' and 'signup' too — after a fresh login (especially the
@@ -448,7 +454,10 @@ export default function App() {
           </button>
         </div>
 
-        <div className={`flex-1 ${currentView === 'messages' ? 'overflow-hidden' : 'overflow-y-auto'} scroll-smooth`}>
+        <div
+          ref={contentScrollRef}
+          className={`flex-1 ${currentView === 'messages' ? 'overflow-hidden' : 'overflow-y-auto'} scroll-smooth`}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -480,4 +489,3 @@ export default function App() {
     </div>
   );
 }
-

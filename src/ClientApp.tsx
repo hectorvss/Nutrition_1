@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from 'react';
+import React, { useLayoutEffect, useRef, useState, Suspense } from 'react';
 import { lazyWithRetry } from './lazyWithRetry';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from './context/AuthContext';
@@ -35,6 +35,7 @@ import { useLanguage } from './context/LanguageContext';
 export type ClientView = 'dashboard' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'roadmap' | 'progress' | 'billing' | 'settings' | 'activity-editor' | 'none';
 
 export default function ClientApp() {
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const [currentView, setCurrentView] = useState<ClientView>('dashboard');
   const [selectedActivityName, setSelectedActivityName] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -54,6 +55,11 @@ export default function ClientApp() {
   // so the view remounts and refetches — otherwise the page would keep
   // showing the stale "0 entries" list it loaded before the modal opened.
   const [checkinsRefreshKey, setCheckinsRefreshKey] = useState(0);
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    contentScrollRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [currentView]);
 
   React.useEffect(() => {
     checkOnboarding();
@@ -242,7 +248,10 @@ export default function ClientApp() {
           </button>
         </div>
 
-        <div className={`flex-1 ${currentView === 'messages' ? 'overflow-hidden' : 'overflow-y-auto'} scroll-smooth no-scrollbar`}>
+        <div
+          ref={contentScrollRef}
+          className={`flex-1 ${currentView === 'messages' ? 'overflow-hidden' : 'overflow-y-auto'} scroll-smooth no-scrollbar`}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}

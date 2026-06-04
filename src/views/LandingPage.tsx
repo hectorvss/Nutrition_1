@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useLayoutEffect, useState } from "react";
 import { motion } from "motion/react";
 import { Search, Play, X, Instagram, Linkedin } from "lucide-react";
 import { lazyWithRetry } from "../lazyWithRetry";
@@ -49,6 +49,10 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
   const { t, language, setLanguage } = useLanguage();
   const isEs = language === 'es';
   const [currentPage, setCurrentPage] = useState<LandingPageKind>('home');
+
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [currentPage]);
 
   // Scroll a la sección de features (mockups con capturas reales). Si el
   // usuario está en una sub-página, vuelve a home primero y luego scrollea.
