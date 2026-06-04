@@ -25,8 +25,10 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
   const [videoUrl, setVideoUrl] = useState('');
   const [safetyRating, setSafetyRating] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSave = async () => {
+    setSaveError(null);
     if (!name.trim()) return;
     setIsSaving(true);
     try {
@@ -48,6 +50,9 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
         safety_rating: safetyRating || null,
       } as any);
       onBack();
+    } catch (err: any) {
+      console.error('Error saving exercise:', err);
+      setSaveError(err?.message || t('exercise_save_error', { defaultValue: 'Error al guardar el ejercicio. Inténtalo de nuevo.' }));
     } finally {
       setIsSaving(false);
     }
@@ -81,6 +86,9 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
                 {isSaving ? t('saving') : t('add_to_library')}
               </button>
             </div>
+            {saveError && (
+              <p className="text-sm text-red-600 dark:text-red-400 text-right mt-2">{saveError}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -63,7 +63,13 @@ export default function ClientDashboard({ onNavigate }: ClientDashboardProps) {
       }
     };
     fetchData();
-    return () => { mounted = false; };
+    // Re-fetch when a check-in is submitted so streak/adherence updates immediately
+    const onCheckInComplete = () => fetchData();
+    window.addEventListener('client:checkin_completed', onCheckInComplete);
+    return () => {
+      mounted = false;
+      window.removeEventListener('client:checkin_completed', onCheckInComplete);
+    };
   }, []);
 
   if (isLoading) {

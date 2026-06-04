@@ -54,11 +54,16 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">{t('gender', { defaultValue: 'Gender' })}</label>
-              <input
+              <select
                 value={form.gender}
                 onChange={e => setForm((f: any) => ({ ...f, gender: e.target.value }))}
                 className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+              >
+                <option value="">{t('select', { defaultValue: 'Selecciona' })}</option>
+                <option value="male">{t('male', { defaultValue: 'Hombre' })}</option>
+                <option value="female">{t('female', { defaultValue: 'Mujer' })}</option>
+                <option value="other">{t('other', { defaultValue: 'Otro' })}</option>
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-2">{t('age', { defaultValue: 'Age' })}</label>
@@ -88,7 +93,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
             </button>
             <button
               onClick={onSave}
-              disabled={isSaving}
+              disabled={isSaving || !form.full_name.trim()}
               className="flex-1 py-2.5 font-bold bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}

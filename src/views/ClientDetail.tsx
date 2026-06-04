@@ -180,8 +180,8 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
     }
   };
 
-  // Find the exact client object, or fallback if something went wrong
-  const client = clients.find(c => c.id === clientId as any) || {
+  // Compare as strings to avoid number/string mismatch (c.id may be typed differently)
+  const client = clients.find(c => String(c.id) === String(clientId)) || {
     name: t('unknown_client'),
     avatar: '',
     weight: '--',

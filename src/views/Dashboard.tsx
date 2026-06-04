@@ -391,8 +391,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 </>
               )}
             </div>
-            <button 
-              onClick={() => onNavigate('tasks')}
+            <button
+              onClick={() => onNavigate('clients')}
               className="w-full mt-6 py-2.5 text-sm font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-[0.98] shrink-0"
             >
               {t('view_activity_history')}

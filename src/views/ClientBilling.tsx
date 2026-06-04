@@ -471,7 +471,7 @@ export default function ClientBilling({ onBack, onConnectStripe }: ClientBilling
         <KpiCard icon={AlertTriangle} color="amber" label={isEs ? 'Pendientes / impagos' : 'Pending / overdue'} value={kpis ? String(kpis.pendingOrOverdue) : '--'}
           sub={kpis && kpis.overdueAmountCents ? money(kpis.overdueAmountCents, kpis.currency) : undefined} />
         <KpiCard icon={Wallet} color="indigo" label={isEs ? 'Saldo Stripe' : 'Stripe balance'}
-          value={balance ? money(Math.round(balance.balance * 100), balance.currency) : '--'} />
+          value={balance ? money(balance.balance, balance.currency) : '--'} />
       </div>
 
       {/* Tira secundaria: desglose por tipo de cobro */}

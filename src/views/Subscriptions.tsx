@@ -48,7 +48,8 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
     try {
       const r = await fetchWithAuth('/manager/billing/portal', { method: 'POST' });
       if (r?.url) {
-        window.location.href = r.url;
+        // Open in new tab so the user keeps the app context
+        window.open(r.url, '_blank', 'noopener,noreferrer');
       } else {
         setError(isEs ? 'La gestión de facturación no está disponible.' : 'Billing management unavailable.');
       }

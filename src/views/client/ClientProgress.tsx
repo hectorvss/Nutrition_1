@@ -45,6 +45,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import CheckInHistory from '../CheckInHistory';
 import CheckInReview from '../CheckInReview';
 import Select from '../../components/ui/Select';
+import { useToast } from '../../components/ui/Toast';
 import WorkoutLogItem from './progress/WorkoutLogItem';
 import EditProfileModal from './EditProfileModal';
 import { Skeleton, SkeletonBlock, SkeletonCircle, SkeletonText } from '../../components/ui/Skeleton';
@@ -68,6 +69,7 @@ const STROKE_COLOR_MAP: Record<string, string> = {
 
 export default function ClientProgress() {
   const { t, language } = useLanguage();
+  const { showToast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'en-US';
   const { user } = useAuth();
   // Tooltip de recharts adaptado al tema (antes estaba fijo a blanco y se veía
@@ -188,8 +190,9 @@ export default function ClientProgress() {
       });
       const data = await fetchWithAuth('/client/profile-stats');
       setStats(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating workout log:', error);
+      showToast(error?.message || t('workout_log_update_error', { defaultValue: 'Error al actualizar el registro. Inténtalo de nuevo.' }), 'error');
     }
   };
 

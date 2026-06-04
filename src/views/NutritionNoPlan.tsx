@@ -292,13 +292,14 @@ export default function NutritionNoPlan({ client, onBack, onStartPlan }: Nutriti
     setMacroSplitId(preset.macroId);
   };
 
-  // Once the real templates have loaded, snap the selection to the recommended
-  // one (the initial state was computed before templates arrived).
+  // Once the real DB templates have loaded, re-snap the selection to the
+  // recommended preset (initial state was derived before templates arrived,
+  // so selectedId may point to a stale/non-existent preset ID).
   React.useEffect(() => {
     if (isLoadingTemplates) return;
-    if (!allPresets.some(p => p.id === selectedId)) {
-      handleSelectPreset(recommendedPreset);
-    }
+    // Always re-snap after load: the recommended preset might be a DB template
+    // that didn't exist during the initial render.
+    handleSelectPreset(recommendedPreset);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadingTemplates]);
 

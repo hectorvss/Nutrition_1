@@ -23,6 +23,7 @@ export default function PlanningPlanTemplates({ onBack, onEditTemplate }: Planni
   const { t } = useLanguage();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [layout, setLayout] = useState<'grid' | 'rows'>('grid');
   const [busy, setBusy] = useState(false);
 
@@ -30,7 +31,10 @@ export default function PlanningPlanTemplates({ onBack, onEditTemplate }: Planni
     setIsLoading(true);
     fetchWithAuth('/manager/planning-templates?limit=200').then(unwrapList)
       .then((d) => setTemplates(Array.isArray(d) ? d : []))
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Error loading planning templates:', err);
+        setLoadError(t('planning_templates_load_failed', { defaultValue: 'No se pudieron cargar las plantillas. Recarga la página.' }));
+      })
       .finally(() => setIsLoading(false));
   };
   useEffect(() => { load(); }, []);
@@ -106,6 +110,14 @@ export default function PlanningPlanTemplates({ onBack, onEditTemplate }: Planni
             <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
               <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
               <p className="text-sm font-medium">{t('loading_templates', { defaultValue: 'Cargando plantillas...' })}</p>
+            </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-20 text-red-400 gap-2">
+              <ClipboardList className="w-10 h-10 opacity-30" />
+              <p className="text-sm">{loadError}</p>
+              <button onClick={load} className="text-emerald-500 font-semibold hover:underline">
+                {t('retry', { defaultValue: 'Reintentar' })}
+              </button>
             </div>
           ) : templates.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">

@@ -264,6 +264,8 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
           answers_json: answers
         })
       });
+      // Notify the client dashboard to refresh streak/adherence immediately
+      window.dispatchEvent(new CustomEvent('client:checkin_completed'));
       onComplete();
     } catch (err: any) {
       // Inline banner instead of a blocking alert() — the modal stays open

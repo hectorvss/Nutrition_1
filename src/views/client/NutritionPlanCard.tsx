@@ -82,7 +82,7 @@ const NutritionPlanCard = ({ plan }: { plan: any }) => {
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 border border-slate-100 dark:border-slate-700'
                 }`}
               >
-                {d.slice(0, 3)}
+                {t(d, { defaultValue: d }).slice(0, 3)}
               </button>
             ))}
           </div>

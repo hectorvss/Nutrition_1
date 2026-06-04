@@ -68,6 +68,11 @@ export default function AddClient({ onBack }: AddClientProps) {
        setError(t('email_required'));
        return;
     }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(email.trim())) {
+      setError(t('email_invalid', { defaultValue: 'Introduce un email válido.' }));
+      return;
+    }
     
     setLoading(true);
     setError('');
