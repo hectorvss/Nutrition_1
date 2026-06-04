@@ -1320,7 +1320,7 @@ function ImportModal({ isEs, locale, onClose, onImported }: { isEs: boolean; loc
   );
 }
 
-const inputCls = 'w-full p-2.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:border-[var(--brand-primary)] focus:ring-0 outline-none';
+const inputCls = 'w-full p-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:border-[var(--brand-primary)] focus:ring-0 outline-none';
 const selectCls = inputCls;
 
 // ── Desplegable CUSTOM (no <select> nativo) ────────────────────────────────
@@ -1996,7 +1996,7 @@ function CreatePlanModal({ isEs, locale, onClose, onCreated }: { isEs: boolean; 
                   type="button"
                   onClick={() => setKind(k as any)}
                   style={kind === k ? brandStyle : undefined}
-                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
                 >{lbl}</button>
               ))}
             </div>
@@ -2027,7 +2027,7 @@ function CreatePlanModal({ isEs, locale, onClose, onCreated }: { isEs: boolean; 
                 <Field label={isEs ? 'Frecuencia' : 'Frequency'}>
                   <div className="grid grid-cols-2 gap-2">
                     {([['month', isEs ? 'Mensual' : 'Monthly'], ['year', isEs ? 'Anual' : 'Yearly']] as const).map(([k, lbl]) => (
-                      <button key={k} type="button" onClick={() => setInterval(k as any)} className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${interval === k ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>{lbl}</button>
+                      <button key={k} type="button" onClick={() => setInterval(k as any)} className={`px-3 py-2 rounded-xl text-xs font-bold border transition ${interval === k ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>{lbl}</button>
                     ))}
                   </div>
                 </Field>
@@ -2160,7 +2160,7 @@ function EditPlanModal({ isEs, locale, plan, onClose, onSaved }: { isEs: boolean
                   type="button"
                   onClick={() => setKind(k as any)}
                   style={kind === k ? brandStyle : undefined}
-                  className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition ${kind === k ? `${brandBtnCls} border-transparent` : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-[var(--brand-primary)]/50'}`}
                 >{lbl}</button>
               ))}
             </div>
@@ -2191,7 +2191,7 @@ function EditPlanModal({ isEs, locale, plan, onClose, onSaved }: { isEs: boolean
                 <Field label={isEs ? 'Frecuencia' : 'Frequency'}>
                   <div className="grid grid-cols-2 gap-2">
                     {([['month', isEs ? 'Mensual' : 'Monthly'], ['year', isEs ? 'Anual' : 'Yearly']] as const).map(([k, lbl]) => (
-                      <button key={k} type="button" onClick={() => setInterval(k as any)} className={`px-3 py-2 rounded-lg text-xs font-bold border transition ${interval === k ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>{lbl}</button>
+                      <button key={k} type="button" onClick={() => setInterval(k as any)} className={`px-3 py-2 rounded-xl text-xs font-bold border transition ${interval === k ? 'bg-slate-900 dark:bg-white border-slate-900 dark:border-white text-white dark:text-slate-900' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}>{lbl}</button>
                     ))}
                   </div>
                 </Field>

@@ -2078,6 +2078,24 @@ router.post('/settings', async (req: any, res) => {
 });
 
 
+async function fetchStripePaymentMethod(stripeCustomerId?: string | null) {
+  const platformKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeCustomerId || !platformKey) return null;
+  try {
+    const stripe = newStripeClient(platformKey);
+    const cust: any = await stripe.customers.retrieve(stripeCustomerId, {
+      expand: ['invoice_settings.default_payment_method']
+    });
+    const pm: any = cust?.invoice_settings?.default_payment_method;
+    if (pm?.card) {
+      return { brand: pm.card.brand, last4: pm.card.last4, expMonth: pm.card.exp_month, expYear: pm.card.exp_year };
+    }
+  } catch (e: any) {
+    console.error('Billing Stripe payment method fetch error:', e?.message);
+  }
+  return null;
+}
+
 // Get the manager's SaaS subscription, invoices and payment method
 router.get('/billing', async (req: any, res) => {
   try {
@@ -2103,13 +2121,7 @@ router.get('/billing', async (req: any, res) => {
           status: i.status,
           pdf: i.invoice_pdf || i.hosted_invoice_url || null
         }));
-        const cust: any = await stripe.customers.retrieve(sub.stripe_customer_id, {
-          expand: ['invoice_settings.default_payment_method']
-        });
-        const pm: any = cust?.invoice_settings?.default_payment_method;
-        if (pm?.card) {
-          paymentMethod = { brand: pm.card.brand, last4: pm.card.last4, expMonth: pm.card.exp_month, expYear: pm.card.exp_year };
-        }
+        paymentMethod = await fetchStripePaymentMethod(sub.stripe_customer_id);
       } catch (e: any) {
         console.error('Billing Stripe fetch error:', e?.message);
       }
@@ -2149,7 +2161,7 @@ router.get('/billing/status', async (req: any, res) => {
       return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
     })();
 
-    const [clientsCount, automationsCount, monthlyMsgCount] = await Promise.all([
+    const [clientsCount, automationsCount, monthlyMsgCount, paymentMethod] = await Promise.all([
       supabaseAdmin
         .from('users')
         .select('id', { count: 'exact', head: true })
@@ -2163,6 +2175,7 @@ router.get('/billing/status', async (req: any, res) => {
         .select('id', { count: 'exact', head: true })
         .eq('sender_id', userId)
         .gte('created_at', monthStartIso),
+      fetchStripePaymentMethod(sub?.stripe_customer_id),
     ]);
 
     const usage = {
@@ -2184,6 +2197,7 @@ router.get('/billing/status', async (req: any, res) => {
       accessBlocked: blocked,
       limits,
       usage,
+      paymentMethod,
     });
   } catch (error: any) {
     console.error('Error fetching billing status:', error);

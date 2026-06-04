@@ -66,6 +66,9 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
   const statusLabel = status?.status
     ? (STATUS_LABEL[status.status]?.[isEs ? 0 : 1] || status.status)
     : null;
+  const paymentMethodLabel = status?.paymentMethod
+    ? `${status.paymentMethod.brand?.toUpperCase?.() || 'CARD'} •••• ${status.paymentMethod.last4}${status.paymentMethod.expMonth && status.paymentMethod.expYear ? ` · ${String(status.paymentMethod.expMonth).padStart(2, '0')}/${String(status.paymentMethod.expYear).slice(-2)}` : ''}`
+    : (isEs ? 'Sin método de pago' : 'No payment method');
   const fmtDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString(isEs ? 'es-ES' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : '—';
 
@@ -135,6 +138,12 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
                   {!isTrial && status?.currentPeriodEnd && (
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       {isEs ? 'Se renueva el ' : 'Renews on '}{fmtDate(status.currentPeriodEnd)}
+                    </p>
+                  )}
+                  {status?.hasStripeSubscription && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                      {isEs ? 'Método de pago: ' : 'Payment method: '}
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">{paymentMethodLabel}</span>
                     </p>
                   )}
                 </div>

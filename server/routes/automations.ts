@@ -486,10 +486,11 @@ export async function processTrigger(managerId: string, triggerId: string, data:
       // Pre-fetch manager profile una vez para todas las iteraciones de clientes
       const { data: _managerProfile } = await supabaseAdmin
         .from('profiles')
-        .select('full_name')
+        .select('full_name, language')
         .eq('user_id', managerId)
         .maybeSingle();
-      const _cachedCoachName = _managerProfile?.full_name || 'your coach';
+      const _cachedLanguage = _managerProfile?.language === 'en' ? 'en' : 'es';
+      const _cachedCoachName = _managerProfile?.full_name || (_cachedLanguage === 'en' ? 'your coach' : 'tu coach');
 
       for (const clientId of clientIds) {
         // 3. Fetch comprehensive client data for conditions and variables
@@ -666,6 +667,7 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           profile: cProfile || null,
           coachName: _cachedCoachName,
           latestCheckIn: ciData,
+          language: _cachedLanguage,
           // El trigger subscription-renewal-soon inyecta el link de pago en el
           // payload para que `{Payment Link}` se resuelva en el recordatorio.
           paymentUrl: (data as any)?.paymentUrl ?? null,

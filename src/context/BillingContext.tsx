@@ -29,6 +29,12 @@ export interface BillingStatus {
   currentPeriodEnd: string | null;
   hasStripeSubscription: boolean;
   accessBlocked: boolean;
+  paymentMethod: {
+    brand: string;
+    last4: string;
+    expMonth?: number;
+    expYear?: number;
+  } | null;
   limits: PlanLimits;
   usage: BillingUsage;
 }

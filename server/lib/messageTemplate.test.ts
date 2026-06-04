@@ -30,6 +30,12 @@ describe('renderMessage', () => {
     expect(renderMessage('{Client Name}', { client: null })).toBe('tu cliente');
   });
 
+  it('uses English fallbacks when language is en', () => {
+    expect(renderMessage('{Client Name}', { client: null, language: 'en' })).toBe('your client');
+    expect(renderMessage('{Coach Name}', { coachName: null, language: 'en' })).toBe('your coach');
+    expect(renderMessage('{Check-in Day}', { profile: null, language: 'en' })).toBe('your check-in day');
+  });
+
   it('substitutes {First Name} — first word only', () => {
     const ctx: RenderContext = { client: { full_name: 'Ana García López' } };
     expect(renderMessage('{First Name}', ctx)).toBe('Ana');

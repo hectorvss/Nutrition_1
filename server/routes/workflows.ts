@@ -5,6 +5,7 @@ import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { safeErr } from '../lib/http.js';
 import { makeEnforceLimit, countActiveAutomations } from '../lib/plans.js';
 import { sendPushToUser } from '../lib/push.js';
+import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
 const router = Router();
 
@@ -422,16 +423,22 @@ function getByPath(obj: any, path: string): any {
 function renderTemplate(text: string, ctx: any): string {
   if (!text) return '';
   const client = ctx.client || {};
-  const firstName = (client.full_name || 'there').split(' ')[0];
   const sub = ctx.subscription || {};
+  const language = ctx.language === 'en' ? 'en' : 'es';
+  const locale = language === 'en' ? 'en-US' : 'es-ES';
   const amountStr = typeof sub.amountCents === 'number'
-    ? (sub.amountCents / 100).toLocaleString('es-ES', { style: 'currency', currency: (sub.currency || 'eur').toUpperCase() })
+    ? (sub.amountCents / 100).toLocaleString(locale, { style: 'currency', currency: (sub.currency || 'eur').toUpperCase() })
     : '';
-  const renewalStr = sub.renewalDate ? new Date(sub.renewalDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  return String(text)
-    .replace(/{First Name}/g, firstName)
-    .replace(/{Client Name}/g, client.full_name || 'there')
-    .replace(/{Coach Name}/g, ctx.coachName || 'your coach')
+  const renewalStr = sub.renewalDate ? new Date(sub.renewalDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const baseCtx: RenderContext = {
+    client: { id: client.id, email: client.email, full_name: client.full_name },
+    profile: client || null,
+    coachName: ctx.coachName,
+    latestCheckIn: ctx.checkin || null,
+    paymentUrl: sub.paymentUrl || null,
+    language,
+  };
+  return renderMessage(String(text), baseCtx)
     .replace(/{Plan Name}/g, sub.planName || '')
     .replace(/{Amount}/g, amountStr)
     .replace(/{Renewal Date}/g, renewalStr)
@@ -526,8 +533,9 @@ export function validateWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[]) {
 async function buildContext(managerId: string, triggerType: string, payload: any) {
   const ctx: any = { trigger: { type: triggerType, ...payload }, data: {}, client: null };
   const { data: mgrProfile } = await supabaseAdmin
-    .from('profiles').select('full_name').eq('user_id', managerId).maybeSingle();
-  ctx.coachName = mgrProfile?.full_name || 'your coach';
+    .from('profiles').select('full_name, language').eq('user_id', managerId).maybeSingle();
+  ctx.language = mgrProfile?.language === 'en' ? 'en' : 'es';
+  ctx.coachName = mgrProfile?.full_name || (ctx.language === 'en' ? 'your coach' : 'tu coach');
 
   if (payload?.clientId) {
     const { data: cli } = await supabaseAdmin

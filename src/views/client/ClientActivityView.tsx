@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 
 interface Props {
   activityName?: string;
+  activityId?: string;
   onBack: () => void;
 }
 
@@ -12,6 +13,15 @@ interface Props {
 const stripPrefix = (s: string) => s.replace(/^\s*(\d+[.)]\s*|[-•*]\s*)/, '').trim();
 const parseItems = (txt?: string | null): string[] =>
   (txt || '').split('\n').map(stripPrefix).filter(Boolean);
+const normalizeExerciseName = (s?: string | null) =>
+  (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\b(db|dumbell)\b/g, 'dumbbell')
+    .replace(/\b(bb)\b/g, 'barbell')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 
 /**
  * Read-only exercise view for the client portal. Replaces the
@@ -21,10 +31,16 @@ const parseItems = (txt?: string | null): string[] =>
  * client only consults the exercise: muscle group, equipment, video and
  * the coach's instructions / common mistakes / tips.
  */
-export default function ClientActivityView({ activityName, onBack }: Props) {
+export default function ClientActivityView({ activityName, activityId, onBack }: Props) {
   const { t } = useLanguage();
   const { exercises, getExerciseFullDetails } = useExerciseContext();
-  const exercise = exercises.find(e => e.name === activityName);
+  const wanted = normalizeExerciseName(activityName);
+  const exercise = exercises.find(e => activityId && e.id === activityId)
+    || exercises.find(e => normalizeExerciseName(e.name) === wanted)
+    || exercises.find(e => {
+      const candidate = normalizeExerciseName(e.name);
+      return wanted.length > 2 && (candidate.includes(wanted) || wanted.includes(candidate));
+    });
 
   const [instructions, setInstructions] = useState<string[]>([]);
   const [mistakes, setMistakes] = useState<string[]>([]);
