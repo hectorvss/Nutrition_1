@@ -588,9 +588,9 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-        <div className="w-full flex flex-col lg:flex-row gap-8">
+        <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
           {/* Left Column: Workout Blocks */}
-          <div className="flex-1 flex flex-col gap-6 pr-2 pb-20">
+          <div className="flex-1 flex flex-col gap-6 pr-2">
             {loadError && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-3xl p-8 flex flex-col items-center justify-center text-center gap-3">
                 <span className="material-symbols-outlined text-4xl text-red-400">error</span>
@@ -740,11 +740,12 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
           </div>
 
           {/* Right Column: Library (full-height) + Summary below.
-              The column itself scrolls so the library takes up nearly the full
-              viewport while the summary card appears naturally beneath it. */}
-          <div className="w-full lg:w-[400px] flex flex-col gap-8 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-            {/* Exercise Library — grows to fill almost the entire viewport */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl flex flex-col" style={{ minHeight: 'calc(100vh - 7rem)' }}>
+              Sticky so the library stays in view as the left column scrolls.
+              The library card fills the sticky viewport; the summary sits below
+              and is reached by scrolling the outer page. */}
+          <div className="w-full lg:w-[400px] shrink-0 flex flex-col gap-8 lg:sticky lg:top-6">
+            {/* Exercise Library — fills the sticky viewport height */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
               <div className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-4 shrink-0">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t('exercise_library')}</h3>
