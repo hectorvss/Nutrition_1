@@ -281,20 +281,20 @@ function Slider({
         style={fillStyle}
         className={[
           'w-full h-2.5 rounded-full appearance-none cursor-pointer outline-none transition-shadow',
+          // accent-color overrides the system default purple on Windows/Chromium
+          '[accent-color:#10b981]',
           'focus-visible:ring-4 focus-visible:ring-emerald-500/20',
-          // Chromium / WebKit — el thumb necesita -mt para centrarse
-          // sobre un track de 10px una vez que appearance:none oculta el
-          // track nativo.
+          // Chromium / WebKit
           '[&::-webkit-slider-runnable-track]:rounded-full',
           '[&::-webkit-slider-runnable-track]:h-2.5',
           '[&::-webkit-slider-thumb]:appearance-none',
           '[&::-webkit-slider-thumb]:w-7',
           '[&::-webkit-slider-thumb]:h-7',
           '[&::-webkit-slider-thumb]:rounded-full',
-          '[&::-webkit-slider-thumb]:bg-emerald-500',
+          '[&::-webkit-slider-thumb]:bg-[#10b981]',
           '[&::-webkit-slider-thumb]:border-[3px]',
           '[&::-webkit-slider-thumb]:border-white',
-          '[&::-webkit-slider-thumb]:shadow-[0_4px_12px_rgba(16,185,129,0.35)]',
+          '[&::-webkit-slider-thumb]:shadow-[0_4px_14px_rgba(16,185,129,0.45)]',
           '[&::-webkit-slider-thumb]:transition-transform',
           '[&::-webkit-slider-thumb]:-mt-[9px]',
           'hover:[&::-webkit-slider-thumb]:scale-110',
@@ -307,10 +307,10 @@ function Slider({
           '[&::-moz-range-thumb]:w-7',
           '[&::-moz-range-thumb]:h-7',
           '[&::-moz-range-thumb]:rounded-full',
-          '[&::-moz-range-thumb]:bg-emerald-500',
+          '[&::-moz-range-thumb]:bg-[#10b981]',
           '[&::-moz-range-thumb]:border-[3px]',
           '[&::-moz-range-thumb]:border-white',
-          '[&::-moz-range-thumb]:shadow-[0_4px_12px_rgba(16,185,129,0.35)]',
+          '[&::-moz-range-thumb]:shadow-[0_4px_14px_rgba(16,185,129,0.45)]',
           'hover:[&::-moz-range-thumb]:scale-110',
         ].join(' ')}
       />

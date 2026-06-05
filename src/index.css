@@ -2,6 +2,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 @import "tailwindcss";
 
+/* Force emerald green on all range inputs (overrides system accent-color on Windows/Chromium
+   which defaults to purple and bleeds through even with appearance:none on the thumb) */
+input[type="range"] {
+  accent-color: #10b981;
+}
+input[type="range"]::-webkit-slider-thumb {
+  background-color: #10b981 !important;
+  border-color: white !important;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.45) !important;
+}
+input[type="range"]::-moz-range-thumb {
+  background-color: #10b981 !important;
+  border-color: white !important;
+  box-shadow: 0 4px 14px rgba(16,185,129,0.45) !important;
+}
+
 /* Tailwind v4: por defecto el variante `dark:` usa
    @media (prefers-color-scheme: dark) — es decir, sigue al tema del SO.
    Nuestro dark mode es in-app (ThemeContext alterna la clase `.dark` en
