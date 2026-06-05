@@ -1,44 +1,84 @@
 import { motion } from 'motion/react';
+import { Clock, TrendingUp, ShieldCheck, LayoutDashboard } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
-/**
- * Honest proof points, but expressed in a way that feels like business impact
- * rather than generic admin counts.
- */
-const stats: { valueEs: string; valueEn: string; labelEs: string; labelEn: string; subEs?: string; subEn?: string }[] = [
+const stats = [
   {
-    valueEs: '8+ h',
-    valueEn: '8+ h',
-    labelEs: 'ahorradas por semana',
-    labelEn: 'saved each week',
-    subEs: 'en check-ins, planes y mensajes repetitivos',
-    subEn: 'on repetitive check-ins, plans and messages',
+    icon: Clock,
+    accent: 'emerald',
+    numEs: '8+',
+    unitEs: 'h / semana',
+    numEn: '8+',
+    unitEn: 'h / week',
+    labelEs: 'recuperadas en admin',
+    labelEn: 'saved on admin',
+    subEs: 'check-ins, planes y mensajes automatizados',
+    subEn: 'automated check-ins, plans and messages',
   },
   {
-    valueEs: '3x',
-    valueEn: '3x',
-    labelEs: 'más capacidad de clientes',
-    labelEn: 'more client capacity',
-    subEs: 'sin abrir más horas de agenda',
-    subEn: 'without opening more hours',
+    icon: TrendingUp,
+    accent: 'blue',
+    numEs: '3×',
+    unitEs: 'más clientes',
+    numEn: '3×',
+    unitEn: 'more clients',
+    labelEs: 'sin ampliar tu agenda',
+    labelEn: 'without extra hours',
+    subEs: 'escala tu negocio sin trabajar más',
+    subEn: 'grow your business, not your workload',
   },
   {
-    valueEs: '14 días',
-    valueEn: '14 days',
-    labelEs: 'de prueba gratis',
-    labelEn: 'free trial',
-    subEs: 'sin tarjeta, cancela cuando quieras',
-    subEn: 'no card, cancel anytime',
+    icon: ShieldCheck,
+    accent: 'violet',
+    numEs: '14',
+    unitEs: 'días gratis',
+    numEn: '14',
+    unitEn: 'day trial',
+    labelEs: 'sin tarjeta de crédito',
+    labelEn: 'no credit card needed',
+    subEs: 'cancela en cualquier momento',
+    subEn: 'cancel anytime, no strings',
   },
   {
-    valueEs: '1 centro',
-    valueEn: '1 hub',
-    labelEs: 'para planes, chat y progreso',
-    labelEn: 'for plans, chat and progress',
-    subEs: 'un solo flujo, sin saltar entre herramientas',
+    icon: LayoutDashboard,
+    accent: 'amber',
+    numEs: 'Todo',
+    unitEs: 'en uno',
+    numEn: 'All',
+    unitEn: 'in one',
+    labelEs: 'planes, chat y progreso',
+    labelEn: 'plans, chat and progress',
+    subEs: 'un solo flujo, sin saltar entre apps',
     subEn: 'one workflow, no app-hopping',
   },
 ];
+
+const ACCENT: Record<string, { bg: string; icon: string; num: string; unit: string }> = {
+  emerald: {
+    bg: 'bg-emerald-50',
+    icon: 'text-emerald-500',
+    num: 'text-emerald-600',
+    unit: 'text-emerald-500',
+  },
+  blue: {
+    bg: 'bg-blue-50',
+    icon: 'text-blue-500',
+    num: 'text-blue-600',
+    unit: 'text-blue-500',
+  },
+  violet: {
+    bg: 'bg-violet-50',
+    icon: 'text-violet-500',
+    num: 'text-violet-600',
+    unit: 'text-violet-500',
+  },
+  amber: {
+    bg: 'bg-amber-50',
+    icon: 'text-amber-500',
+    num: 'text-amber-600',
+    unit: 'text-amber-500',
+  },
+};
 
 export default function StatsSection() {
   const { language } = useLanguage();
@@ -46,7 +86,7 @@ export default function StatsSection() {
 
   return (
     <section className="px-4 py-24 max-w-6xl mx-auto">
-      <div className="text-center mb-12">
+      <div className="text-center mb-14">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
           {isEs ? 'En números' : 'By the numbers'}
         </p>
@@ -55,34 +95,51 @@ export default function StatsSection() {
         </h2>
         <p className="mt-4 text-sm md:text-base text-gray-500 max-w-2xl mx-auto">
           {isEs
-            ? 'Automatiza el trabajo repetitivo, centraliza la operativa y recupera horas para atender mejor a cada cliente.'
+            ? 'Automatiza el trabajo repetitivo, centraliza tu operativa y recupera horas para atender mejor a cada cliente.'
             : 'Automate repetitive work, centralise your ops and get hours back to coach each client better.'}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map((s, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.08 }}
-            className="bg-white border border-gray-100 rounded-3xl p-6 md:p-7 text-center shadow-[0_24px_70px_-32px_rgba(0,0,0,0.18)]"
-          >
-            <div className="text-5xl md:text-6xl font-semibold tracking-tight mb-3 text-gray-950">
-              {isEs ? s.valueEs : s.valueEn}
-            </div>
-            <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500 font-bold leading-snug">
-              {isEs ? s.labelEs : s.labelEn}
-            </div>
-            {(s.subEs || s.subEn) && (
-              <div className="text-[11px] text-gray-400 mt-3 leading-snug">
-                {isEs ? s.subEs : s.subEn}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        {stats.map((s, i) => {
+          const a = ACCENT[s.accent];
+          const Icon = s.icon;
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.09, duration: 0.5, ease: 'easeOut' }}
+              className="bg-white border border-gray-100 rounded-3xl p-7 flex flex-col gap-4 shadow-[0_20px_60px_-24px_rgba(0,0,0,0.14)] hover:shadow-[0_24px_70px_-20px_rgba(0,0,0,0.2)] transition-shadow duration-300"
+            >
+              {/* Icon badge */}
+              <div className={`w-10 h-10 rounded-2xl ${a.bg} flex items-center justify-center shrink-0`}>
+                <Icon className={`w-5 h-5 ${a.icon}`} />
               </div>
-            )}
-          </motion.div>
-        ))}
+
+              {/* Number + unit */}
+              <div className="flex items-baseline gap-2">
+                <span className={`text-5xl font-bold tracking-tight leading-none ${a.num}`}>
+                  {isEs ? s.numEs : s.numEn}
+                </span>
+                <span className={`text-sm font-semibold ${a.unit} leading-tight`}>
+                  {isEs ? s.unitEs : s.unitEn}
+                </span>
+              </div>
+
+              {/* Label + sub */}
+              <div>
+                <p className="text-sm font-bold text-gray-900 leading-snug">
+                  {isEs ? s.labelEs : s.labelEn}
+                </p>
+                <p className="text-xs text-gray-400 mt-1 leading-snug">
+                  {isEs ? s.subEs : s.subEn}
+                </p>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
       <p className="text-center text-[11px] text-gray-400 mt-6 max-w-3xl mx-auto">
