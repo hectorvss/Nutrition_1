@@ -101,10 +101,23 @@ input[type="range"]::-moz-range-thumb {
     --brand-primary: #10b981;
     scrollbar-gutter: stable;
   }
-  
+
   html, body {
     scrollbar-gutter: stable;
   }
+
+  /* ── Scrollbars light mode ─────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+
+  /* ── Scrollbars dark mode ──────────────────────────────────────────────── */
+  .dark ::-webkit-scrollbar-track { background: transparent; }
+  .dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  .dark * { scrollbar-color: #334155 transparent; }
 
   /*
    * Cursor affordance — Tailwind v4 (like v3) does NOT add `cursor: pointer`
