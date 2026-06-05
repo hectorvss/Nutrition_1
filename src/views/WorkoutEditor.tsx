@@ -739,11 +739,12 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
             </button>
           </div>
 
-          {/* Right Column: Summary & Library — sticky like the nutrition editor
-              so the exercise library stays in view while the workout cards scroll. */}
+          {/* Right Column: Library (full-height) + Summary below.
+              The column itself scrolls so the library takes up nearly the full
+              viewport while the summary card appears naturally beneath it. */}
           <div className="w-full lg:w-[400px] flex flex-col gap-8 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-            {/* Exercise Library */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl flex flex-col relative">
+            {/* Exercise Library — grows to fill almost the entire viewport */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl flex flex-col" style={{ minHeight: 'calc(100vh - 7rem)' }}>
               <div className="px-6 py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-4 shrink-0">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-slate-900 dark:text-white">{t('exercise_library')}</h3>
@@ -759,8 +760,8 @@ export default function WorkoutEditor({ onBack, onEditActivity, clientId, dayId,
                   />
                 </div>
               </div>
-              
-              <div className="p-4 bg-slate-50/20 dark:bg-slate-800/20 max-h-[600px] overflow-y-auto custom-scrollbar">
+
+              <div className="p-4 bg-slate-50/20 dark:bg-slate-800/20 flex-1 overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col gap-2">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-2 mt-2">{t('master_list')}</h4>
                   {filteredExercises.map((ex, idx) => (
