@@ -93,16 +93,16 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
   };
 
   return (
-    <div className={`bg-surface font-body text-on-surface ${embedded ? '' : 'min-h-screen'}`}>
+    <div className={`font-body bg-white text-slate-900 dark:bg-slate-950 dark:text-white ${embedded ? '' : 'min-h-screen'}`}>
       <main className={`max-w-7xl mx-auto px-8 ${embedded ? 'py-6' : 'py-24'}`}>
         {/* Header Section — solo en modo landing (no embebido). En la pantalla
             de Suscripciones ya hay una cabecera propia, asi que se omite. */}
         {!embedded && (
           <header className="max-w-3xl mx-auto text-center mb-12">
-            <h1 className="text-5xl md:text-7xl tracking-tight text-primary mb-8 leading-[1.1] font-medium font-sans">
+            <h1 className="text-5xl md:text-7xl tracking-tight text-slate-900 dark:text-white mb-8 leading-[1.1] font-medium font-sans">
               {isEs ? 'Precios simples que crecen con tu negocio de coaching' : 'Simple pricing that grows with your coaching business'}
             </h1>
-            <p className="text-on-surface-variant text-lg leading-relaxed font-medium">
+            <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed font-medium">
               {isEs ? 'Obtén acceso completo a la plataforma desde el primer día y elige el plan que encaje con tus clientes activos.' : 'Get full access to the platform from day one, and choose the plan that matches the number of active clients you manage.'}
             </p>
             {!user && (
@@ -127,19 +127,19 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
           // Modo embebido: toggle compacto y sobrio, sin pildora gigante
           // centrada. El descuento es un badge pequeno junto a "Anual".
           <div className="flex justify-center mb-8">
-            <div className="inline-flex items-center bg-surface-container-high p-1 rounded-full">
+            <div className="inline-flex items-center bg-slate-200 dark:bg-slate-800 p-1 rounded-full">
               <button
                 onClick={() => setIsAnnual(false)}
-                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer border-none ${!isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer border-none ${!isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
               >
                 {isEs ? 'Mensual' : 'Monthly'}
               </button>
               <button
                 onClick={() => setIsAnnual(true)}
-                className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer border-none ${isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+                className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-full transition-all cursor-pointer border-none ${isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
               >
                 {isEs ? 'Anual' : 'Annual'}
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isAnnual ? 'bg-on-primary/20 text-on-primary' : 'bg-secondary/15 text-secondary'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isAnnual ? 'bg-on-primary/20 text-on-primary' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'}`}>
                   {isEs ? '-20%' : '-20%'}
                 </span>
               </button>
@@ -147,16 +147,16 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
           </div>
         ) : (
           <div className="flex flex-col items-center mb-16">
-            <div className="inline-flex items-center bg-surface-container-high p-1 rounded-full relative">
+            <div className="inline-flex items-center bg-slate-200 dark:bg-slate-800 p-1 rounded-full relative">
               <button
                 onClick={() => setIsAnnual(false)}
-                className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${!isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+                className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${!isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
               >
                 {isEs ? 'Mensual' : 'Monthly'}
               </button>
               <button
                 onClick={() => setIsAnnual(true)}
-                className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant'}`}
+                className={`px-6 py-2 text-sm font-bold rounded-full transition-all cursor-pointer border-none ${isAnnual ? 'bg-primary text-on-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
               >
                 {isEs ? 'Anual' : 'Annual'}
               </button>
@@ -165,7 +165,7 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-4 text-secondary font-bold text-sm"
+                className="mt-4 text-emerald-600 dark:text-emerald-400 font-bold text-sm"
               >
                 {isEs ? 'Ahorra un 20% con facturación anual' : 'Save 20% with annual billing'}
               </motion.div>
@@ -229,39 +229,39 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
               key={idx}
               whileHover={{ scale: 1.02, y: -5 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className={`bg-surface-container-lowest rounded-3xl p-10 flex flex-col border transition-shadow hover:shadow-2xl hover:shadow-black/5 ${
+              className={`bg-white dark:bg-slate-900 rounded-3xl p-10 flex flex-col border border-slate-200 dark:border-slate-800 transition-shadow hover:shadow-2xl hover:shadow-black/5 ${
                 currentTier === plan.tier
-                  ? 'border-emerald-500 ring-2 ring-emerald-500/30'
-                  : 'border-outline-variant/30'
+                  ? 'ring-2 ring-emerald-500/30'
+                  : ''
               }`}
             >
               <div className="mb-8">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-xl font-bold text-primary">{plan.title}</h3>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.title}</h3>
                   {currentTier === plan.tier && (
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full">
                       {isEs ? 'Tu plan' : 'Your plan'}
                     </span>
                   )}
                 </div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold tracking-tight text-primary">{calculatePrice(plan.monthlyPrice)}€</span>
-                  <span className="text-on-surface-variant font-medium">{isEs ? '/mes' : '/month'}</span>
+                  <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{calculatePrice(plan.monthlyPrice)}€</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">{isEs ? '/mes' : '/month'}</span>
                 </div>
               </div>
-              <div className="bg-secondary-container/20 px-4 py-2 rounded-full w-fit mb-8">
-                <span className="text-secondary font-bold text-xs uppercase tracking-wider">{plan.clients}</span>
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-full w-fit mb-8">
+                <span className="text-emerald-700 dark:text-emerald-300 font-bold text-xs uppercase tracking-wider">{plan.clients}</span>
               </div>
               <ul className="space-y-6 mb-10 flex-grow">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <CheckCircle2 className="text-secondary w-5 h-5 fill-secondary/10" />
-                    <span className="text-on-surface-variant text-sm font-medium">{feature}</span>
+                    <CheckCircle2 className="text-emerald-500 dark:text-emerald-400 w-5 h-5 fill-emerald-500/10" />
+                    <span className="text-slate-600 dark:text-slate-300 text-sm font-medium">{feature}</span>
                   </li>
                 ))}
               </ul>
               {currentTier === plan.tier ? (
-                <div className="w-full py-4 rounded-full font-bold border border-emerald-500 bg-emerald-50 text-emerald-700 flex items-center justify-center gap-2">
+                <div className="w-full py-4 rounded-full font-bold border border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center gap-2">
                   <CheckCircle2 className="w-5 h-5" />
                   {isEs ? 'Plan actual' : 'Current plan'}
                 </div>
@@ -270,8 +270,8 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
                   onClick={onManageBilling}
                   className={`w-full py-4 rounded-full font-bold transition-all duration-300 cursor-pointer border flex items-center justify-center gap-2 ${
                     idx === 1
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-transparent text-primary border-primary hover:bg-primary hover:text-on-primary'
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                    : 'bg-transparent text-slate-900 dark:text-white border-slate-900 dark:border-slate-700 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900'
                   }`}
                 >
                   <CreditCard className="w-5 h-5" />
@@ -285,8 +285,8 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
                     loading === plan.tier ? 'opacity-70 cursor-wait' : ''
                   } ${
                     idx === 1
-                    ? 'bg-primary text-on-primary border-primary'
-                    : 'bg-transparent text-primary border-primary hover:bg-primary hover:text-on-primary'
+                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-slate-900 dark:border-white'
+                    : 'bg-transparent text-slate-900 dark:text-white border-slate-900 dark:border-slate-700 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900'
                   }`}
                 >
                   {loading === plan.tier ? (
@@ -304,22 +304,22 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
         {/* Detailed Comparison Section */}
         <section className="mt-32">
           <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="font-sans text-5xl text-primary mb-6 font-medium">{isEs ? 'Compara capacidades de la plataforma' : 'Compare platform capabilities'}</h2>
-            <p className="text-on-surface-variant text-lg font-medium">
+            <h2 className="font-sans text-5xl text-slate-900 dark:text-white mb-6 font-medium">{isEs ? 'Compara capacidades de la plataforma' : 'Compare platform capabilities'}</h2>
+            <p className="text-slate-600 dark:text-slate-400 text-lg font-medium">
               {isEs ? 'Una comparativa lado a lado de todo lo incluido en los planes para ayudarte a elegir mejor.' : 'A side-by-side look at everything included in our plans to help you make the best choice.'}
             </p>
           </div>
-          <div className="relative overflow-x-auto rounded-xl border border-outline-variant/20 shadow-sm bg-surface-container-lowest">
+          <div className="relative overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
             <table className="w-full border-collapse text-left min-w-[800px] font-body">
               <thead>
-                <tr className="border-b border-outline-variant/30">
-                  <th className="py-10 px-8 text-[11px] font-extrabold uppercase tracking-[0.2em] text-on-surface-variant/60 w-1/4">{isEs ? 'Característica' : 'Feature'}</th>
-                  <th className="py-10 px-6 text-xl font-bold text-primary text-center">{isEs ? 'Profesional' : 'Professional'}</th>
-                  <th className="py-10 px-6 text-xl font-bold text-primary text-center relative bg-surface-container-low/40">Scale</th>
-                  <th className="py-10 px-6 text-xl font-bold text-primary text-center">{isEs ? 'Ilimitado' : 'Unlimited'}</th>
+                <tr className="border-b border-slate-200 dark:border-slate-800">
+                  <th className="py-10 px-8 text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 w-1/4">{isEs ? 'Característica' : 'Feature'}</th>
+                  <th className="py-10 px-6 text-xl font-bold text-slate-900 dark:text-white text-center">{isEs ? 'Profesional' : 'Professional'}</th>
+                  <th className="py-10 px-6 text-xl font-bold text-slate-900 dark:text-white text-center relative bg-slate-50 dark:bg-slate-800/60">Scale</th>
+                  <th className="py-10 px-6 text-xl font-bold text-slate-900 dark:text-white text-center">{isEs ? 'Ilimitado' : 'Unlimited'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/10">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {[
                   { name: isEs ? "Base de datos nutricional" : "Nutrition Database", prof: true, scale: true, unlim: true },
                   { name: isEs ? "Herramientas de planificación de comidas" : "Meal Planning Tools", prof: true, scale: true, unlim: true },
@@ -332,26 +332,26 @@ export default function Pricing({ onGetStarted, currentTier, onManageBilling, em
                   { name: isEs ? "Alertas inteligentes" : "Intelligent Alerts", prof: isEs ? "25 / mes" : "25 / mo", scale: isEs ? "100 / mes" : "100 / mo", unlim: isEs ? "Ilimitado" : "Unlimited" },
                 ].map((row, i) => (
                   <tr key={i} className="table-row-hover transition-colors group">
-                    <td className="py-6 px-8 text-sm font-semibold text-on-surface/80 group-hover:text-primary transition-colors">{row.name}</td>
+                    <td className="py-6 px-8 text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{row.name}</td>
                     <td className="py-6 px-6 text-center">
                       {row.prof === true ? (
-                        <CheckCircle2 className="text-secondary/40 w-5 h-5 mx-auto" />
+                        <CheckCircle2 className="text-emerald-500/60 w-5 h-5 mx-auto" />
                       ) : (
-                        <span className="text-on-surface-variant/70 font-medium tabular-nums">{row.prof}</span>
+                        <span className="text-slate-500 dark:text-slate-400 font-medium tabular-nums">{row.prof}</span>
                       )}
                     </td>
-                    <td className="py-6 px-6 text-center bg-surface-container-low/40">
+                    <td className="py-6 px-6 text-center bg-slate-50 dark:bg-slate-800/60">
                       {row.scale === true ? (
-                        <CheckCircle2 className="text-secondary w-6 h-6 mx-auto" />
+                        <CheckCircle2 className="text-emerald-500 w-6 h-6 mx-auto" />
                       ) : (
-                        <span className="text-black font-medium tabular-nums">{row.scale}</span>
+                        <span className="text-slate-900 dark:text-white font-medium tabular-nums">{row.scale}</span>
                       )}
                     </td>
                     <td className="py-6 px-6 text-center">
                       {row.unlim === true ? (
-                        <CheckCircle2 className="text-secondary/40 w-5 h-5 mx-auto" />
+                        <CheckCircle2 className="text-emerald-500/60 w-5 h-5 mx-auto" />
                       ) : (
-                        <span className="text-on-surface-variant/70 font-medium tracking-tight">{row.unlim}</span>
+                        <span className="text-slate-500 dark:text-slate-400 font-medium tracking-tight">{row.unlim}</span>
                       )}
                     </td>
                   </tr>
