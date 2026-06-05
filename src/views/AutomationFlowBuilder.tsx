@@ -239,7 +239,7 @@ export default function AutomationFlowBuilder({
                   </Select>
                   <input type="text" value={c.value}
                     onChange={(e) => updateCondition(key, c.type, { value: e.target.value })}
-                    className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs px-2 py-1 focus:ring-1 focus:ring-emerald-500 outline-none" />
+                    className="w-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white px-2 py-1 focus:ring-1 focus:ring-emerald-500 outline-none" />
                   {def?.hint && <span className="text-[10px] text-slate-400 shrink-0">{def.hint}</span>}
                   <button onClick={() => removeCondition(key, c.type)} className="text-slate-300 hover:text-red-500 shrink-0">
                     <X className="w-3.5 h-3.5" />
@@ -386,7 +386,7 @@ export default function AutomationFlowBuilder({
                         <option value="goal">goal</option>
                         <option value="notes">notes</option>
                       </Select>
-                      <span className="text-sm text-slate-500">=</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">=</span>
                       <input type="text" value={step.value}
                         onChange={e => updateStep(i, { ...step, value: e.target.value })}
                         placeholder="Active / vacaciones / …"
@@ -448,11 +448,11 @@ export default function AutomationFlowBuilder({
                           <option value="Nutrition">Nutrición</option>
                           <option value="Admin">Admin</option>
                         </Select>
-                        <span className="text-sm text-slate-500">en</span>
+                        <span className="text-sm text-slate-500 dark:text-slate-400">en</span>
                         <input type="number" min={0} value={step.offsetDays ?? 0}
                           onChange={e => updateStep(i, { ...step, offsetDays: Math.max(0, parseInt(e.target.value) || 0) })}
                           className="w-16 px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
-                        <span className="text-sm text-slate-500">días, a las</span>
+                        <span className="text-sm text-slate-500 dark:text-slate-400">días, a las</span>
                         <TimeSelect value={step.time || '09:00'}
                           onChange={(v) => updateStep(i, { ...step, time: v })}
                           className="w-28 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm px-2 py-1" />
@@ -548,7 +548,7 @@ export default function AutomationFlowBuilder({
             <div className="space-y-4">
               {/* Frequency */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('repeat_frequency', { defaultValue: 'Frecuencia' })}</label>
+                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('repeat_frequency', { defaultValue: 'Frecuencia' })}</label>
                 <div className="flex gap-2">
                   <Select value={rules.frequency} onChange={(v) => updateRule('frequency', v as any)}
                     className="w-28 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm px-3 py-2">
@@ -559,7 +559,7 @@ export default function AutomationFlowBuilder({
                     <div className="flex items-center gap-2">
                       <input type="number" min={1} value={rules.frequencyValue}
                         onChange={e => updateRule('frequencyValue', parseInt(e.target.value) || 1)}
-                        className="w-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm px-3 py-2" />
+                        className="w-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-white px-3 py-2" />
                       <Select value={rules.frequencyUnit} onChange={(v) => updateRule('frequencyUnit', v as any)}
                         className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm px-3 py-2">
                         <option value="Days">{t('days', { defaultValue: 'Días' })}</option>
@@ -573,12 +573,12 @@ export default function AutomationFlowBuilder({
 
               {/* Audience */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('target_audience', { defaultValue: 'Audiencia' })}</label>
+                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('target_audience', { defaultValue: 'Audiencia' })}</label>
                 <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 w-fit">
                   {(['All Clients', 'Specific Clients'] as const).map(opt => (
                     <button key={opt} onClick={() => updateRule('audience', opt)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                        rules.audience === opt ? 'bg-white dark:bg-slate-900 shadow-sm text-emerald-600' : 'text-slate-500'
+                        rules.audience === opt ? 'bg-white dark:bg-slate-900 shadow-sm text-emerald-600' : 'text-slate-500 dark:text-slate-400'
                       }`}>
                       {opt === 'All Clients' ? t('all_clients', { defaultValue: 'Todos' }) : t('specific_clients', { defaultValue: 'Específicos' })}
                     </button>
@@ -601,12 +601,12 @@ export default function AutomationFlowBuilder({
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                       <input type="text" value={clientSearch} onChange={e => setClientSearch(e.target.value)}
                         placeholder={t('search_add_client', { defaultValue: 'Buscar cliente…' })}
-                        className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs outline-none" />
+                        className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none" />
                       {clientSearch && (
                         <div className="absolute z-30 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-44 overflow-y-auto">
                           {filteredClients.length ? filteredClients.map(c => (
                             <button key={c.id} onClick={() => addClient(c.id)}
-                              className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs">
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-900 dark:text-white">
                               {c.name}
                             </button>
                           )) : <div className="px-3 py-2 text-xs text-slate-400 italic">{t('no_matching_clients', { defaultValue: 'Sin resultados' })}</div>}
@@ -619,7 +619,7 @@ export default function AutomationFlowBuilder({
 
               {/* Delivery time */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{t('preferred_delivery_time', { defaultValue: 'Franja horaria' })}</label>
+                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('preferred_delivery_time', { defaultValue: 'Franja horaria' })}</label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {[
                     { label: 'Morning', time: '8–11h', icon: Sunrise, color: 'text-orange-400' },

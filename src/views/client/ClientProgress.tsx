@@ -533,7 +533,7 @@ export default function ClientProgress() {
               <div
                 key={idx}
                 onClick={() => setSelectedAnalysisSubject(ex.id)}
-                className={`flex-shrink-0 w-48 p-5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/10 shadow-md shadow-emerald-50' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 shadow-sm'}`}
+                className={`flex-shrink-0 w-48 p-5 rounded-2xl border transition-all cursor-pointer select-none group ${isSelected ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-900/10 shadow-md shadow-emerald-50 dark:shadow-black/20' : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700 shadow-sm dark:shadow-black/10'}`}
               >
                 <div className="flex justify-between items-start mb-5">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${isSelected ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'}`}>
@@ -651,7 +651,7 @@ export default function ClientProgress() {
                 </div>
               ))}
               {(stats?.training?.allExercises || []).length > visiblePRs && (
-                <button onClick={() => setVisiblePRs(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 transition-colors uppercase tracking-widest mt-2">{t('load_more_records')}</button>
+                <button onClick={() => setVisiblePRs(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors uppercase tracking-widest mt-2">{t('load_more_records')}</button>
               )}
             </div>
           </div>
@@ -667,7 +667,7 @@ export default function ClientProgress() {
                 <WorkoutLogItem key={workout.id} workout={workout} isExpanded={expandedWorkoutId === workout.id} onToggle={setExpandedWorkoutId} onUpdate={handleUpdateWorkoutLog} />
               ))}
               {(stats?.recentWorkouts || []).length > visibleWorkouts && (
-                <button onClick={() => setVisibleWorkouts(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 transition-colors uppercase tracking-widest mt-2">{t('load_more_activity')}</button>
+                <button onClick={() => setVisibleWorkouts(prev => prev + 4)} className="w-full py-2.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors uppercase tracking-widest mt-2">{t('load_more_activity')}</button>
               )}
             </div>
           </div>
@@ -888,7 +888,7 @@ export default function ClientProgress() {
                   {stats?.goal || t('in_progress')} {t('plan')}
                 </p>
                 <div className="flex gap-3 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
-                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100">
+                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
                     <Dumbbell className="w-3.5 h-3.5 text-emerald-500" />
                     <span>{t('active_training')}</span>
                   </div>
@@ -905,7 +905,7 @@ export default function ClientProgress() {
                   {t('edit_profile')}
                 </button>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100">
+              <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-100 dark:border-slate-700">
                 <User className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate">{user?.email}</span>
               </div>

@@ -129,13 +129,13 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
     <div className="p-6 md:p-8 lg:p-10 w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('checkin_list_title')}</h1>
-          <p className="text-sm text-slate-500 font-medium mt-1">{t('checkin_list_subtitle')}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{t('checkin_list_title')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">{t('checkin_list_subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={onManageTemplates}
-            className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 text-slate-700 bg-white rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
           >
             <ClipboardList className="w-4 h-4" />
             {t('checkin_templates_btn')}
@@ -143,7 +143,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
@@ -151,10 +151,10 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
             placeholder={t('search_placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
           />
         </div>
-        <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-full md:w-auto">
           {(['All', 'Unreviewed', 'Completed'] as const).map((f) => {
             // Same wording as the Onboarding screen: Todos / Pendiente / Completado.
             const label =
@@ -169,8 +169,8 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                 onClick={() => setFilter(f)}
                 className={`flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
                   filter === f
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 {showDot && <div className="w-2 h-2 rounded-full bg-amber-500" />}
@@ -186,7 +186,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={`sk-${i}`}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
             >
               <div className="p-5 flex flex-col md:flex-row items-center gap-6">
                 <div className="flex items-center gap-4 flex-1 w-full">
@@ -206,7 +206,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
+                <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t dark:border-slate-800 md:border-t-0 pt-4 md:pt-0">
                   <div className="text-right hidden sm:block space-y-1">
                     <Skeleton className="h-2 w-16" />
                     <Skeleton className="h-3 w-12" />
@@ -228,14 +228,14 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
       {!isLoading && (
         <div className="space-y-4">
           {filteredClients.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center">
               <p className="text-slate-400 font-medium text-sm">{t('no_clients_match')}</p>
             </div>
           ) : filteredClients.map((client) => (
             <div
               key={client.id}
               onClick={() => onViewHistory(client.id)}
-              className="group bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer overflow-hidden relative"
+              className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-700 transition-all cursor-pointer overflow-hidden relative"
             >
               {client.unreviewed && (
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400" />
@@ -251,7 +251,7 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-lg border-2 border-white shadow-sm">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 font-bold text-lg border-2 border-white dark:border-slate-700 shadow-sm">
                         {client.initials}
                       </div>
                     )}
@@ -261,31 +261,31 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
-                      <h3 className="text-lg font-bold text-slate-900 truncate">{client.name}</h3>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white truncate">{client.name}</h3>
                       {client.unreviewed && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider text-amber-600 bg-amber-50 border-amber-200">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
                           {t('pending_review')}
                         </span>
                       )}
                       {!client.hasCheckIns && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider text-slate-400 bg-slate-50 border-slate-200">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                           {t('no_checkins_label')}
                         </span>
                       )}
                       <button
                         onClick={(e) => handleOpenAssign(e, client)}
-                        className="ml-auto px-3 py-1 bg-slate-50 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-100 flex items-center gap-1.5 shadow-sm"
+                        className="ml-auto px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border border-slate-100 dark:border-slate-700 flex items-center gap-1.5 shadow-sm"
                       >
                          <span className="material-symbols-outlined text-[14px]">assignment_add</span>
                          {assignments[client.id] || t('assign_template')}
                       </button>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      <div className="flex justify-between text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         <span>{t('adherence_score')}</span>
-                        <span className="text-slate-900">{client.adherence}%</span>
+                        <span className="text-slate-900 dark:text-white">{client.adherence}%</span>
                       </div>
-                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                      <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${
                             client.adherence >= 90 ? 'bg-emerald-500' :
@@ -298,17 +298,17 @@ export default function CheckInList({ onViewHistory, onManageTemplates }: CheckI
                   </div>
                 </div>
 
-                <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
+                <div className="flex items-center gap-8 w-full md:w-auto justify-between md:justify-end border-t dark:border-slate-800 md:border-t-0 pt-4 md:pt-0">
                   <div className="text-right hidden sm:block">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('last_checkin')}</p>
-                    <p className="text-xs font-bold text-slate-600">{client.submitted}</p>
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">{t('last_checkin')}</p>
+                    <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{client.submitted}</p>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-center min-w-[60px]">
-                      <p className="text-lg font-bold text-slate-900">{client.weight}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">{t('weight')}</p>
+                      <p className="text-lg font-bold text-slate-900 dark:text-white">{client.weight}</p>
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{t('weight')}</p>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-all">
+                    <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 transition-all">
                       <ChevronRight className="w-5 h-5" />
                     </div>
                   </div>

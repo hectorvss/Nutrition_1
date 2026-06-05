@@ -763,7 +763,7 @@ export default function ClientTraining({ onViewExercise }: ClientTrainingProps) 
               <button
                 onClick={handleSaveSession}
                 disabled={isSaving}
-                className="bg-black hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
+                className="bg-black dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-60 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 font-semibold text-sm shadow-sm whitespace-nowrap"
               >
                 {isSaving
                   ? <><span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> {t('saving', { defaultValue: 'Guardando…' })}</>

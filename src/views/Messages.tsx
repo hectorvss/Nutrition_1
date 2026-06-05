@@ -562,11 +562,11 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
     return (
       <div className="flex-1 h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden p-6 md:p-8 lg:p-10">
         <main className="w-full h-full bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden font-['Manrope',_sans-serif] flex flex-col">
-          <div className="p-6 border-b border-slate-100 space-y-4">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800 space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-bold text-slate-900">{t('messages_title')}</h2>
-                <p className="text-sm text-slate-500">{t('messages_subtitle')}</p>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('messages_title')}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('messages_subtitle')}</p>
               </div>
               <button 
                 onClick={() => setIsComposing(true)}
@@ -580,7 +580,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
               <div className="relative w-full sm:w-96">
                 <Search className="text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" />
                 <input
-                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-none bg-slate-50 shadow-sm ring-1 ring-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 placeholder-slate-400 transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-none bg-slate-50 dark:bg-slate-800 shadow-sm ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 transition-all"
                   placeholder={t('search_clients_messages')}
                   type="text"
                   value={chatSearch}
@@ -593,7 +593,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                   className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap ${
                     filterType === 'all'
                       ? 'bg-[var(--brand-primary)] text-white'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   {t('all_chats')}
@@ -602,14 +602,14 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                   onClick={() => setFilterType('unread')}
                   className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
                     filterType === 'unread'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 ring-2 ring-emerald-100'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 ring-2 ring-emerald-100 dark:ring-emerald-900/30'
+                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   {t('unread_label')} 
                   {unreadChatsCount > 0 && (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                      filterType === 'unread' ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                      filterType === 'unread' ? 'bg-emerald-200 dark:bg-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                     }`}>
                       {unreadChatsCount}
                     </span>
@@ -619,8 +619,8 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                   onClick={() => setFilterType('needs_reply')}
                   className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${
                     filterType === 'needs_reply'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200 ring-2 ring-amber-100'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 ring-2 ring-amber-100 dark:ring-amber-900/30'
+                      : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${filterType === 'needs_reply' ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`}></span>
@@ -640,7 +640,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                     setSelectedClientId(client.id);
                     setIsComposing(false);
                   }}
-                  className="group p-5 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors relative"
+                  className="group p-5 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors relative"
                 >
                   {(latest?.unreadCount || 0) > 0 && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-r-full"></div>}
                   <div className="flex gap-4 items-start">
@@ -653,7 +653,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-baseline mb-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-base text-slate-900">{client.name}</h3>
+                          <h3 className="font-bold text-base text-slate-900 dark:text-white">{client.name}</h3>
                           <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-500 uppercase tracking-wide">
                             {latest ? t('plan_review') : t('active')}
                           </span>
@@ -665,7 +665,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                         )}
                       </div>
                       <div className="flex justify-between items-end gap-4">
-                        <p className="text-sm text-slate-600 font-medium truncate pr-4 leading-relaxed">
+                        <p className="text-sm text-slate-600 dark:text-slate-300 font-medium truncate pr-4 leading-relaxed">
                           {latest ? (
                             <>
                               <span className="font-bold">{latest.sender_id === user.id ? t('you_label') : client.name.split(' ')[0]}:</span> {latest.content}
@@ -676,7 +676,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                         </p>
                         <div className="flex-shrink-0 flex items-center gap-3">
                           <button onClick={(e) => toggleFavorite(e, client.id)} className="focus:outline-none">
-                            <Star className={`w-5 h-5 transition-colors ${favorites.includes(client.id) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 group-hover:text-emerald-500'}`} />
+                            <Star className={`w-5 h-5 transition-colors ${favorites.includes(client.id) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 dark:text-slate-600 group-hover:text-emerald-500'}`} />
                           </button>
                           {(latest?.unreadCount || 0) > 0 && (
                             <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-md shadow-emerald-500/30">
@@ -720,27 +720,27 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
           /* New Message Workspace */
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
              {/* Composition Area */}
-             <div className="flex-1 flex flex-col border-r border-slate-100 overflow-hidden">
-                <header className="p-6 border-b border-slate-100 flex justify-between items-center">
-                  <h2 className="text-2xl font-bold text-slate-900">{t('new_message')}</h2>
-                  <button 
+             <div className="flex-1 flex flex-col border-r border-slate-100 dark:border-slate-800 overflow-hidden">
+                <header className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('new_message')}</h2>
+                  <button
                     onClick={() => {
                       setIsComposing(false);
                       setSelectedRecipients([]);
                     }}
-                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all"
                   >
                     <Plus className="w-6 h-6 rotate-45" />
                   </button>
                 </header>
 
-                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/30">
-                  <label className="text-sm font-bold text-slate-500 min-w-8">{t('to_label')}</label>
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/30 dark:bg-slate-800/20">
+                  <label className="text-sm font-bold text-slate-500 dark:text-slate-400 min-w-8">{t('to_label')}</label>
                   <div className="flex-1 flex flex-wrap items-center gap-2">
                     {selectedRecipients.map(r => (
-                      <div key={r.id} className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-full pl-1 pr-2 py-0.5 shadow-sm">
+                      <div key={r.id} className="flex items-center gap-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full pl-1 pr-2 py-0.5 shadow-sm">
                         <img src={r.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
-                        <span className="text-sm font-semibold text-slate-700">{r.name}</span>
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{r.name}</span>
                         <button 
                           onClick={() => setSelectedRecipients(prev => prev.filter(p => p.id !== r.id))}
                           className="hover:text-red-500 transition-colors"
@@ -750,8 +750,8 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                       </div>
                     ))}
                     <div className="relative flex-1 min-w-[150px]">
-                      <input 
-                        className="w-full bg-transparent border-none focus:ring-0 text-sm py-1 placeholder-slate-400 outline-none focus:outline-none ring-0 shadow-none" 
+                      <input
+                        className="w-full bg-transparent border-none focus:ring-0 text-sm py-1 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:outline-none ring-0 shadow-none"
                         placeholder={t('type_name_placeholder')} 
                         value={recipientSearch}
                         onChange={(e) => {
@@ -761,7 +761,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                         onFocus={() => setShowRecipientResults(true)}
                       />
                       {showRecipientResults && recipientSearch && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl z-20 overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-20 overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
                           {clients
                             .filter(c => c.name.toLowerCase().includes(recipientSearch.toLowerCase()) && !selectedRecipients.find(sr => sr.id === c.id))
                             .map(client => (
@@ -772,12 +772,12 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                                   setRecipientSearch('');
                                   setShowRecipientResults(false);
                                 }}
-                                className="w-full p-3 flex items-center gap-3 hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                                className="w-full p-3 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-0"
                               >
                                 <img src={client.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
                                 <div className="text-left">
-                                  <p className="text-sm font-bold text-slate-900">{client.name}</p>
-                                  <p className="text-xs text-slate-500">{client.plan}</p>
+                                  <p className="text-sm font-bold text-slate-900 dark:text-white">{client.name}</p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">{client.plan}</p>
                                 </div>
                               </button>
                             ))
@@ -788,9 +788,9 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                   </div>
                 </div>
 
-                <div className="flex-1 flex flex-col p-6 bg-white relative">
+                <div className="flex-1 flex flex-col p-6 bg-white dark:bg-slate-900 relative">
                   <textarea
-                    className="w-full h-full resize-none border-none focus:ring-0 p-0 text-lg text-slate-700 placeholder-slate-300 leading-relaxed font-['Manrope']"
+                    className="w-full h-full resize-none border-none focus:ring-0 p-0 text-lg text-slate-700 dark:text-slate-200 bg-transparent placeholder-slate-300 dark:placeholder-slate-600 leading-relaxed font-['Manrope']"
                     placeholder={t('write_first_message')}
                     value={composingContent}
                     onChange={(e) => setComposingContent(e.target.value)}
@@ -805,7 +805,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                   
                   {/* Multi-send files preview */}
                   {(selectedFile || audioBlob) && (
-                    <div className="mb-4 flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl w-fit">
+                    <div className="mb-4 flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-fit">
                       <Paperclip className="w-4 h-4 text-slate-400" />
                       <span className="text-sm font-semibold">{selectedFile?.file.name || t('audio_recording')}</span>
                       <button onClick={() => { setSelectedFile(null); setAudioBlob(null); }} className="text-slate-400 hover:text-red-500">
@@ -814,12 +814,12 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                     </div>
                   )}
 
-                  <footer className="mt-4 flex justify-between items-end pt-4 border-t border-slate-100">
+                  <footer className="mt-4 flex justify-between items-end pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all">
+                      <button onClick={() => fileInputRef.current?.click()} className="p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all">
                         <Paperclip className="w-5 h-5" />
                       </button>
-                      <button onClick={() => imageInputRef.current?.click()} className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all">
+                      <button onClick={() => imageInputRef.current?.click()} className="p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all">
                         <ImageIcon className="w-5 h-5" />
                       </button>
                       <button
@@ -835,28 +835,28 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                           setFavorites(updated);
                           localStorage.setItem('chatFavorites', JSON.stringify(updated));
                         }}
-                        className={`p-2.5 rounded-xl hover:bg-slate-50 transition-all ${
+                        className={`p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${
                           selectedRecipients.length > 0 && selectedRecipients.every(r => favorites.includes(r.id))
                             ? 'text-amber-400'
-                            : 'text-slate-400 hover:text-slate-600'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
                         }`}
                       >
                         <Star className={`w-5 h-5 ${
                           selectedRecipients.length > 0 && selectedRecipients.every(r => favorites.includes(r.id)) ? 'fill-amber-400' : ''
                         }`} />
                       </button>
-                      <div className="h-4 w-px bg-slate-200 mx-2"></div>
+                      <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
                       <button
                         type="button"
                         title={t('open_calendar')}
                         onClick={() => onNavigate?.('calendar')}
-                        className="p-2.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
+                        className="p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all"
                       >
                         <Calendar className="w-5 h-5" />
                       </button>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest hidden sm:block">{t('press_enter_send')}</span>
+                      <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden sm:block">{t('press_enter_send')}</span>
                       <button 
                         onClick={handleSendBroadcast}
                         disabled={(!composingContent.trim() && !selectedFile && !audioBlob) || selectedRecipients.length === 0 || isSending}
@@ -871,22 +871,22 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
              </div>
 
              {/* Sidebar: Suggested Groups & Clients */}
-             <div className="hidden md:flex w-80 lg:w-96 bg-slate-50/50 flex-col h-full border-l border-slate-100 overflow-y-auto custom-scrollbar">
-                <div className="p-6 border-b border-slate-100">
-                  <h3 className="font-bold text-slate-900">{t('suggested_clients')}</h3>
-                  <p className="text-xs text-slate-500 mt-1 font-semibold">{t('recently_active_assigned')}</p>
+             <div className="hidden md:flex w-80 lg:w-96 bg-slate-50/50 dark:bg-slate-900/50 flex-col h-full border-l border-slate-100 dark:border-slate-800 overflow-y-auto custom-scrollbar">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                  <h3 className="font-bold text-slate-900 dark:text-white">{t('suggested_clients')}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">{t('recently_active_assigned')}</p>
                 </div>
                 <div className="flex-1 p-4 space-y-3">
                   {clients.slice(0, 8).map(client => (
-                    <div key={client.id} className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
+                    <div key={client.id} className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white dark:hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-700 transition-all cursor-pointer">
                       <div className="relative">
                         <img src={client.avatar} alt="" className="w-11 h-11 rounded-full object-cover shadow-sm" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-bold text-slate-900 truncate">{client.name}</h4>
-                        <p className="text-xs text-slate-500 font-medium truncate">{client.plan} • {t('online_status')}</p>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">{client.name}</h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">{client.plan} • {t('online_status')}</p>
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
                           if (!selectedRecipients.find(sr => sr.id === client.id)) {
                             setSelectedRecipients(prev => [...prev, client]);
@@ -894,8 +894,8 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                         }}
                         className={`p-1.5 rounded-xl border transition-all ${
                           selectedRecipients.find(sr => sr.id === client.id)
-                            ? 'bg-blue-50 text-blue-500 border-blue-100'
-                            : 'bg-white text-slate-400 group-hover:text-emerald-500 border-slate-200 opacity-0 group-hover:opacity-100'
+                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-500 border-blue-100 dark:border-blue-800'
+                            : 'bg-white dark:bg-slate-900 text-slate-400 group-hover:text-emerald-500 border-slate-200 dark:border-slate-700 opacity-0 group-hover:opacity-100'
                         }`}
                       >
                         <UserPlus className="w-4 h-4" />
@@ -904,39 +904,39 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                   ))}
 
                   <div className="pt-6 pb-2">
-                    <h4 className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-[2px]">{t('quick_groups')}</h4>
+                    <h4 className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[2px]">{t('quick_groups')}</h4>
                   </div>
-                  <div className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
-                    <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-inner">
+                  <div className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white dark:hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-700 transition-all cursor-pointer">
+                    <div className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-inner">
                       <GroupsIcon className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-slate-900">{t('all_active_clients')}</h4>
-                      <p className="text-xs text-slate-500 font-medium">{t('members_count', { count: clients.length })}</p>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t('all_active_clients')}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('members_count', { count: clients.length })}</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setSelectedRecipients(clients)}
-                      className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-400 group-hover:bg-[#17cf54]/10 group-hover:text-[#17cf54] group-hover:border-[#17cf54]/20 opacity-0 group-hover:opacity-100 transition-all"
+                      className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400 group-hover:bg-[#17cf54]/10 group-hover:text-[#17cf54] group-hover:border-[#17cf54]/20 opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <UserPlus className="w-4 h-4" />
                     </button>
                   </div>
                   <div
                     onClick={() => setSelectedRecipients(clients.filter(c => c.nutritionPlanAssigned))}
-                    className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 border border-transparent hover:border-slate-100 transition-all cursor-pointer">
-                    <div className="w-11 h-11 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-inner">
+                    className="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white dark:hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 border border-transparent hover:border-slate-100 dark:hover:border-slate-700 transition-all cursor-pointer">
+                    <div className="w-11 h-11 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shadow-inner">
                       <GroupsIcon className="w-6 h-6" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-slate-900">{t('nutrition_plans_group')}</h4>
-                      <p className="text-xs text-slate-500 font-medium">{t('members_count', { count: clients.filter(c => c.nutritionPlanAssigned).length })}</p>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">{t('nutrition_plans_group')}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t('members_count', { count: clients.filter(c => c.nutritionPlanAssigned).length })}</p>
                     </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedRecipients(clients.filter(c => c.nutritionPlanAssigned));
                       }}
-                      className="p-1.5 rounded-xl bg-white border border-slate-200 text-slate-400 group-hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all">
+                      className="p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400 group-hover:text-[#17cf54] opacity-0 group-hover:opacity-100 transition-all">
                       <UserPlus className="w-4 h-4" />
                     </button>
                   </div>
@@ -947,15 +947,15 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
           /* Chat View */
           <>
             {/* Header */}
-            <header className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <header className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           {user?.role === 'MANAGER' && (
-            <button 
+            <button
               onClick={() => {
                 setSelectedClientId(null);
                 setIsComposing(false);
               }}
-              className="p-2 mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              className="p-2 mr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all"
             >
               <Plus className="w-5 h-5 rotate-45" />
             </button>
@@ -969,7 +969,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
           </div>
           <div>
             <div className="flex items-center space-x-1">
-              <h2 className="font-bold text-slate-900">{activeRecipient?.name || t('loading')}</h2>
+              <h2 className="font-bold text-slate-900 dark:text-white">{activeRecipient?.name || t('loading')}</h2>
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             </div>
           </div>
@@ -992,7 +992,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                  if (activeRecipient?.id) onNavigate?.('clients', { clientId: activeRecipient.id });
                  else onNavigate?.('clients');
                }}
-               className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center space-x-2">
+               className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center space-x-2">
                <User className="w-4 h-4" />
                <span>{t('client_details')}</span>
              </button>
@@ -1017,7 +1017,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
             <button
               onClick={loadOlderMessages}
               disabled={isLoadingOlder}
-              className="text-xs font-bold text-slate-500 hover:text-slate-700 bg-white border border-slate-200 hover:border-slate-300 px-4 py-2 rounded-full transition-all flex items-center gap-2 disabled:opacity-60"
+              className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 px-4 py-2 rounded-full transition-all flex items-center gap-2 disabled:opacity-60"
             >
               {isLoadingOlder ? (
                 <>
@@ -1048,7 +1048,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
             <React.Fragment key={msg.id}>
             {isNewDay && (
               <div className="flex justify-center">
-                <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[11px] font-bold uppercase rounded-full tracking-wider">{dateLabel}</span>
+                <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-bold uppercase rounded-full tracking-wider">{dateLabel}</span>
               </div>
             )}
             <div className={`flex items-start space-x-3 ${isOwn ? 'justify-end' : 'max-w-2xl'}`}>
@@ -1061,9 +1061,9 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
               )}
               <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} gap-1 max-w-[85%]`}>
                 <div className={`p-4 rounded-2xl shadow-sm border overflow-hidden ${
-                  isOwn 
-                    ? 'bg-emerald-100 text-emerald-800 rounded-tr-none border-emerald-200' 
-                    : 'bg-slate-50 text-slate-700 rounded-tl-none border-slate-200'
+                  isOwn
+                    ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 rounded-tr-none border-emerald-200 dark:border-emerald-800'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-tl-none border-slate-200 dark:border-slate-700'
                 }`}>
                   {/* Media Content */}
                   {msg.attachment_url && (
@@ -1091,23 +1091,23 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                           target="_blank" 
                           rel="noopener noreferrer"
                           className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                            isOwn 
-                              ? 'bg-white/40 border-green-200 hover:bg-white/60' 
-                              : 'bg-white/50 border-slate-200 hover:bg-white/80'
+                            isOwn
+                              ? 'bg-white/40 dark:bg-emerald-900/20 border-green-200 dark:border-green-800 hover:bg-white/60 dark:hover:bg-emerald-900/30'
+                              : 'bg-white/50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 hover:bg-white/80 dark:hover:bg-slate-700/70'
                           }`}
                         >
-                          <div className={`p-2 rounded-lg ${isOwn ? 'bg-green-100' : 'bg-slate-100'}`}>
-                            <FileText className={`w-5 h-5 ${isOwn ? 'text-green-600' : 'text-slate-500'}`} />
+                          <div className={`p-2 rounded-lg ${isOwn ? 'bg-green-100 dark:bg-green-900/30' : 'bg-slate-100 dark:bg-slate-700'}`}>
+                            <FileText className={`w-5 h-5 ${isOwn ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-300'}`} />
                           </div>
                           <div className="flex-1 min-w-0 text-left">
-                            <p className={`text-sm font-bold truncate ${isOwn ? 'text-green-800' : 'text-slate-900'}`}>{msg.attachment_name || t('document_label')}</p>
-                            <p className={`text-[10px] ${isOwn ? 'text-green-600/70' : 'text-slate-500'}`}>{t('click_to_view')}</p>
+                            <p className={`text-sm font-bold truncate ${isOwn ? 'text-green-800 dark:text-green-200' : 'text-slate-900 dark:text-white'}`}>{msg.attachment_name || t('document_label')}</p>
+                            <p className={`text-[10px] ${isOwn ? 'text-green-600/70 dark:text-green-400/70' : 'text-slate-500 dark:text-slate-400'}`}>{t('click_to_view')}</p>
                           </div>
                           <Download className={`w-4 h-4 ${isOwn ? 'text-green-600/70' : 'text-slate-400'}`} />
                         </a>
                       )}
                       {msg.attachment_type === 'audio' && (
-                        <div className={`flex items-center gap-2 p-2 rounded-xl ${isOwn ? 'bg-green-50/50' : 'bg-slate-200/50'}`}>
+                        <div className={`flex items-center gap-2 p-2 rounded-xl ${isOwn ? 'bg-green-50/50 dark:bg-green-900/20' : 'bg-slate-200/50 dark:bg-slate-700/50'}`}>
                           <audio controls className="h-10 w-full max-w-[240px] mix-blend-multiply opacity-80">
                             <source src={msg.attachment_url} type="audio/webm" />
                             {t('audio_not_supported')}
@@ -1116,32 +1116,32 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                       )}
                       {msg.attachment_type === 'check_in' && (
                         <div className={`flex flex-col gap-3 p-4 rounded-xl border transition-all ${
-                          isOwn 
-                            ? 'bg-white/40 border-green-200 shadow-sm' 
-                            : 'bg-white/50 border-slate-200 shadow-sm'
+                          isOwn
+                            ? 'bg-white/40 dark:bg-emerald-900/20 border-green-200 dark:border-green-800 shadow-sm'
+                            : 'bg-white/50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 shadow-sm'
                         }`}>
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOwn ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOwn ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}`}>
                               <CheckCircle2 className="w-6 h-6" />
                             </div>
                             <div className="flex-1 min-w-0">
-                               <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900' : 'text-slate-900'}`}>{t('weekly_checkin_assessment')}</p>
-                               <p className="text-[11px] text-slate-500 font-medium">{t('review_progress_feedback')}</p>
+                               <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900 dark:text-emerald-200' : 'text-slate-900 dark:text-white'}`}>{t('weekly_checkin_assessment')}</p>
+                               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{t('review_progress_feedback')}</p>
                             </div>
                           </div>
-                          
+
                           {msg.content && (
-                            <div className={`text-xs p-3 rounded-lg border italic ${isOwn ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-slate-100/50 border-slate-100 text-slate-600 line-clamp-2'}`}>
+                            <div className={`text-xs p-3 rounded-lg border italic ${isOwn ? 'bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300' : 'bg-slate-100/50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600 text-slate-600 dark:text-slate-300 line-clamp-2'}`}>
                                "{msg.content}"
                             </div>
                           )}
 
-                          <button 
+                          <button
                             onClick={() => onNavigate?.('check-ins', { checkInId: msg.attachment_url, clientId: isOwn ? msg.receiver_id : msg.sender_id })}
                             className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                              isOwn 
-                                ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
-                                : 'bg-slate-900 text-white hover:bg-slate-800'
+                              isOwn
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                : 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600'
                             }`}
                           >
                             <FileText className="w-4 h-4" />
@@ -1165,23 +1165,23 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                         return (
                           <div className={`flex flex-col gap-3 p-4 rounded-xl border transition-all ${
                             isOwn
-                              ? 'bg-white/40 border-green-200 shadow-sm'
-                              : 'bg-white/50 border-slate-200 shadow-sm'
+                              ? 'bg-white/40 dark:bg-emerald-900/20 border-green-200 dark:border-green-800 shadow-sm'
+                              : 'bg-white/50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 shadow-sm'
                           }`}>
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOwn ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isOwn ? 'bg-emerald-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'}`}>
                                 <CreditCard className="w-6 h-6" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900' : 'text-slate-900'}`}>{title}</p>
-                                <p className="text-[11px] text-slate-500 font-medium">
+                                <p className={`text-sm font-bold truncate ${isOwn ? 'text-emerald-900 dark:text-emerald-200' : 'text-slate-900 dark:text-white'}`}>{title}</p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                                   {amount ? <>{amount}{per} · {isEs ? 'Pago seguro con Stripe' : 'Secure payment via Stripe'}</> : (isEs ? 'Pago seguro con Stripe' : 'Secure payment via Stripe')}
                                 </p>
                               </div>
                             </div>
 
                             {msg.content && (
-                              <div className={`text-xs p-3 rounded-lg border italic ${isOwn ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-slate-100/50 border-slate-100 text-slate-600 line-clamp-2'}`}>
+                              <div className={`text-xs p-3 rounded-lg border italic ${isOwn ? 'bg-emerald-50/50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300' : 'bg-slate-100/50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600 text-slate-600 dark:text-slate-300 line-clamp-2'}`}>
                                 "{msg.content}"
                               </div>
                             )}
@@ -1194,7 +1194,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
                                 className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
                                   isOwn
                                     ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                    : 'bg-slate-900 text-white hover:bg-slate-800'
+                                    : 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600'
                                 }`}
                               >
                                 <CreditCard className="w-4 h-4" />
@@ -1241,25 +1241,25 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
             <button
               type="button"
               onClick={() => insertQuickMessage(t('quick_client_book_checkin_msg'))}
-              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 rounded-full text-xs font-semibold hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors">
               <span>{t('quick_client_book_checkin')}</span>
             </button>
             <button
               type="button"
               onClick={() => insertQuickMessage(t('quick_client_ask_meal_msg'))}
-              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-full text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
               <span>{t('quick_client_ask_meal')}</span>
             </button>
             <button
               type="button"
               onClick={() => insertQuickMessage(t('quick_client_request_change_msg'))}
-              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800 rounded-full text-xs font-semibold hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
               <span>{t('quick_client_request_change')}</span>
             </button>
             <button
               type="button"
               onClick={() => insertQuickMessage(t('quick_client_share_progress_msg'))}
-              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold hover:bg-emerald-100 transition-colors">
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors">
               <span>{t('quick_client_share_progress')}</span>
             </button>
           </>
@@ -1268,19 +1268,19 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
             <button
               type="button"
               onClick={() => insertQuickMessage(t('quick_weekly_checkin_msg'))}
-              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-100 transition-colors">
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 rounded-full text-xs font-semibold hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors">
               <span>{t('quick_weekly_checkin')}</span>
             </button>
             <button
               type="button"
               onClick={() => insertQuickMessage(t('quick_ask_meal_msg'))}
-              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-semibold hover:bg-blue-100 transition-colors">
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-full text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
               <span>{t('quick_ask_meal')}</span>
             </button>
             <button
               type="button"
               onClick={() => insertQuickMessage(t('quick_request_plan_change_msg'))}
-              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-semibold hover:bg-purple-100 transition-colors">
+              className="whitespace-nowrap flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-800 rounded-full text-xs font-semibold hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
               <span>{t('quick_request_plan_change')}</span>
             </button>
           </>
@@ -1289,7 +1289,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
 
       {/* Multimedia Preview Area */}
       {errorStatus && (
-        <div className="px-6 py-2 bg-red-50 border-t border-red-100 flex items-center justify-between">
+        <div className="px-6 py-2 bg-red-50 dark:bg-red-900/20 border-t border-red-100 dark:border-red-900 flex items-center justify-between">
           <p className="text-xs text-red-600 font-bold flex items-center gap-2">
             <Flag className="w-4 h-4" />
             {errorStatus}
@@ -1300,17 +1300,17 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
         </div>
       )}
       {(selectedFile || audioBlob || isRecording) && (
-        <div className="px-6 py-2 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="px-6 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center gap-3">
             {selectedFile && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
                 {selectedFile.type === 'image' ? (
                   <ImageIcon className="w-4 h-4 text-emerald-500" />
                 ) : (
                   <FileText className="w-4 h-4 text-blue-500" />
                 )}
-                <span className="text-xs font-semibold text-slate-700 truncate max-w-[150px]">{selectedFile.file.name}</span>
-                <button onClick={() => setSelectedFile(null)} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">{selectedFile.file.name}</span>
+                <button onClick={() => setSelectedFile(null)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
                   <Plus className="w-3.5 h-3.5 rotate-45 text-slate-400" />
                 </button>
               </div>
@@ -1325,10 +1325,10 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
               </div>
             )}
             {audioBlob && !isRecording && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm">
                 <Mic className="w-4 h-4 text-purple-500" />
-                <span className="text-xs font-semibold text-slate-700">{t('audio_recording')}</span>
-                <button onClick={() => setAudioBlob(null)} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{t('audio_recording')}</span>
+                <button onClick={() => setAudioBlob(null)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
                   <Plus className="w-3.5 h-3.5 rotate-45 text-slate-400" />
                 </button>
               </div>
@@ -1347,8 +1347,8 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
 
       {/* Input Area */}
       <footer className="p-4 pb-6 pt-2">
-        <form onSubmit={handleSendMessage} className="flex items-center space-x-3 p-2 bg-slate-50 border border-slate-200 rounded-2xl focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
-          <div className="flex items-center space-x-1 px-2 border-r border-slate-200">
+        <form onSubmit={handleSendMessage} className="flex items-center space-x-3 p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
+          <div className="flex items-center space-x-1 px-2 border-r border-slate-200 dark:border-slate-700">
             <button 
               type="button" 
               disabled={isRecording || uploading}
@@ -1379,7 +1379,7 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
             value={newMessage}
             disabled={isRecording || uploading}
             onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm py-2 text-slate-700 placeholder-slate-400 disabled:opacity-50" 
+            className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm py-2 text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 disabled:opacity-50"
           placeholder={isRecording ? t('recording_audio_input') : t('type_your_message')}
             type="text"
           />

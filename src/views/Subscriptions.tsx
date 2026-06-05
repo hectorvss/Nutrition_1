@@ -91,7 +91,7 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" /> {error}
           </div>
         )}
@@ -120,8 +120,8 @@ export default function Subscriptions({ onBack }: SubscriptionsProps) {
                     {statusLabel && (
                       <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                         status?.accessBlocked
-                          ? 'bg-red-100 text-red-600'
-                          : 'bg-emerald-100 text-emerald-600'
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                          : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
                       }`}>
                         {statusLabel}
                       </span>

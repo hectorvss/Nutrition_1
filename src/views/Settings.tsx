@@ -601,7 +601,7 @@ function ProfileSettings() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-pink-100 flex items-center justify-center">
+            <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
               <span className="font-bold text-pink-600 text-lg">ig</span>
             </div>
             <div className="flex-1">
@@ -616,7 +616,7 @@ function ProfileSettings() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-emerald-100 flex items-center justify-center">
+            <div className="w-10 h-10 flex-shrink-0 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
               <span className="material-symbols-outlined text-emerald-600">language</span>
             </div>
             <div className="flex-1">
@@ -1405,7 +1405,7 @@ function BillingSettings() {
             <button
               onClick={openPortal}
               disabled={portalLoading}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium text-sm hover:bg-slate-800 active:scale-[0.99] transition-all disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 dark:bg-slate-700 text-white font-medium text-sm hover:bg-slate-800 dark:hover:bg-slate-600 active:scale-[0.99] transition-all disabled:opacity-50"
             >
               {portalLoading && <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
               {portalLoading ? t('saving') : (isEs ? 'Gestionar suscripción' : 'Manage subscription')}
@@ -1762,7 +1762,7 @@ function IntegrationsSettings() {
           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
               <p className="font-bold text-slate-900 dark:text-white text-sm">{t('connection_status')}</p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {localIntegrations.google_calendar_enabled ? t('sync_active') : t('not_connected')}
               </p>
             </div>
@@ -1820,7 +1820,7 @@ function IntegrationsSettings() {
 
           <div className="flex justify-end pt-2 gap-2 items-center">
             {testMsg && (
-              <span className={`text-xs font-bold mr-auto ${testMsg.ok ? 'text-emerald-600' : 'text-red-600'}`}>{testMsg.text}</span>
+              <span className={`text-xs font-bold mr-auto ${testMsg.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{testMsg.text}</span>
             )}
             <button
               onClick={() => runIntegrationAction('gcal-sync', '/manager/integrations/google-calendar/sync-all', t('settings_saved', { defaultValue: 'OK' }))}
@@ -1874,7 +1874,7 @@ function IntegrationsSettings() {
           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
             <div>
               <p className="font-bold text-slate-900 dark:text-white text-sm">{t('stripe_status')}</p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {localIntegrations.stripe_enabled ? t('connected_stripe') : t('not_connected')}
               </p>
             </div>
@@ -2035,7 +2035,7 @@ function IntegrationsSettings() {
             </button>
           )}
         </div>
-        {pushMsg && <div className="mb-4 text-xs font-semibold text-red-600">{pushMsg}</div>}
+        {pushMsg && <div className="mb-4 text-xs font-semibold text-red-600 dark:text-red-400">{pushMsg}</div>}
         <div className="mb-6" />
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 bg-slate-50 dark:bg-slate-800 px-4 rounded-t-lg items-center">

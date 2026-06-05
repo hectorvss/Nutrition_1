@@ -42,7 +42,7 @@ const InformationTab: React.FC<InformationTabProps> = ({ clientId, t }) => {
 
   if (isLoadingOnboarding) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center text-slate-400 gap-3">
+      <div className="py-20 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-3">
         <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
         <p className="text-sm font-medium">{t('loading_general_information')}</p>
       </div>

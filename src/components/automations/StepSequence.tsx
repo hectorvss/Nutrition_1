@@ -87,12 +87,12 @@ export default function StepSequence({ steps, onChange, maxSteps, conditionCatal
         return (
           <div
             key={i}
-            className="group bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 transition-all hover:border-slate-300"
+            className="group bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 transition-all hover:border-slate-300 dark:hover:border-slate-600"
           >
             <div className="flex items-start gap-3">
               {/* Numero + icono */}
               <div className="shrink-0 flex flex-col items-center gap-1">
-                <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
                   {i + 1}
                 </div>
                 <Icon className={`w-5 h-5 ${meta.color}`} />
@@ -214,7 +214,7 @@ export default function StepSequence({ steps, onChange, maxSteps, conditionCatal
                       <option value="goal">goal</option>
                       <option value="notes">notes</option>
                     </select>
-                    <span className="text-sm text-slate-500">=</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">=</span>
                     <input
                       type="text"
                       value={step.value}

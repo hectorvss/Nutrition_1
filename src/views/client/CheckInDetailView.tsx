@@ -249,14 +249,14 @@ export default function CheckInDetailView({ checkIn: initialCheckIn, onBack }: C
 
         {/* Coach Feedback Section (If available) */}
         {checkIn.reviewed_at && (
-          <div className="bg-[#17cf54] rounded-3xl p-8 text-white shadow-lg space-y-6">
+          <div className="bg-[#17cf54] dark:bg-emerald-900/40 rounded-3xl p-8 text-white dark:text-emerald-100 shadow-lg dark:border dark:border-emerald-800 space-y-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
                 <span className="material-symbols-outlined text-2xl">chat_bubble</span>
               </div>
               <div>
                 <h2 className="text-xl font-bold">{t('coach_feedback')}</h2>
-                <p className="text-sm text-white/80">{t('reviewed_on')} {new Date(checkIn.reviewed_at).toLocaleDateString(locale)}</p>
+                <p className="text-sm text-white/80 dark:text-emerald-300/70">{t('reviewed_on')} {new Date(checkIn.reviewed_at).toLocaleDateString(locale)}</p>
               </div>
             </div>
             <div className="space-y-4">

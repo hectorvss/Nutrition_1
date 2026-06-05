@@ -314,7 +314,7 @@ export default function WeeklyCheckinFlow({ onComplete, onCancel }: WeeklyChecki
             <button onClick={handleBack} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all">
                <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <div className="h-6 w-px bg-slate-200 dark:border-slate-800" />
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" />
             <div className="flex flex-col">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1">{t('checking_in')}</p>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white leading-none">{template?.name || template?.title || t('weekly_progress')}</h2>

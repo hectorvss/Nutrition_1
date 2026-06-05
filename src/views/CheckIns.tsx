@@ -82,7 +82,7 @@ export default function CheckIns({ initialClientId, initialCheckInId, onViewChan
       )}
       {viewMode === 'templates' && (
         <div className="p-6 md:p-8">
-          <button onClick={handleBackToList} className="mb-4 text-emerald-600 font-bold flex items-center gap-2">
+          <button onClick={handleBackToList} className="mb-4 text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2">
             <span className="material-symbols-outlined">arrow_back</span>
             {t('back_to_checkins')}
           </button>

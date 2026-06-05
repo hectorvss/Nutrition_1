@@ -25,7 +25,7 @@ export default function CheckInReviewRenderer({ template, answers, isClient = fa
         </div>
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
-          <p className="text-sm text-slate-500">{subtitle}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
         </div>
       </div>
       <div className={`grid gap-x-8 gap-y-6 ${!isClient ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
