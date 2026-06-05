@@ -192,7 +192,7 @@ export default function ExerciseCreate({ onBack }: ExerciseCreateProps) {
               {/* Muscle Groups */}
               <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 p-8">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-emerald-500">activity</span>
+                  <span className="material-symbols-outlined text-emerald-500">exercise</span>
                   {t('muscle_groups')}
                 </h3>
                 <div className="space-y-6">
