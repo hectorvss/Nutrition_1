@@ -247,7 +247,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                       <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">{item.client} <span className="font-normal text-slate-500 dark:text-slate-400 ml-1">{t(item.title)}</span></h4>
-                      <span className="text-xs text-slate-400 shrink-0">{item.timeLabel}</span>
+                      <span className="text-xs text-slate-400 shrink-0">{formatActivityTime(item.dueDate || item.createdAt || item.created_at || item.date) || item.timeLabel}</span>
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{item.desc}</p>
                   </div>

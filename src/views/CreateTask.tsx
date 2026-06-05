@@ -436,11 +436,11 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 <div className="md:col-span-10 bg-white dark:bg-slate-900 p-6 md:p-10 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
                     {[
-                      { id: 'Training', label: t('category_training'), icon: Dumbbell, activeClass: 'peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 hover:border-emerald-200', iconClass: 'peer-checked:text-emerald-600 group-hover:text-emerald-500' },
-                      { id: 'Nutrition', label: t('category_nutrition'), icon: Utensils, activeClass: 'peer-checked:bg-orange-50 peer-checked:border-orange-500 peer-checked:text-orange-700 hover:border-orange-200', iconClass: 'peer-checked:text-orange-600 group-hover:text-orange-500' },
-                      { id: 'Check-in', label: t('category_checkin'), icon: ClipboardCheck, activeClass: 'peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 hover:border-blue-200', iconClass: 'peer-checked:text-blue-600 group-hover:text-blue-500' },
-                      { id: 'Call', label: t('category_call'), icon: Phone, activeClass: 'peer-checked:bg-purple-50 peer-checked:border-purple-500 peer-checked:text-purple-700 hover:border-purple-200', iconClass: 'peer-checked:text-purple-600 group-hover:text-purple-500' },
-                      { id: 'Admin', label: t('category_admin'), icon: ShieldCheck, activeClass: 'peer-checked:bg-slate-200 peer-checked:border-slate-500 peer-checked:text-slate-800 hover:border-slate-300', iconClass: 'peer-checked:text-slate-600 group-hover:text-slate-500' },
+                      { id: 'Training', label: t('category_training'), icon: Dumbbell, activeClass: 'peer-checked:bg-emerald-50 dark:peer-checked:bg-emerald-900/40 peer-checked:border-emerald-500 peer-checked:text-emerald-700 dark:peer-checked:text-emerald-300 hover:border-emerald-200', iconClass: 'peer-checked:text-emerald-600 dark:peer-checked:text-emerald-400 group-hover:text-emerald-500' },
+                      { id: 'Nutrition', label: t('category_nutrition'), icon: Utensils, activeClass: 'peer-checked:bg-orange-50 dark:peer-checked:bg-orange-900/40 peer-checked:border-orange-500 peer-checked:text-orange-700 dark:peer-checked:text-orange-300 hover:border-orange-200', iconClass: 'peer-checked:text-orange-600 dark:peer-checked:text-orange-400 group-hover:text-orange-500' },
+                      { id: 'Check-in', label: t('category_checkin'), icon: ClipboardCheck, activeClass: 'peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/40 peer-checked:border-blue-500 peer-checked:text-blue-700 dark:peer-checked:text-blue-300 hover:border-blue-200', iconClass: 'peer-checked:text-blue-600 dark:peer-checked:text-blue-400 group-hover:text-blue-500' },
+                      { id: 'Call', label: t('category_call'), icon: Phone, activeClass: 'peer-checked:bg-purple-50 dark:peer-checked:bg-purple-900/40 peer-checked:border-purple-500 peer-checked:text-purple-700 dark:peer-checked:text-purple-300 hover:border-purple-200', iconClass: 'peer-checked:text-purple-600 dark:peer-checked:text-purple-400 group-hover:text-purple-500' },
+                      { id: 'Admin', label: t('category_admin'), icon: ShieldCheck, activeClass: 'peer-checked:bg-slate-200 dark:peer-checked:bg-slate-700 peer-checked:border-slate-500 peer-checked:text-slate-800 dark:peer-checked:text-slate-200 hover:border-slate-300', iconClass: 'peer-checked:text-slate-600 dark:peer-checked:text-slate-300 group-hover:text-slate-500' },
                     ].map((cat) => (
                       <label key={cat.id} className="cursor-pointer group">
                         <input 
@@ -584,9 +584,9 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                 </div>
                 <div className="md:col-span-10 bg-white dark:bg-slate-900 p-6 md:p-10 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
                   {[
-                    { level: 'Low', activeClass: 'peer-checked:bg-slate-100 peer-checked:border-slate-400 text-slate-600' },
-                    { level: 'Medium', activeClass: 'peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 text-slate-600' },
-                    { level: 'High', activeClass: 'peer-checked:bg-red-50 peer-checked:border-red-500 peer-checked:text-red-700 text-slate-600' }
+                    { level: 'Low', activeClass: 'peer-checked:bg-slate-100 dark:peer-checked:bg-slate-700 peer-checked:border-slate-400 dark:peer-checked:border-slate-500 peer-checked:text-slate-700 dark:peer-checked:text-slate-200 text-slate-600' },
+                    { level: 'Medium', activeClass: 'peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/40 peer-checked:border-blue-500 peer-checked:text-blue-700 dark:peer-checked:text-blue-300 text-slate-600' },
+                    { level: 'High', activeClass: 'peer-checked:bg-red-50 dark:peer-checked:bg-red-900/40 peer-checked:border-red-500 peer-checked:text-red-700 dark:peer-checked:text-red-300 text-slate-600' }
                   ].map((p) => (
                     <label key={p.level} className="cursor-pointer flex-1">
                       <input 

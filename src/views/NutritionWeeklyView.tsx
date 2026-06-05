@@ -282,7 +282,7 @@ export default function NutritionWeeklyView({ client, onBack, onSelectDay, onRea
       fats: fPct,
       weekViewLabel: t('meals_count', { count: meals.length }),
       tag: realTag || t('active_plan'),
-      tagColor: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      tagColor: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800',
       bars
     };
   });
