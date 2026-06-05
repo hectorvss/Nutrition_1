@@ -54,30 +54,10 @@ const stats = [
 ];
 
 const ACCENT: Record<string, { bg: string; icon: string; num: string; unit: string }> = {
-  emerald: {
-    bg: 'bg-emerald-50',
-    icon: 'text-emerald-500',
-    num: 'text-emerald-600',
-    unit: 'text-emerald-500',
-  },
-  blue: {
-    bg: 'bg-blue-50',
-    icon: 'text-blue-500',
-    num: 'text-blue-600',
-    unit: 'text-blue-500',
-  },
-  violet: {
-    bg: 'bg-violet-50',
-    icon: 'text-violet-500',
-    num: 'text-violet-600',
-    unit: 'text-violet-500',
-  },
-  amber: {
-    bg: 'bg-amber-50',
-    icon: 'text-amber-500',
-    num: 'text-amber-600',
-    unit: 'text-amber-500',
-  },
+  emerald: { bg: 'bg-gray-100', icon: 'text-gray-500', num: 'text-gray-950', unit: 'text-gray-500' },
+  blue:    { bg: 'bg-gray-100', icon: 'text-gray-500', num: 'text-gray-950', unit: 'text-gray-500' },
+  violet:  { bg: 'bg-gray-100', icon: 'text-gray-500', num: 'text-gray-950', unit: 'text-gray-500' },
+  amber:   { bg: 'bg-gray-100', icon: 'text-gray-500', num: 'text-gray-950', unit: 'text-gray-500' },
 };
 
 export default function StatsSection() {
