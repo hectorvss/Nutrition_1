@@ -316,6 +316,164 @@ export const FLOW_TEMPLATES: Record<string, FlowTemplate> = {
   },
 };
 
-export function templateForTrigger(triggerId: string): FlowTemplate | null {
-  return FLOW_TEMPLATES[triggerId] || null;
+function cloneTemplate(template: FlowTemplate): FlowTemplate {
+  return JSON.parse(JSON.stringify(template));
+}
+
+function translateToEnglish(template: FlowTemplate): FlowTemplate {
+  const t = cloneTemplate(template);
+  switch (t.triggerId) {
+    case 'new-client':
+      t.title = 'Welcome new client';
+      t.summary = 'Greets the client when they join, waits a day and checks that they have started.';
+      (t.steps[0] as any).message = "Hi {First Name}! I'm {Coach Name}, great to start this journey with you 💪 Take a few minutes to complete your profile and tell me anything you need help with here.";
+      (t.steps[2] as any).message = '{First Name}, have you had a chance to take a look at the app? If anything came up while setting it up, write to me and we will go through it together.';
+      break;
+    case 'onboarding-completed':
+      t.title = 'Onboarding completed';
+      t.summary = 'Confirms that onboarding is done and explains what happens next.';
+      (t.steps[0] as any).message = "Great, {First Name}! I've got everything from your onboarding ✅ I'm preparing your personalized plan and I'll let you know as soon as it's ready.";
+      break;
+    case 'onboarding-stalled':
+      t.title = 'Onboarding not finished';
+      t.summary = 'Politely reminds the client to finish onboarding and creates a task if they still do not.';
+      (t.steps[0] as any).message = "Hi {First Name}, I saw you started your onboarding but it was left halfway. It's quick and it helps me tailor your plan to you — should we finish it today?";
+      (t.steps[2] as any).message = "Call {Client Name}: onboarding not finished";
+      break;
+    case 'first-checkin':
+      t.title = 'First check-in sent';
+      t.summary = "Congratulates the client for sending their first check-in.";
+      (t.steps[0] as any).message = "Your first check-in, {First Name}! 🎉 This is exactly what I need to support you properly. I'll review it and give you feedback soon.";
+      break;
+    case 'anniversary':
+      t.title = 'Client anniversary';
+      t.summary = 'Celebrates the time the client has been with you.';
+      (t.steps[0] as any).message = "{First Name}, today marks a special moment since we started working together! 🥳 Thanks for the consistency. Let's keep building progress.";
+      break;
+    case 'subscription-renewal-soon':
+      t.title = 'Upcoming renewal';
+      t.summary = 'Warns the client that their plan is about to renew.';
+      (t.steps[0] as any).message = 'Hi {First Name}, your plan with me renews in {Days Until Expiry} days. If you want to review goals or make any changes before then, I am here.';
+      break;
+    case 'weekly-checkin':
+      t.title = 'Weekly check-in reminder';
+      t.summary = 'Reminds the client every week that their check-in is due.';
+      (t.steps[0] as any).message = "Hi {First Name}! It's time for your weekly check-in 📋 Tell me how the week went: weight, energy, adherence, and anything else you want to mention.";
+      break;
+    case 'checkin-overdue':
+      t.title = 'Check-in overdue';
+      t.summary = 'Reminds about the missed check-in, waits and creates a task if it is still missing.';
+      (t.steps[0] as any).message = '{First Name}, I have not received your check-in this week. When you have five minutes, send it over and we will keep fine-tuning things 💪';
+      (t.steps[2] as any).message = 'Contact {Client Name}: overdue check-in';
+      break;
+    case 'checkin-submitted':
+      t.title = 'Check-in received';
+      t.summary = 'Confirms to the client that their check-in was received.';
+      (t.steps[0] as any).message = 'Received, {First Name}! Thanks for your check-in 🙌 I will review it carefully and get back to you shortly.';
+      break;
+    case 'checkin-pending-review':
+      t.title = 'Check-in waiting for review';
+      t.summary = 'Creates a task so no check-in is left without feedback.';
+      (t.steps[0] as any).message = 'Review {Client Name}\'s pending check-in';
+      break;
+    case 'consecutive-checkins-missed':
+      t.title = 'Several missed check-ins';
+      t.summary = 'Supportive message + escalation to the coach when the client keeps missing check-ins.';
+      (t.steps[0] as any).message = "I noticed you've gone several weeks without a check-in, {First Name}. Is everything okay? If something is getting in the way, tell me and we will adjust it together.";
+      (t.steps[2] as any).message = 'Call {Client Name}: several check-ins missed in a row';
+      break;
+    case 'client-reply':
+      t.title = 'Automatic acknowledgement';
+      t.summary = 'Replies instantly so the client knows their message arrived.';
+      (t.steps[0] as any).message = "Thanks for writing, {First Name}! I have received your message and I will reply as soon as I can 🙂";
+      break;
+    case 'client-message-stale':
+      t.title = 'Client message without reply';
+      t.summary = 'Creates a task so no client message stays unanswered.';
+      (t.steps[0] as any).message = 'Reply to {Client Name}\'s pending message';
+      break;
+    case 'weight-dropped':
+      t.title = 'Sudden weight drop';
+      t.summary = 'Checks with the client that the weight drop is healthy.';
+      (t.steps[0] as any).message = "{First Name}, I noticed a notable weight drop this week ({Current Weight}). How are you feeling in terms of energy and hunger? I want to make sure we are moving at a healthy pace.";
+      (t.steps[2] as any).message = 'Review {Client Name}\'s weight drop';
+      break;
+    case 'weight-gained':
+      t.title = 'Sudden weight gain';
+      t.summary = 'Supportive, no-judgment message when weight goes up suddenly.';
+      (t.steps[0] as any).message = "Hi {First Name}, weight fluctuates and one week does not define anything 🙂 Tell me how things have been going (sleep, stress, eating out) and we will adjust without drama.";
+      break;
+    case 'weight-goal-reached':
+      t.title = 'Goal weight reached';
+      t.summary = 'Celebrates that the client has reached their weight goal.';
+      (t.steps[0] as any).message = "You did it, {First Name}! 🎯 You've reached your goal weight of {Goal Weight}. I am really proud of your work. Let's talk about maintenance and what comes next.";
+      break;
+    case 'weight-plateau':
+      t.title = 'Weight plateau';
+      t.summary = 'Motivates the client and creates a task to review the plan.';
+      (t.steps[0] as any).message = "We have been on a plateau for a few weeks, {First Name}. That's totally normal — the body adapts. I'm going to review your plan and give it a push 💪";
+      (t.steps[1] as any).message = 'Review and adjust {Client Name}\'s plan (plateau)';
+      break;
+    case 'adherence-high':
+      t.title = 'High adherence';
+      t.summary = 'Recognizes the client when their adherence is excellent.';
+      (t.steps[0] as any).message = "Great week, {First Name}! 🌟 Your adherence was {Adherence Rate}. This is how results are built — keep doing exactly that.";
+      break;
+    case 'adherence-low':
+      t.title = 'Low adherence';
+      t.summary = 'Supportive message + escalation when adherence drops.';
+      (t.steps[0] as any).message = "Hi {First Name}, this week adherence dropped to {Adherence Rate}. No worries — tell me what is making it harder and we will make it easier.";
+      (t.steps[2] as any).message = 'Call {Client Name}: low adherence';
+      break;
+    case 'workout-streak-broken':
+      t.title = 'Broken workout streak';
+      t.summary = 'Re-engages the client who has stopped training for a few days.';
+      (t.steps[0] as any).message = "{First Name}, it's been a few days since you logged a workout. What matters is getting back to it, not perfection — how about a short session today to get the rhythm back?";
+      break;
+    case 'workout-streak-milestone':
+      t.title = 'Workout milestone';
+      t.summary = 'Celebrates a logged workout milestone.';
+      (t.steps[0] as any).message = "Nice one, {First Name}! 🏆 You just hit a workout milestone. Consistency is your superpower — on to the next one.";
+      break;
+    case 'birthday':
+      t.title = 'Client birthday';
+      t.summary = 'Congratulates the client on their birthday.';
+      (t.steps[0] as any).message = "Happy birthday, {First Name}! 🎂 Enjoy your day without guilt. Tomorrow we keep going strong. A hug, {Coach Name}.";
+      break;
+    case 'inactivity':
+      t.title = 'App inactivity';
+      t.summary = 'Re-engages an inactive client, waits and escalates if they do not return.';
+      (t.steps[0] as any).message = "Hi {First Name}, it's been {Days Inactive} days since I saw you in the app. Everything okay? I am here for whatever you need — write to me and we will get back on track.";
+      (t.steps[2] as any).message = 'Contact {Client Name}: prolonged inactivity';
+      break;
+    case 'plan-update-due':
+      t.title = 'Plan due for update';
+      t.summary = 'Creates a task to update the client plan.';
+      (t.steps[0] as any).message = 'Update {Client Name}\'s plan (it has not been renewed in weeks)';
+      break;
+    case 'no-appointment':
+      t.title = 'No future appointment';
+      t.summary = 'Invites the client to book their next session.';
+      (t.steps[0] as any).message = "{First Name}, I do not see any session with us on the calendar. Shall we find a slot this week to review your progress?";
+      break;
+    case 'custom':
+      t.title = 'Manual automation';
+      t.summary = 'A blank flow you can trigger manually whenever you want.';
+      (t.steps[0] as any).message = 'Hi {First Name}, ';
+      break;
+  }
+  return t;
+}
+
+export function localizeFlowTemplates(language: string): Record<string, FlowTemplate> {
+  if (language !== 'en') return FLOW_TEMPLATES;
+  return Object.fromEntries(
+    Object.entries(FLOW_TEMPLATES).map(([key, template]) => [key, translateToEnglish(template)]),
+  );
+}
+
+export function templateForTrigger(triggerId: string, language: string = 'es'): FlowTemplate | null {
+  const tpl = FLOW_TEMPLATES[triggerId] || null;
+  if (!tpl) return null;
+  return language === 'en' ? translateToEnglish(tpl) : tpl;
 }

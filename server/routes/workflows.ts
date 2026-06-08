@@ -414,6 +414,56 @@ export const WORKFLOW_STARTER_TEMPLATES = [
   },
 ] as const;
 
+function cloneWorkflowStarter(value: any): any {
+  return JSON.parse(JSON.stringify(value));
+}
+
+export function localizeWorkflowStarterTemplates(language: string) {
+  if (language !== 'en') return WORKFLOW_STARTER_TEMPLATES;
+  return WORKFLOW_STARTER_TEMPLATES.map(tpl => {
+    const t = cloneWorkflowStarter(tpl);
+    switch (t.id) {
+      case 'tpl.payment_welcome':
+        t.name = 'Subscription welcome';
+        t.description = 'When a client activates their subscription (first payment), greet them and notify the coach.';
+        t.nodes[1].config.message = "Welcome, {First Name}! 🎉 Your {Plan Name} subscription is now active. If you have any questions, write to me here.";
+        t.nodes[2].config.title = 'New payment from {Client Name}';
+        t.nodes[2].config.description = '{Client Name} has paid {Amount} ({Plan Name}).';
+        break;
+      case 'tpl.dunning':
+        t.name = 'Failed payment recovery (dunning)';
+        t.description = 'If a payment fails: send the link instantly and, if it still fails, notify the coach and tag the client.';
+        t.nodes[1].config.message = "Hi {First Name}, we could not process your payment for {Plan Name}. You can retry it here: {Payment Link}";
+        t.nodes[4].config.title = 'Unresolved failed payment: {Client Name}';
+        t.nodes[4].config.description = '{Client Name} has not regularized their {Plan Name} payment in 3 days.';
+        break;
+      case 'tpl.dunning_autopause':
+        t.name = 'Failed payment -> auto-pause';
+        t.description = 'If a payment fails: warn with the link, wait 5 days and, if it is still unpaid, pause the subscription automatically.';
+        t.nodes[1].config.message = "Hi {First Name}, your {Plan Name} payment could not be processed. Update your payment method here: {Payment Link}";
+        t.nodes[4].config.title = 'Subscription paused due to failed payment: {Client Name}';
+        t.nodes[4].config.description = '{Client Name} did not regularize {Plan Name}; it was paused automatically.';
+        break;
+      case 'tpl.renewal_reminder':
+        t.name = 'Renewal reminder';
+        t.description = '3 days before renewal, you warn the client with the amount and date.';
+        t.nodes[1].config.message = 'Hi {First Name}, your {Plan Name} subscription renews on {Renewal Date} for {Amount}. We keep going! 💪';
+        break;
+      case 'tpl.trial_conversion':
+        t.name = 'Trial ending -> conversion';
+        t.description = 'Before the free trial ends, encourage the client to continue.';
+        t.nodes[1].config.message = 'Hi {First Name}, your {Plan Name} trial ends on {Renewal Date}. If you want to continue, everything will carry on automatically. Can I help with anything before then?';
+        break;
+      case 'tpl.retention':
+        t.name = 'Retention on cancel';
+        t.description = 'When someone cancels, you offer a discount code to bring them back (choose the plan in the "Create code" node).';
+        t.nodes[2].config.message = 'Sorry to see you go, {First Name}. If you change your mind, you have 20% off for 3 months with code VUELVE20. We are still here!';
+        break;
+    }
+    return t;
+  });
+}
+
 // ---- Helpers -----------------------------------------------
 function getByPath(obj: any, path: string): any {
   if (!path) return undefined;
@@ -1644,8 +1694,18 @@ router.get('/catalog', verifyManager, (_req, res) => {
 });
 
 // Plantillas de fábrica (recetas listas) para activar con un clic.
-router.get('/starter-templates', verifyManager, (_req, res) => {
-  res.json({ templates: WORKFLOW_STARTER_TEMPLATES });
+router.get('/starter-templates', verifyManager, async (req: any, res) => {
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('language')
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    const language = profile?.language === 'en' ? 'en' : 'es';
+    res.json({ templates: localizeWorkflowStarterTemplates(language) });
+  } catch {
+    res.json({ templates: localizeWorkflowStarterTemplates('es') });
+  }
 });
 
 // Real-data option lists for node config dropdowns (configField.source).

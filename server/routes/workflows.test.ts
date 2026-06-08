@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WORKFLOW_CATALOG, validateWorkflow, type WorkflowNode, type WorkflowEdge } from './workflows';
+import { WORKFLOW_CATALOG, localizeWorkflowStarterTemplates, validateWorkflow, type WorkflowNode, type WorkflowEdge } from './workflows';
 
 const trigger = (id = 'trigger'): WorkflowNode => ({
   id,
@@ -72,5 +72,24 @@ describe('validateWorkflow', () => {
     ], [edge('trigger', 'message')]);
     expect(result.ok).toBe(true);
     expect(result.errors).toEqual([]);
+  });
+});
+
+describe('localizeWorkflowStarterTemplates', () => {
+  it('returns English starter templates when requested', () => {
+    const templates = localizeWorkflowStarterTemplates('en');
+    const welcome = templates.find(t => t.id === 'tpl.payment_welcome');
+    const dunning = templates.find(t => t.id === 'tpl.dunning');
+    expect(welcome?.name).toBe('Subscription welcome');
+    expect((welcome?.nodes[1] as any).config.message).toContain('Welcome, {First Name}');
+    expect(dunning?.name).toBe('Failed payment recovery (dunning)');
+    expect((dunning?.nodes[1] as any).config.message).toContain('could not process your payment');
+  });
+
+  it('keeps Spanish as the default language', () => {
+    const templates = localizeWorkflowStarterTemplates('es');
+    const welcome = templates.find(t => t.id === 'tpl.payment_welcome');
+    expect(welcome?.name).toBe('Bienvenida al suscribirse');
+    expect((welcome?.nodes[1] as any).config.message).toContain('¡Bienvenido/a');
   });
 });

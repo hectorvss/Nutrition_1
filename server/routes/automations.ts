@@ -9,7 +9,8 @@ import { logger } from '../lib/logger.js';
 import { makeEnforceLimit, limitsForTier, countActiveAutomations, type PlanTier } from '../lib/plans.js';
 import { TRIGGERS, TRIGGER_BY_ID, filterTriggersByTier } from '../lib/automation-triggers.js';
 import { ACTIVATION_CONDITIONS, STOP_CONDITIONS, filterConditionsByTier } from '../lib/automation-conditions.js';
-import { FLOW_TEMPLATES } from '../lib/automation-templates.js';
+import { localizeFlowTemplates } from '../lib/automation-templates.js';
+import { getDefaultAutomations } from '../lib/automation-defaults.js';
 import { sendPushToUser } from '../lib/push.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
@@ -319,7 +320,7 @@ async function executeAutomationSteps(opts: {
       // abort the chain.
       try {
         await sendPushToUser(ctx.managerId, {
-          title: renderMessage(step.title || 'Automatización', ctx.renderCtx),
+          title: renderMessage(step.title || (ctx.renderCtx.language === 'en' ? 'Automation' : 'Automatización'), ctx.renderCtx),
           body: renderMessage(step.body || '', ctx.renderCtx),
           url: '/automations',
         });
@@ -788,6 +789,21 @@ router.get('/', verifyManager, async (req: any, res: any) => {
           enabled: true
         }
       ];
+      let seedLanguage: 'en' | 'es' = 'en';
+      try {
+        const { data: seedProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('language')
+          .eq('user_id', managerId)
+          .maybeSingle();
+        seedLanguage = seedProfile?.language === 'es' ? 'es' : 'en';
+      } catch {
+        seedLanguage = 'en';
+      }
+      if (seedLanguage === 'es') {
+        const spanishDefaults = getDefaultAutomations('es', managerId);
+        defaults.splice(0, defaults.length, ...(spanishDefaults as any[]));
+      }
 
       // Plain insert: this branch only runs when the manager has zero automations,
       // so there is nothing to conflict with. (There is no unique constraint on
@@ -824,6 +840,17 @@ function pickAutomationFields(body: any): Record<string, any> {
  */
 router.get('/catalog', verifyManager, async (req: any, res) => {
   try {
+    let language: 'es' | 'en' = 'es';
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('language')
+        .eq('user_id', req.user.id)
+        .maybeSingle();
+      language = profile?.language === 'en' ? 'en' : 'es';
+    } catch {
+      language = 'es';
+    }
     const { data: sub } = await supabaseAdmin
       .from('manager_subscriptions')
       .select('plan_tier')
@@ -846,7 +873,7 @@ router.get('/catalog', verifyManager, async (req: any, res) => {
       // Ready-made flow per trigger. The builder pre-fills message + steps +
       // stop conditions + delivery from here so picking a trigger gives a
       // working automation, not a blank form.
-      templates: FLOW_TEMPLATES,
+      templates: localizeFlowTemplates(language),
     });
   } catch (error: any) {
     logger.error('automations.catalog.failed', { err: error?.message });
