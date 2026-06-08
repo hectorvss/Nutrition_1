@@ -10,7 +10,7 @@ import { makeEnforceLimit, limitsForTier, countActiveAutomations, type PlanTier 
 import { TRIGGERS, TRIGGER_BY_ID, filterTriggersByTier } from '../lib/automation-triggers.js';
 import { ACTIVATION_CONDITIONS, STOP_CONDITIONS, filterConditionsByTier } from '../lib/automation-conditions.js';
 import { localizeFlowTemplates } from '../lib/automation-templates.js';
-import { getDefaultAutomations } from '../lib/automation-defaults.js';
+import { getDefaultAutomations, getLocalizedAutomationPreview } from '../lib/automation-defaults.js';
 import { sendPushToUser } from '../lib/push.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
@@ -20,6 +20,29 @@ const enforceAutomationLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomation
   (userId: string) => countActiveAutomations(supabaseAdmin, userId));
 
 const router = Router();
+
+async function resolveManagerLanguage(managerId: string): Promise<'es' | 'en'> {
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('language')
+      .eq('user_id', managerId)
+      .maybeSingle();
+    return profile?.language === 'en' ? 'en' : 'es';
+  } catch {
+    return 'es';
+  }
+}
+
+function addAutomationPreview(automation: any, language: 'es' | 'en') {
+  const steps = Array.isArray(automation?.delivery_rules?.steps) ? automation.delivery_rules.steps : [];
+  const firstStepMessage = steps.find((step: any) => step?.kind === 'message')?.message || '';
+  const baseMessage = firstStepMessage || automation?.message || '';
+  return {
+    ...automation,
+    message_preview: getLocalizedAutomationPreview(automation?.trigger_id || '', baseMessage, language),
+  };
+}
 
 // ─── Multi-step engine ────────────────────────────────────────────────────
 // Una automation puede definir `delivery_rules.steps: Step[]`. Si esta vacio
@@ -702,6 +725,17 @@ router.get('/', verifyManager, async (req: any, res: any) => {
   const isFirstPage = !page.cursor;
   try {
     const managerId = req.user.id;
+    let language: 'es' | 'en' = 'es';
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('language')
+        .eq('user_id', managerId)
+        .maybeSingle();
+      language = profile?.language === 'en' ? 'en' : 'es';
+    } catch {
+      language = 'es';
+    }
     let q = supabaseAdmin
       .from('automations')
       .select('*')
@@ -717,93 +751,7 @@ router.get('/', verifyManager, async (req: any, res: any) => {
     // Seed defaults if empty (solo primera pagina)
     if (isFirstPage && (!data || data.length === 0)) {
       console.log('Seeding default automations for manager:', managerId);
-      const defaults = [
-        {
-          manager_id: managerId,
-          name: 'Weekly Check-in Reminder',
-          description: 'Automatically nudge clients to complete their check-in form every week.',
-          trigger_id: 'weekly-checkin',
-          message: "Hi {First Name}, it's check-in day! 📝 Please take a few minutes to update your progress in the app. Consistency is the key to our success!",
-          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'Repeat', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
-          name: 'Overdue Check-in',
-          description: 'Follow up when a client misses their scheduled check-in deadline.',
-          trigger_id: 'checkin-overdue',
-          message: "Hi {First Name}, I noticed your check-in is a bit late. Is everything okay? Let me know if you need help with anything or if you've had a busy week! 🙏",
-          delivery_rules: { frequency: 'Every', frequencyValue: 1, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'ClipboardCheck', iconBg: 'bg-red-100', iconColor: 'text-red-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
-          name: 'No Activity Alert',
-          description: "Re-engage clients who haven't logged any activity for 3 consecutive days.",
-          trigger_id: 'inactivity',
-          message: "Hey {First Name}, I haven't seen any activity in the app for a few days. Just wanted to check in and see if you're staying on track! Let me know if you need a boost. ⚡",
-          delivery_rules: { frequency: 'Every', frequencyValue: 3, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'AlertTriangle', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
-          name: 'New Client Added',
-          description: 'Trigger immediately when you add a new client to send a welcome message.',
-          trigger_id: 'new-client',
-          message: "Welcome to the team, {First Name}! 🚀 I'm thrilled to have you here. I've just set up your profile — take a look around and let me know if you have any questions!",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'UserPlus', iconBg: 'bg-purple-100', iconColor: 'text-purple-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
-          name: 'App Setup Reminder',
-          description: "Nudge clients who haven't completed their initial app profile setup.",
-          trigger_id: 'app-setup',
-          message: "Hi {First Name}, just a quick reminder to finish setting up your profile and app preferences so we can hit the ground running! 📱",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'Smartphone', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
-          name: 'Weekly Adherence High',
-          description: 'Congratulate clients who achieved >90% habit adherence this week.',
-          trigger_id: 'adherence-high',
-          message: "Amazing work this week, {First Name}! 🌟 Your adherence rate was {Adherence Rate}. You're absolutely crushing it. Keep that momentum going!",
-          delivery_rules: { frequency: 'Every', frequencyValue: 7, frequencyUnit: 'Days', deliveryTime: 'Afternoon', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'TrendingUp', iconBg: 'bg-teal-100', iconColor: 'text-teal-600' },
-          enabled: true
-        },
-        {
-          manager_id: managerId,
-          name: 'Client Birthday',
-          description: "Send a personalized greeting on your client's special day.",
-          trigger_id: 'birthday',
-          message: "Happy Birthday, {First Name}! 🎂 Wishing you an incredible day filled with joy (and maybe a little treat). Enjoy your special day! — {Coach Name}",
-          delivery_rules: { frequency: 'Once', deliveryTime: 'Morning', audience: 'All Clients', activation_conditions: [], stop_conditions: [] },
-          icon_info: { iconName: 'Cake', iconBg: 'bg-pink-100', iconColor: 'text-pink-600' },
-          enabled: true
-        }
-      ];
-      let seedLanguage: 'en' | 'es' = 'en';
-      try {
-        const { data: seedProfile } = await supabaseAdmin
-          .from('profiles')
-          .select('language')
-          .eq('user_id', managerId)
-          .maybeSingle();
-        seedLanguage = seedProfile?.language === 'es' ? 'es' : 'en';
-      } catch {
-        seedLanguage = 'en';
-      }
-      if (seedLanguage === 'es') {
-        const spanishDefaults = getDefaultAutomations('es', managerId);
-        defaults.splice(0, defaults.length, ...(spanishDefaults as any[]));
-      }
+      const defaults = getDefaultAutomations(language, managerId);
 
       // Plain insert: this branch only runs when the manager has zero automations,
       // so there is nothing to conflict with. (There is no unique constraint on
@@ -817,7 +765,17 @@ router.get('/', verifyManager, async (req: any, res: any) => {
       data = seeded;
     }
 
-    res.json(buildPage(data || [], page.limit, 'created_at'));
+    const previewable = (data || []).map((automation: any) => {
+      const steps = Array.isArray(automation?.delivery_rules?.steps) ? automation.delivery_rules.steps : [];
+      const firstStepMessage = steps.find((step: any) => step?.kind === 'message')?.message || '';
+      const baseMessage = firstStepMessage || automation?.message || '';
+      return {
+        ...automation,
+        message_preview: getLocalizedAutomationPreview(automation?.trigger_id || '', baseMessage, language),
+      };
+    });
+
+    res.json(buildPage(previewable, page.limit, 'created_at'));
   } catch (error: any) {
     res.status(500).json({ error: safeErr(error) });
   }
@@ -921,7 +879,8 @@ router.post('/', verifyManager, enforceAutomationLimit, async (req: any, res) =>
       .select()
       .single();
     if (error) throw error;
-    res.json(data);
+    const language = await resolveManagerLanguage(req.user.id);
+    res.json(addAutomationPreview(data, language));
   } catch (error: any) {
     res.status(500).json({ error: safeErr(error) });
   }
@@ -944,7 +903,8 @@ router.put('/:id', verifyManager, async (req: any, res) => {
       .single();
 
     if (error) throw error;
-    res.json(data);
+    const language = await resolveManagerLanguage(req.user.id);
+    res.json(addAutomationPreview(data, language));
   } catch (error: any) {
     res.status(500).json({ error: safeErr(error) });
   }
@@ -1455,3 +1415,4 @@ router.post('/cron', cronHandler);
 router.get('/cron', cronHandler);
 
 export default router;
+

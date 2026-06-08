@@ -63,7 +63,7 @@ export default function Automations() {
     setWizard({
       triggerId: automation.trigger_id,
       triggerName: automation.trigger || automation.trigger_id,
-      message: automation.message,
+      message: automation.message_preview || automation.message,
       automationName: automation.name,
       deliveryRules: {
         frequency: 'Once',

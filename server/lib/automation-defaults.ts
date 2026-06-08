@@ -144,3 +144,35 @@ export function getDefaultAutomations(language: string, managerId: string): Auto
   const defaults = baseDefaults(managerId);
   return language === 'es' ? defaults.map(localizeSpanish) : defaults;
 }
+
+function defaultMessagesByTrigger(language: 'es' | 'en'): Record<string, string> {
+  return Object.fromEntries(
+    getDefaultAutomations(language, '__preview__').map(seed => [seed.trigger_id, seed.message]),
+  );
+}
+
+/**
+ * Returns the message that should be shown in previews for an automation.
+ *
+ * For manager-owned seed automations we keep the preview aligned with the
+ * manager language, even if the stored row was created earlier in the other
+ * language. Custom messages keep their stored text untouched.
+ */
+export function getLocalizedAutomationPreview(
+  triggerId: string,
+  message: string | null | undefined,
+  language: 'es' | 'en',
+): string {
+  const es = defaultMessagesByTrigger('es')[triggerId];
+  const en = defaultMessagesByTrigger('en')[triggerId];
+  const knownDefault = Boolean(es || en);
+
+  if (!knownDefault) return message || '';
+
+  const normalized = (message || '').trim();
+  if (!normalized || normalized === es || normalized === en) {
+    return language === 'en' ? (en || es || normalized) : (es || en || normalized);
+  }
+
+  return message || '';
+}

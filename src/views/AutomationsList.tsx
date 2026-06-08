@@ -227,7 +227,9 @@ export default function AutomationsList({ onCreateNew, onCreateWorkflow, onEdit,
                       </span>
                     </div>
                     <div className="col-span-3 hidden sm:block">
-                      <p className="text-sm text-slate-500 dark:text-slate-400 truncate pr-4">{auto.message}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 truncate pr-4">
+                        {auto.message_preview || auto.message}
+                      </p>
                     </div>
                     <div className="col-span-5 md:col-span-2 flex justify-end items-center gap-2">
                       {/* Edit and Delete hidden until hover */}

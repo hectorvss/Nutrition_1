@@ -38,6 +38,7 @@ export interface Automation {
   trigger: string;
   trigger_id: string; // Changed from triggerId for DB consistency
   message: string;
+  message_preview?: string;
   delivery_rules: AutomationDeliveryRules; // Changed from deliveryRules
   enabled: boolean;
   icon_info: {
