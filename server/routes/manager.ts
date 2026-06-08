@@ -2078,17 +2078,54 @@ router.post('/settings', async (req: any, res) => {
 });
 
 
-async function fetchStripePaymentMethod(stripeCustomerId?: string | null) {
+// Resolves the active payment method for a Stripe customer.
+// Stripe Checkout typically sets the PM on the subscription (default_payment_method)
+// rather than on the customer's invoice_settings, so we try three sources in order:
+//  1. customer.invoice_settings.default_payment_method  (customer-level default)
+//  2. subscription.default_payment_method               (most common for Checkout)
+//  3. stripe.paymentMethods.list({ customer })          (any attached PM, last resort)
+async function fetchStripePaymentMethod(
+  stripeCustomerId?: string | null,
+  stripeSubscriptionId?: string | null,
+) {
   const platformKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeCustomerId || !platformKey) return null;
   try {
     const stripe = newStripeClient(platformKey);
+
+    // 1. Customer-level default PM
     const cust: any = await stripe.customers.retrieve(stripeCustomerId, {
-      expand: ['invoice_settings.default_payment_method']
+      expand: ['invoice_settings.default_payment_method'],
     });
-    const pm: any = cust?.invoice_settings?.default_payment_method;
+    let pm: any = cust?.invoice_settings?.default_payment_method;
+
+    // 2. Subscription-level default PM (most common when paying via Checkout)
+    if (!pm?.card && stripeSubscriptionId) {
+      try {
+        const sub: any = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
+          expand: ['default_payment_method'],
+        });
+        pm = sub?.default_payment_method;
+      } catch { /* subscription might not exist yet – ignore */ }
+    }
+
+    // 3. Any payment method attached to the customer (last resort)
+    if (!pm?.card) {
+      const methods = await stripe.paymentMethods.list({
+        customer: stripeCustomerId,
+        type: 'card',
+        limit: 1,
+      });
+      pm = methods.data[0];
+    }
+
     if (pm?.card) {
-      return { brand: pm.card.brand, last4: pm.card.last4, expMonth: pm.card.exp_month, expYear: pm.card.exp_year };
+      return {
+        brand: pm.card.brand,
+        last4: pm.card.last4,
+        expMonth: pm.card.exp_month,
+        expYear: pm.card.exp_year,
+      };
     }
   } catch (e: any) {
     console.error('Billing Stripe payment method fetch error:', e?.message);
@@ -2121,7 +2158,7 @@ router.get('/billing', async (req: any, res) => {
           status: i.status,
           pdf: i.invoice_pdf || i.hosted_invoice_url || null
         }));
-        paymentMethod = await fetchStripePaymentMethod(sub.stripe_customer_id);
+        paymentMethod = await fetchStripePaymentMethod(sub.stripe_customer_id, sub.stripe_subscription_id);
       } catch (e: any) {
         console.error('Billing Stripe fetch error:', e?.message);
       }
@@ -2175,7 +2212,7 @@ router.get('/billing/status', async (req: any, res) => {
         .select('id', { count: 'exact', head: true })
         .eq('sender_id', userId)
         .gte('created_at', monthStartIso),
-      fetchStripePaymentMethod(sub?.stripe_customer_id),
+      fetchStripePaymentMethod(sub?.stripe_customer_id, sub?.stripe_subscription_id),
     ]);
 
     const usage = {
