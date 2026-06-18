@@ -277,6 +277,12 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
           </div>
         ))}
       </nav>
+
+      {/* Nuly branding — footer del sidebar */}
+      <div className={`shrink-0 border-t border-slate-100 dark:border-slate-800 flex items-center ${expanded ? 'px-4 py-3 gap-2' : 'justify-center py-3'}`}>
+        <img src="/logo-color.png" alt="Nuly" className="w-7 h-7 rounded-lg object-cover shrink-0" />
+        {expanded && <span className="text-xs font-black text-slate-400 dark:text-slate-500 tracking-tight">Nuly</span>}
+      </div>
     </div>
   );
 

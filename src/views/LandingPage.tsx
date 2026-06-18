@@ -74,9 +74,12 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
           <nav className="backdrop-blur-md bg-white/40 border border-white/20 pl-2 pr-6 py-2 rounded-full flex items-center gap-6 shadow-sm">
             <button
               onClick={() => setCurrentPage('home')}
-              aria-label="NutriFit"
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-lg cursor-pointer border-none"
-            ></button>
+              aria-label="Nuly"
+              className="flex items-center gap-2 cursor-pointer border-none bg-transparent"
+            >
+              <img src="/logo.png" alt="Nuly" className="w-8 h-8 object-contain" />
+              <span className="font-black text-lg text-black tracking-tight">Nuly</span>
+            </button>
             <div className="flex gap-5 md:gap-6 text-[15px] md:text-base">
               {[
                 // Etiquetas con mayúscula inicial explícita: los items de
@@ -402,7 +405,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
         <div className="max-w-6xl mx-auto px-6 relative z-10">
           <div className="flex flex-col items-center mb-12">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2 text-gray-400">{t('designed_for_professionals')}</p>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900 mb-6 font-black font-sans">NutriFit Systems Inc.</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-900 mb-6 font-black font-sans">Nuly</p>
             <div className="flex gap-6 text-gray-400">
               <a
                 href={SOCIAL.x}
