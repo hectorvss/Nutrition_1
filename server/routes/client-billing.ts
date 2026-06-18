@@ -8,6 +8,7 @@ import { supabase, supabaseAdmin } from '../db/index.js';
 import { newStripeClient } from '../lib/stripe.js';
 import { safeErr } from '../lib/http.js';
 import { sendPushToUser } from '../lib/push.js';
+import { sendManagerNotificationEmail } from '../lib/email.js';
 import type Stripe from 'stripe';
 
 const router = Router();
@@ -165,6 +166,16 @@ export async function notifyManagerOfPayment(managerId: string, clientId: string
       body: `${name} ha pagado${amount ? ` ${amount}` : ''}.`,
       url: '/?view=client-billing',
       prefKey: 'payments_push',
+    });
+    await sendManagerNotificationEmail(managerId, 'payments_email', {
+      subject: { es: 'Pago recibido', en: 'Payment received' },
+      title: { es: 'Se ha recibido un pago', en: 'A payment was received' },
+      body: {
+        es: `${name} ha pagado${amount ? ` ${amount}` : ''}. Entra en facturación para revisarlo.`,
+        en: `${name} has paid${amount ? ` ${amount}` : ''}. Open billing to review it.`,
+      },
+      ctaLabel: { es: 'Abrir facturación', en: 'Open billing' },
+      ctaUrl: '/?view=client-billing',
     });
   } catch (e) {
     console.error('notifyManagerOfPayment failed (non-fatal):', e);

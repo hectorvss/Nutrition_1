@@ -16,6 +16,7 @@ import { computeBusinessExtras } from '../lib/analytics/business.js';
 import { computeNutritionExtras } from '../lib/analytics/nutrition.js';
 import { computeTrainingExtras } from '../lib/analytics/training.js';
 import { repeatLabelToRrule, expandTaskDates, applyExceptions, virtualInstanceId, parseVirtualId, type TaskRow, type TaskException } from '../lib/recurrence.js';
+import { getManagerNotificationContext, sendClientAccessEmail } from '../lib/email.js';
 
 // Limit enforcer for client creation. Counts active clients under this manager
 // and blocks POST /clients when the tier cap is reached.
@@ -773,6 +774,20 @@ async function createClientForManager(
   runWorkflowsForEvent(managerId, 'trigger.new_client', { clientId }).catch(err => {
     console.error('Workflow trigger error (new_client):', err);
   });
+
+  if (opts.sendEmail) {
+    const loginUrl = `${process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+    const managerCtx = await getManagerNotificationContext(managerId);
+    sendClientAccessEmail({
+      to: email,
+      language: managerCtx.language,
+      clientName: fullName || email.split('@')[0],
+      password,
+      loginUrl,
+    }).catch(err => {
+      console.error('Client access email failed:', err);
+    });
+  }
 
   return { ok: true, clientId };
 }
@@ -2039,6 +2054,8 @@ router.get('/settings', async (req: any, res) => {
         new_client_check_ins_push: true,
         new_messages_email: false,
         new_messages_push: true,
+        payments_email: true,
+        payments_push: true,
         appointment_reminders_email: true,
         appointment_reminders_push: true,
         system_updates_email: true,

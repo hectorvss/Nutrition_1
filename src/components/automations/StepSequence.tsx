@@ -1,7 +1,7 @@
 // Editor visual de la cadena multi-step de una automation.
 //
 // Cada paso es un AutomationStep tipado (message | wait | create_task |
-// set_field | stop_if). Renderizamos una lista vertical donde cada step
+// set_field | stop_if | send_email). Renderizamos una lista vertical donde cada step
 // se ve como una tarjeta con el icono del tipo y los campos editables.
 //
 // Disenado para ser FACIL: el primer step siempre es "Enviar mensaje" (por
@@ -13,7 +13,7 @@
 import React, { useState } from 'react';
 import {
   Send, Clock, ClipboardList, Edit2, AlertCircle, Plus, Trash2,
-  ChevronDown,
+  Mail, ChevronDown,
 } from 'lucide-react';
 
 export type AutomationStep =
@@ -23,6 +23,7 @@ export type AutomationStep =
   | { kind: 'set_field'; field: 'status' | 'goal' | 'notes'; value: string }
   | { kind: 'stop_if'; conditionType: string; operator: string; value: string }
   | { kind: 'notify_coach'; title: string; body: string }
+  | { kind: 'send_email'; subject: string; title: string; subtitle?: string; body: string; imageUrl?: string; imageAlt?: string; ctaLabel?: string; ctaUrl?: string; note?: string }
   | { kind: 'create_event'; title: string; eventType?: string; offsetDays?: number; time?: string }
   | { kind: 'assign_checkin'; templateId: string }
   | { kind: 'assign_onboarding'; templateId: string };
@@ -37,6 +38,7 @@ const STEP_TYPES: Array<{
   { kind: 'message',     label: 'Enviar mensaje',        desc: 'Envia un mensaje al chat del cliente.',                 icon: Send,          color: 'text-emerald-500' },
   { kind: 'wait',        label: 'Esperar',                desc: 'Pausa la cadena X horas o dias antes del siguiente paso.', icon: Clock,         color: 'text-blue-500' },
   { kind: 'create_task', label: 'Crear tarea para mi',    desc: 'Crea una tarea en tu panel (escalada al coach).',       icon: ClipboardList, color: 'text-purple-500' },
+  { kind: 'send_email',  label: 'Enviar email',           desc: 'Envía un correo al cliente con contenido personalizado.', icon: Mail,          color: 'text-indigo-500' },
   { kind: 'set_field',   label: 'Etiquetar al cliente',   desc: 'Cambia un campo del cliente (status/goal/notas).',     icon: Edit2,         color: 'text-amber-500' },
   { kind: 'stop_if',     label: 'Parar si...',            desc: 'Aborta la cadena cuando una condicion se cumple.',     icon: AlertCircle,   color: 'text-rose-500' },
 ];
@@ -46,6 +48,7 @@ function defaultStepFor(kind: AutomationStep['kind']): AutomationStep {
     case 'message':     return { kind, message: '' };
     case 'wait':        return { kind, amount: 1, unit: 'days', cancelIfReplied: true };
     case 'create_task': return { kind, title: '', type: 'Admin', priority: 'medium' };
+    case 'send_email':  return { kind, subject: '', title: '', subtitle: '', body: '', imageUrl: '', imageAlt: '', ctaLabel: '', ctaUrl: '', note: '' };
     case 'set_field':   return { kind, field: 'status', value: 'Active' };
     case 'stop_if':     return { kind, conditionType: 'reply', operator: 'within', value: '24' };
   }
@@ -200,6 +203,90 @@ export default function StepSequence({ steps, onChange, maxSteps, conditionCatal
                         <option>Nutrition</option>
                       </select>
                     </div>
+                  </div>
+                )}
+
+                {step.kind === 'send_email' && (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={step.subject}
+                      onChange={e => updateStep(i, { ...step, subject: e.target.value })}
+                      placeholder="Asunto del email"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={step.title}
+                      onChange={e => updateStep(i, { ...step, title: e.target.value })}
+                      placeholder="Título"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={step.subtitle || ''}
+                      onChange={e => updateStep(i, { ...step, subtitle: e.target.value })}
+                      placeholder="Subtítulo"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <textarea
+                      value={step.body}
+                      onChange={e => updateStep(i, { ...step, body: e.target.value })}
+                      placeholder="Contenido del email"
+                      rows={4}
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none resize-none"
+                    />
+                    <input
+                      type="text"
+                      value={step.imageUrl || ''}
+                      onChange={e => updateStep(i, { ...step, imageUrl: e.target.value })}
+                      placeholder="URL de la imagen"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={step.imageAlt || ''}
+                      onChange={e => updateStep(i, { ...step, imageAlt: e.target.value })}
+                      placeholder="Texto alternativo"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={step.ctaLabel || ''}
+                        onChange={e => updateStep(i, { ...step, ctaLabel: e.target.value })}
+                        placeholder="Texto del botón"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={step.ctaUrl || ''}
+                        onChange={e => updateStep(i, { ...step, ctaUrl: e.target.value })}
+                        placeholder="URL del botón"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={step.note || ''}
+                      onChange={e => updateStep(i, { ...step, note: e.target.value })}
+                      placeholder="Nota de pie"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    {variables.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {variables.slice(0, 6).map(v => (
+                          <button
+                            key={v.label}
+                            type="button"
+                            onClick={() => updateStep(i, { ...step, body: step.body + v.label })}
+                            className="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 px-2 py-0.5 rounded transition-colors"
+                          >
+                            {v.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 

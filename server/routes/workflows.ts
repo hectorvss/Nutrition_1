@@ -5,6 +5,7 @@ import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { safeErr } from '../lib/http.js';
 import { makeEnforceLimit, countActiveAutomations } from '../lib/plans.js';
 import { sendPushToUser } from '../lib/push.js';
+import { sendClientTransactionalEmail } from '../lib/email.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
 const router = Router();
@@ -92,6 +93,19 @@ export const WORKFLOW_CATALOG = [
   { type: 'action', key: 'action.send_message', label: 'Send message', category: 'Actions',
     icon: 'Send', description: 'Send a message to the client.',
     configFields: [{ name: 'message', label: 'Message', type: 'textarea' }] },
+  { type: 'action', key: 'action.send_email', label: 'Send email', category: 'Actions',
+    icon: 'Mail', description: 'Send a fully custom email to the client.',
+    configFields: [
+      { name: 'subject', label: 'Subject', type: 'text' },
+      { name: 'title', label: 'Title', type: 'text' },
+      { name: 'subtitle', label: 'Subtitle', type: 'text' },
+      { name: 'body', label: 'Body', type: 'textarea' },
+      { name: 'imageUrl', label: 'Image URL', type: 'text' },
+      { name: 'imageAlt', label: 'Image alt', type: 'text' },
+      { name: 'ctaLabel', label: 'CTA label', type: 'text' },
+      { name: 'ctaUrl', label: 'CTA URL', type: 'text' },
+      { name: 'note', label: 'Footer note', type: 'text' },
+    ] },
   { type: 'action', key: 'action.create_task', label: 'Create task', category: 'Actions',
     icon: 'ListTodo', description: 'Create a task for the manager.',
     configFields: [
@@ -412,6 +426,173 @@ export const WORKFLOW_STARTER_TEMPLATES = [
     ],
     edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3')],
   },
+  {
+    id: 'tpl.onboarding_email_pack',
+    name: 'Onboarding premium por email',
+    description: 'Al crear un cliente, envia un email completo con bienvenida, imagen, CTA a la app y tarea interna para preparar el plan.',
+    category: 'Onboarding',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.new_client', 80, 160),
+      tNode('n2', 'action', 'action.send_email', 360, 160, {
+        subject: 'Bienvenido/a a tu nuevo plan, {First Name}',
+        title: 'Tu proceso empieza hoy',
+        subtitle: 'Todo lo que necesitas esta centralizado en tu app.',
+        body: 'Hola {First Name}, soy {Coach Name}. Ya tienes acceso a tu espacio personal. Durante estos primeros dias revisaremos tu punto de partida, tus objetivos y los ajustes que necesitas para avanzar con seguridad.',
+        imageUrl: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80',
+        imageAlt: 'Persona entrenando con acompanamiento profesional',
+        ctaLabel: 'Entrar a mi app',
+        ctaUrl: '{App URL}',
+        note: 'Si tienes cualquier duda, responde a este email o escribeme por el chat.',
+      }),
+      tNode('n3', 'action', 'action.assign_onboarding', 640, 160),
+      tNode('n4', 'action', 'action.notify_coach', 920, 160, { title: 'Preparar onboarding de {Client Name}', description: 'Nuevo cliente creado. Revisa sus datos iniciales y prepara el primer contacto.' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4')],
+  },
+  {
+    id: 'tpl.checkin_overdue_email_escalation',
+    name: 'Check-in atrasado multicanal',
+    description: 'Si el check-in se retrasa, combina push, email con CTA, espera y escalada al coach si sigue sin responder.',
+    category: 'Check-ins',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.checkin_overdue', 80, 160, { graceDays: 1 }),
+      tNode('n2', 'action', 'action.send_push', 360, 160, { title: 'Tu check-in esta pendiente', body: 'Tardaras solo un par de minutos y me ayuda a ajustar tu plan.', url: '/' }),
+      tNode('n3', 'action', 'action.send_email', 640, 160, {
+        subject: 'Tu check-in semanal esta pendiente',
+        title: 'Necesito tus datos para ajustar bien',
+        subtitle: 'Sin check-in trabajamos a ciegas.',
+        body: 'Hola {First Name}, tu check-in de esta semana sigue pendiente. Enviarlo nos permite detectar bloqueos, ajustar comida, entrenamiento y mantener el progreso.',
+        ctaLabel: 'Enviar check-in',
+        ctaUrl: '{App URL}',
+      }),
+      tNode('n4', 'flow', 'flow.delay', 920, 160, { amount: 2, unit: 'days' }),
+      tNode('n5', 'action', 'action.notify_coach', 1200, 160, { title: '{Client Name} sigue sin check-in', description: 'El cliente no respondio tras push + email. Conviene contacto personal.' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4'), tEdge('n4', 'n5')],
+  },
+  {
+    id: 'tpl.weight_drop_safety_email',
+    name: 'Bajada brusca de peso: protocolo de seguridad',
+    description: 'Ante una bajada de peso relevante, avisa al coach y envia al cliente un email calmado para recoger contexto.',
+    category: 'Peso y seguridad',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.weight_change', 80, 160, { direction: 'loss', minKg: 2 }),
+      tNode('n2', 'action', 'action.notify_coach', 360, 160, { title: 'Bajada brusca de peso: {Client Name}', description: 'Revisa el check-in y contexto antes de ajustar el plan. Puede requerir seguimiento de seguridad.' }),
+      tNode('n3', 'action', 'action.send_email', 640, 160, {
+        subject: 'Vamos a revisar tu cambio de peso',
+        title: 'He detectado un cambio importante',
+        subtitle: 'Quiero entender el contexto antes de tocar el plan.',
+        body: 'Hola {First Name}, he visto un cambio de peso relevante en tu ultimo registro. No te preocupes: lo revisaremos con calma. Respondeme si ha habido enfermedad, menos comida, mas estres, cambios de medicacion o entrenamientos mas duros.',
+        ctaLabel: 'Ver mi ultimo check-in',
+        ctaUrl: '{App URL}',
+        note: 'Si hay mareos, debilidad o sintomas importantes, prioriza asistencia sanitaria.',
+      }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3')],
+  },
+  {
+    id: 'tpl.goal_reached_email_review',
+    name: 'Meta alcanzada: celebracion y siguiente fase',
+    description: 'Celebra el hito por email, agenda revision y crea tarea para preparar la siguiente fase.',
+    category: 'Progreso',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.goal_reached', 80, 160),
+      tNode('n2', 'action', 'action.send_email', 360, 160, {
+        subject: 'Objetivo conseguido, {First Name}',
+        title: 'Has alcanzado tu objetivo',
+        subtitle: 'Ahora toca convertir el resultado en una nueva fase sostenible.',
+        body: 'Enhorabuena, {First Name}. Este resultado viene de tu constancia. El siguiente paso es revisar metricas, sensaciones y definir si vamos a mantenimiento, recomposicion o un nuevo objetivo.',
+        imageUrl: 'https://images.unsplash.com/photo-1571019613914-85f342c6a11e?auto=format&fit=crop&w=1200&q=80',
+        imageAlt: 'Celebracion de progreso deportivo',
+        ctaLabel: 'Ver mi progreso',
+        ctaUrl: '{App URL}',
+      }),
+      tNode('n3', 'action', 'action.schedule_appointment', 640, 160, { title: 'Revision de siguiente fase - {Client Name}', type: 'Video Call', date: 'today+3d', time: '10:00', duration: '30m' }),
+      tNode('n4', 'action', 'action.create_task', 920, 160, { title: 'Preparar nueva fase de {Client Name}', type: 'Nutrition', priority: 'high' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4')],
+  },
+  {
+    id: 'tpl.monthly_progress_digest',
+    name: 'Resumen mensual de progreso',
+    description: 'Cada 30 dias envia un digest por email y crea una tarea para revisar el plan si el cliente no trae check-ins recientes.',
+    category: 'Progreso',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.schedule', 80, 160, { everyDays: 30 }),
+      tNode('n2', 'condition', 'flow.has_checkin', 360, 160, { days: 14 }),
+      tNode('n3', 'action', 'action.send_email', 640, 80, {
+        subject: 'Tu resumen mensual de progreso',
+        title: 'Un mes mas construyendo resultados',
+        subtitle: 'Revisamos datos, constancia y siguientes ajustes.',
+        body: 'Hola {First Name}, cerramos otro mes de trabajo. Revisa tu progreso en la app y cuentame que ha sido mas facil y que te esta costando. Con eso afinamos el siguiente bloque.',
+        ctaLabel: 'Ver progreso',
+        ctaUrl: '{App URL}',
+      }),
+      tNode('n4', 'action', 'action.create_task', 640, 260, { title: 'Cliente sin datos recientes: {Client Name}', type: 'Check-in', priority: 'medium' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3', 'true'), tEdge('n2', 'n4', 'false')],
+  },
+  {
+    id: 'tpl.failed_payment_email',
+    name: 'Impago con email de recuperacion',
+    description: 'Acompana el dunning con un email claro, link de pago, espera y escalada si no se regulariza.',
+    category: 'Suscripciones',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.payment_failed', 80, 160),
+      tNode('n2', 'action', 'action.send_email', 360, 160, {
+        subject: 'No hemos podido procesar tu pago',
+        title: 'Actualiza tu metodo de pago',
+        subtitle: 'Asi evitamos que tu plan se pause.',
+        body: 'Hola {First Name}, el pago de {Plan Name} no se ha podido procesar. Puedes regularizarlo desde el boton de abajo. Si necesitas ayuda, responde a este email.',
+        ctaLabel: 'Actualizar pago',
+        ctaUrl: '{Payment Link}',
+      }),
+      tNode('n3', 'flow', 'flow.delay', 640, 160, { amount: 3, unit: 'days' }),
+      tNode('n4', 'action', 'action.notify_coach', 920, 160, { title: 'Impago pendiente: {Client Name}', description: 'No se resolvio el pago tras email de recuperacion.' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4')],
+  },
+  {
+    id: 'tpl.birthday_email',
+    name: 'Cumpleanos con email personalizado',
+    description: 'Envia un email cercano el dia del cumpleanos y crea una tarea opcional de detalle personal.',
+    category: 'Relacion',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.birthday', 80, 160),
+      tNode('n2', 'action', 'action.send_email', 360, 160, {
+        subject: 'Feliz cumpleanos, {First Name}',
+        title: 'Que tengas un dia enorme',
+        subtitle: 'Hoy tambien cuenta disfrutar.',
+        body: 'Feliz cumpleanos, {First Name}. Espero que tengas un dia genial. Celebra, disfruta y manana seguimos cuidando el proceso con normalidad.',
+        imageUrl: 'https://images.unsplash.com/photo-1464349153735-7db50ed83c84?auto=format&fit=crop&w=1200&q=80',
+        imageAlt: 'Celebracion de cumpleanos',
+        note: 'Tu coach',
+      }),
+      tNode('n3', 'action', 'action.create_task', 640, 160, { title: 'Detalle personal de cumpleanos para {Client Name}', type: 'Admin', priority: 'low' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3')],
+  },
+  {
+    id: 'tpl.high_adherence_referral_email',
+    name: 'Alta adherencia: pedir testimonio',
+    description: 'Cuando el cliente viene con buena adherencia, refuerza por email y crea tarea para pedir testimonio o referido.',
+    category: 'Crecimiento',
+    nodes: [
+      tNode('n1', 'trigger', 'trigger.checkin_submitted', 80, 160),
+      tNode('n2', 'data', 'data.get_latest_checkin', 360, 160),
+      tNode('n3', 'condition', 'flow.if', 640, 160, { field: 'latestCheckin.nutrition_adherence_score', operator: '>=', value: '8' }),
+      tNode('n4', 'action', 'action.send_email', 920, 80, {
+        subject: 'Semana muy fuerte, {First Name}',
+        title: 'Tu constancia esta marcando la diferencia',
+        subtitle: 'Este es el tipo de semana que construye resultados.',
+        body: 'Enhorabuena, {First Name}. Tu adherencia ha sido muy buena y eso merece reconocerse. Sigue con esta linea y dime si hay algo que podamos optimizar para mantenerlo sostenible.',
+        ctaLabel: 'Ver progreso',
+        ctaUrl: '{App URL}',
+      }),
+      tNode('n5', 'action', 'action.create_task', 920, 260, { title: 'Valorar testimonio/referral con {Client Name}', type: 'Admin', priority: 'low' }),
+    ],
+    edges: [tEdge('n1', 'n2'), tEdge('n2', 'n3'), tEdge('n3', 'n4', 'true'), tEdge('n4', 'n5')],
+  },
 ] as const;
 
 function cloneWorkflowStarter(value: any): any {
@@ -459,6 +640,95 @@ export function localizeWorkflowStarterTemplates(language: string) {
         t.description = 'When someone cancels, you offer a discount code to bring them back (choose the plan in the "Create code" node).';
         t.nodes[2].config.message = 'Sorry to see you go, {First Name}. If you change your mind, you have 20% off for 3 months with code VUELVE20. We are still here!';
         break;
+      case 'tpl.onboarding_email_pack':
+        t.name = 'Premium onboarding email';
+        t.description = 'When a client is created, send a complete welcome email with image, app CTA and an internal task to prepare the plan.';
+        t.nodes[1].config.subject = 'Welcome to your new plan, {First Name}';
+        t.nodes[1].config.title = 'Your process starts today';
+        t.nodes[1].config.subtitle = 'Everything you need is centralized in your app.';
+        t.nodes[1].config.body = 'Hi {First Name}, I am {Coach Name}. You now have access to your personal space. Over the next few days we will review your starting point, goals and the adjustments you need to move forward safely.';
+        t.nodes[1].config.ctaLabel = 'Open my app';
+        t.nodes[1].config.note = 'If you have any questions, reply to this email or write to me in chat.';
+        t.nodes[3].config.title = 'Prepare onboarding for {Client Name}';
+        t.nodes[3].config.description = 'New client created. Review their initial data and prepare the first contact.';
+        break;
+      case 'tpl.checkin_overdue_email_escalation':
+        t.name = 'Overdue check-in multichannel';
+        t.description = 'If the check-in is late, combine push, email with CTA, wait and coach escalation if they still do not respond.';
+        t.nodes[1].config.title = 'Your check-in is pending';
+        t.nodes[1].config.body = 'It only takes a couple of minutes and helps me adjust your plan.';
+        t.nodes[2].config.subject = 'Your weekly check-in is pending';
+        t.nodes[2].config.title = 'I need your data to adjust properly';
+        t.nodes[2].config.subtitle = 'Without your check-in we are working blind.';
+        t.nodes[2].config.body = 'Hi {First Name}, your check-in for this week is still pending. Sending it helps us spot blockers, adjust nutrition, training and keep progress moving.';
+        t.nodes[2].config.ctaLabel = 'Send check-in';
+        t.nodes[4].config.title = '{Client Name} still has no check-in';
+        t.nodes[4].config.description = 'The client did not respond after push + email. Personal contact is recommended.';
+        break;
+      case 'tpl.weight_drop_safety_email':
+        t.name = 'Sudden weight drop: safety protocol';
+        t.description = 'When weight drops significantly, alert the coach and send the client a calm email to collect context.';
+        t.nodes[1].config.title = 'Sudden weight drop: {Client Name}';
+        t.nodes[1].config.description = 'Review the check-in and context before adjusting the plan. Safety follow-up may be needed.';
+        t.nodes[2].config.subject = 'Let us review your weight change';
+        t.nodes[2].config.title = 'I noticed an important change';
+        t.nodes[2].config.subtitle = 'I want to understand the context before changing the plan.';
+        t.nodes[2].config.body = 'Hi {First Name}, I noticed a relevant weight change in your latest log. Do not worry: we will review it calmly. Reply if there has been illness, less food, more stress, medication changes or harder training.';
+        t.nodes[2].config.ctaLabel = 'View my latest check-in';
+        t.nodes[2].config.note = 'If you feel dizzy, weak or have important symptoms, prioritize medical support.';
+        break;
+      case 'tpl.goal_reached_email_review':
+        t.name = 'Goal reached: celebration and next phase';
+        t.description = 'Celebrate the milestone by email, schedule a review and create a task to prepare the next phase.';
+        t.nodes[1].config.subject = 'Goal achieved, {First Name}';
+        t.nodes[1].config.title = 'You reached your goal';
+        t.nodes[1].config.subtitle = 'Now we turn the result into a sustainable next phase.';
+        t.nodes[1].config.body = 'Congratulations, {First Name}. This result comes from your consistency. The next step is reviewing metrics, feelings and deciding whether we move to maintenance, recomposition or a new goal.';
+        t.nodes[1].config.ctaLabel = 'View my progress';
+        t.nodes[2].config.title = 'Next-phase review - {Client Name}';
+        t.nodes[3].config.title = 'Prepare next phase for {Client Name}';
+        break;
+      case 'tpl.monthly_progress_digest':
+        t.name = 'Monthly progress digest';
+        t.description = 'Every 30 days, send a progress email and create a task if the client has no recent check-ins.';
+        t.nodes[2].config.subject = 'Your monthly progress summary';
+        t.nodes[2].config.title = 'Another month building results';
+        t.nodes[2].config.subtitle = 'We review data, consistency and next adjustments.';
+        t.nodes[2].config.body = 'Hi {First Name}, we are closing another month of work. Review your progress in the app and tell me what felt easier and what is still hard. With that, we fine-tune the next block.';
+        t.nodes[2].config.ctaLabel = 'View progress';
+        t.nodes[3].config.title = 'Client without recent data: {Client Name}';
+        break;
+      case 'tpl.failed_payment_email':
+        t.name = 'Failed payment recovery email';
+        t.description = 'Support dunning with a clear email, payment link, wait and escalation if payment is not fixed.';
+        t.nodes[1].config.subject = 'We could not process your payment';
+        t.nodes[1].config.title = 'Update your payment method';
+        t.nodes[1].config.subtitle = 'This helps us avoid pausing your plan.';
+        t.nodes[1].config.body = 'Hi {First Name}, the payment for {Plan Name} could not be processed. You can regularize it from the button below. If you need help, reply to this email.';
+        t.nodes[1].config.ctaLabel = 'Update payment';
+        t.nodes[3].config.title = 'Payment still pending: {Client Name}';
+        t.nodes[3].config.description = 'Payment was not resolved after the recovery email.';
+        break;
+      case 'tpl.birthday_email':
+        t.name = 'Personalized birthday email';
+        t.description = 'Send a warm birthday email and create an optional task for a personal detail.';
+        t.nodes[1].config.subject = 'Happy birthday, {First Name}';
+        t.nodes[1].config.title = 'Have an amazing day';
+        t.nodes[1].config.subtitle = 'Today enjoying yourself counts too.';
+        t.nodes[1].config.body = 'Happy birthday, {First Name}. I hope you have a great day. Celebrate, enjoy it, and tomorrow we keep taking care of the process normally.';
+        t.nodes[1].config.note = 'Your coach';
+        t.nodes[2].config.title = 'Personal birthday detail for {Client Name}';
+        break;
+      case 'tpl.high_adherence_referral_email':
+        t.name = 'High adherence: ask for testimonial';
+        t.description = 'When the client has strong adherence, reinforce by email and create a task to ask for a testimonial or referral.';
+        t.nodes[3].config.subject = 'Very strong week, {First Name}';
+        t.nodes[3].config.title = 'Your consistency is making the difference';
+        t.nodes[3].config.subtitle = 'This is the kind of week that builds results.';
+        t.nodes[3].config.body = 'Congratulations, {First Name}. Your adherence has been very good and that deserves recognition. Keep this line and tell me if there is anything we can optimize to keep it sustainable.';
+        t.nodes[3].config.ctaLabel = 'View progress';
+        t.nodes[4].config.title = 'Consider testimonial/referral with {Client Name}';
+        break;
     }
     return t;
   });
@@ -494,6 +764,7 @@ function renderTemplate(text: string, ctx: any): string {
     .replace(/{Renewal Date}/g, renewalStr)
     .replace(/{Subscription Status}/g, sub.status || '')
     .replace(/{Payment Link}/g, sub.paymentUrl || '')
+    .replace(/{App URL}/g, process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:3000')
     .replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, p) => {
       const v = getByPath(ctx, p);
       return v == null ? '' : String(v);
@@ -575,6 +846,11 @@ export function validateWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[]) {
       warnings.push(`Node "${n.label || n.key}" is not connected to anything.`);
     if (n.key === 'flow.if' && !edges.some(e => e.source === n.id))
       warnings.push('An If/Else node has no branches connected.');
+    if (n.key === 'action.send_email') {
+      const cfg = n.config || {};
+      const hasContent = Boolean(String(cfg.subject || '').trim() || String(cfg.title || '').trim() || String(cfg.body || '').trim() || String(cfg.subtitle || '').trim());
+      if (!hasContent) errors.push('The email action needs at least a subject, title or body.');
+    }
   }
   return { ok: errors.length === 0, errors, warnings };
 }
@@ -746,6 +1022,49 @@ async function runLoop(p: {
               sender_id: managerId, receiver_id: ctx.client.id, content: msg });
             await logStep(node, error ? 'failed' : 'completed', { message: msg }, error?.message);
             if (error) { status = 'failed'; return { status, steps, ctx }; }
+          }
+          break;
+        }
+        case 'action.send_email': {
+          if (!ctx.client?.id || !ctx.client.email) {
+            await logStep(node, 'skipped', { reason: 'no client email in context' });
+            break;
+          }
+          const subject = renderTemplate(cfg.subject || cfg.title || 'Workflow email', ctx);
+          const title = renderTemplate(cfg.title || subject, ctx);
+          const subtitle = cfg.subtitle ? renderTemplate(cfg.subtitle, ctx) : undefined;
+          const body = renderTemplate(cfg.body || '', ctx);
+          const imageUrl = cfg.imageUrl ? renderTemplate(cfg.imageUrl, ctx) : undefined;
+          const imageAlt = cfg.imageAlt ? renderTemplate(cfg.imageAlt, ctx) : undefined;
+          const ctaLabel = cfg.ctaLabel ? renderTemplate(cfg.ctaLabel, ctx) : undefined;
+          const ctaUrl = cfg.ctaUrl ? renderTemplate(cfg.ctaUrl, ctx) : undefined;
+          const note = cfg.note ? renderTemplate(cfg.note, ctx) : undefined;
+          if (dryRun) {
+            await logStep(node, 'completed', { dryRun: true, subject, title, subtitle, hasImage: !!imageUrl });
+            break;
+          }
+          const sent = await sendClientTransactionalEmail({
+            to: ctx.client.email,
+            language: ctx.language,
+            subject,
+            title,
+            subtitle,
+            body,
+            imageUrl,
+            imageAlt,
+            ctaLabel,
+            ctaUrl,
+            note,
+          });
+          await logStep(node, sent.ok || sent.skipped ? 'completed' : 'failed', {
+            subject,
+            title,
+            subtitle,
+            hasImage: !!imageUrl,
+          }, sent.ok || sent.skipped ? undefined : 'Email send failed');
+          if (!sent.ok && !sent.skipped) {
+            status = 'failed';
+            return { status, steps, ctx };
           }
           break;
         }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft, ArrowRight, Zap, Send, Clock, ClipboardList, Edit2,
   AlertCircle, Plus, Sunrise, Sun, Moon, Search, X, CheckCheck, Pause,
-  ChevronDown, Bell, CalendarPlus, ClipboardCheck, Filter,
+  ChevronDown, Bell, Mail, CalendarPlus, ClipboardCheck, Filter,
 } from 'lucide-react';
 import { AutomationDeliveryRules } from '../context/AutomationContext';
 import { useClient } from '../context/ClientContext';
@@ -29,6 +29,7 @@ interface AutomationFlowBuilderProps {
 const VARIABLES = [
   { label: '{First Name}',        desc: 'Nombre de pila del cliente' },
   { label: '{Client Name}',       desc: 'Nombre completo del cliente' },
+  { label: '{Client Email}',      desc: 'Correo del cliente' },
   { label: '{Coach Name}',        desc: 'Tu nombre completo' },
   { label: '{Coach First Name}',  desc: 'Tu nombre de pila' },
   { label: '{Current Weight}',    desc: 'Último peso registrado' },
@@ -51,6 +52,7 @@ const STEP_META: Record<AutomationStep['kind'], { label: string; tag: string; ic
   message:       { label: 'Enviar mensaje',       tag: 'ACCIÓN', icon: Send,          iconClass: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
   wait:          { label: 'Esperar / pausa',      tag: 'ACCIÓN', icon: Clock,         iconClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
   create_task:   { label: 'Escalada (tarea)',     tag: 'ACCIÓN', icon: ClipboardList, iconClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' },
+  send_email:    { label: 'Enviar email',         tag: 'ACCIÓN', icon: Mail,          iconClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' },
   notify_coach:  { label: 'Notificarme a mí',     tag: 'ACCIÓN', icon: Bell,          iconClass: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
   create_event:  { label: 'Agendar evento',       tag: 'ACCIÓN', icon: CalendarPlus,  iconClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' },
   assign_checkin:{ label: 'Asignar check-in',     tag: 'ACCIÓN', icon: ClipboardCheck,iconClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' },
@@ -63,6 +65,7 @@ const ADDABLE: Array<{ kind: AutomationStep['kind']; desc: string }> = [
   { kind: 'message',        desc: 'Envía un mensaje al chat del cliente.' },
   { kind: 'wait',           desc: 'Pausa la cadena X horas o días.' },
   { kind: 'create_task',    desc: 'Crea una tarea en tu panel (escalada).' },
+  { kind: 'send_email',     desc: 'Envía un email personalizado al cliente.' },
   { kind: 'notify_coach',   desc: 'Te envía una notificación push al instante.' },
   { kind: 'create_event',   desc: 'Agenda un evento en tu calendario.' },
   { kind: 'assign_checkin', desc: 'Asigna una plantilla de check-in al cliente.' },
@@ -78,6 +81,7 @@ function defaultStepFor(kind: AutomationStep['kind']): AutomationStep {
     case 'message':        return { kind, message: '' };
     case 'wait':           return { kind, amount: 1, unit: 'days', cancelIfReplied: true };
     case 'create_task':    return { kind, title: '', type: 'Admin', priority: 'medium' };
+    case 'send_email':     return { kind, subject: '', title: '', subtitle: '', body: '', imageUrl: '', imageAlt: '', ctaLabel: '', ctaUrl: '', note: '' };
     case 'notify_coach':   return { kind, title: 'Revisar a {Client Name}', body: '' };
     case 'create_event':   return { kind, title: 'Sesión con {First Name}', eventType: 'Call', offsetDays: 3, time: '09:00' };
     case 'assign_checkin': return { kind, templateId: '' };
@@ -167,8 +171,18 @@ export default function AutomationFlowBuilder({
     c.name.toLowerCase().includes(clientSearch.toLowerCase()) && !(rules.selected_client_ids || []).includes(c.id));
 
   const firstMessage = (steps.find(s => s.kind === 'message') as any)?.message || '';
+  const firstEmail = (steps.find(s => s.kind === 'send_email') as any) || null;
+  const emailHasContent = !firstEmail
+    ? false
+    : Boolean(String(firstEmail.subject || '').trim() || String(firstEmail.title || '').trim() || String(firstEmail.body || '').trim() || String(firstEmail.subtitle || '').trim());
   const canContinue = steps.length > 0 &&
-    !(steps.length === 1 && steps[0].kind === 'message' && !steps[0].message.trim());
+    !(
+      steps.length === 1 &&
+      (
+        (steps[0].kind === 'message' && !steps[0].message.trim()) ||
+        (steps[0].kind === 'send_email' && !emailHasContent)
+      )
+    );
 
   const handleContinue = () => {
     const enrichedRules: any = { ...rules, steps };
@@ -180,6 +194,7 @@ export default function AutomationFlowBuilder({
     const s = steps[i];
     if (s.kind === 'message')      updateStep(i, { ...s, message: (s.message || '') + variable });
     if (s.kind === 'create_task')  updateStep(i, { ...s, title: (s.title || '') + variable });
+    if (s.kind === 'send_email')   updateStep(i, { ...s, body: (s.body || '') + variable });
     if (s.kind === 'create_event') updateStep(i, { ...s, title: (s.title || '') + variable });
     if (s.kind === 'notify_coach') updateStep(i, { ...s, body: (s.body || '') + variable });
   };
@@ -374,6 +389,51 @@ export default function AutomationFlowBuilder({
                         </Select>
                         <div className="flex-1">{variableSelect(i)}</div>
                       </div>
+                    </div>
+                  )}
+
+                  {step.kind === 'send_email' && (
+                    <div className="space-y-2">
+                      <input type="text" value={step.subject}
+                        onChange={e => updateStep(i, { ...step, subject: e.target.value })}
+                        placeholder="Asunto del email"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      <input type="text" value={step.title}
+                        onChange={e => updateStep(i, { ...step, title: e.target.value })}
+                        placeholder="Título"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      <input type="text" value={step.subtitle || ''}
+                        onChange={e => updateStep(i, { ...step, subtitle: e.target.value })}
+                        placeholder="Subtítulo"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      <textarea value={step.body}
+                        onChange={e => updateStep(i, { ...step, body: e.target.value })}
+                        placeholder="Contenido del email"
+                        rows={4}
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none resize-none" />
+                      <input type="text" value={step.imageUrl || ''}
+                        onChange={e => updateStep(i, { ...step, imageUrl: e.target.value })}
+                        placeholder="URL de la imagen"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      <input type="text" value={step.imageAlt || ''}
+                        onChange={e => updateStep(i, { ...step, imageAlt: e.target.value })}
+                        placeholder="Texto alternativo"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" value={step.ctaLabel || ''}
+                          onChange={e => updateStep(i, { ...step, ctaLabel: e.target.value })}
+                          placeholder="Texto del botón"
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                        <input type="text" value={step.ctaUrl || ''}
+                          onChange={e => updateStep(i, { ...step, ctaUrl: e.target.value })}
+                          placeholder="URL del botón"
+                          className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      </div>
+                      <input type="text" value={step.note || ''}
+                        onChange={e => updateStep(i, { ...step, note: e.target.value })}
+                        placeholder="Nota de pie"
+                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-1 focus:ring-emerald-500 outline-none" />
+                      {variableSelect(i)}
                     </div>
                   )}
 

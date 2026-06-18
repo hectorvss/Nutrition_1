@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../db/index.js';
 import { processTrigger } from './automations.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { sendPushToUser } from '../lib/push.js';
+import { sendManagerNotificationEmail } from '../lib/email.js';
 import { verifyManager as _verifyManager, verifyClient as _verifyClient, type AuthedRequest } from '../middleware/auth.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 
@@ -1887,6 +1888,16 @@ router.post('/client/submissions', verifyClient, async (req: AuthedRequest, res)
         body: 'Un cliente ha enviado un nuevo check-in.',
         url: '/check-ins',
         prefKey: 'new_client_check_ins_push',
+      }).catch(() => {});
+      sendManagerNotificationEmail(clientData.manager_id, 'new_client_check_ins_email', {
+        subject: { es: 'Nuevo check-in', en: 'New check-in' },
+        title: { es: 'Un cliente ha enviado un nuevo check-in', en: 'A client submitted a new check-in' },
+        body: {
+          es: 'Hay una nueva revisión esperando en tu panel. Entra para verla y responder cuando quieras.',
+          en: 'A new review is waiting in your dashboard. Open it whenever you are ready.',
+        },
+        ctaLabel: { es: 'Abrir check-ins', en: 'Open check-ins' },
+        ctaUrl: '/check-ins',
       }).catch(() => {});
     }
 

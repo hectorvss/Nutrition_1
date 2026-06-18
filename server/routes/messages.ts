@@ -4,6 +4,7 @@ import { supabaseAdmin } from '../db/index.js';
 import { authenticate } from '../middleware/auth.js';
 import { runWorkflowsForEvent } from './workflows.js';
 import { sendPushToUser } from '../lib/push.js';
+import { sendManagerNotificationEmail } from '../lib/email.js';
 import { parsePagination, buildPage } from '../lib/pagination.js';
 import { makeEnforceLimit } from '../lib/plans.js';
 
@@ -322,6 +323,19 @@ router.post('/', enforceMonthlyMessages, async (req: any, res) => {
       url: '/messages',
       prefKey: 'new_messages_push',
     }).catch(() => {});
+
+    if (isClientToManager) {
+      sendManagerNotificationEmail(receiver_id, 'new_messages_email', {
+        subject: { es: 'Nuevo mensaje', en: 'New message' },
+        title: { es: 'Tienes un nuevo mensaje', en: 'You have a new message' },
+        body: {
+          es: 'Un cliente te ha escrito. Entra en tu bandeja para responder cuando quieras.',
+          en: 'A client sent you a message. Open your inbox whenever you are ready to reply.',
+        },
+        ctaLabel: { es: 'Abrir mensajes', en: 'Open messages' },
+        ctaUrl: '/messages',
+      }).catch(() => {});
+    }
 
     res.json(message);
   } catch (error: any) {

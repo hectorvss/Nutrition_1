@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { WORKFLOW_CATALOG, localizeWorkflowStarterTemplates, validateWorkflow, type WorkflowNode, type WorkflowEdge } from './workflows';
+import { localizeWorkflows } from '../lib/seed-workflows';
+import { WORKFLOW_CATALOG, WORKFLOW_STARTER_TEMPLATES, localizeWorkflowStarterTemplates, validateWorkflow, type WorkflowNode, type WorkflowEdge } from './workflows';
 
 const trigger = (id = 'trigger'): WorkflowNode => ({
   id,
@@ -37,6 +38,13 @@ describe('WORKFLOW_CATALOG', () => {
         type: catalogNode.type as WorkflowNode['type'],
         key: catalogNode.key,
         label: catalogNode.label,
+        config: catalogNode.key === 'action.send_email'
+          ? {
+              subject: 'Test email',
+              title: 'Test email',
+              body: 'Hello {First Name}',
+            }
+          : undefined,
       };
       const edges = [edge('trigger', 'node')];
       if ('branches' in catalogNode && Array.isArray(catalogNode.branches)) {
@@ -91,5 +99,43 @@ describe('localizeWorkflowStarterTemplates', () => {
     const welcome = templates.find(t => t.id === 'tpl.payment_welcome');
     expect(welcome?.name).toBe('Bienvenida al suscribirse');
     expect((welcome?.nodes[1] as any).config.message).toContain('¡Bienvenido/a');
+  });
+});
+
+describe('workflow template gallery integrity', () => {
+  it('ships a broad starter gallery with validated email templates', () => {
+    expect(WORKFLOW_STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(14);
+
+    const emailTemplates = WORKFLOW_STARTER_TEMPLATES.filter(t =>
+      t.nodes.some((node: any) => node.key === 'action.send_email')
+    );
+    expect(emailTemplates.length).toBeGreaterThanOrEqual(8);
+
+    for (const tpl of WORKFLOW_STARTER_TEMPLATES) {
+      const result = validateWorkflow(tpl.nodes as unknown as WorkflowNode[], tpl.edges as unknown as WorkflowEdge[]);
+      expect(result.ok, `${tpl.id}: ${result.errors.join(', ')}`).toBe(true);
+    }
+  });
+
+  it('localizes every starter template without breaking validation', () => {
+    for (const lang of ['es', 'en']) {
+      const templates = localizeWorkflowStarterTemplates(lang);
+      expect(templates).toHaveLength(WORKFLOW_STARTER_TEMPLATES.length);
+      for (const tpl of templates) {
+        const result = validateWorkflow(tpl.nodes as WorkflowNode[], tpl.edges as WorkflowEdge[]);
+        expect(result.ok, `${lang}/${tpl.id}: ${result.errors.join(', ')}`).toBe(true);
+      }
+    }
+  });
+
+  it('keeps every seeded manager workflow graph valid', () => {
+    for (const lang of ['es', 'en']) {
+      const workflows = localizeWorkflows(lang);
+      expect(workflows.length).toBeGreaterThanOrEqual(15);
+      for (const wf of workflows) {
+        const result = validateWorkflow(wf.nodes as WorkflowNode[], wf.edges as WorkflowEdge[]);
+        expect(result.ok, `${lang}/${wf.name}: ${result.errors.join(', ')}`).toBe(true);
+      }
+    }
   });
 });

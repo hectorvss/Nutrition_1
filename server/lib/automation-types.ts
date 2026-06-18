@@ -11,6 +11,8 @@ export type AutomationStep =
   | { kind: 'stop_if'; conditionType: string; operator: string; value: string }
   // Notify the coach with a web-push notification (escalation without a task).
   | { kind: 'notify_coach'; title: string; body: string }
+  // Send a fully custom transactional email to the client.
+  | { kind: 'send_email'; subject?: string; title: string; subtitle?: string; body: string; imageUrl?: string; imageAlt?: string; ctaLabel?: string; ctaUrl?: string; note?: string }
   // Schedule a calendar event for the coach, `offsetDays` after the trigger.
   | { kind: 'create_event'; title: string; description?: string; eventType?: string; offsetDays?: number; time?: string; linkUrl?: string }
   // Assign a check-in template to the client so they get a fresh form.

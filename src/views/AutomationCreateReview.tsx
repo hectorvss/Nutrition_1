@@ -120,9 +120,11 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
     ? (wizardData.deliveryRules as any).steps
     : [{ kind: 'message', message: wizardData.message }];
   const messageSteps = flowSteps.filter(s => s.kind === 'message' && s.message?.trim());
+  const emailSteps = flowSteps.filter(s => s.kind === 'send_email');
   const STEP_LABEL: Record<string, string> = {
     message: 'Enviar mensaje', wait: 'Esperar / pausa', create_task: 'Escalada (tarea)',
     set_field: 'Etiquetar cliente', stop_if: 'Parar si…', notify_coach: 'Notificar al coach',
+    send_email: 'Enviar email',
     create_event: 'Agendar evento', assign_checkin: 'Asignar check-in',
     assign_onboarding: 'Asignar onboarding',
   };
@@ -134,6 +136,7 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
       case 'set_field':     return `${s.field} = ${s.value}`;
       case 'stop_if':       return `Parar si ${s.conditionType} ${s.operator} ${s.value}`;
       case 'notify_coach':  return `Notificación: ${s.title || '(sin título)'}`;
+      case 'send_email':    return `Email: ${s.subject || s.title || '(sin asunto)'}${s.subtitle ? ` · ${s.subtitle}` : ''}`;
       case 'create_event':  return `Evento "${s.title || '(sin título)'}" (${s.eventType || 'Call'}) en ${s.offsetDays ?? 0} días a las ${s.time || '09:00'}`;
       case 'assign_checkin':return `Asignar plantilla de check-in${s.templateId ? '' : ' (sin elegir)'}`;
       case 'assign_onboarding':return `Asignar formulario de onboarding${s.templateId ? '' : ' (sin elegir)'}`;
@@ -332,6 +335,50 @@ export default function AutomationCreateReview({ wizardData, onBack, onActivate 
               {/* Right: Phone preview */}
               <div className="lg:w-[400px] border-l border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-6 md:p-8 flex flex-col items-center justify-center relative">
                 <div className="absolute top-4 right-4 bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{t('preview_mode')}</div>
+                <div className="w-full max-w-[340px] mb-4">
+                  {emailSteps.length > 0 ? (
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email</div>
+                        <div className="text-sm font-bold text-slate-900 dark:text-white">
+                          {emailSteps[0].subject || emailSteps[0].title || '(sin asunto)'}
+                        </div>
+                        {emailSteps[0].subtitle && (
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{emailSteps[0].subtitle}</div>
+                        )}
+                      </div>
+                      {emailSteps[0].imageUrl && (
+                        <div className="px-4 pt-4">
+                          <img
+                            src={emailSteps[0].imageUrl}
+                            alt={emailSteps[0].imageAlt || emailSteps[0].title || 'Email preview'}
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="p-4 space-y-3">
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                          {emailSteps[0].title || emailSteps[0].subject || 'Título'}
+                        </div>
+                        {emailSteps[0].body && (
+                          <div className="text-xs leading-relaxed text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                            {getPreviewText(emailSteps[0].body)}
+                          </div>
+                        )}
+                        {emailSteps[0].ctaLabel && (
+                          <div className="inline-flex items-center rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white">
+                            {emailSteps[0].ctaLabel}
+                          </div>
+                        )}
+                        {emailSteps[0].note && (
+                          <div className="text-[11px] text-slate-400 whitespace-pre-wrap">
+                            {getPreviewText(emailSteps[0].note)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
                 <div className="w-[300px] bg-white dark:bg-slate-900 rounded-[3rem] border-8 border-slate-200 dark:border-slate-800 shadow-xl relative overflow-hidden flex flex-col transform scale-90 sm:scale-100 origin-top" style={{ height: 560 }}>
                   <div className="bg-slate-100 dark:bg-slate-800 h-14 flex items-center px-6 pt-2 justify-between shrink-0">
                     <span className="text-[10px] font-bold text-slate-800 dark:text-slate-300">{currentTime}</span>

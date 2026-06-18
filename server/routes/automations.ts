@@ -12,6 +12,7 @@ import { ACTIVATION_CONDITIONS, STOP_CONDITIONS, filterConditionsByTier } from '
 import { localizeFlowTemplates } from '../lib/automation-templates.js';
 import { getDefaultAutomations, getLocalizedAutomationPreview } from '../lib/automation-defaults.js';
 import { sendPushToUser } from '../lib/push.js';
+import { sendManagerNotificationEmail, sendClientTransactionalEmail } from '../lib/email.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 
 // Block automation creation once the manager hits their tier's active-automation
@@ -37,7 +38,13 @@ async function resolveManagerLanguage(managerId: string): Promise<'es' | 'en'> {
 function addAutomationPreview(automation: any, language: 'es' | 'en') {
   const steps = Array.isArray(automation?.delivery_rules?.steps) ? automation.delivery_rules.steps : [];
   const firstStepMessage = steps.find((step: any) => step?.kind === 'message')?.message || '';
-  const baseMessage = firstStepMessage || automation?.message || '';
+  const firstEmailStep = steps.find((step: any) => step?.kind === 'send_email') || null;
+  const emailText = firstEmailStep
+    ? [firstEmailStep.subject, firstEmailStep.title, firstEmailStep.subtitle, firstEmailStep.body]
+        .filter(Boolean)
+        .join(' ')
+    : '';
+  const baseMessage = firstStepMessage || emailText || automation?.message || '';
   return {
     ...automation,
     message_preview: getLocalizedAutomationPreview(automation?.trigger_id || '', baseMessage, language),
@@ -253,8 +260,9 @@ async function executeAutomationSteps(opts: {
   ctx: ExecutionContext;
   steps: AutomationStep[];
   fromStep: number;
+  dryRun?: boolean;
 }): Promise<'completed' | 'parked' | 'aborted'> {
-  const { ctx, steps, fromStep } = opts;
+  const { ctx, steps, fromStep, dryRun = false } = opts;
 
   for (let i = fromStep; i < steps.length; i++) {
     const step = steps[i];
@@ -274,6 +282,69 @@ async function executeAutomationSteps(opts: {
         automation_id: ctx.automation.id,
         client_id: ctx.clientId,
         trigger_context: { ...ctx.triggerPayload, step_index: i, step_kind: 'message' },
+        sent_at: new Date().toISOString(),
+      });
+      continue;
+    }
+
+    if (step.kind === 'send_email') {
+      const clientEmail = String(ctx.renderCtx?.client?.email || '').trim();
+      if (!clientEmail) {
+        await supabaseAdmin.from('automation_logs').insert({
+          automation_id: ctx.automation.id,
+          client_id: ctx.clientId,
+          trigger_context: { ...ctx.triggerPayload, step_index: i, step_kind: 'send_email', reason: 'missing_email' },
+          sent_at: new Date().toISOString(),
+        });
+        continue;
+      }
+      const subject = renderMessage(step.subject || step.title || 'Update', ctx.renderCtx);
+      const title = renderMessage(step.title || subject, ctx.renderCtx);
+      const subtitle = step.subtitle ? renderMessage(step.subtitle, ctx.renderCtx) : undefined;
+      const body = renderMessage(step.body || '', ctx.renderCtx);
+      const imageUrl = step.imageUrl ? renderMessage(step.imageUrl, ctx.renderCtx) : undefined;
+      const imageAlt = step.imageAlt ? renderMessage(step.imageAlt, ctx.renderCtx) : undefined;
+      const ctaLabel = step.ctaLabel ? renderMessage(step.ctaLabel, ctx.renderCtx) : undefined;
+      const ctaUrl = step.ctaUrl ? renderMessage(step.ctaUrl, ctx.renderCtx) : undefined;
+      const note = step.note ? renderMessage(step.note, ctx.renderCtx) : undefined;
+      if (dryRun) {
+        await supabaseAdmin.from('automation_logs').insert({
+          automation_id: ctx.automation.id,
+          client_id: ctx.clientId,
+          trigger_context: { ...ctx.triggerPayload, step_index: i, step_kind: 'send_email', dryRun: true, subject, title },
+          sent_at: new Date().toISOString(),
+        });
+        continue;
+      }
+      const sent = await sendClientTransactionalEmail({
+        to: clientEmail,
+        language: ctx.renderCtx.language === 'en' ? 'en' : 'es',
+        subject,
+        title,
+        subtitle,
+        body,
+        imageUrl,
+        imageAlt,
+        ctaLabel,
+        ctaUrl,
+        note,
+      });
+      if (!sent.ok && !sent.skipped) {
+        console.error(`[automation ${ctx.automation.id}] send_email step ${i} failed`);
+        return 'aborted';
+      }
+      await supabaseAdmin.from('automation_logs').insert({
+        automation_id: ctx.automation.id,
+        client_id: ctx.clientId,
+        trigger_context: {
+          ...ctx.triggerPayload,
+          step_index: i,
+          step_kind: 'send_email',
+          subject,
+          title,
+          subtitle,
+          has_image: !!imageUrl,
+        },
         sent_at: new Date().toISOString(),
       });
       continue;
@@ -342,10 +413,22 @@ async function executeAutomationSteps(opts: {
       // Web-push to the coach. Best-effort: a missing subscription must not
       // abort the chain.
       try {
+        const title = renderMessage(step.title || (ctx.renderCtx.language === 'en' ? 'Automation' : 'Automatización'), ctx.renderCtx);
+        const body = renderMessage(step.body || '', ctx.renderCtx);
         await sendPushToUser(ctx.managerId, {
-          title: renderMessage(step.title || (ctx.renderCtx.language === 'en' ? 'Automation' : 'Automatización'), ctx.renderCtx),
-          body: renderMessage(step.body || '', ctx.renderCtx),
+          title,
+          body,
           url: '/automations',
+        });
+        await sendManagerNotificationEmail(ctx.managerId, 'system_updates_email', {
+          subject: { es: 'Nueva alerta de automatización', en: 'New automation alert' },
+          title: { es: title, en: title },
+          body: {
+            es: body || 'Tienes una nueva alerta en automatizaciones.',
+            en: body || 'You have a new alert in automations.',
+          },
+          ctaLabel: { es: 'Abrir automatizaciones', en: 'Open automations' },
+          ctaUrl: '/automations',
         });
       } catch (e: any) {
         console.error(`[automation ${ctx.automation.id}] notify_coach step ${i} failed:`, e?.message);
@@ -846,10 +929,14 @@ router.get('/catalog', verifyManager, async (req: any, res) => {
  */
 async function validateSteps(req: any, steps: any): Promise<{ ok: boolean; error?: string; steps?: AutomationStep[] }> {
   if (!Array.isArray(steps) || steps.length === 0) return { ok: true, steps: [] };
-  const VALID_KINDS = ['message', 'wait', 'create_task', 'set_field', 'stop_if', 'notify_coach', 'create_event', 'assign_checkin', 'assign_onboarding'];
+  const VALID_KINDS = ['message', 'wait', 'create_task', 'set_field', 'stop_if', 'notify_coach', 'send_email', 'create_event', 'assign_checkin', 'assign_onboarding'];
   const cleaned: AutomationStep[] = [];
   for (const s of steps) {
     if (!s || typeof s !== 'object' || !VALID_KINDS.includes(s.kind)) continue;
+    if (s.kind === 'send_email') {
+      const hasContent = Boolean(String(s.subject || '').trim() || String(s.title || '').trim() || String(s.body || '').trim() || String(s.subtitle || '').trim());
+      if (!hasContent) return { ok: false, error: 'El email necesita al menos asunto, título o contenido.' };
+    }
     cleaned.push(s as AutomationStep);
   }
   // Cap por tier.

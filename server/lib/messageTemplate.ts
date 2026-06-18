@@ -41,6 +41,7 @@ const DASH = '—';
 /** Central catalog of recognized tokens. */
 export const KNOWN_VARIABLES: Array<{ token: string; resolve: (ctx: RenderContext) => string }> = [
   { token: '{Client Name}', resolve: ctx => String(ctx.client?.full_name || ctx.client?.email || fallback(ctx, 'tu cliente', 'your client')) },
+  { token: '{Client Email}', resolve: ctx => String(ctx.client?.email || fallback(ctx, 'tu email del cliente', 'your client email')) },
   { token: '{First Name}', resolve: ctx => {
       const n = ctx.client?.full_name || ctx.client?.email || fallback(ctx, 'tu cliente', 'your client');
       return String(n).split(' ')[0];

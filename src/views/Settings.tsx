@@ -2038,17 +2038,20 @@ function IntegrationsSettings() {
         {pushMsg && <div className="mb-4 text-xs font-semibold text-red-600 dark:text-red-400">{pushMsg}</div>}
         <div className="mb-6" />
         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 py-3 bg-slate-50 dark:bg-slate-800 px-4 rounded-t-lg items-center">
-            <div className="md:col-span-9 font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('event_type')}</div>
-            <div className="md:col-span-3 text-center font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('push')}</div>
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px_140px] gap-4 py-3 bg-slate-50 dark:bg-slate-800 px-4 rounded-t-lg items-center">
+            <div className="font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('event_type')}</div>
+            <div className="text-center font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('push')}</div>
+            <div className="text-center font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('email')}</div>
           </div>
           {[
             { id: 'new_client_check_ins', title: t('checkins'), desc: t('new_client_check_ins_desc') },
             { id: 'new_messages', title: t('messages'), desc: t('new_messages_desc') },
-            { id: 'payments', title: t('payments', { defaultValue: 'Pagos' }), desc: t('payments_push_desc', { defaultValue: 'Avísame cuando un cliente paga una suscripción o cobro.' }) },
+            { id: 'payments', title: t('stripe_payments', { defaultValue: 'Pagos' }), desc: t('payments_push_desc', { defaultValue: 'Avísame cuando un cliente paga una suscripción o cobro.' }) },
+            { id: 'appointment_reminders', title: t('appointment_reminders', { defaultValue: 'Recordatorios de cita' }), desc: t('appointment_reminders_desc') },
+            { id: 'system_updates', title: t('system_updates', { defaultValue: 'Actualizaciones del sistema' }), desc: t('system_updates_desc') },
           ].map((item, i) => (
-            <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-4 py-4 px-4 items-center">
-              <div className="md:col-span-9">
+            <div key={i} className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_140px_140px] gap-4 py-4 px-4 items-center">
+              <div>
                 <h4 className="font-semibold text-slate-900 dark:text-white text-sm">{item.title}</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.desc}</p>
               </div>
@@ -2057,6 +2060,14 @@ function IntegrationsSettings() {
                   type="checkbox"
                   checked={settings.notification_prefs?.[`${item.id}_push`] ?? true}
                   onChange={() => handleTogglePreference(`${item.id}_push`)}
+                  className="w-5 h-5 text-emerald-500 border-slate-300 dark:border-slate-600 dark:bg-slate-800 rounded focus:ring-emerald-500/20"
+                />
+              </div>
+              <div className="md:col-span-3 flex justify-center">
+                <input
+                  type="checkbox"
+                  checked={settings.notification_prefs?.[`${item.id}_email`] ?? true}
+                  onChange={() => handleTogglePreference(`${item.id}_email`)}
                   className="w-5 h-5 text-emerald-500 border-slate-300 dark:border-slate-600 dark:bg-slate-800 rounded focus:ring-emerald-500/20"
                 />
               </div>

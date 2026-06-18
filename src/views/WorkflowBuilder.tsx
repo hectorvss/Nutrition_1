@@ -14,7 +14,7 @@ import {
   AlarmClockOff, CalendarDays, BadgeCheck, ClipboardList, CalendarClock,
   Database, Calculator, CalendarPlus, ClipboardPlus, UserCog, PenSquare, BellRing,
   Cake, UserSearch, FileSearch, Bell, Tag,
-  CreditCard, DollarSign, XCircle,
+  CreditCard, DollarSign, XCircle, Mail, Utensils, Star,
 } from 'lucide-react';
 import { fetchWithAuth } from '../api';
 import { useLanguage } from '../context/LanguageContext';
@@ -43,7 +43,7 @@ const ICONS: Record<string, React.ElementType> = {
   Database, Calculator,
   CalendarPlus, ClipboardPlus, UserCog, PenSquare, BellRing,
   Cake, UserSearch, FileSearch, Bell, Tag,
-  CreditCard, DollarSign, XCircle,
+  CreditCard, DollarSign, XCircle, Mail, Utensils, Star,
 };
 
 // Minimalist palette: one colour accent per node type rendered as a thin left

@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS public.manager_settings (
         "new_client_check_ins_push": true,
         "new_messages_email": false,
         "new_messages_push": true,
+        "payments_email": true,
+        "payments_push": true,
         "appointment_reminders_email": true,
         "appointment_reminders_push": true,
         "system_updates_email": true,
