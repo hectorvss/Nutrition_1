@@ -4,7 +4,7 @@ SaaS para entrenadores y nutricionistas: gestiona clientes, asigna planes de
 nutrición y entrenamiento, registra check-ins semanales, chatea con clientes,
 automatiza mensajería y construye workflows visuales sin código.
 
-**Demo en producción:** [nutrition-1-zeta.vercel.app](https://nutrition-1-zeta.vercel.app)
+**Demo en producción:** [nuly.app](https://nuly.app)
 
 ---
 

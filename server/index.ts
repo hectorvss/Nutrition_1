@@ -29,10 +29,13 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3005;
 
 // Middleware — CORS restringido a orígenes conocidos
-const frontendUrl = (process.env.FRONTEND_URL || 'https://nutrition-1-zeta.vercel.app').replace(/\/+$/, '');
+const frontendUrl = (process.env.FRONTEND_URL || 'https://nuly.app').replace(/\/+$/, '');
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'https://nuly.app',
+  'https://www.nuly.app',
+  'https://nutrition-1-zeta.vercel.app',
   frontendUrl,
 ].filter(Boolean);
 
