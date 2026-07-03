@@ -232,7 +232,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                   </div>
                   <div className="mx-auto bg-gray-100/50 rounded-xl px-4 py-1.5 text-xs text-gray-400 font-medium flex items-center gap-2 w-1/3">
                     <Search className="w-3 h-3" />
-                    nutrifit.pro/dashboard
+                    nuly.app/dashboard
                   </div>
                 </div>
                 <div className="flex-1 relative overflow-hidden bg-white">
@@ -284,7 +284,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_client_management_highlight')}
               description={t('landing_client_management_description')}
               gradientClass="gradient-bg-writing"
-              url="nutrifit.pro/clients"
+              url="nuly.app/clients"
               imageSrc="/landing/feature-clients.png"
               imageAlt="Lista de clientes del manager con plan, adherencia y próxima cita"
             />
@@ -295,7 +295,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_nutrition_planning_highlight')}
               description={t('landing_nutrition_planning_description')}
               gradientClass="gradient-bg-learning"
-              url="nutrifit.pro/nutrition"
+              url="nuly.app/nutrition"
               imageSrc="/landing/feature-nutrition.png"
               imageAlt="Planes de nutrición por cliente con objetivo, macros y kcal"
               reverse
@@ -307,7 +307,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_progress_tracking_highlight')}
               description={t('landing_progress_tracking_description')}
               gradientClass="gradient-bg-planning"
-              url="nutrifit.pro/analytics"
+              url="nuly.app/analytics"
               imageSrc="/landing/feature-progress.png"
               imageAlt="Panel de analíticas: clientes activos, retención, MRR, ARR y churn rate"
             />
@@ -318,7 +318,7 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
               highlight={t('landing_proactive_followup_highlight')}
               description={t('landing_proactive_followup_description')}
               gradientClass="gradient-bg-shopping"
-              url="nutrifit.pro/automations"
+              url="nuly.app/automations"
               imageSrc="/landing/feature-automations.png"
               imageAlt="Workflows de automatización: renovación de plan, check-in semanal, alertas de churn"
               reverse
@@ -338,14 +338,14 @@ export default function LandingPage({ onGetStarted, onLogin }: LandingPageProps)
                 ? 'arrastrando bloques: detecta riesgo de abandono, reacciona a la adherencia y dispara mensajes, tareas o alertas — todo en automático.'
                 : 'by dragging blocks: detect churn risk, react to adherence and fire messages, tasks or alerts — all on autopilot.'}
               gradientClass="gradient-bg-privacy"
-              url="nutrifit.pro/automations/workflow"
+              url="nuly.app/automations/workflow"
               imageSrc="/landing/feature-workflow.png"
               imageAlt="Constructor visual de workflows: flujo Churn Radar con triggers, ramas condicionales y múltiples acciones"
             />
 
             {/* Tras ver el producto: primero la calculadora de ROI (cuanto
                 te devuelve — valor concreto), luego la comparativa vs Excel /
-                WhatsApp / CRM (por que NutriFit y no lo que ya usas). El bloque
+                WhatsApp / CRM (por que Nuly y no lo que ya usas). El bloque
                 "para quien es" se movio a la pagina Soluciones, su contexto
                 natural. */}
             <ROISection />

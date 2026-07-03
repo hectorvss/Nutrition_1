@@ -5,9 +5,9 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {
-    data = { title: 'NutriFit', body: event.data ? event.data.text() : '' };
+    data = { title: 'Nuly', body: event.data ? event.data.text() : '' };
   }
-  const title = data.title || 'NutriFit';
+  const title = data.title || 'Nuly';
   const options = {
     body: data.body || '',
     badge: '/favicon.ico',

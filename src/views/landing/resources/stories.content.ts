@@ -102,8 +102,8 @@ export const stories: ResourceArticle[] = [
       },
       {
         type: 'p',
-        es: 'Migrar de WhatsApp a un sistema ordenado no requiere un fin de semana entero: basta con dar de alta a tus clientes activos uno a uno y dejar que la plataforma se encargue del resto. Estos son los pasos exactos que siguió Marta en NutriFit.',
-        en: 'Moving from WhatsApp to a tidy system does not take a whole weekend: you just add your active clients one by one and let the platform handle the rest. These are the exact steps Marta followed in NutriFit.',
+        es: 'Migrar de WhatsApp a un sistema ordenado no requiere un fin de semana entero: basta con dar de alta a tus clientes activos uno a uno y dejar que la plataforma se encargue del resto. Estos son los pasos exactos que siguió Marta en Nuly.',
+        en: 'Moving from WhatsApp to a tidy system does not take a whole weekend: you just add your active clients one by one and let the platform handle the rest. These are the exact steps Marta followed in Nuly.',
       },
       {
         type: 'steps',
@@ -223,8 +223,8 @@ export const stories: ResourceArticle[] = [
       },
       {
         type: 'p',
-        es: 'La clave del estudio de Javier fue convertir su mejor proceso en plantillas que cualquier entrenador pudiera reutilizar, y dejar que las automatizaciones vigilaran el suelo mínimo de calidad. Así lo montaron en NutriFit.',
-        en: 'The key for Javier’s studio was turning their best process into templates any trainer could reuse, and letting automations watch over the minimum quality floor. This is how they set it up in NutriFit.',
+        es: 'La clave del estudio de Javier fue convertir su mejor proceso en plantillas que cualquier entrenador pudiera reutilizar, y dejar que las automatizaciones vigilaran el suelo mínimo de calidad. Así lo montaron en Nuly.',
+        en: 'The key for Javier’s studio was turning their best process into templates any trainer could reuse, and letting automations watch over the minimum quality floor. This is how they set it up in Nuly.',
       },
       {
         type: 'steps',
@@ -352,8 +352,8 @@ export const stories: ResourceArticle[] = [
       },
       {
         type: 'p',
-        es: 'El salto de Lucía no vino de trabajar más, sino de quitarse de encima las tareas que no cobraba: cobros, recordatorios y planes hechos desde cero. Estos son los pasos que liberaron sus tardes en NutriFit.',
-        en: 'Lucía’s leap did not come from working more, but from shedding the tasks she was not billing for: payments, reminders and plans built from scratch. These are the steps that freed up her afternoons in NutriFit.',
+        es: 'El salto de Lucía no vino de trabajar más, sino de quitarse de encima las tareas que no cobraba: cobros, recordatorios y planes hechos desde cero. Estos son los pasos que liberaron sus tardes en Nuly.',
+        en: 'Lucía’s leap did not come from working more, but from shedding the tasks she was not billing for: payments, reminders and plans built from scratch. These are the steps that freed up her afternoons in Nuly.',
       },
       {
         type: 'steps',

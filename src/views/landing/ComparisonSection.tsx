@@ -9,32 +9,32 @@ import { useLanguage } from '../../context/LanguageContext';
  * herramienta.
  *
  * Rediseno (mayo 2026):
- *  - La columna NutriFit ya no es un bloque solido negro (agresivo y
+ *  - La columna Nuly ya no es un bloque solido negro (agresivo y
  *    rompia la armonia del fondo claro). Ahora va con borde y fondo
  *    esmeralda discreto + badge "RECOMENDADO" sobre el header, mismo
  *    lenguaje visual que el resto de la landing.
  *  - Las coberturas (% por columna) se renderizan como barra horizontal
  *    debajo del label, no como dato escondido en gris pequeno. De un
- *    vistazo el visitante ve "Excel 17% vs NutriFit 100%".
+ *    vistazo el visitante ve "Excel 17% vs Nuly 100%".
  */
 type Cell = true | false | 'partial';
 
-const rows: { es: string; en: string; excel: Cell; whatsapp: Cell; crm: Cell; nutrifit: Cell }[] = [
-  { es: 'Portal personalizado para cada cliente',          en: 'Personalised portal per client',                  excel: false,    whatsapp: false,    crm: 'partial', nutrifit: true },
-  { es: 'Planes de nutrición con macros automáticos',      en: 'Nutrition plans with automatic macros',           excel: 'partial', whatsapp: false,    crm: false,     nutrifit: true },
-  { es: 'Planes de entreno con bloques y progresión',      en: 'Training plans with blocks and progression',      excel: 'partial', whatsapp: false,    crm: false,     nutrifit: true },
-  { es: 'Recetas detalladas reutilizables',                en: 'Reusable, detailed recipes',                      excel: false,    whatsapp: false,    crm: false,     nutrifit: true },
-  { es: 'Check-ins semanales estructurados',               en: 'Structured weekly check-ins',                     excel: 'partial', whatsapp: 'partial', crm: 'partial', nutrifit: true },
-  { es: 'Mensajería 1-a-1 con histórico',                  en: '1-on-1 messaging with history',                   excel: false,    whatsapp: true,     crm: 'partial', nutrifit: true },
-  { es: 'Notificaciones push (web + móvil)',               en: 'Push notifications (web + mobile)',               excel: false,    whatsapp: true,     crm: 'partial', nutrifit: true },
-  { es: 'Alertas automáticas de adherencia',               en: 'Automatic adherence alerts',                      excel: false,    whatsapp: false,    crm: false,     nutrifit: true },
-  { es: 'Workflow Builder visual',                         en: 'Visual workflow builder',                         excel: false,    whatsapp: false,    crm: 'partial', nutrifit: true },
-  { es: 'Calendario sincronizado (Google)',                en: 'Synchronised calendar (Google)',                  excel: false,    whatsapp: false,    crm: 'partial', nutrifit: true },
-  { es: 'Cobros recurrentes (Stripe) integrados',          en: 'Integrated recurring billing (Stripe)',           excel: false,    whatsapp: false,    crm: 'partial', nutrifit: true },
-  { es: 'Analíticas de progreso por cliente',              en: 'Per-client progress analytics',                   excel: 'partial', whatsapp: false,    crm: 'partial', nutrifit: true },
-  { es: 'Aislamiento real coach ↔ cliente',                en: 'Real coach ↔ client isolation',                   excel: false,    whatsapp: false,    crm: 'partial', nutrifit: true },
-  { es: 'Datos cifrados en infraestructura UE',            en: 'Encrypted data on EU infrastructure',             excel: false,    whatsapp: false,    crm: 'partial', nutrifit: true },
-  { es: 'Bilingüe ES/EN listo para usar',                  en: 'Bilingual ES/EN out of the box',                  excel: 'partial', whatsapp: true,     crm: 'partial', nutrifit: true },
+const rows: { es: string; en: string; excel: Cell; whatsapp: Cell; crm: Cell; nuly: Cell }[] = [
+  { es: 'Portal personalizado para cada cliente',          en: 'Personalised portal per client',                  excel: false,    whatsapp: false,    crm: 'partial', nuly: true },
+  { es: 'Planes de nutrición con macros automáticos',      en: 'Nutrition plans with automatic macros',           excel: 'partial', whatsapp: false,    crm: false,     nuly: true },
+  { es: 'Planes de entreno con bloques y progresión',      en: 'Training plans with blocks and progression',      excel: 'partial', whatsapp: false,    crm: false,     nuly: true },
+  { es: 'Recetas detalladas reutilizables',                en: 'Reusable, detailed recipes',                      excel: false,    whatsapp: false,    crm: false,     nuly: true },
+  { es: 'Check-ins semanales estructurados',               en: 'Structured weekly check-ins',                     excel: 'partial', whatsapp: 'partial', crm: 'partial', nuly: true },
+  { es: 'Mensajería 1-a-1 con histórico',                  en: '1-on-1 messaging with history',                   excel: false,    whatsapp: true,     crm: 'partial', nuly: true },
+  { es: 'Notificaciones push (web + móvil)',               en: 'Push notifications (web + mobile)',               excel: false,    whatsapp: true,     crm: 'partial', nuly: true },
+  { es: 'Alertas automáticas de adherencia',               en: 'Automatic adherence alerts',                      excel: false,    whatsapp: false,    crm: false,     nuly: true },
+  { es: 'Workflow Builder visual',                         en: 'Visual workflow builder',                         excel: false,    whatsapp: false,    crm: 'partial', nuly: true },
+  { es: 'Calendario sincronizado (Google)',                en: 'Synchronised calendar (Google)',                  excel: false,    whatsapp: false,    crm: 'partial', nuly: true },
+  { es: 'Cobros recurrentes (Stripe) integrados',          en: 'Integrated recurring billing (Stripe)',           excel: false,    whatsapp: false,    crm: 'partial', nuly: true },
+  { es: 'Analíticas de progreso por cliente',              en: 'Per-client progress analytics',                   excel: 'partial', whatsapp: false,    crm: 'partial', nuly: true },
+  { es: 'Aislamiento real coach ↔ cliente',                en: 'Real coach ↔ client isolation',                   excel: false,    whatsapp: false,    crm: 'partial', nuly: true },
+  { es: 'Datos cifrados en infraestructura UE',            en: 'Encrypted data on EU infrastructure',             excel: false,    whatsapp: false,    crm: 'partial', nuly: true },
+  { es: 'Bilingüe ES/EN listo para usar',                  en: 'Bilingual ES/EN out of the box',                  excel: 'partial', whatsapp: true,     crm: 'partial', nuly: true },
 ];
 
 const cellRender = (v: Cell, highlight?: boolean) => {
@@ -60,10 +60,10 @@ export default function ComparisonSection() {
   const excelCov = coverage((r) => r.excel);
   const whatsCov = coverage((r) => r.whatsapp);
   const crmCov   = coverage((r) => r.crm);
-  const nfCov    = coverage((r) => r.nutrifit);
+  const nfCov    = coverage((r) => r.nuly);
 
   const columns: {
-    key: 'excel' | 'whatsapp' | 'crm' | 'nutrifit';
+    key: 'excel' | 'whatsapp' | 'crm' | 'nuly';
     label: string;
     coverage: number;
     highlight?: boolean;
@@ -71,7 +71,7 @@ export default function ComparisonSection() {
     { key: 'excel',    label: isEs ? 'Excel / Sheets' : 'Excel / Sheets', coverage: excelCov },
     { key: 'whatsapp', label: 'WhatsApp',                                  coverage: whatsCov },
     { key: 'crm',      label: isEs ? 'CRM genérico'   : 'Generic CRM',    coverage: crmCov },
-    { key: 'nutrifit', label: 'NutriFit',                                  coverage: nfCov, highlight: true },
+    { key: 'nuly', label: 'Nuly',                                  coverage: nfCov, highlight: true },
   ];
 
   return (
@@ -86,7 +86,7 @@ export default function ComparisonSection() {
           viewport={{ once: true }}
           className="text-3xl md:text-5xl font-medium leading-tight tracking-tight"
         >
-          {isEs ? 'NutriFit frente a lo que usas ahora.' : 'NutriFit vs. what you use today.'}
+          {isEs ? 'Nuly frente a lo que usas ahora.' : 'Nuly vs. what you use today.'}
         </motion.h2>
         <p className="text-gray-500 mt-4 max-w-xl mx-auto text-sm">
           {isEs
@@ -96,7 +96,7 @@ export default function ComparisonSection() {
       </div>
 
       {/* Resumen de cobertura — barras horizontales por herramienta. Es lo
-          primero que ve el visitante: "Excel 17%, NutriFit 100%". Mucho mas
+          primero que ve el visitante: "Excel 17%, Nuly 100%". Mucho mas
           legible que el % escondido en el header de tabla. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         {columns.map((c) => (
@@ -140,7 +140,7 @@ export default function ComparisonSection() {
         ))}
       </div>
 
-      {/* Tabla detallada. La columna NutriFit ahora va con tinte esmeralda
+      {/* Tabla detallada. La columna Nuly ahora va con tinte esmeralda
           (no negro), borde lateral y badge sobre el header. */}
       <div className="overflow-x-auto rounded-3xl border border-gray-100 bg-white shadow-[0_20px_60px_-20px_rgba(0,0,0,0.06)]">
         <table className="w-full text-sm min-w-[760px]">
@@ -172,7 +172,7 @@ export default function ComparisonSection() {
                 <td className="px-4 py-3.5">{cellRender(r.excel)}</td>
                 <td className="px-4 py-3.5">{cellRender(r.whatsapp)}</td>
                 <td className="px-4 py-3.5">{cellRender(r.crm)}</td>
-                <td className="px-4 py-3.5 bg-emerald-50/40 border-x border-emerald-200/40">{cellRender(r.nutrifit, true)}</td>
+                <td className="px-4 py-3.5 bg-emerald-50/40 border-x border-emerald-200/40">{cellRender(r.nuly, true)}</td>
               </tr>
             ))}
           </tbody>

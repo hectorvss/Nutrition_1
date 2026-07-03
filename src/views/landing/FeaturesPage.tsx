@@ -57,7 +57,7 @@ export default function FeaturesPage({ onBack, onDemo }: FeaturesPageProps) {
           {isEs ? 'Capacidades' : 'Capabilities'}
         </p>
         <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-6 leading-tight">
-          {isEs ? 'Todo lo que NutriFit hace por ti.' : 'Everything NutriFit does for you.'}
+          {isEs ? 'Todo lo que Nuly hace por ti.' : 'Everything Nuly does for you.'}
         </h1>
         <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-16">
           {isEs

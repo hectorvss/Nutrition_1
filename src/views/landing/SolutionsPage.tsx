@@ -30,7 +30,7 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
   const { language } = useLanguage();
   const isEs = language === 'es';
 
-  // Cada problema = título + 3 bullets "antes" + 3 bullets "con NutriFit"
+  // Cada problema = título + 3 bullets "antes" + 3 bullets "con Nuly"
   // + 1 línea de proof. Sin párrafos largos.
   const problems = [
     {
@@ -313,11 +313,11 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
               <div className="col-span-3 md:col-span-2 px-5 py-3">{isEs ? 'Cuándo' : 'When'}</div>
               <div className="col-span-9 md:col-span-5 px-5 py-3 flex items-center gap-2">
                 <XCircle className="w-3.5 h-3.5 text-gray-300" />
-                {isEs ? 'Sin NutriFit' : 'Without NutriFit'}
+                {isEs ? 'Sin Nuly' : 'Without Nuly'}
               </div>
               <div className="hidden md:flex col-span-5 px-5 py-3 items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                {isEs ? 'Con NutriFit' : 'With NutriFit'}
+                {isEs ? 'Con Nuly' : 'With Nuly'}
               </div>
             </div>
             {dayInLife.map((row, idx) => {
@@ -343,8 +343,8 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
 
         {/* 7 fricciones — mismo lenguaje visual que la tabla "antes y
             después". Una sola tabla con 7 filas, columnas Fricción /
-            Sin NutriFit / Con NutriFit. Sin tachado, sin "En el producto".
-            "Sin NutriFit" en gris claro, "Con NutriFit" en negro con check. */}
+            Sin Nuly / Con Nuly. Sin tachado, sin "En el producto".
+            "Sin Nuly" en gris claro, "Con Nuly" en negro con check. */}
         <div className="bg-white border border-gray-100 rounded-3xl overflow-hidden text-left">
           <div className="grid grid-cols-12 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 bg-gray-50/50 border-b border-gray-100">
             <div className="col-span-12 md:col-span-3 px-6 py-4">
@@ -352,11 +352,11 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
             </div>
             <div className="col-span-6 md:col-span-4 px-6 py-4 flex items-center gap-2">
               <XCircle className="w-3.5 h-3.5 text-gray-300" />
-              {isEs ? 'Sin NutriFit' : 'Without NutriFit'}
+              {isEs ? 'Sin Nuly' : 'Without Nuly'}
             </div>
             <div className="col-span-6 md:col-span-5 px-6 py-4 flex items-center gap-2 border-l border-gray-100">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-              {isEs ? 'Con NutriFit' : 'With NutriFit'}
+              {isEs ? 'Con Nuly' : 'With Nuly'}
             </div>
           </div>
           {problems.map(({ Icon, es, en }, i) => {
@@ -388,7 +388,7 @@ export default function SolutionsPage({ onBack, onDemo, onStart }: SolutionsPage
                   </ul>
                 </div>
 
-                {/* Columna 3: Con NutriFit (texto en negro, sin "En el producto") */}
+                {/* Columna 3: Con Nuly (texto en negro, sin "En el producto") */}
                 <div className="col-span-12 md:col-span-5 px-6 py-6 text-[14px] text-gray-900 md:border-l border-gray-100">
                   <ul className="space-y-1.5">
                     {p.after.map((a, j) => (

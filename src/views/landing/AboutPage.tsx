@@ -36,15 +36,15 @@ export default function AboutPage({ onBack, onDemo }: AboutPageProps) {
   return (
     <div className="pt-32 pb-20 px-4 max-w-5xl mx-auto text-center">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
-        {isEs ? 'Sobre NutriFit' : 'About NutriFit'}
+        {isEs ? 'Sobre Nuly' : 'About Nuly'}
       </p>
       <h1 className="text-4xl md:text-6xl font-medium tracking-tight mb-6 leading-tight">
         {isEs ? 'Hecho por coaches\npara coaches.' : 'Made by coaches\nfor coaches.'}
       </h1>
       <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-20 whitespace-pre-line">
         {isEs
-          ? 'Construimos NutriFit porque vivimos la frustración en primera persona: planes en hojas de cálculo, mensajes en WhatsApp y un follow-up que se cae con tres clientes.\n\nNuestra misión es darte un sistema profesional sin la complejidad de los grandes ERPs.'
-          : 'We built NutriFit because we lived the frustration first-hand: plans on spreadsheets, messages on WhatsApp and follow-up that collapses with three clients.\n\nOur mission is to give you a professional system without the complexity of huge ERPs.'}
+          ? 'Construimos Nuly porque vivimos la frustración en primera persona: planes en hojas de cálculo, mensajes en WhatsApp y un follow-up que se cae con tres clientes.\n\nNuestra misión es darte un sistema profesional sin la complejidad de los grandes ERPs.'
+          : 'We built Nuly because we lived the frustration first-hand: plans on spreadsheets, messages on WhatsApp and follow-up that collapses with three clients.\n\nOur mission is to give you a professional system without the complexity of huge ERPs.'}
       </p>
 
       <h2 className="text-2xl font-medium tracking-tight mb-8">{isEs ? 'Lo que nos guía' : 'What guides us'}</h2>

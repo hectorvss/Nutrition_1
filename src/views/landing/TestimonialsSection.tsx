@@ -32,9 +32,9 @@ const featured: Testimonial = {
   roleEs: 'Coach independiente · Madrid',
   roleEn: 'Independent coach · Madrid',
   quoteEs:
-    'Llevaba todo en Excel y WhatsApp y estaba al límite con 14 clientes. En tres meses con NutriFit pasé a 28 sin trabajar más horas — el seguimiento prácticamente se gestiona solo y mis clientes notan que esto va en serio.',
+    'Llevaba todo en Excel y WhatsApp y estaba al límite con 14 clientes. En tres meses con Nuly pasé a 28 sin trabajar más horas — el seguimiento prácticamente se gestiona solo y mis clientes notan que esto va en serio.',
   quoteEn:
-    'I ran everything on Excel and WhatsApp and was maxed out at 14 clients. Three months into NutriFit I was at 28 without working more hours — the follow-up runs itself and my clients can tell this is serious.',
+    'I ran everything on Excel and WhatsApp and was maxed out at 14 clients. Three months into Nuly I was at 28 without working more hours — the follow-up runs itself and my clients can tell this is serious.',
   metricValue: '14 → 28',
   metricEs: 'clientes en 3 meses',
   metricEn: 'clients in 3 months',

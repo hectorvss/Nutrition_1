@@ -84,7 +84,7 @@ export default function LegalPage({ kind, onBack }: LegalPageProps) {
           },
           {
             heading: '4. Propiedad intelectual',
-            body: 'El código, diseño y marcas de la plataforma son propiedad de NutriFit. El contenido que tú o tus clientes generáis sigue siendo vuestro.',
+            body: 'El código, diseño y marcas de la plataforma son propiedad de Nuly. El contenido que tú o tus clientes generáis sigue siendo vuestro.',
           },
           {
             heading: '5. Limitación de responsabilidad',
@@ -110,7 +110,7 @@ export default function LegalPage({ kind, onBack }: LegalPageProps) {
           },
           {
             heading: '4. Intellectual property',
-            body: 'The platform code, design and trademarks belong to NutriFit. The content you or your clients generate remains yours.',
+            body: 'The platform code, design and trademarks belong to Nuly. The content you or your clients generate remains yours.',
           },
           {
             heading: '5. Limitation of liability',

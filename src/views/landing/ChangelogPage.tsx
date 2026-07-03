@@ -54,8 +54,8 @@ export default function ChangelogPage({ onBack }: ChangelogPageProps) {
       </h1>
       <p className="text-gray-500 text-lg max-w-2xl mx-auto mb-16">
         {isEs
-          ? 'Actualizamos NutriFit casi cada semana. Aquí va el rastro público de lo que cambia.'
-          : 'We ship NutriFit almost weekly. This is the public trail of what changes.'}
+          ? 'Actualizamos Nuly casi cada semana. Aquí va el rastro público de lo que cambia.'
+          : 'We ship Nuly almost weekly. This is the public trail of what changes.'}
       </p>
 
       <div className="space-y-12 text-center">

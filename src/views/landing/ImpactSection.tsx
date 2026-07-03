@@ -7,7 +7,7 @@ import { useLanguage } from '../../context/LanguageContext';
  * dos barras por tarea, longitud proporcional a los minutos.
  *
  * El factor "wow" viene de la diferencia visible entre la barra gris (proceso
- * manual de hoy) y la barra negra (NutriFit). Los numeros son estimaciones
+ * manual de hoy) y la barra negra (Nuly). Los numeros son estimaciones
  * realistas basadas en flujos tipicos.
  */
 const tasks = [
@@ -46,8 +46,8 @@ export default function ImpactSection() {
         </motion.h2>
         <p className="text-gray-500 mt-4 max-w-xl mx-auto text-sm">
           {isEs
-            ? 'Minutos medios por tarea, basados en flujos reales de coaches que usan NutriFit a diario.'
-            : 'Average minutes per task, based on real-world flows from coaches who use NutriFit daily.'}
+            ? 'Minutos medios por tarea, basados en flujos reales de coaches que usan Nuly a diario.'
+            : 'Average minutes per task, based on real-world flows from coaches who use Nuly daily.'}
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export default function ImpactSection() {
           </span>
           <span className="flex items-center gap-2 text-black font-medium">
             <span className="w-3 h-3 rounded-sm bg-black" />
-            NutriFit
+            Nuly
           </span>
         </div>
 
@@ -123,7 +123,7 @@ export default function ImpactSection() {
           <div>
             <div className="text-2xl md:text-3xl font-medium tracking-tight">{totalAfter} min</div>
             <div className="text-[10px] uppercase tracking-widest text-gray-400 font-bold mt-1">
-              {isEs ? 'Con NutriFit' : 'With NutriFit'}
+              {isEs ? 'Con Nuly' : 'With Nuly'}
             </div>
           </div>
           <div>

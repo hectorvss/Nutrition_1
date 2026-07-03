@@ -7,8 +7,8 @@ interface DemoPageProps {
 }
 
 // Email destino de las solicitudes de demo. Cuando dispongamos del buzon real
-// (p.ej. demo@nutrifit.pro) basta con cambiar esta constante.
-const DEMO_INBOX = 'hello@nutrifit.pro';
+// (p.ej. demo@nuly.app) basta con cambiar esta constante.
+const DEMO_INBOX = 'hello@nuly.app';
 
 /**
  * Pagina "Reservar demo": formulario con nombre, email, num. de clientes y
@@ -27,7 +27,7 @@ export default function DemoPage({ onBack }: DemoPageProps) {
     e.preventDefault();
     if (!form.email || !form.name) return;
     const subject = encodeURIComponent(
-      isEs ? `Demo NutriFit · ${form.name}` : `NutriFit demo · ${form.name}`,
+      isEs ? `Demo Nuly · ${form.name}` : `Nuly demo · ${form.name}`,
     );
     const body = encodeURIComponent(
       [

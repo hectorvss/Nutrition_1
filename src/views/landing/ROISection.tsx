@@ -18,7 +18,7 @@ import { useLanguage } from '../../context/LanguageContext';
  *    que es el numero que mas movera al coach que ya esta lleno.
  *
  * Modelo de calculo (transparente y editable desde el codigo):
- *  - savingsRate = 0.7  → NutriFit automatiza el 70% del tiempo
+ *  - savingsRate = 0.7  → Nuly automatiza el 70% del tiempo
  *                          repetitivo (check-ins, planes, mensajes).
  *  - hoursTotal       = clientes × horasPorCliente
  *  - hoursSaved       = hoursTotal × savingsRate
@@ -28,7 +28,7 @@ import { useLanguage } from '../../context/LanguageContext';
  *  - extraCapacity    = hoursSaved / horasPorCliente  (clientes adicionales).
  *  - roi              = moneyValueOfTime / 79€  (plan Scale).
  */
-const NUTRIFIT_PRICE_MONTH = 79;
+const NULY_PRICE_MONTH = 79;
 const SAVINGS_RATE = 0.7;
 
 export default function ROISection() {
@@ -47,8 +47,8 @@ export default function ROISection() {
     const moneyValueOfTime = hoursSaved * hourlyValue;
     const extraCapacity = hoursPerClient > 0 ? hoursSaved / hoursPerClient : 0;
     const extraRevenue = extraCapacity * tariff;
-    const roi = NUTRIFIT_PRICE_MONTH > 0
-      ? Math.round((moneyValueOfTime / NUTRIFIT_PRICE_MONTH) * 10) / 10
+    const roi = NULY_PRICE_MONTH > 0
+      ? Math.round((moneyValueOfTime / NULY_PRICE_MONTH) * 10) / 10
       : 0;
     return {
       revenue,
@@ -76,7 +76,7 @@ export default function ROISection() {
             viewport={{ once: true }}
             className="text-3xl md:text-5xl font-medium leading-tight tracking-tight text-gray-900"
           >
-            {isEs ? 'Cuánto te devuelve NutriFit cada mes.' : 'How much NutriFit returns each month.'}
+            {isEs ? 'Cuánto te devuelve Nuly cada mes.' : 'How much Nuly returns each month.'}
           </motion.h2>
           <p className="text-gray-500 mt-4 max-w-xl mx-auto text-sm">
             {isEs
@@ -152,8 +152,8 @@ export default function ROISection() {
             value={`×${numbers.roi}`}
             note={
               isEs
-                ? `Sobre ${NUTRIFIT_PRICE_MONTH}€/mes`
-                : `Over €${NUTRIFIT_PRICE_MONTH}/mo`
+                ? `Sobre ${NULY_PRICE_MONTH}€/mes`
+                : `Over €${NULY_PRICE_MONTH}/mo`
             }
             highlight
           />
@@ -161,8 +161,8 @@ export default function ROISection() {
 
         <p className="text-[11px] text-gray-400 mt-10 text-center max-w-2xl mx-auto leading-relaxed">
           {isEs
-            ? `Cálculo orientativo. Asumimos que NutriFit automatiza el ${Math.round(SAVINGS_RATE * 100)}% del tiempo repetitivo (check-ins, planes, mensajes). Los resultados reales varían según tu flujo de trabajo.`
-            : `Indicative figures. We assume NutriFit automates ${Math.round(SAVINGS_RATE * 100)}% of repetitive time (check-ins, plans, messages). Real results vary with your workflow.`}
+            ? `Cálculo orientativo. Asumimos que Nuly automatiza el ${Math.round(SAVINGS_RATE * 100)}% del tiempo repetitivo (check-ins, planes, mensajes). Los resultados reales varían según tu flujo de trabajo.`
+            : `Indicative figures. We assume Nuly automates ${Math.round(SAVINGS_RATE * 100)}% of repetitive time (check-ins, plans, messages). Real results vary with your workflow.`}
         </p>
       </div>
     </section>

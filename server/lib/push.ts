@@ -5,7 +5,7 @@ import { supabaseAdmin } from '../db/index.js';
 // (every helper becomes a no-op) — the app keeps working.
 const VAPID_PUBLIC = String(process.env.VAPID_PUBLIC_KEY || '').trim().replace(/^["']|["']$/g, '');
 const VAPID_PRIVATE = String(process.env.VAPID_PRIVATE_KEY || '').trim().replace(/^["']|["']$/g, '');
-const VAPID_SUBJECT = String(process.env.VAPID_SUBJECT || 'mailto:notifications@nutrifit.app').trim();
+const VAPID_SUBJECT = String(process.env.VAPID_SUBJECT || 'mailto:notifications@nuly.app').trim();
 
 const isBase64Url = (value: string) => /^[A-Za-z0-9_-]+$/.test(value) && !value.includes('=');
 

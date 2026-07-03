@@ -74,8 +74,8 @@ export const articles: ResourceArticle[] = [
       },
       {
         type: 'p',
-        es: 'La teoría está clara; el problema es convertirla en una rutina de cinco minutos que hagas cada lunes sin pensar. En NutriFit tienes los dos sitios donde vive este número: la pestaña Analítica para la foto agregada de toda tu cartera y la pestaña Check-ins para bajar al detalle de cada cliente. Este es el recorrido exacto.',
-        en: 'The theory is clear; the problem is turning it into a five-minute routine you run every Monday without thinking. In NutriFit you have the two places this number lives: the Analítica tab for the aggregate snapshot of your whole roster and the Check-ins tab to drill into each client. Here’s the exact walkthrough.',
+        es: 'La teoría está clara; el problema es convertirla en una rutina de cinco minutos que hagas cada lunes sin pensar. En Nuly tienes los dos sitios donde vive este número: la pestaña Analítica para la foto agregada de toda tu cartera y la pestaña Check-ins para bajar al detalle de cada cliente. Este es el recorrido exacto.',
+        en: 'The theory is clear; the problem is turning it into a five-minute routine you run every Monday without thinking. In Nuly you have the two places this number lives: the Analítica tab for the aggregate snapshot of your whole roster and the Check-ins tab to drill into each client. Here’s the exact walkthrough.',
       },
       {
         type: 'steps',
@@ -219,8 +219,8 @@ export const articles: ResourceArticle[] = [
       },
       {
         type: 'p',
-        es: 'Las dos palancas que más tiempo te devuelven son agrupar los check-ins en un único bloque y dejar de escribir planes desde cero. Lo primero ataca la dispersión; lo segundo, la duplicación. Así se montan ambas dentro de NutriFit sin inventar nada raro.',
-        en: 'The two levers that give you the most time back are batching your check-ins into a single block and never writing plans from scratch again. The first kills scatter; the second kills duplication. Here’s how to set both up inside NutriFit without inventing anything fancy.',
+        es: 'Las dos palancas que más tiempo te devuelven son agrupar los check-ins en un único bloque y dejar de escribir planes desde cero. Lo primero ataca la dispersión; lo segundo, la duplicación. Así se montan ambas dentro de Nuly sin inventar nada raro.',
+        en: 'The two levers that give you the most time back are batching your check-ins into a single block and never writing plans from scratch again. The first kills scatter; the second kills duplication. Here’s how to set both up inside Nuly without inventing anything fancy.',
       },
       {
         type: 'steps',

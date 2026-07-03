@@ -5,7 +5,7 @@ import { useLanguage } from '../../context/LanguageContext';
 /**
  * "Para quién es" — cuatro etapas del COACH INDEPENDIENTE.
  *
- * Decision de producto: NutriFit hoy esta hecha para coaches que
+ * Decision de producto: Nuly hoy esta hecha para coaches que
  * trabajan solos. Vendiamos "4 perfiles" muy diferentes (independiente,
  * clinico, equipo, gimnasio) y eso atrae leads que la app no resuelve.
  * Esta seccion mantiene 4 tarjetas pero todas son sub-perfiles del

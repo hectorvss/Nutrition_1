@@ -346,7 +346,7 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
         {/* Footer info at left bottom */}
         <div className="absolute bottom-8 left-0 w-full text-center lg:text-left lg:px-20 opacity-30">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-            NutriFit Systems Inc. © {new Date().getFullYear()}
+            Nuly © {new Date().getFullYear()}
           </p>
         </div>
       </div>
@@ -374,7 +374,7 @@ export default function Login({ onBackToLanding, initialMode }: { onBackToLandin
                 </div>
                 <div className="mx-auto bg-gray-100/70 rounded-md px-3 py-0.5 text-[10px] text-gray-400 font-medium w-1/2 text-center flex items-center justify-center gap-1.5 truncate">
                   <Search className="w-2.5 h-2.5" />
-                  nutrifit.pro/login
+                  nuly.app/login
                 </div>
               </div>
               <div className="flex-1 relative overflow-hidden bg-white">
