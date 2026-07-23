@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
 import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import { safeErr } from '../lib/http.js';
-import { makeEnforceLimit, countActiveAutomations } from '../lib/plans.js';
+import { makeEnforceLimit, countActiveAutomations, limitsForTier, type PlanTier } from '../lib/plans.js';
 import { sendPushToUser } from '../lib/push.js';
 import { sendClientTransactionalEmail } from '../lib/email.js';
 import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
@@ -772,6 +772,15 @@ function renderTemplate(text: string, ctx: any): string {
 }
 
 function compare(left: any, op: string, right: any): boolean {
+  // Dato faltante (null/undefined/''): no afirmamos igualdad NI desigualdad, para
+  // no disparar acciones sobre datos ausentes. Antes `String(undefined) !== 'No
+  // issues'` daba true y la condicion `painLevel != 'No issues'` alertaba "el
+  // cliente reporta dolor" aunque nunca hubiera reportado nada.
+  const leftMissing = left === null || left === undefined || left === '';
+  if (leftMissing && (op === '==' || op === '!=')) {
+    const rightMissing = right === null || right === undefined || right === '';
+    return op === '==' ? rightMissing : false; // != con dato faltante -> no dispara
+  }
   const ln = parseFloat(left), rn = parseFloat(right);
   const numeric = !isNaN(ln) && !isNaN(rn);
   switch (op) {
@@ -846,10 +855,22 @@ export function validateWorkflow(nodes: WorkflowNode[], edges: WorkflowEdge[]) {
       warnings.push(`Node "${n.label || n.key}" is not connected to anything.`);
     if (n.key === 'flow.if' && !edges.some(e => e.source === n.id))
       warnings.push('An If/Else node has no branches connected.');
+    const cfg = n.config || {};
+    const label = n.label || n.key;
+    // send_email vacío SÍ es error: un email sin nada de contenido no tiene
+    // sentido enviarlo (y el runtime lo mandaria vacio).
     if (n.key === 'action.send_email') {
-      const cfg = n.config || {};
       const hasContent = Boolean(String(cfg.subject || '').trim() || String(cfg.title || '').trim() || String(cfg.body || '').trim() || String(cfg.subtitle || '').trim());
-      if (!hasContent) errors.push('The email action needs at least a subject, title or body.');
+      if (!hasContent) errors.push(`"${label}": el email necesita al menos asunto, título o contenido.`);
+    }
+    // message/push vacíos: el diseño permite publicar y rellenar después (los
+    // starter templates lo hacen), así que NO bloqueamos — pero avisamos porque
+    // en runtime enviarian contenido vacio al cliente si se quedan asi.
+    if (n.key === 'action.send_message' && !String(cfg.message || '').trim()) {
+      warnings.push(`"${label}": el mensaje está vacío — se enviaría en blanco.`);
+    }
+    if (n.key === 'action.send_push' && !String(cfg.body || '').trim()) {
+      warnings.push(`"${label}": la notificación push no tiene cuerpo.`);
     }
   }
   return { ok: errors.length === 0, errors, warnings };
@@ -2161,6 +2182,24 @@ router.put('/:id', verifyManager, async (req: any, res) => {
     if (!def) return res.status(404).json({ error: 'Workflow not found' });
 
     const body = req.body || {};
+    // Cierra el bypass del cupo: activar por PUT un workflow antes desactivado
+    // debe respetar el cap del plan (igual que /publish, que si lo enforcea).
+    if (body.enabled === true && !def.enabled) {
+      const { data: sub } = await supabaseAdmin
+        .from('manager_subscriptions').select('plan_tier').eq('user_id', req.user.id).maybeSingle();
+      const tier = (sub?.plan_tier as PlanTier) || 'trial';
+      const limit = limitsForTier(tier).activeAutomations;
+      if (limit != null) {
+        const used = await countActiveAutomations(supabaseAdmin, req.user.id);
+        if (used >= limit) {
+          return res.status(402).json({
+            error: 'plan_limit_reached',
+            message: `Has alcanzado el limite de automatizaciones activas de tu plan ${tier}.`,
+            resource: 'activeAutomations', tier, limit, used, accessBlocked: false,
+          });
+        }
+      }
+    }
     if (body.name !== undefined || body.description !== undefined || body.enabled !== undefined) {
       const upd: any = { updated_at: new Date().toISOString() };
       if (body.name !== undefined) upd.name = body.name;

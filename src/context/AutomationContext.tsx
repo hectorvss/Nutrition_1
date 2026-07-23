@@ -136,7 +136,11 @@ export const AutomationProvider = ({ children }: { children: ReactNode }) => {
       });
       setAutomations([...automations, newAuto]);
     } catch (e) {
+      // RELANZAR: antes se tragaba el error y el wizard volvia a la lista como
+      // si hubiera guardado (incluso con 402/límite o 500). El caller
+      // (handleActivate) espera el throw para mostrar saveError y no navegar.
       console.error('Add failed', e);
+      throw e;
     }
   };
 
@@ -171,7 +175,10 @@ export const AutomationProvider = ({ children }: { children: ReactNode }) => {
       });
       setAutomations(automations.map(a => a.id === id ? { ...a, ...updated } : a));
     } catch (e) {
+      // RELANZAR (ver addAutomation): el caller necesita el throw para no
+      // reportar un guardado fallido como exitoso.
       console.error('Update failed', e);
+      throw e;
     }
   };
 

@@ -284,14 +284,18 @@ function WorkflowBuilderInner({ workflowId, onBack }: WorkflowBuilderProps) {
         ? t('published_with_warnings', { defaultValue: `Published (${r.warnings.length} warnings)`, n: r.warnings.length })
         : t('published_ok', { defaultValue: 'Published ✓' }));
     } catch (err: any) {
-      const msg = String(err?.message || '');
-      // Detect the plan-cap 402 response from the backend (makeEnforceLimit).
-      if (msg.includes('plan_limit_reached') || msg.toLowerCase().includes('activeworkflows')) {
+      // El 402 del backend (makeEnforceLimit) llega con err.code = error del body.
+      if (err?.code === 'plan_limit_reached' || err?.code === 'subscription_required') {
         setStatus(t('workflow_limit_reached', {
-          defaultValue: 'You have reached the active-workflow limit for your plan. Unpublish one or upgrade to activate this workflow.',
+          defaultValue: 'Has alcanzado el límite de automatizaciones activas de tu plan. Desactiva una o mejora el plan para activar este workflow.',
+        }));
+      } else if (Array.isArray(err?.data?.errors) && err.data.errors.length) {
+        // Errores de validacion concretos (antes se descartaban -> "Validation failed").
+        setStatus(t('publish_failed_reasons', {
+          defaultValue: `No se pudo publicar: ${err.data.errors.join(' · ')}`,
         }));
       } else {
-        setStatus('Publish failed: ' + msg);
+        setStatus('Publish failed: ' + String(err?.message || ''));
       }
     }
   };

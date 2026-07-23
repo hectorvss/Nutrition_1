@@ -97,7 +97,14 @@ export const fetchWithAuth = async (endpoint: string, options: RequestInit = {},
       throw err;
     }
 
-    throw new Error(errorData.error || 'API Request Failed');
+    // Adjuntamos el cuerpo completo (code + detalle) al error para que la UI
+    // pueda mostrar mensajes especificos — p.ej. los `errors[]` de validacion
+    // de un workflow — en vez del generico "Validation failed".
+    const err: any = new Error(errorData.error || 'API Request Failed');
+    err.code = errorData.error;
+    err.status = response.status;
+    err.data = errorData;
+    throw err;
   }
 
   // 204 No Content (and empty bodies) would make response.json() throw.

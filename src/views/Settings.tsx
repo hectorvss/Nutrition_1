@@ -46,7 +46,7 @@ import { supabase } from '../supabase';
 import { enablePush, disablePush, isPushEnabled, pushSupported } from '../push';
 import AppearanceSettings from './settings/AppearanceSettings';
 
-type SettingsTab = 'general' | 'profile' | 'security' | 'billing' | 'integrations' | 'appearance';
+type SettingsTab = 'general' | 'profile' | 'security' | 'billing' | 'integrations' | 'api' | 'appearance';
 
 export default function Settings({ initialTab }: { initialTab?: SettingsTab } = {}) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab || 'general');
@@ -65,6 +65,7 @@ export default function Settings({ initialTab }: { initialTab?: SettingsTab } = 
     { id: 'security', label: t('security'), icon: Lock, clientSafe: false },
     { id: 'billing', label: t('billing'), icon: CreditCard, clientSafe: false },
     { id: 'integrations', label: t('integrations'), icon: Share2, clientSafe: false },
+    { id: 'api', label: t('api_mcp', { defaultValue: 'API y MCP' }), icon: KeyRound, clientSafe: false },
     { id: 'appearance', label: t('appearance'), icon: Palette, clientSafe: true },
   ];
   const tabs = isClient ? allTabs.filter(t => t.clientSafe) : allTabs;
@@ -91,6 +92,8 @@ export default function Settings({ initialTab }: { initialTab?: SettingsTab } = 
         return <BillingSettings />;
       case 'integrations':
         return <IntegrationsSettings />;
+      case 'api':
+        return <ApiMcpSettings />;
       case 'appearance':
         return <AppearanceSettings />;
       default:

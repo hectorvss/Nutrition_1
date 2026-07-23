@@ -20,6 +20,51 @@ import { renderMessage, type RenderContext } from '../lib/messageTemplate.js';
 const enforceAutomationLimit = makeEnforceLimit(supabaseAdmin, 'activeAutomations',
   (userId: string) => countActiveAutomations(supabaseAdmin, userId));
 
+type PlanBlock = { status: number; body: any } | null;
+
+// Defense-in-depth: el catalogo ya oculta los triggers 'advanced' para tier
+// basico, pero la API directa (POST/PUT /automations) no validaba el trigger_id
+// -> un usuario basico podia crear un trigger avanzado por API. Aqui lo cerramos.
+// Solo bloquea triggers CONOCIDOS marcados 'advanced'; los desconocidos nunca
+// disparan (no son un riesgo de tier) y app-setup/legacy siguen editables.
+async function triggerTierBlock(userId: string, triggerId: string | undefined): Promise<PlanBlock> {
+  if (!triggerId) return null;
+  const def = TRIGGER_BY_ID[triggerId];
+  if (!def || def.tier !== 'advanced') return null;
+  const { data: sub } = await supabaseAdmin
+    .from('manager_subscriptions').select('plan_tier').eq('user_id', userId).maybeSingle();
+  const tier = (sub?.plan_tier as PlanTier) || 'trial';
+  if (limitsForTier(tier).automationTriggerTier === 'basic') {
+    return { status: 402, body: {
+      error: 'plan_limit_reached',
+      message: `El trigger "${def.name}" requiere un plan superior.`,
+      resource: 'activeAutomations', tier, accessBlocked: false,
+    } };
+  }
+  return null;
+}
+
+// Cierra el bypass del cupo: crear automations desactivadas no cuenta, pero
+// ACTIVARLAS por PUT si. Cuando una PUT transiciona de disabled -> enabled,
+// revalidamos el cupo del plan (mismo cupo compartido con workflows).
+async function enableCapBlock(userId: string, willEnable: boolean, wasEnabled: boolean): Promise<PlanBlock> {
+  if (!willEnable || wasEnabled) return null; // no hay transicion a enabled
+  const { data: sub } = await supabaseAdmin
+    .from('manager_subscriptions').select('plan_tier').eq('user_id', userId).maybeSingle();
+  const tier = (sub?.plan_tier as PlanTier) || 'trial';
+  const limit = limitsForTier(tier).activeAutomations;
+  if (limit == null) return null; // ilimitado
+  const used = await countActiveAutomations(supabaseAdmin, userId);
+  if (used >= limit) {
+    return { status: 402, body: {
+      error: 'plan_limit_reached',
+      message: `Has alcanzado el limite de automatizaciones activas de tu plan ${tier}.`,
+      resource: 'activeAutomations', tier, limit, used, accessBlocked: false,
+    } };
+  }
+  return null;
+}
+
 const router = Router();
 
 async function resolveManagerLanguage(managerId: string): Promise<'es' | 'en'> {
@@ -353,23 +398,28 @@ async function executeAutomationSteps(opts: {
     if (step.kind === 'wait') {
       const ms = (step.amount || 0) * (step.unit === 'hours' ? 3600 : 86400) * 1000;
       const resumeAt = new Date(Date.now() + ms).toISOString();
+      // UPSERT sobre el indice unico (automation_id, client_id). El primer wait
+      // inserta; un wait POSTERIOR (llegado al reanudar la misma cadena) actualiza
+      // la MISMA fila con el nuevo step_index/resume_at en vez de chocar con el
+      // unique-index. `created_at` se refresca a "ahora" para que la ventana de
+      // cancelIfReplied cuente desde ESTE wait. Antes, un INSERT chocaba (23505),
+      // se descartaba y luego el resume borraba la fila -> la cadena se perdia
+      // tras el primer wait.
       const { error } = await supabaseAdmin
         .from('automation_pending_steps')
-        .insert({
+        .upsert({
           automation_id: ctx.automation.id,
           client_id: ctx.clientId,
           step_index: i + 1, // queremos resumir DESDE el step siguiente al wait
           resume_at: resumeAt,
+          created_at: new Date().toISOString(),
           context: {
             triggerPayload: ctx.triggerPayload,
             renderCtx: ctx.renderCtx,
             cancelIfReplied: !!step.cancelIfReplied,
           },
-        });
-      if (error && error.code !== '23505') {
-        // 23505 = unique-violation -> ya hay una fila parqueada para esta
-        // cadena. La nueva se descarta (no duplicamos el delay). Cualquier
-        // otro error lo loguemos y abortamos para no perder telemetria.
+        }, { onConflict: 'automation_id,client_id' });
+      if (error) {
         console.error(`[automation ${ctx.automation.id}] wait step ${i} parking failed:`, error);
         return 'aborted';
       }
@@ -532,6 +582,154 @@ async function executeAutomationSteps(opts: {
 }
 
 /**
+ * Construye el diccionario de `conditionValues` de un cliente (el evaluator de
+ * conditions solo consulta este dict) + los intermedios que el render de
+ * variables necesita. Se usa tanto en el disparo normal como al REANUDAR una
+ * cadena parqueada, para que los `stop_if` posteriores a un `wait` se evaluen
+ * contra datos frescos (antes se reanudaba con conditionValues vacio -> los
+ * stop_if nunca se cumplian).
+ */
+async function buildClientConditionValues(
+  managerId: string, automationId: string, clientId: string, triggerId: string,
+): Promise<null | { conditionValues: Record<string, any>; client: any; profile: any; cProfile: any; ciData: any }> {
+  const { data: client, error: clientError } = await supabaseAdmin
+    .from('users')
+    .select(`
+      id, email, status, created_at,
+      profiles(full_name),
+      clients_profiles(goal_weight, check_in_day, last_login, weight, notes, metadata)
+    `)
+    .eq('id', clientId)
+    .maybeSingle();
+
+  if (clientError || !client) return null;
+
+  const [{ data: legacyCheckins }, { data: dynamicCheckins }] = await Promise.all([
+    supabaseAdmin
+      .from('check_ins')
+      .select('data_json, date, created_at, reviewed_at')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(2),
+    supabaseAdmin
+      .from('client_checkin_submissions')
+      .select('answers_json, submitted_at, reviewed_at')
+      .eq('client_id', clientId)
+      .order('submitted_at', { ascending: false })
+      .limit(2),
+  ]);
+  const checkins = normalizeCheckinRows(legacyCheckins || [], dynamicCheckins || []);
+  const latestCheckIn = checkins[0] || null;
+  const prevCheckIn = checkins[1] || null;
+
+  const ciData: any = latestCheckIn?.data || {};
+  const prevData: any = prevCheckIn?.data || {};
+
+  const profile = Array.isArray(client.profiles) ? client.profiles[0] : (client.profiles as any);
+  const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : (client.clients_profiles as any);
+
+  const currentWeight = readWeight(ciData) ?? (Number(cProfile?.weight) || 0);
+  const prevWeight    = readWeight(prevData) ?? currentWeight;
+  const weightDiff    = Math.abs(currentWeight - prevWeight);
+  const goalWeight    = Number(cProfile?.goal_weight) || 0;
+  const goalWeightDiff = goalWeight ? Math.abs(currentWeight - goalWeight) : 0;
+
+  const lastLogin = cProfile?.last_login ? new Date(cProfile.last_login) : new Date();
+  const daysInactive = Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 3600 * 24));
+  const daysSinceLogin = daysInactive;
+
+  const lastCheckinRaw = latestCheckIn?.at || null;
+  const lastCheckinDate = lastCheckinRaw ? new Date(lastCheckinRaw) : null;
+  const daysSinceCheckin = lastCheckinDate
+    ? Math.floor((Date.now() - lastCheckinDate.getTime()) / (1000 * 3600 * 24))
+    : 999;
+  const createdAt = (client as any).created_at ? new Date((client as any).created_at) : new Date();
+  const daysAsClient = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 3600 * 24));
+
+  const adherencePct = Number(ciData.nutrition_adherence_score ?? ciData.adherence_score);
+  const adherence    = Number.isFinite(adherencePct) ? adherencePct * 10 : 0;
+
+  const mood = Number(ciData.mood ?? ciData.mood_score) || 0;
+  const rpe  = Number(ciData.rpe ?? ciData.rpe_score) || 0;
+  const bodyFat = Number(ciData.body_fat ?? ciData.bodyFat) || 0;
+
+  const weekAgo = new Date(Date.now() - 7 * DAY_MS).toISOString();
+  const [
+    { data: latestAnyMessage },
+    { count: unreadCount },
+    { data: latestCoachMessage },
+    planActive,
+    workouts,
+    sendsThisWeek,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from('messages')
+      .select('created_at')
+      .or(`and(sender_id.eq.${managerId},receiver_id.eq.${clientId}),and(sender_id.eq.${clientId},receiver_id.eq.${managerId})`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', clientId)
+      .eq('receiver_id', managerId)
+      .or('is_read.eq.false,is_read.is.null'),
+    supabaseAdmin
+      .from('messages')
+      .select('created_at')
+      .eq('sender_id', managerId)
+      .eq('receiver_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    hasAnyActivePlan(clientId),
+    recentWorkoutStats(clientId),
+    countAutomationLogsSince(automationId, clientId, weekAgo),
+  ]);
+  const hoursSinceLastMsg = latestAnyMessage?.created_at
+    ? (Date.now() - new Date(latestAnyMessage.created_at).getTime()) / HOUR_MS
+    : 999;
+  const hoursSinceCoachReply = latestCoachMessage?.created_at
+    ? (Date.now() - new Date(latestCoachMessage.created_at).getTime()) / HOUR_MS
+    : 999;
+  const metadata = cProfile?.metadata || {};
+  const tags = Array.isArray(metadata?.tags) ? metadata.tags.map((x: any) => String(x).toLowerCase()) : [];
+  const notes = String(cProfile?.notes || '').toLowerCase();
+
+  const conditionValues: Record<string, any> = {
+    weight: currentWeight,
+    weight_goal: currentWeight,
+    weight_diff: weightDiff,
+    goal_weight: goalWeight,
+    goal_weight_diff: goalWeightDiff,
+    body_fat: bodyFat,
+    adherence,
+    adherence_avg_4w: adherence,
+    mood, rpe,
+    last_checkin: daysSinceCheckin,
+    last_login_days: daysSinceLogin,
+    activity: daysInactive,
+    days_as_client: daysAsClient,
+    streak_workouts: workouts.totalWorkouts,
+    unread_messages_count: unreadCount || 0,
+    has_active_plan: planActive ? 'true' : 'false',
+    reply: (triggerId === 'client-reply') ? 0 : 999,
+    checkin: (triggerId === 'checkin-submitted') ? 0 : daysSinceCheckin,
+    weight_goal_reached: goalWeight && currentWeight <= goalWeight ? 'true' : 'false',
+    client_archived: ((client as any).status === 'Archived' || (client as any).status === 'archived') ? 'true' : 'false',
+    coach_replied: hoursSinceCoachReply,
+    last_message_recent: hoursSinceLastMsg,
+    max_sends_per_week: sendsThisWeek,
+    workflow_paused: 'false',
+    on_vacation: (tags.includes('vacaciones') || tags.includes('pausa') || notes.includes('vacaciones')) ? 'true' : 'false',
+    plan_completed: metadata?.plan_completed === true ? 'true' : 'false',
+  };
+
+  return { conditionValues, client, profile, cProfile, ciData };
+}
+
+/**
  * Helper to process an automation trigger
  */
 export async function processTrigger(managerId: string, triggerId: string, data: any) {
@@ -600,146 +798,12 @@ export async function processTrigger(managerId: string, triggerId: string, data:
       const _cachedCoachName = _managerProfile?.full_name || (_cachedLanguage === 'en' ? 'your coach' : 'tu coach');
 
       for (const clientId of clientIds) {
-        // 3. Fetch comprehensive client data for conditions and variables
-        const { data: client, error: clientError } = await supabaseAdmin
-          .from('users')
-          .select(`
-            id, email, status, created_at,
-            profiles(full_name),
-            clients_profiles(goal_weight, check_in_day, last_login, weight, notes, metadata)
-          `)
-          .eq('id', clientId)
-          .maybeSingle();
-
-        if (clientError || !client) continue;
-
-        const [{ data: legacyCheckins }, { data: dynamicCheckins }] = await Promise.all([
-          supabaseAdmin
-            .from('check_ins')
-            .select('data_json, date, created_at, reviewed_at')
-            .eq('client_id', clientId)
-            .order('created_at', { ascending: false })
-            .limit(2),
-          supabaseAdmin
-            .from('client_checkin_submissions')
-            .select('answers_json, submitted_at, reviewed_at')
-            .eq('client_id', clientId)
-            .order('submitted_at', { ascending: false })
-            .limit(2),
-        ]);
-        const checkins = normalizeCheckinRows(legacyCheckins || [], dynamicCheckins || []);
-        const latestCheckIn = checkins[0] || null;
-        const prevCheckIn = checkins[1] || null;
-
-        const ciData: any = latestCheckIn?.data || {};
-        const prevData: any = prevCheckIn?.data || {};
-
-        const profile = Array.isArray(client.profiles) ? client.profiles[0] : (client.profiles as any);
-        const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : (client.clients_profiles as any);
-
-        const currentWeight = readWeight(ciData) ?? (Number(cProfile?.weight) || 0);
-        const prevWeight    = readWeight(prevData) ?? currentWeight;
-        const weightDiff    = Math.abs(currentWeight - prevWeight);
-        const goalWeight    = Number(cProfile?.goal_weight) || 0;
-        const goalWeightDiff = goalWeight ? Math.abs(currentWeight - goalWeight) : 0;
-
-        const lastLogin = cProfile?.last_login ? new Date(cProfile.last_login) : new Date();
-        const daysInactive = Math.floor((Date.now() - lastLogin.getTime()) / (1000 * 3600 * 24));
-        const daysSinceLogin = daysInactive;
-
-        const lastCheckinRaw = latestCheckIn?.at || null;
-        const lastCheckinDate = lastCheckinRaw ? new Date(lastCheckinRaw) : null;
-        const daysSinceCheckin = lastCheckinDate
-          ? Math.floor((Date.now() - lastCheckinDate.getTime()) / (1000 * 3600 * 24))
-          : 999;
-        const createdAt = (client as any).created_at ? new Date((client as any).created_at) : new Date();
-        const daysAsClient = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 3600 * 24));
-
-        const adherencePct = Number(ciData.nutrition_adherence_score ?? ciData.adherence_score);
-        const adherence    = Number.isFinite(adherencePct) ? adherencePct * 10 : 0;
-
-        const mood = Number(ciData.mood ?? ciData.mood_score) || 0;
-        const rpe  = Number(ciData.rpe ?? ciData.rpe_score) || 0;
-        const bodyFat = Number(ciData.body_fat ?? ciData.bodyFat) || 0;
-
-        // Anti-spam helpers: ¿hubo mensaje reciente? ¿el coach respondio?
-        const weekAgo = new Date(Date.now() - 7 * DAY_MS).toISOString();
-        const [
-          { data: latestAnyMessage },
-          { count: unreadCount },
-          { data: latestCoachMessage },
-          planActive,
-          workouts,
-          sendsThisWeek,
-        ] = await Promise.all([
-          supabaseAdmin
-            .from('messages')
-            .select('created_at')
-            .or(`and(sender_id.eq.${managerId},receiver_id.eq.${clientId}),and(sender_id.eq.${clientId},receiver_id.eq.${managerId})`)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          supabaseAdmin
-            .from('messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('sender_id', clientId)
-            .eq('receiver_id', managerId)
-            .or('is_read.eq.false,is_read.is.null'),
-          supabaseAdmin
-            .from('messages')
-            .select('created_at')
-            .eq('sender_id', managerId)
-            .eq('receiver_id', clientId)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          hasAnyActivePlan(clientId),
-          recentWorkoutStats(clientId),
-          countAutomationLogsSince(automation.id, clientId, weekAgo),
-        ]);
-        const hoursSinceLastMsg = latestAnyMessage?.created_at
-          ? (Date.now() - new Date(latestAnyMessage.created_at).getTime()) / HOUR_MS
-          : 999;
-        const hoursSinceCoachReply = latestCoachMessage?.created_at
-          ? (Date.now() - new Date(latestCoachMessage.created_at).getTime()) / HOUR_MS
-          : 999;
-        const metadata = cProfile?.metadata || {};
-        const tags = Array.isArray(metadata?.tags) ? metadata.tags.map((x: any) => String(x).toLowerCase()) : [];
-        const notes = String(cProfile?.notes || '').toLowerCase();
-
-        // Diccionario unico — el evaluator de conditions solo consulta esto.
-        const conditionValues: Record<string, any> = {
-          weight: currentWeight,
-          // weight_goal es un alias historico de `weight` (se comparaba contra
-          // goal). El catalogo nuevo usa `weight` + value='Target', pero
-          // mantenemos esta clave para automations creadas antes del refactor.
-          weight_goal: currentWeight,
-          weight_diff: weightDiff,
-          goal_weight: goalWeight,
-          goal_weight_diff: goalWeightDiff,
-          body_fat: bodyFat,
-          adherence,
-          adherence_avg_4w: adherence, // simplificacion: mismo valor (TODO: media real)
-          mood, rpe,
-          last_checkin: daysSinceCheckin,
-          last_login_days: daysSinceLogin,
-          activity: daysInactive,
-          days_as_client: daysAsClient,
-          streak_workouts: workouts.totalWorkouts,
-          unread_messages_count: unreadCount || 0,
-          has_active_plan: planActive ? 'true' : 'false',
-          // Stop conditions (event-based + anti-spam)
-          reply: (triggerId === 'client-reply') ? 0 : 999, // 'within' compara: 0 = "ahora", 999 = "hace mucho"
-          checkin: (triggerId === 'checkin-submitted') ? 0 : daysSinceCheckin,
-          weight_goal_reached: goalWeight && currentWeight <= goalWeight ? 'true' : 'false',
-          client_archived: ((client as any).status === 'Archived' || (client as any).status === 'archived') ? 'true' : 'false',
-          coach_replied: hoursSinceCoachReply,
-          last_message_recent: hoursSinceLastMsg,
-          max_sends_per_week: sendsThisWeek,
-          workflow_paused: 'false', // si llegamos aqui es porque enabled=true
-          on_vacation: (tags.includes('vacaciones') || tags.includes('pausa') || notes.includes('vacaciones')) ? 'true' : 'false',
-          plan_completed: metadata?.plan_completed === true ? 'true' : 'false',
-        };
+        // 3. Datos del cliente + conditionValues (mismo helper que usa el
+        //    resume de cadenas parqueadas, para que stop_if tras un wait
+        //    evalue contra datos frescos).
+        const cv = await buildClientConditionValues(managerId, automation.id, clientId, triggerId);
+        if (!cv) continue;
+        const { conditionValues, client, profile, cProfile, ciData } = cv;
 
         // 4a. Activation conditions
         if (!evalConditions(rules.activation_conditions, conditionValues)) continue;
@@ -953,6 +1017,9 @@ async function validateSteps(req: any, steps: any): Promise<{ ok: boolean; error
 router.post('/', verifyManager, enforceAutomationLimit, async (req: any, res) => {
   try {
     const fields = pickAutomationFields(req.body);
+    // Gate por tier del trigger (defense-in-depth frente a llamadas directas).
+    const tBlock = await triggerTierBlock(req.user.id, fields.trigger_id);
+    if (tBlock) return res.status(tBlock.status).json(tBlock.body);
     // Validar steps si vienen en delivery_rules.steps
     if (fields.delivery_rules?.steps) {
       const v = await validateSteps(req, fields.delivery_rules.steps);
@@ -976,10 +1043,22 @@ router.post('/', verifyManager, enforceAutomationLimit, async (req: any, res) =>
 router.put('/:id', verifyManager, async (req: any, res) => {
   try {
     const fields = pickAutomationFields(req.body);
+    // Gate por tier del trigger si la edicion cambia/reafirma el trigger.
+    const tBlock = await triggerTierBlock(req.user.id, fields.trigger_id);
+    if (tBlock) return res.status(tBlock.status).json(tBlock.body);
     if (fields.delivery_rules?.steps) {
       const v = await validateSteps(req, fields.delivery_rules.steps);
       if (!v.ok) return res.status(400).json({ error: v.error });
       fields.delivery_rules.steps = v.steps;
+    }
+    // Si la PUT ACTIVA una automation antes desactivada, revalidar el cupo
+    // (crear desactivadas no cuenta, activarlas si -> cerraba el bypass).
+    if (fields.enabled === true) {
+      const { data: current } = await supabaseAdmin
+        .from('automations').select('enabled').eq('id', req.params.id)
+        .eq('manager_id', req.user.id).maybeSingle();
+      const capBlock = await enableCapBlock(req.user.id, true, !!current?.enabled);
+      if (capBlock) return res.status(capBlock.status).json(capBlock.body);
     }
     const { data, error } = await supabaseAdmin
       .from('automations')
@@ -1428,27 +1507,32 @@ const cronHandler = async (req: any, res: any) => {
           }
         }
 
-        // Reconstruir un context minimo. Las conditions ya no pueden
-        // evaluarse contra datos frescos sin re-fetch — por ahora vacio
-        // (los stop_if dentro de la cadena no se evaluan en resume).
+        // Recalcular conditionValues con datos FRESCOS para que los `stop_if`
+        // posteriores a un wait se evaluen de verdad (p.ej. "espera 2 dias,
+        // para si el cliente respondio / alcanzo su peso objetivo"). Antes se
+        // reanudaba con conditionValues vacio y ningun stop_if se cumplia.
+        const freshCv = await buildClientConditionValues(
+          automation.manager_id, automation.id, row.client_id, ctx0.triggerId || '',
+        );
         const execCtx: ExecutionContext = {
           managerId: automation.manager_id,
           automation, clientId: row.client_id,
           renderCtx: ctx0.renderCtx || {},
           triggerPayload: ctx0.triggerPayload || {},
-          conditionValues: ctx0.conditionValues || {},
+          conditionValues: freshCv?.conditionValues || ctx0.conditionValues || {},
         };
 
         const result = await executeAutomationSteps({
           ctx: execCtx, steps, fromStep: row.step_index,
         });
 
-        // El insert de wait en executeAutomationSteps creo una fila NUEVA
-        // (porque el unique-index por (automation_id, client_id) hubiera
-        // dado conflict si reusamos). Borramos la fila previa siempre que
-        // hayamos completado o aborted; si el siguiente wait parqueo otra,
-        // tambien borramos la primera (la nueva tiene id distinto).
-        await supabaseAdmin.from('automation_pending_steps').delete().eq('id', row.id);
+        // Si la cadena volvio a parquear en otro `wait`, el upsert ACTUALIZO
+        // esta misma fila (mismo id) con el nuevo step_index/resume_at futuro:
+        // NO la borramos, o perderiamos el resto de la cadena. Solo borramos
+        // cuando la cadena termino ('completed') o abortó ('aborted').
+        if (result !== 'parked') {
+          await supabaseAdmin.from('automation_pending_steps').delete().eq('id', row.id);
+        }
         stepsResumed++;
       }
     } catch (e: any) {

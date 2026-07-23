@@ -51,6 +51,7 @@ import { useBilling } from './context/BillingContext';
 import TrialBanner from './components/TrialBanner';
 import PaywallLimitModal from './components/PaywallLimitModal';
 import { ToastProvider } from './components/ui/Toast';
+import AgentPanel from './ai/AgentPanel';
 const Paywall = lazyWithRetry(() => import('./components/Paywall'));
 
 type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' | 'create-task' | 'task-intelligence' | 'planning' | 'planning-template-selector' | 'planning-detail' | 'planning-templates' | 'planning-template-detail' | 'clients' | 'check-ins' | 'messages' | 'nutrition' | 'training' | 'workout-editor' | 'workout-editor-blank' | 'activity-editor' | 'exercise-detail' | 'assign-program' | 'library' | 'exercises' | 'recipe-create' | 'recipe-detail' | 'food-create' | 'supplement-create' | 'exercise-create' | 'analytics' | 'settings' | 'automations' | 'onboarding' | 'onboarding-editor' | 'subscriptions' | 'client-billing';
@@ -486,6 +487,9 @@ export default function App() {
           el viejo mensaje rojo inline en cada formulario queda secundario
           y la conversion se centraliza en una sola pieza. */}
       <PaywallLimitModal />
+      {/* Nuly AI — copiloto del coach: FAB + panel lateral, disponible en
+          cualquier vista del manager. */}
+      <AgentPanel currentView={currentView} selectedClientId={selectedClientId} />
     </div>
   );
 }

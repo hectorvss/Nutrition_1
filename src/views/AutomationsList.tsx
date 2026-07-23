@@ -96,8 +96,21 @@ export default function AutomationsList({ onCreateNew, onCreateWorkflow, onEdit,
   };
 
   const removeWorkflow = async (id: string) => {
+    const w = workflows.find(x => x.id === id);
+    if (!window.confirm(t('confirm_delete_workflow', {
+      defaultValue: `¿Eliminar el workflow "${w?.name || ''}"? Esta acción no se puede deshacer.`,
+    }))) return;
     await fetchWithAuth(`/workflows/${id}`, { method: 'DELETE' }).catch(() => {});
     loadWorkflows();
+  };
+
+  // Borrado con confirmacion (antes se eliminaba al primer click, sin aviso).
+  const confirmDeleteAuto = (auto: any) => {
+    if (!window.confirm(t('confirm_delete_automation', {
+      defaultValue: `¿Eliminar la automatización "${auto?.name || ''}"? Esta acción no se puede deshacer.`,
+    }))) return;
+    // El context ya loguea el error; si falla, la fila permanece.
+    Promise.resolve(deleteAutomation(auto.id)).catch(() => {});
   };
 
   const s = search.toLowerCase();
@@ -279,7 +292,7 @@ export default function AutomationsList({ onCreateNew, onCreateWorkflow, onEdit,
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => deleteAutomation(auto.id)}
+                        onClick={() => confirmDeleteAuto(auto)}
                         className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                         title={t('delete_label')}
                       >
