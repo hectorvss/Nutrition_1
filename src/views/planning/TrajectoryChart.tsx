@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { Icon, computeTrajectory } from './helpers';
 import { RoadmapData, TrajectoryGoals } from '../../types/planning';
+import DatePicker from '../../components/ui/DatePicker';
 
 interface Props {
   roadmap: RoadmapData;
@@ -319,11 +320,11 @@ export default function TrajectoryChart({ roadmap, checkInsHistory, client, lang
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-3 py-2 border border-slate-200 dark:border-slate-700">
           <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{t('planning_program_start_date', { defaultValue: 'Start date' })}</p>
-          <input
-            type="date"
-            className="text-xs font-bold text-slate-800 dark:text-white bg-transparent border-none p-0 w-full focus:ring-0 outline-none"
+          <DatePicker
             value={tGoals.programStartDate || ''}
-            onChange={e => onUpdateTrajectoryGoals({ programStartDate: e.target.value })}
+            onChange={(v) => onUpdateTrajectoryGoals({ programStartDate: v })}
+            allowClear={false}
+            className="w-full flex items-center justify-between gap-1 text-xs font-bold text-slate-800 dark:text-white bg-transparent text-left outline-none"
           />
         </div>
         <div className="rounded-xl bg-slate-50 dark:bg-slate-800/60 px-3 py-2 border border-slate-200 dark:border-slate-700">

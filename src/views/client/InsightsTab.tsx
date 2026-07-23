@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { getEventPresentationInfo, EventType } from '../../context/CalendarContext';
+import DatePicker from '../../components/ui/DatePicker';
 
 interface InsightsTabProps {
   clientId: string;
@@ -181,17 +182,10 @@ const InsightsTab: React.FC<InsightsTabProps> = ({
         </div>
         <div>
           <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">{t('access_expiration_date')}</label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-sm text-slate-600 dark:text-slate-300 focus:ring-emerald-500 focus:border-emerald-500 outline-none disabled:opacity-50"
-              type="date"
-              value={accessExpiration}
-              disabled={savingExpiration}
-              onChange={(e) => setAccessExpiration(e.target.value)}
-              onBlur={(e) => onSaveExpiration(e.target.value)}
-            />
-          </div>
+          <DatePicker
+            value={accessExpiration}
+            onChange={(v) => { setAccessExpiration(v); onSaveExpiration(v); }}
+          />
         </div>
         <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800">
           <button

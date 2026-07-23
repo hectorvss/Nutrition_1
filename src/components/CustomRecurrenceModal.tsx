@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import Select from './ui/Select';
+import DatePicker from './ui/DatePicker';
 
 // Lightweight modal mirroring Google Calendar's "Custom recurrence" dialog.
 // Outputs a vanilla iCalendar RRULE string (e.g. "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE")
@@ -205,13 +206,9 @@ export default function CustomRecurrenceModal({ open, onClose, initialRule, init
                   className="text-emerald-500"
                 />
                 <span>{t('on', { defaultValue: 'El' })}</span>
-                <input
-                  type="date"
-                  value={until}
-                  min={anchorDate}
-                  onChange={e => { setUntil(e.target.value); setEndsMode('on'); }}
-                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm py-1.5 px-2 focus:border-emerald-500 focus:ring-emerald-500"
-                />
+                <div className="w-40" onClick={() => setEndsMode('on')}>
+                  <DatePicker value={until} min={anchorDate} onChange={(v) => { setUntil(v); setEndsMode('on'); }} allowClear={false} />
+                </div>
               </label>
             </div>
           </div>

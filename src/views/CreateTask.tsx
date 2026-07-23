@@ -20,6 +20,7 @@ import { useCalendar } from '../context/CalendarContext';
 import { supabase } from '../supabase';
 import Select from '../components/ui/Select';
 import TimeSelect from '../components/ui/TimeSelect';
+import DatePicker from '../components/ui/DatePicker';
 import CustomRecurrenceModal from '../components/CustomRecurrenceModal';
 import RecurrenceScopeDialog from '../components/RecurrenceScopeDialog';
 import { useLanguage } from '../context/LanguageContext';
@@ -513,14 +514,7 @@ export default function CreateTask({ onNavigate, editId, initialDate }: CreateTa
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wide">{t('date')}</label>
-                      <div className="relative">
-                        <input 
-                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:border-emerald-500 focus:ring-emerald-500 py-2.5 px-3"
-                          type="date" 
-                          value={date}
-                          onChange={e => setDate(e.target.value)}
-                        />
-                      </div>
+                      <DatePicker value={date} onChange={setDate} allowClear={false} />
                     </div>
                     <div className="flex gap-3">
                       <div className="flex-1">
