@@ -31,7 +31,12 @@ import {
   CheckCircle2,
   Sparkles,
   ArrowRight,
-  Check
+  Check,
+  KeyRound,
+  Copy,
+  Terminal,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -2095,6 +2100,253 @@ function IntegrationsSettings() {
           {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
           {saving ? t('saving') : t('save_notification_prefs')}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── API y MCP ───────────────────────────────────────────────────────────────
+// Genera claves API personales (acceso completo o por scopes) y muestra cómo
+// conectar el SaaS del manager a un cliente MCP.
+const API_SCOPE_INFO: { id: string; es: string; en: string }[] = [
+  { id: 'clients', es: 'Clientes', en: 'Clients' },
+  { id: 'billing', es: 'Suscripciones y cobros', en: 'Billing & subscriptions' },
+  { id: 'messages', es: 'Mensajes', en: 'Messages' },
+  { id: 'tasks', es: 'Tareas y calendario', en: 'Tasks & calendar' },
+  { id: 'nutrition', es: 'Nutrición y recetas', en: 'Nutrition & recipes' },
+  { id: 'training', es: 'Entrenamiento y ejercicios', en: 'Training & exercises' },
+  { id: 'automations', es: 'Automatizaciones y workflows', en: 'Automations & workflows' },
+  { id: 'analytics', es: 'Analítica', en: 'Analytics' },
+  { id: 'settings', es: 'Ajustes e integraciones', en: 'Settings & integrations' },
+];
+
+function ApiMcpSettings() {
+  const { t, language } = useLanguage();
+  const isEs = language === 'es';
+  const [keys, setKeys] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [fullAccess, setFullAccess] = useState(true);
+  const [selScopes, setSelScopes] = useState<string[]>([]);
+  const [expiry, setExpiry] = useState('0'); // 0 = sin caducidad
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const mcpUrl = `${origin}/api/mcp`;
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const d = await fetchWithAuth('/manager/api-keys');
+      setKeys(Array.isArray(d?.keys) ? d.keys : []);
+    } catch (e: any) {
+      setErr(e?.message || 'Error');
+    } finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const copy = (text: string, id: string) => {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    setCopied(id);
+    setTimeout(() => setCopied(c => (c === id ? null : c)), 1500);
+  };
+
+  const toggleScope = (id: string) =>
+    setSelScopes(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]));
+
+  const create = async () => {
+    setErr(null);
+    if (!newName.trim()) { setErr(isEs ? 'Ponle un nombre a la clave.' : 'Give the key a name.'); return; }
+    const scopes = fullAccess ? ['full'] : selScopes;
+    if (!fullAccess && scopes.length === 0) { setErr(isEs ? 'Elige al menos un permiso.' : 'Pick at least one scope.'); return; }
+    setCreating(true);
+    try {
+      const d = await fetchWithAuth('/manager/api-keys', {
+        method: 'POST',
+        body: JSON.stringify({ name: newName.trim(), scopes, expires_in_days: Number(expiry) || undefined }),
+      });
+      if (d?.key) setCreatedKey(d.key);
+      setNewName(''); setSelScopes([]); setFullAccess(true); setExpiry('0');
+      await load();
+    } catch (e: any) {
+      setErr(e?.message || (isEs ? 'No se pudo crear la clave.' : 'Could not create the key.'));
+    } finally { setCreating(false); }
+  };
+
+  const revoke = async (id: string) => {
+    if (!window.confirm(isEs ? '¿Revocar esta clave? Dejará de funcionar al instante.' : 'Revoke this key? It stops working immediately.')) return;
+    try { await fetchWithAuth(`/manager/api-keys/${id}/revoke`, { method: 'POST', body: JSON.stringify({}) }); await load(); }
+    catch (e: any) { setErr(e?.message || 'Error'); }
+  };
+  const del = async (id: string) => {
+    try { await fetchWithAuth(`/manager/api-keys/${id}`, { method: 'DELETE' }); await load(); }
+    catch (e: any) { setErr(e?.message || 'Error'); }
+  };
+
+  const mcpConfig = JSON.stringify({
+    mcpServers: { nutrifit: { type: 'http', url: mcpUrl, headers: { Authorization: 'Bearer TU_CLAVE_API' } } },
+  }, null, 2);
+
+  const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString(isEs ? 'es-ES' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+  const rel = (d?: string | null) => {
+    if (!d) return isEs ? 'nunca' : 'never';
+    const mins = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+    if (mins < 1) return isEs ? 'ahora' : 'now';
+    if (mins < 60) return isEs ? `hace ${mins} min` : `${mins} min ago`;
+    if (mins < 1440) return isEs ? `hace ${Math.floor(mins / 60)} h` : `${Math.floor(mins / 60)} h ago`;
+    return isEs ? `hace ${Math.floor(mins / 1440)} d` : `${Math.floor(mins / 1440)} d ago`;
+  };
+
+  const inputCls = 'w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-emerald-500';
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('api_mcp', { defaultValue: 'API y MCP' })}</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          {isEs
+            ? 'Crea claves API personales para acceder a tu SaaS por programación (REST) y desde un cliente MCP. Cada clave puede dar acceso completo o limitado por permisos.'
+            : 'Create personal API keys to access your SaaS programmatically (REST) and from an MCP client. Each key can grant full or scoped access.'}
+        </p>
+      </div>
+
+      {err && <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-sm text-rose-700 dark:text-rose-400">{err}</div>}
+
+      {/* Clave recién creada (se muestra una sola vez) */}
+      {createdKey && (
+        <div className="p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/20">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">{isEs ? 'Clave creada — cópiala ahora' : 'Key created — copy it now'}</span>
+          </div>
+          <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mb-2">{isEs ? 'Por seguridad no volverá a mostrarse. Guárdala en un lugar seguro.' : 'For security it won’t be shown again. Store it safely.'}</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-xs font-mono text-slate-800 dark:text-slate-100 break-all">{createdKey}</code>
+            <button onClick={() => copy(createdKey, 'new')} className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-1.5">
+              {copied === 'new' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {isEs ? 'Copiar' : 'Copy'}
+            </button>
+          </div>
+          <button onClick={() => setCreatedKey(null)} className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline">{isEs ? 'Entendido, ocultar' : 'Got it, hide'}</button>
+        </div>
+      )}
+
+      {/* Crear clave */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2"><KeyRound className="w-4 h-4 text-slate-400" /> {isEs ? 'Nueva clave API' : 'New API key'}</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{isEs ? 'Nombre' : 'Name'}</label>
+            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder={isEs ? 'p.ej. Integración n8n, Claude MCP…' : 'e.g. n8n integration, Claude MCP…'} className={inputCls} maxLength={80} />
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{isEs ? 'Permisos' : 'Permissions'}</label>
+            <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer mb-2">
+              <input type="checkbox" checked={fullAccess} onChange={e => setFullAccess(e.target.checked)} className="w-4 h-4 rounded accent-emerald-500" />
+              <span>
+                <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{isEs ? 'Acceso completo' : 'Full access'}</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">{isEs ? 'La clave puede hacer todo lo que puedes hacer tú en el SaaS.' : 'The key can do everything you can do in the SaaS.'}</span>
+              </span>
+            </label>
+            {!fullAccess && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-1">
+                {API_SCOPE_INFO.map(sc => (
+                  <label key={sc.id} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer text-sm">
+                    <input type="checkbox" checked={selScopes.includes(sc.id)} onChange={() => toggleScope(sc.id)} className="w-4 h-4 rounded accent-emerald-500" />
+                    <span className="text-slate-700 dark:text-slate-200">{isEs ? sc.es : sc.en}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="max-w-xs">
+            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{isEs ? 'Caducidad' : 'Expiration'}</label>
+            <select value={expiry} onChange={e => setExpiry(e.target.value)} className={inputCls}>
+              <option value="0">{isEs ? 'Sin caducidad' : 'No expiry'}</option>
+              <option value="30">{isEs ? '30 días' : '30 days'}</option>
+              <option value="90">{isEs ? '90 días' : '90 days'}</option>
+              <option value="365">{isEs ? '1 año' : '1 year'}</option>
+            </select>
+          </div>
+          <button onClick={create} disabled={creating} className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition flex items-center gap-2 disabled:opacity-60">
+            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {isEs ? 'Generar clave' : 'Generate key'}
+          </button>
+        </div>
+      </div>
+
+      {/* Lista de claves */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">{isEs ? 'Tus claves' : 'Your keys'}</h3>
+        {loading ? (
+          <div className="py-8 flex justify-center text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /></div>
+        ) : keys.length === 0 ? (
+          <p className="text-sm text-slate-400 py-4 text-center">{isEs ? 'Aún no tienes claves. Crea una arriba.' : 'No keys yet. Create one above.'}</p>
+        ) : (
+          <div className="space-y-2">
+            {keys.map(k => {
+              const revoked = !!k.revoked_at;
+              const expired = k.expires_at && new Date(k.expires_at).getTime() < Date.now();
+              return (
+                <div key={k.id} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${revoked || expired ? 'border-slate-200 dark:border-slate-800 opacity-60' : 'border-slate-200 dark:border-slate-700'}`}>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white truncate">{k.name}</span>
+                      <code className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{k.key_prefix}…</code>
+                      {(k.scopes || []).includes('full')
+                        ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">{isEs ? 'ACCESO COMPLETO' : 'FULL'}</span>
+                        : <span className="text-[10px] font-semibold text-slate-500">{(k.scopes || []).length} {isEs ? 'permisos' : 'scopes'}</span>}
+                      {revoked && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400">{isEs ? 'REVOCADA' : 'REVOKED'}</span>}
+                      {!revoked && expired && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{isEs ? 'CADUCADA' : 'EXPIRED'}</span>}
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      {isEs ? 'Usada' : 'Used'} {rel(k.last_used_at)} · {isEs ? 'creada' : 'created'} {fmt(k.created_at)}{k.expires_at ? ` · ${isEs ? 'caduca' : 'expires'} ${fmt(k.expires_at)}` : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {!revoked && <button onClick={() => revoke(k.id)} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition">{isEs ? 'Revocar' : 'Revoke'}</button>}
+                    {revoked && <button onClick={() => del(k.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition" title={isEs ? 'Eliminar' : 'Delete'}><Trash2 className="w-4 h-4" /></button>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Conexión MCP */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Terminal className="w-4 h-4 text-slate-400" /> {isEs ? 'Conectar por MCP' : 'Connect via MCP'}</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          {isEs
+            ? 'Conecta un cliente MCP (Claude, etc.) a tu cuenta. Usa una de tus claves API como token. Las herramientas disponibles respetan los permisos de la clave.'
+            : 'Connect an MCP client (Claude, etc.) to your account. Use one of your API keys as the token. Available tools respect the key’s permissions.'}
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{isEs ? 'URL del servidor MCP' : 'MCP server URL'}</label>
+            <div className="flex gap-2">
+              <input readOnly value={mcpUrl} className={`${inputCls} font-mono`} />
+              <button onClick={() => copy(mcpUrl, 'url')} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5">
+                {copied === 'url' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{isEs ? 'Configuración (ejemplo)' : 'Config (example)'}</label>
+              <button onClick={() => copy(mcpConfig, 'cfg')} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
+                {copied === 'cfg' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {isEs ? 'Copiar' : 'Copy'}
+              </button>
+            </div>
+            <pre className="p-3 rounded-xl bg-slate-900 dark:bg-black text-slate-100 text-[11px] font-mono overflow-x-auto"><code>{mcpConfig}</code></pre>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2 flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              {isEs ? 'Sustituye TU_CLAVE_API por una clave generada arriba. No la compartas: da acceso a tu cuenta.' : 'Replace TU_CLAVE_API with a key generated above. Don’t share it: it grants access to your account.'}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
