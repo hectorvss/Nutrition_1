@@ -2055,7 +2055,11 @@ function IntegrationsSettings() {
                 <h4 className="font-semibold text-slate-900 dark:text-white text-sm">{item.title}</h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.desc}</p>
               </div>
-              <div className="md:col-span-3 flex justify-center">
+              {/* Cada checkbox ocupa UNA celda del grid (columna Push / Email).
+                  Antes llevaban `md:col-span-3`, que los hacía abarcar las 3
+                  columnas y envolverse a filas propias centradas → aparecían
+                  apilados en vertical en vez de bajo sus cabeceras. */}
+              <div className="flex md:justify-center">
                 <input
                   type="checkbox"
                   checked={settings.notification_prefs?.[`${item.id}_push`] ?? true}
@@ -2063,7 +2067,7 @@ function IntegrationsSettings() {
                   className="w-5 h-5 text-emerald-500 border-slate-300 dark:border-slate-600 dark:bg-slate-800 rounded focus:ring-emerald-500/20"
                 />
               </div>
-              <div className="md:col-span-3 flex justify-center">
+              <div className="flex md:justify-center">
                 <input
                   type="checkbox"
                   checked={settings.notification_prefs?.[`${item.id}_email`] ?? true}
