@@ -38,6 +38,10 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://nuly.app',
   'https://www.nuly.app',
+  // App interior en su propio subdominio (mismo proyecto Vercel). La API es
+  // mismo-origen en app.nuly.app, pero lo listamos explícitamente por si algún
+  // flujo (marketing → app) cruza orígenes.
+  'https://app.nuly.app',
   'https://nutrition-1-zeta.vercel.app',
   frontendUrl,
 ].filter(Boolean);

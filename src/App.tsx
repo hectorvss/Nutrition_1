@@ -46,6 +46,7 @@ const ClientApp             = lazyWithRetry(() => import('./ClientApp'));
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu } from 'lucide-react';
 import LandingPage from './views/LandingPage';
+import { isMarketingHost, isAppHost, redirectToApp, redirectToMarketing } from './lib/appHost';
 import { useLanguage } from './context/LanguageContext';
 import { useBilling } from './context/BillingContext';
 import TrialBanner from './components/TrialBanner';
@@ -58,7 +59,18 @@ type View = 'landing' | 'login' | 'signup' | 'dashboard' | 'tasks' | 'calendar' 
 
 export default function App() {
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
-  const [currentView, setCurrentView] = useState<View>('landing');
+  // Vista inicial según host + intención (?view=). En el host de la app
+  // (app.nuly.app) no mostramos la landing de marketing: arrancamos en login
+  // (o signup si la landing enlazó con ?view=signup). En marketing/local
+  // arrancamos en 'landing' como siempre.
+  const [currentView, setCurrentView] = useState<View>(() => {
+    if (typeof window !== 'undefined') {
+      const v = new URLSearchParams(window.location.search).get('view');
+      if (v === 'login' || v === 'signup') return v;
+      if (isAppHost()) return 'login';
+    }
+    return 'landing';
+  });
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedCheckInId, setSelectedCheckInId] = useState<string | null>(null);
@@ -96,7 +108,15 @@ export default function App() {
   // this, renderView() falls through to the "screen under development"
   // placeholder because there is no `case 'login'`.
   React.useEffect(() => {
-    if (user && (currentView === 'landing' || currentView === 'login' || currentView === 'signup')) {
+    if (!user) return;
+    // La app interior es app.nuly.app. Si hay sesión pero seguimos en el host
+    // de marketing (p. ej. sesión antigua en el localStorage de nuly.app previa
+    // al split), no renderizamos la app aquí: mandamos al usuario a la app.
+    if (isMarketingHost()) {
+      redirectToApp();
+      return;
+    }
+    if (currentView === 'landing' || currentView === 'login' || currentView === 'signup') {
       setCurrentView('dashboard');
     }
   }, [user, currentView]);
@@ -142,10 +162,13 @@ export default function App() {
   }
   
   if (!user && currentView === 'landing') {
+    // En marketing (nuly.app) los CTA saltan a la app interior (app.nuly.app),
+    // donde ocurre el login/registro. En local/preview no hay split: se navega
+    // en la misma SPA con setState como siempre.
     return (
       <LandingPage
-        onGetStarted={() => setCurrentView('signup')}
-        onLogin={() => setCurrentView('login')}
+        onGetStarted={() => isMarketingHost() ? redirectToApp('signup') : setCurrentView('signup')}
+        onLogin={() => isMarketingHost() ? redirectToApp('login') : setCurrentView('login')}
       />
     );
   }
@@ -154,7 +177,8 @@ export default function App() {
     return (
       <Login
         initialMode={currentView === 'signup' ? 'signup' : 'login'}
-        onBackToLanding={() => setCurrentView('landing')}
+        // En app.nuly.app no hay landing: "volver" lleva al sitio de marketing.
+        onBackToLanding={() => isAppHost() ? redirectToMarketing() : setCurrentView('landing')}
       />
     );
   }
@@ -387,10 +411,16 @@ export default function App() {
   };
 
   if (currentView === 'landing') {
+    // Usuario autenticado en la vista 'landing'. En marketing el efecto de
+    // arriba ya está redirigiendo a app.nuly.app; mostramos un loader para no
+    // parpadear la landing durante la navegación.
+    if (isMarketingHost()) {
+      return <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-slate-500 dark:text-slate-400">{t('loading_application')}</div>;
+    }
     return (
-      <LandingPage 
-        onGetStarted={() => setCurrentView('dashboard')} 
-        onLogin={() => setCurrentView('dashboard')} 
+      <LandingPage
+        onGetStarted={() => setCurrentView('dashboard')}
+        onLogin={() => setCurrentView('dashboard')}
       />
     );
   }
