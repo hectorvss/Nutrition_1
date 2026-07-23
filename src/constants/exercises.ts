@@ -14,6 +14,10 @@ export interface Exercise {
   instructions?: string;
   commonMistakes?: string;
   tips?: string;
+  /** True when this exercise belongs to the current manager (editable/
+   *  deletable in place). Global catalog rows are read-only and get forked
+   *  into an owned copy on edit. */
+  owned?: boolean;
 }
 
 export const exercises: Exercise[] = [

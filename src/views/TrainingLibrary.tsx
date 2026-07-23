@@ -155,18 +155,22 @@ export default function TrainingLibrary({ onNavigate }: TrainingLibraryProps) {
                     </div>
                     
                     <div className="flex md:justify-center items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(t('confirm_delete_exercise') || `${exercise.name}?`)) {
-                            deleteExercise(exercise.id);
-                          }
-                        }}
-                        className="text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-xl transition-all"
-                        title={t('delete')}
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      {/* Shared catalog exercises are read-only; only the
+                          manager's own custom exercises can be deleted. */}
+                      {exercise.owned && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(t('confirm_delete_exercise') || `${exercise.name}?`)) {
+                              deleteExercise(exercise.id);
+                            }
+                          }}
+                          className="text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 p-2 rounded-xl transition-all"
+                          title={t('delete')}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                     </div>
                   </div>

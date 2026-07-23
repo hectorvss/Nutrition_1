@@ -392,9 +392,13 @@ export default function LibraryDashboard({ onNavigate }: LibraryDashboardProps) 
                         <span className="text-lg font-bold text-amber-600">{food.fats}g</span>
                       </div>
                       <div className="hidden md:flex justify-center gap-2">
-                        <button onClick={() => deleteFood(food.id)} className="p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-400 hover:bg-red-500 hover:text-white transition-all" title={t('delete_label')}>
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        {/* Shared catalog foods are read-only; only the
+                            manager's own custom foods can be deleted. */}
+                        {food.owned && (
+                          <button onClick={() => deleteFood(food.id)} className="p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 text-red-400 hover:bg-red-500 hover:text-white transition-all" title={t('delete_label')}>
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

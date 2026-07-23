@@ -48,29 +48,41 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
       // `getExerciseFullDetails` to keep the global load under control.
       const { data, error } = await supabase
         .from('exercises')
-        .select('id,name,category,subcategory,video_url,type,muscle_groups,secondary_muscles,tools,difficulty_level,icon')
+        .select('id,name,category,subcategory,video_url,type,muscle_groups,secondary_muscles,tools,difficulty_level,icon,manager_id,source_exercise_id')
         .eq('language', language)
         .order('name');
 
       if (error) throw error;
 
-      const mappedExercises: Exercise[] = (data || []).map(item => ({
-        id: item.id,
-        name: item.name,
-        category: item.category as any,
-        subcategory: item.subcategory,
-        video_url: item.video_url,
-        description: undefined,
-        type: item.type as any,
-        muscleGroups: item.muscle_groups || [],
-        secondaryMuscles: item.secondary_muscles || [],
-        tools: item.tools || [],
-        level: item.difficulty_level as any,
-        icon: item.icon || 'fitness_center',
-        instructions: undefined,
-        commonMistakes: undefined,
-        tips: undefined,
-      }));
+      const rows = data || [];
+      // Hide a global once the current manager has forked it (copy-on-write),
+      // so the catalog never shows both the original and the edited copy.
+      const forkedGlobalIds = new Set(
+        rows
+          .filter(r => r.manager_id && r.manager_id === user?.id && r.source_exercise_id)
+          .map(r => r.source_exercise_id)
+      );
+
+      const mappedExercises: Exercise[] = rows
+        .filter(item => !(item.manager_id == null && forkedGlobalIds.has(item.id)))
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category as any,
+          subcategory: item.subcategory,
+          video_url: item.video_url,
+          description: undefined,
+          type: item.type as any,
+          muscleGroups: item.muscle_groups || [],
+          secondaryMuscles: item.secondary_muscles || [],
+          tools: item.tools || [],
+          level: item.difficulty_level as any,
+          icon: item.icon || 'fitness_center',
+          instructions: undefined,
+          commonMistakes: undefined,
+          tips: undefined,
+          owned: !!item.manager_id && item.manager_id === user?.id,
+        }));
 
       setExercises(mappedExercises);
     } catch (err) {
@@ -103,11 +115,14 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchExercises();
-  }, [language]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, user?.id]);
 
   const addExercise = async (exercise: Omit<Exercise, 'id'>) => {
     assertManagerOrThrow(user?.role);
+    if (!user?.id) throw new Error('Not authenticated');
     try {
+      // Stamp ownership so the row is the manager's own (RLS requires it).
       const { error } = await supabase
         .from('exercises')
         .insert([{
@@ -126,7 +141,9 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
           common_mistakes: exercise.commonMistakes ?? null,
           tips: exercise.tips ?? null,
           safety_rating: (exercise as any).safety_rating ?? null,
-          language: language
+          language: language,
+          is_custom: true,
+          manager_id: user.id,
         }]);
 
       if (error) throw error;
@@ -139,7 +156,13 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteExercise = async (id: string) => {
     assertManagerOrThrow(user?.role);
+    if (!user?.id) throw new Error('Not authenticated');
     try {
+      const original = exercises.find(e => e.id === id);
+      if (original && !original.owned) {
+        // Shared catalog exercises can't be deleted — they belong to everyone.
+        throw new Error('Cannot delete a shared catalog exercise. You can only delete your own.');
+      }
       const { error } = await supabase
         .from('exercises')
         .delete()
@@ -155,7 +178,9 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
 
   const updateExercise = async (id: string, updates: Partial<Exercise>) => {
     assertManagerOrThrow(user?.role);
+    if (!user?.id) throw new Error('Not authenticated');
     try {
+      const original = exercises.find(e => e.id === id);
       const dbUpdates: any = {};
       if (updates.name) dbUpdates.name = updates.name;
       if (updates.category) dbUpdates.category = updates.category;
@@ -172,12 +197,39 @@ export const ExerciseProvider = ({ children }: { children: ReactNode }) => {
       if (updates.commonMistakes !== undefined) dbUpdates.common_mistakes = updates.commonMistakes;
       if (updates.tips !== undefined) dbUpdates.tips = updates.tips;
 
-      const { error } = await supabase
-        .from('exercises')
-        .update(dbUpdates)
-        .eq('id', id);
-
-      if (error) throw error;
+      if (original && original.owned) {
+        // The manager owns this row → edit in place.
+        const { error } = await supabase
+          .from('exercises')
+          .update(dbUpdates)
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        // Global (or not owned) → copy-on-write. Never mutate the shared
+        // catalog; create the manager's own copy with the edits merged in.
+        const merged: any = {
+          name: dbUpdates.name ?? original?.name,
+          category: dbUpdates.category ?? original?.category,
+          subcategory: dbUpdates.subcategory ?? original?.subcategory,
+          video_url: dbUpdates.video_url ?? original?.video_url,
+          description: dbUpdates.description ?? original?.description ?? null,
+          type: dbUpdates.type ?? original?.type,
+          muscle_groups: dbUpdates.muscle_groups ?? original?.muscleGroups,
+          secondary_muscles: dbUpdates.secondary_muscles ?? original?.secondaryMuscles,
+          tools: dbUpdates.tools ?? original?.tools,
+          difficulty_level: dbUpdates.difficulty_level ?? original?.level,
+          icon: dbUpdates.icon ?? original?.icon,
+          instructions: dbUpdates.instructions ?? null,
+          common_mistakes: dbUpdates.common_mistakes ?? null,
+          tips: dbUpdates.tips ?? null,
+          language: language,
+          is_custom: true,
+          manager_id: user.id,
+          source_exercise_id: id,
+        };
+        const { error } = await supabase.from('exercises').insert([merged]);
+        if (error) throw error;
+      }
       await fetchExercises();
     } catch (err) {
       console.error('Error updating exercise:', err);
