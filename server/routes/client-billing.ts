@@ -2008,4 +2008,120 @@ export async function runBillingSyncSweep(): Promise<{ checked: number; paid: nu
   return { checked, paid };
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+ * Acciones de billing compartidas con Nuly AI (server/ai/tools/billing.ts).
+ * Espejan los handlers POST /:id/cancel, /:id/pause y /:id/resume usando los
+ * MISMOS helpers delicados (resolveSubscriptionId, rowUsesSharedPlanLink):
+ * la protección de links compartidos y el "si Stripe falla, la BD no miente"
+ * viven en un solo sitio. Si cambias un handler, revisa su acción gemela.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export interface BillingActionResult {
+  ok: boolean;
+  scheduled?: boolean;
+  error?: string;
+}
+
+async function loadOwnedBillingRow(managerId: string, billingId: string) {
+  const { data: row } = await supabaseAdmin
+    .from('client_billing')
+    .select('*')
+    .eq('id', billingId)
+    .eq('manager_id', managerId)
+    .maybeSingle();
+  return row || null;
+}
+
+export async function cancelBillingAction(
+  managerId: string,
+  billingId: string,
+  atPeriodEnd: boolean,
+): Promise<BillingActionResult> {
+  const row = await loadOwnedBillingRow(managerId, billingId);
+  if (!row) return { ok: false, error: 'Cobro no encontrado para este coach.' };
+
+  const conn = await getCoachStripe(managerId);
+  if ('error' in conn) return { ok: false, error: conn.error };
+  const { stripe } = conn;
+
+  const { data: clientUser } = await supabaseAdmin.from('users').select('email').eq('id', row.client_id).maybeSingle();
+  const subscriptionId = await resolveSubscriptionId(stripe, row, clientUser?.email);
+  const sharedLink = await rowUsesSharedPlanLink(row);
+
+  let subscriptionCancelFailed = false;
+  if (subscriptionId) {
+    try {
+      if (atPeriodEnd) {
+        await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
+      } else {
+        await stripe.subscriptions.cancel(subscriptionId);
+      }
+    } catch (subErr) {
+      subscriptionCancelFailed = true;
+      console.error('Stripe subscription cancel FAILED (agent action):', subErr);
+    }
+  }
+  try {
+    if (!subscriptionId && row.stripe_invoice_id && row.status !== 'paid') {
+      await stripe.invoices.voidInvoice(row.stripe_invoice_id);
+    }
+    if (!atPeriodEnd && !sharedLink && row.stripe_payment_link_id) {
+      await stripe.paymentLinks.update(row.stripe_payment_link_id, { active: false });
+    }
+  } catch (bestEffortErr) {
+    console.error('Stripe cancel best-effort failure (agent action):', bestEffortErr);
+  }
+
+  if (subscriptionCancelFailed) {
+    return { ok: false, error: 'Stripe no pudo cancelar la suscripción. No se ha marcado como cancelada; revísalo en el panel de Stripe.' };
+  }
+
+  if (atPeriodEnd && subscriptionId) {
+    await supabaseAdmin.from('client_billing').update({ cancel_at_period_end: true }).eq('id', billingId);
+  } else {
+    await supabaseAdmin
+      .from('client_billing')
+      .update({
+        status: row.stripe_invoice_id && row.status !== 'paid' && !subscriptionId ? 'void' : 'canceled',
+        cancel_at_period_end: false,
+        paused: false,
+      })
+      .eq('id', billingId);
+  }
+  return { ok: true, scheduled: atPeriodEnd && !!subscriptionId };
+}
+
+export async function pauseBillingAction(managerId: string, billingId: string): Promise<BillingActionResult> {
+  const row = await loadOwnedBillingRow(managerId, billingId);
+  if (!row) return { ok: false, error: 'Cobro no encontrado para este coach.' };
+  if (row.kind !== 'recurring') return { ok: false, error: 'Solo se pueden pausar suscripciones.' };
+
+  const conn = await getCoachStripe(managerId);
+  if ('error' in conn) return { ok: false, error: conn.error };
+  const { stripe } = conn;
+  const { data: clientUser } = await supabaseAdmin.from('users').select('email').eq('id', row.client_id).maybeSingle();
+  const subId = await resolveSubscriptionId(stripe, row, clientUser?.email);
+  if (!subId) return { ok: false, error: 'No hay una suscripción activa que pausar (el cliente aún no ha pagado).' };
+
+  await stripe.subscriptions.update(subId, { pause_collection: { behavior: 'void' } });
+  await supabaseAdmin.from('client_billing').update({ paused: true, stripe_subscription_id: subId }).eq('id', billingId);
+  return { ok: true };
+}
+
+export async function resumeBillingAction(managerId: string, billingId: string): Promise<BillingActionResult> {
+  const row = await loadOwnedBillingRow(managerId, billingId);
+  if (!row) return { ok: false, error: 'Cobro no encontrado para este coach.' };
+
+  const conn = await getCoachStripe(managerId);
+  if ('error' in conn) return { ok: false, error: conn.error };
+  const { stripe } = conn;
+  const { data: clientUser } = await supabaseAdmin.from('users').select('email').eq('id', row.client_id).maybeSingle();
+  const subId = await resolveSubscriptionId(stripe, row, clientUser?.email);
+  if (!subId) return { ok: false, error: 'No hay una suscripción que reanudar.' };
+
+  await stripe.subscriptions.update(subId, { pause_collection: null as any });
+  await supabaseAdmin.from('client_billing').update({ paused: false }).eq('id', billingId);
+  return { ok: true };
+}
+
 export default router;

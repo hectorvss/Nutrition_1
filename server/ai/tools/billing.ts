@@ -1,8 +1,30 @@
 import { z } from 'zod';
 import { NulyTool, type ToolCtx } from '../tool.js';
 import { supabaseAdmin } from '../../db/index.js';
+import {
+  cancelBillingAction,
+  pauseBillingAction,
+  resumeBillingAction,
+} from '../../routes/client-billing.js';
 
 const UUID = z.string().uuid();
+
+/** Resumen legible de un cobro para previews de aprobación. */
+async function describeCharge(billingId: string, managerId: string): Promise<string> {
+  const { data: row } = await supabaseAdmin
+    .from('client_billing')
+    .select('description, amount_cents, currency, interval, status, client_id')
+    .eq('id', billingId)
+    .eq('manager_id', managerId)
+    .maybeSingle();
+  if (!row) return 'Cobro no encontrado.';
+  const { data: prof } = await supabaseAdmin
+    .from('profiles')
+    .select('full_name')
+    .eq('user_id', row.client_id)
+    .maybeSingle();
+  return `${prof?.full_name || row.client_id} · ${row.description || 'Sin descripción'} · ${((row.amount_cents || 0) / 100).toFixed(2)} ${String(row.currency || 'eur').toUpperCase()}${row.interval ? `/${row.interval}` : ''} · estado: ${row.status}`;
+}
 
 export class GetBillingOverviewTool extends NulyTool<z.ZodType> {
   readonly name = 'get_billing_overview';
@@ -140,5 +162,76 @@ export class SendPaymentReminderTool extends NulyTool<z.ZodType> {
       .eq('id', args.billing_id);
 
     return ['Recordatorio de pago enviado al cliente por chat.', { kind: 'reminder_sent', billing_id: args.billing_id }];
+  }
+}
+
+export class CancelSubscriptionTool extends NulyTool<z.ZodType> {
+  readonly name = 'cancel_subscription';
+  readonly description =
+    'Cancela un cobro/suscripción de un cliente en Stripe (inmediata o a fin de ciclo). OPERACIÓN CON IMPACTO MONETARIO — siempre requiere aprobación. Usa get_billing_overview antes para localizar el billing_id.';
+  readonly schema = z.object({
+    billing_id: UUID,
+    at_period_end: z.boolean().default(true).describe('true = a fin de ciclo (recomendado); false = inmediata'),
+  });
+
+  isDangerous(): boolean {
+    return true;
+  }
+
+  async preview(args: z.infer<typeof this.schema>, ctx: ToolCtx): Promise<string> {
+    const desc = await describeCharge(args.billing_id, ctx.managerId);
+    return `**Cancelar suscripción** (${args.at_period_end ? 'a fin de ciclo' : 'INMEDIATA'}):\n- ${desc}`;
+  }
+
+  protected async run(args: z.infer<typeof this.schema>, ctx: ToolCtx): Promise<[string, unknown?]> {
+    const result = await cancelBillingAction(ctx.managerId, args.billing_id, args.at_period_end);
+    if (!result.ok) return [`No se pudo cancelar: ${result.error}`];
+    return [
+      result.scheduled
+        ? 'Cancelación programada: la suscripción sigue activa hasta fin de ciclo.'
+        : 'Suscripción cancelada.',
+      { kind: 'billing_action', action: 'cancel', billing_id: args.billing_id, scheduled: !!result.scheduled },
+    ];
+  }
+}
+
+export class PauseSubscriptionTool extends NulyTool<z.ZodType> {
+  readonly name = 'pause_subscription';
+  readonly description =
+    'Pausa el cobro de una suscripción activa de un cliente (Stripe deja de cobrar hasta reanudar). Requiere aprobación.';
+  readonly schema = z.object({ billing_id: UUID });
+
+  isDangerous(): boolean {
+    return true;
+  }
+
+  async preview(args: z.infer<typeof this.schema>, ctx: ToolCtx): Promise<string> {
+    return `**Pausar suscripción:**\n- ${await describeCharge(args.billing_id, ctx.managerId)}`;
+  }
+
+  protected async run(args: z.infer<typeof this.schema>, ctx: ToolCtx): Promise<[string, unknown?]> {
+    const result = await pauseBillingAction(ctx.managerId, args.billing_id);
+    if (!result.ok) return [`No se pudo pausar: ${result.error}`];
+    return ['Suscripción pausada — Stripe no cobrará hasta reanudarla.', { kind: 'billing_action', action: 'pause', billing_id: args.billing_id }];
+  }
+}
+
+export class ResumeSubscriptionTool extends NulyTool<z.ZodType> {
+  readonly name = 'resume_subscription';
+  readonly description = 'Reanuda el cobro de una suscripción pausada de un cliente. Requiere aprobación.';
+  readonly schema = z.object({ billing_id: UUID });
+
+  isDangerous(): boolean {
+    return true;
+  }
+
+  async preview(args: z.infer<typeof this.schema>, ctx: ToolCtx): Promise<string> {
+    return `**Reanudar suscripción:**\n- ${await describeCharge(args.billing_id, ctx.managerId)}`;
+  }
+
+  protected async run(args: z.infer<typeof this.schema>, ctx: ToolCtx): Promise<[string, unknown?]> {
+    const result = await resumeBillingAction(ctx.managerId, args.billing_id);
+    if (!result.ok) return [`No se pudo reanudar: ${result.error}`];
+    return ['Suscripción reanudada — los cobros continúan con normalidad.', { kind: 'billing_action', action: 'resume', billing_id: args.billing_id }];
   }
 }

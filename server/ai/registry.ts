@@ -15,7 +15,13 @@ import {
   AssignNutritionPlanTool,
 } from './tools/generators.js';
 import { ManageMemoryTool } from './tools/memory.js';
-import { GetBillingOverviewTool, SendPaymentReminderTool } from './tools/billing.js';
+import {
+  GetBillingOverviewTool,
+  SendPaymentReminderTool,
+  CancelSubscriptionTool,
+  PauseSubscriptionTool,
+  ResumeSubscriptionTool,
+} from './tools/billing.js';
 
 const ALL: NulyTool[] = [
   new ListClientsTool(),
@@ -34,6 +40,9 @@ const ALL: NulyTool[] = [
   new ManageMemoryTool(),
   new GetBillingOverviewTool(),
   new SendPaymentReminderTool(),
+  new CancelSubscriptionTool(),
+  new PauseSubscriptionTool(),
+  new ResumeSubscriptionTool(),
 ];
 
 const byName = new Map<string, NulyTool>(ALL.map(t => [t.name, t]));
