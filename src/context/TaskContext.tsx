@@ -55,6 +55,9 @@ interface TaskContextType {
   markTaskAsDone: (taskId: number | string) => Promise<void>;
   markTaskAsPending: (taskId: number | string) => Promise<void>;
   completedTasks: TaskItem[];
+  // True mientras aún se cargan los datos de los que derivan las tareas
+  // (clientes). La vista Tasks lo usa para pintar skeletons en la carga inicial.
+  loading: boolean;
 }
 
 const defaultRules: AutomationRule[] = [
@@ -501,7 +504,7 @@ export function buildAutomatedTasksPure(
 }
 
 export const TaskProvider = ({ children }: { children: ReactNode }) => {
-  const { clients } = useClient();
+  const { clients, isLoading: clientsLoading } = useClient();
   const { user } = useAuth();
   const { t } = useLanguage();
 
@@ -731,7 +734,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   }, [clients, rules, manualTasks, completedAutomatedIds, buildAutomatedTasks, t]);
 
   return (
-    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks, markTaskAsDone, markTaskAsPending, completedTasks }}>
+    <TaskContext.Provider value={{ rules, tasks, addManualTask, updateRule, saveRules, refreshTasks, markTaskAsDone, markTaskAsPending, completedTasks, loading: clientsLoading }}>
       {children}
     </TaskContext.Provider>
   );

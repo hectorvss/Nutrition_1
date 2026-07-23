@@ -38,6 +38,7 @@ import { unwrapList } from '../api/unwrap';
 import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import CoachProfileModal from './client/CoachProfileModal';
+import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
 
 interface Message {
   id: string;
@@ -59,9 +60,13 @@ interface MessagesProps {
 
 export default function Messages({ onNavigate, initialClientId }: MessagesProps) {
   const { user } = useAuth();
-  const { clients } = useClient();
+  const { clients, isLoading: clientsLoading } = useClient();
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
+  // Primera carga del hilo abierto. Sólo se pone a true al cambiar de chat y a
+  // false cuando llega la primera página; el polling (cada 5s) nunca lo re-activa,
+  // así los skeletons no parpadean en cada refresco.
+  const [threadLoading, setThreadLoading] = useState(false);
   const [latestMessages, setLatestMessages] = useState<Record<string, Message>>({});
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -206,6 +211,9 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
       }
     } catch (err) {
       console.error('Failed to load messages:', err);
+    } finally {
+      // Primera página resuelta (con éxito o error): quita el skeleton.
+      setThreadLoading(false);
     }
   };
 
@@ -275,6 +283,8 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
     setOlderCursor(null);
     setHasOlder(false);
     userLoadedOlderRef.current = false;
+    // Muestra skeleton del hilo mientras llega la primera página del nuevo chat.
+    if (activeRecipient) { setMessages([]); setThreadLoading(true); }
     loadMessagesRef.current();
     // Polling agresivo (5s) solo cuando la pestana esta activa.
     // Usamos la ref para que el tick siempre llame a la version mas reciente
@@ -631,6 +641,24 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
           </div>
           
           <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {/* Carga inicial de la lista: filas skeleton que imitan cada
+                conversación (avatar redondeado + nombre + preview). */}
+            {clientsLoading && clients.length === 0 && (
+              <div aria-hidden="true">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
+                    <SkeletonCircle size={56} className="rounded-2xl" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <Skeleton className="h-3.5 w-32" />
+                        <Skeleton className="h-2.5 w-10" />
+                      </div>
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {filteredClients.map((client) => {
               const latest = latestMessages[client.id];
               return (
@@ -1009,6 +1037,28 @@ export default function Messages({ onNavigate, initialClientId }: MessagesProps)
 
       {/* Messages Scroll Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+        {/* Primera carga del hilo: burbujas skeleton alternando lado (entrante
+            con avatar / saliente a la derecha) mientras llega la página. */}
+        {threadLoading && messages.length === 0 && (
+          <div className="space-y-8" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map((i) => {
+              const own = i % 2 === 1;
+              return (
+                <div key={i} className={`flex items-start space-x-3 ${own ? 'justify-end' : ''}`}>
+                  {!own && <SkeletonCircle size={32} />}
+                  <div className={own ? 'flex flex-col items-end' : ''}>
+                    <Skeleton
+                      className="rounded-2xl"
+                      style={{ width: i % 3 === 0 ? 220 : i % 3 === 1 ? 150 : 260, height: i % 4 === 0 ? 56 : 40 }}
+                    />
+                    <Skeleton className="h-2 w-12 mt-1.5" />
+                  </div>
+                  {own && <SkeletonCircle size={32} />}
+                </div>
+              );
+            })}
+          </div>
+        )}
         {/* Boton para cargar mensajes anteriores. Aparece arriba (los viejos
             estan al principio de la lista). Cuando se pulsa, el scroll se
             queda igual visualmente porque solo se anaden filas arriba. */}

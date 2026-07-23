@@ -48,10 +48,11 @@ interface TasksProps {
 
 import { useTask, TaskItem } from '../context/TaskContext';
 import { useLanguage } from '../context/LanguageContext';
+import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
 
 export default function Tasks({ onNavigate }: TasksProps) {
   const { t } = useLanguage();
-  const { tasks, completedTasks, markTaskAsDone, markTaskAsPending } = useTask();
+  const { tasks, completedTasks, markTaskAsDone, markTaskAsPending, loading } = useTask();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
   // Tasks mid-completion: brief green "confirm" beat before the card animates out.
@@ -180,7 +181,38 @@ export default function Tasks({ onNavigate }: TasksProps) {
             </button>
           </div>
 
-          {activeTab === 'pending' ? (
+          {loading && tasks.length === 0 && completedTasks.length === 0 ? (
+            // Carga inicial: pintamos dos grupos de prioridad con tarjetas
+            // skeleton que imitan el layout real (etiqueta + tarjetas con
+            // icono, título, descripción y pie con avatar), en vez de dejar
+            // el cuerpo en blanco mientras cargan clientes/calendario.
+            <div className="space-y-8 sm:space-y-10" aria-hidden="true">
+              {Array.from({ length: 2 }).map((_, s) => (
+                <section key={s}>
+                  <Skeleton className="h-3 w-32 mb-4" />
+                  <div className="space-y-4">
+                    {Array.from({ length: s === 0 ? 3 : 2 }).map((_, i) => (
+                      <div key={i} className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-slate-200 dark:border-l-slate-700 shadow-sm">
+                        <div className="flex items-center gap-2 mb-3">
+                          <SkeletonCircle size={20} className="rounded-md" />
+                          <Skeleton className="h-2.5 w-24" />
+                        </div>
+                        <Skeleton className="h-4 w-2/3 mb-2" />
+                        <Skeleton className="h-3 w-full max-w-md mb-1" />
+                        <Skeleton className="h-3 w-1/2 max-w-xs" />
+                        <div className="flex items-center gap-3 mt-4">
+                          <SkeletonCircle size={32} />
+                          <Skeleton className="h-3 w-28" />
+                          <div className="flex-1" />
+                          <SkeletonCircle size={44} className="rounded-full" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : activeTab === 'pending' ? (
             <div className="space-y-8 sm:space-y-10">
               {(['high', 'medium', 'low'] as const).map((prio) => {
                 const prioTasks = tasks.filter(t => (t.priority || 'medium') === prio && (!searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()) || t.client.toLowerCase().includes(searchQuery.toLowerCase())));

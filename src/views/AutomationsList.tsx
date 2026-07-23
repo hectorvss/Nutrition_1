@@ -23,6 +23,7 @@ import { useClient } from '../context/ClientContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fetchWithAuth } from '../api';
 import { unwrapList } from '../api/unwrap';
+import { Skeleton, SkeletonCircle } from '../components/ui/Skeleton';
 
 const iconMap: Record<string, React.ElementType> = {
   Hand, Repeat, AlertTriangle, PartyPopper, Cake, FileText, ClipboardCheck, UserPlus, Smartphone, TrendingUp
@@ -45,7 +46,7 @@ interface AutomationsListProps {
 
 export default function AutomationsList({ onCreateNew, onCreateWorkflow, onEdit, onOpenWorkflow }: AutomationsListProps) {
   const { t } = useLanguage();
-  const { automations, toggleAutomation, deleteAutomation } = useAutomation();
+  const { automations, toggleAutomation, deleteAutomation, loading: autosLoading } = useAutomation();
   const { clients } = useClient();
   const [search, setSearch] = useState('');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -56,13 +57,21 @@ export default function AutomationsList({ onCreateNew, onCreateWorkflow, onEdit,
   const [workflows, setWorkflows] = useState<WorkflowRow[]>([]);
   const [wfBusy, setWfBusy] = useState<string | null>(null);
   const [wfError, setWfError] = useState<string | null>(null);
+  const [wfLoading, setWfLoading] = useState(true);
 
   const loadWorkflows = () => {
+    setWfLoading(true);
     fetchWithAuth('/workflows?limit=200')
       .then(d => setWorkflows(unwrapList<WorkflowRow>(d)))
-      .catch(() => setWorkflows([]));
+      .catch(() => setWorkflows([]))
+      .finally(() => setWfLoading(false));
   };
   useEffect(() => { loadWorkflows(); }, []);
+
+  // Carga inicial de la lista: simples (contexto) o workflows (fetch) aún en
+  // vuelo. Sólo pintamos skeletons cuando todavía no hay nada que mostrar, para
+  // no tapar filas ya visibles durante un refresco.
+  const isInitialLoading = (autosLoading || wfLoading) && (automations.length + workflows.length) === 0;
 
   // Activar / desactivar un workflow sin abrir el builder. publish valida el
   // grafo y aplica el límite del plan; unpublish solo lo deshabilita.
@@ -199,7 +208,36 @@ export default function AutomationsList({ onCreateNew, onCreateWorkflow, onEdit,
           </div>
 
           <div className="overflow-y-auto flex-1">
-            {shownCount === 0 && (
+            {/* Carga inicial: filas skeleton que imitan el grid de 12 columnas
+                (icono + nombre/desc + badge de trigger + preview + estado). */}
+            {isInitialLoading && (
+              <div aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="border-b border-slate-100 dark:border-slate-800">
+                    <div className="grid grid-cols-12 gap-4 p-5 items-center">
+                      <div className="col-span-4 flex items-center gap-4">
+                        <SkeletonCircle size={40} className="rounded-xl" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <Skeleton className="h-3.5 w-2/3" />
+                          <Skeleton className="h-2.5 w-1/2" />
+                        </div>
+                      </div>
+                      <div className="col-span-3 hidden md:block">
+                        <Skeleton className="h-6 w-24 rounded-lg" />
+                      </div>
+                      <div className="col-span-3 hidden sm:block">
+                        <Skeleton className="h-3 w-3/4" />
+                      </div>
+                      <div className="col-span-5 md:col-span-2 flex justify-end">
+                        <Skeleton className="h-6 w-11 rounded-full" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isInitialLoading && shownCount === 0 && (
               <div className="p-12 text-center text-slate-500 dark:text-slate-400">
                 {t('no_automations_found')}{' '}
                 <button onClick={onCreateNew} className="text-emerald-500 font-semibold hover:underline">{t('create_one')}</button>
