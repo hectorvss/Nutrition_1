@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { User } from '@supabase/supabase-js';
 import { supabase, supabaseAdmin } from '../db/index.js';
+import { looksLikeApiKey, resolveApiKey, apiKeyAllowsUrl, scopeForUrl } from '../lib/apiKeys.js';
 
 /**
  * Express Request enriquecido por verifyManager / verifyClient / authenticate.
@@ -9,6 +10,31 @@ import { supabase, supabaseAdmin } from '../db/index.js';
  */
 export interface AuthedRequest extends Request {
   user?: User;
+  apiKey?: { managerId: string; scopes: string[]; keyId: string };
+  viaApiKey?: boolean;
+}
+
+// Autentica una request de MANAGER por clave API personal (Bearer nfm_...).
+// Devuelve true si la manejó (envió respuesta o llamó next); false si el token
+// NO es una API key y hay que seguir con el flujo JWT normal.
+async function tryApiKeyManager(req: AuthedRequest, res: Response, next: NextFunction, token: string): Promise<boolean> {
+  if (!looksLikeApiKey(token)) return false;
+  const resolved = await resolveApiKey(token);
+  if (!resolved) { res.status(401).json({ error: 'Invalid or revoked API key' }); return true; }
+  // Gestión de claves NUNCA por clave API (evita que una clave cree más claves).
+  if ((req.originalUrl || '').includes('/api-keys')) {
+    res.status(403).json({ error: 'api_key_management_forbidden', message: 'Las claves API se gestionan desde una sesión con login, no con otra clave API.' });
+    return true;
+  }
+  if (!apiKeyAllowsUrl(req.originalUrl || '', resolved.scopes)) {
+    res.status(403).json({ error: 'insufficient_scope', message: `Esta clave API no tiene permiso para "${scopeForUrl(req.originalUrl || '')}".` });
+    return true;
+  }
+  req.user = { id: resolved.managerId, role: 'MANAGER' } as any;
+  req.apiKey = resolved;
+  req.viaApiKey = true;
+  next();
+  return true;
 }
 
 /**
@@ -20,6 +46,9 @@ export const verifyManager = async (req: AuthedRequest, res: Response, next: Nex
   if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
   try {
+    // Clave API personal (acceso programático / MCP). Si maneja la request, salimos.
+    if (await tryApiKeyManager(req, res, next, token)) return;
+
     const { data, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !data?.user) {
@@ -107,6 +136,9 @@ export const authenticate = async (req: AuthedRequest, res: Response, next: Next
   if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
   try {
+    // Clave API personal de manager (p.ej. enviar mensajes vía API).
+    if (await tryApiKeyManager(req, res, next, token)) return;
+
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data?.user) {
       return res.status(401).json({ error: 'Invalid token' });

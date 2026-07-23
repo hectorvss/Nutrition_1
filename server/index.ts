@@ -24,6 +24,9 @@ import onboardingRoutes from './routes/onboarding.js';
 import recipeRoutes from './routes/recipes.js';
 import clientBillingRoutes from './routes/client-billing.js';
 import coachWebhookRoutes from './routes/coach-webhook.js';
+import apiKeyRoutes from './routes/api-keys.js';
+import mcpRoutes from './routes/mcp.js';
+import aiRoutes from './ai/routes.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3005;
@@ -109,7 +112,10 @@ app.use('/api/workflows', workflowRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/manager/client-billing', clientBillingRoutes);
+app.use('/api/manager/api-keys', apiKeyRoutes);
+app.use('/api/mcp', mcpRoutes);
 app.use('/api/stripe/coach-webhook', coachWebhookRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });

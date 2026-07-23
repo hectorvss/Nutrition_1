@@ -4,36 +4,19 @@
 // espejo local en `client_billing` para listarlos y enviar recordatorios por
 // chat, y refresca el estado on-read (no dependemos de webhooks por-coach).
 import { Router } from 'express';
-import { supabase, supabaseAdmin } from '../db/index.js';
+import { supabaseAdmin } from '../db/index.js';
 import { newStripeClient } from '../lib/stripe.js';
 import { safeErr } from '../lib/http.js';
 import { sendPushToUser } from '../lib/push.js';
 import { sendManagerNotificationEmail } from '../lib/email.js';
+import { verifyManager } from '../middleware/auth.js';
 import type Stripe from 'stripe';
 
 const router = Router();
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ── Auth: mismo patrón que el resto de rutas de manager ────────────────────
-const verifyManager = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
-  try {
-    const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) return res.status(401).json({ error: 'Invalid token' });
-    // Confirma rol MANAGER
-    const { data: profile } = await supabaseAdmin
-      .from('users').select('role').eq('id', data.user.id).maybeSingle();
-    if (!profile || profile.role !== 'MANAGER') {
-      return res.status(403).json({ error: 'Forbidden: manager only' });
-    }
-    req.user = data.user;
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Auth error' });
-  }
-};
+// ── Auth: usa el verifyManager compartido (acepta JWT y claves API con scope). ──
 router.use(verifyManager);
 
 // ── Helper: cliente Stripe del coach (su propia cuenta) ────────────────────
