@@ -930,7 +930,12 @@ async function runLoop(p: {
   ctx: any; queue: QueueItem[]; visited: Set<string>;
   dryRun: boolean;
 }): Promise<LoopResult> {
-  const { managerId, runId, nodes, edges, ctx, queue, visited, dryRun } = p;
+  const { managerId, runId, ctx, queue, visited, dryRun } = p;
+  // Normaliza aqui tambien (defensa en profundidad): cualquier caller que pase
+  // una definicion malformada (nodes/edges no-array) no debe hacer throw en
+  // `nodes.map` / `edges.filter` fuera del try por-nodo.
+  const nodes: WorkflowNode[] = Array.isArray(p.nodes) ? p.nodes : [];
+  const edges: WorkflowEdge[] = Array.isArray(p.edges) ? p.edges : [];
   const steps: any[] = [];
   const nodeById = new Map(nodes.map(n => [n.id, n]));
   let status: LoopResult['status'] = 'completed';
@@ -1680,16 +1685,17 @@ async function runLoop(p: {
 }
 
 async function persistRunResult(runId: string, r: LoopResult) {
-  if (r.pause) {
-    await supabaseAdmin.from('workflow_runs').update({
-      status: 'waiting', resume_at: r.pause.resumeAt, context: r.ctx,
-      resume_state: { queue: r.pause.queue, visited: r.pause.visited, context: r.ctx },
-    }).eq('id', runId);
-  } else {
-    await supabaseAdmin.from('workflow_runs').update({
-      status: r.status, context: r.ctx, resume_at: null, resume_state: null,
-      ended_at: new Date().toISOString(),
-    }).eq('id', runId);
+  const patch = r.pause
+    ? { status: 'waiting', resume_at: r.pause.resumeAt, context: r.ctx,
+        resume_state: { queue: r.pause.queue, visited: r.pause.visited, context: r.ctx } }
+    : { status: r.status, context: r.ctx, resume_at: null, resume_state: null,
+        ended_at: new Date().toISOString() };
+  // Un par de reintentos: si el update final falla el run quedaria colgado en
+  // 'running'; el reaper lo recogeria, pero mejor persistir bien a la primera.
+  for (let i = 0; i < 2; i++) {
+    const { error } = await supabaseAdmin.from('workflow_runs').update(patch).eq('id', runId);
+    if (!error) return;
+    await new Promise(res => setTimeout(res, 200 * (i + 1)));
   }
 }
 
@@ -1700,38 +1706,56 @@ export async function executeWorkflowVersion(opts: {
   triggerType: string; payload: any;
   dryRun?: boolean; dedupeKey?: string;
 }): Promise<{ runId: string | null; status: string; steps: any[] }> {
-  const { managerId, versionId, nodes, edges, triggerType, payload, dryRun = false, dedupeKey } = opts;
-  const ctx = await buildContext(managerId, triggerType, payload);
+  const { managerId, versionId, triggerType, payload, dryRun = false, dedupeKey } = opts;
+  // Definiciones malformadas (nodes/edges no-array) no deben crashear: normaliza.
+  const nodes: WorkflowNode[] = Array.isArray(opts.nodes) ? opts.nodes : [];
+  const edges: WorkflowEdge[] = Array.isArray(opts.edges) ? opts.edges : [];
 
   let runId: string | null = null;
-  if (!dryRun) {
-    const { data: run, error } = await supabaseAdmin.from('workflow_runs').insert({
-      workflow_version_id: versionId, manager_id: managerId, client_id: payload?.clientId || null,
-      trigger_type: triggerType, trigger_payload: payload || {}, status: 'running',
-      dedupe_key: dedupeKey || null,
-    }).select('id').single();
-    if (error) {
-      // 23505 = dedupe hit -> this event already produced a run; skip silently.
-      if (error.code === '23505') return { runId: null, status: 'skipped', steps: [] };
-      throw error;
-    }
-    runId = run!.id;
-  }
+  // TODO el cuerpo va en try/catch: esta funcion NUNCA debe propagar. Si algo
+  // lanza (buildContext, runLoop, persist, una query), marcamos el run como
+  // 'failed' (si se creo) y devolvemos — asi un workflow roto ni deja el run
+  // colgado en 'running' ni aborta el resto del batch (event/cron).
+  try {
+    const ctx = await buildContext(managerId, triggerType, payload);
 
-  const start = nodes.find(n => n.type === 'trigger');
-  if (!start) {
-    if (runId) await supabaseAdmin.from('workflow_runs')
-      .update({ status: 'failed', error: 'No trigger node', ended_at: new Date().toISOString() })
-      .eq('id', runId);
+    if (!dryRun) {
+      const { data: run, error } = await supabaseAdmin.from('workflow_runs').insert({
+        workflow_version_id: versionId, manager_id: managerId, client_id: payload?.clientId || null,
+        trigger_type: triggerType, trigger_payload: payload || {}, status: 'running',
+        dedupe_key: dedupeKey || null,
+      }).select('id').single();
+      if (error) {
+        // 23505 = dedupe hit -> this event already produced a run; skip silently.
+        if (error.code === '23505') return { runId: null, status: 'skipped', steps: [] };
+        throw error;
+      }
+      runId = run!.id;
+    }
+
+    const start = nodes.find(n => n.type === 'trigger');
+    if (!start) {
+      if (runId) await supabaseAdmin.from('workflow_runs')
+        .update({ status: 'failed', error: 'No trigger node', ended_at: new Date().toISOString() })
+        .eq('id', runId);
+      return { runId, status: 'failed', steps: [] };
+    }
+
+    const result = await runLoop({
+      managerId, runId, nodes, edges, ctx,
+      queue: [{ nodeId: start.id }], visited: new Set<string>(), dryRun,
+    });
+    if (runId) await persistRunResult(runId, result);
+    return { runId, status: result.status, steps: result.steps };
+  } catch (err: any) {
+    console.error('executeWorkflowVersion failed:', err?.message || err);
+    if (runId) {
+      await supabaseAdmin.from('workflow_runs')
+        .update({ status: 'failed', error: String(err?.message || err).slice(0, 500), ended_at: new Date().toISOString() })
+        .eq('id', runId).then(() => {}, () => {});
+    }
     return { runId, status: 'failed', steps: [] };
   }
-
-  const result = await runLoop({
-    managerId, runId, nodes, edges, ctx,
-    queue: [{ nodeId: start.id }], visited: new Set<string>(), dryRun,
-  });
-  if (runId) await persistRunResult(runId, result);
-  return { runId, status: result.status, steps: result.steps };
 }
 
 /** Resume a single parked ('waiting') run. */
@@ -1754,8 +1778,14 @@ async function resumeWorkflowRun(run: any) {
       dryRun: false,
     });
     await persistRunResult(run.id, result);
-  } catch (err) {
-    console.error('resumeWorkflowRun failed:', err);
+  } catch (err: any) {
+    // Marcar failed (no solo loguear): si no, el run sigue 'waiting' con
+    // resume_at pasado y se re-selecciona en CADA barrido, re-ejecutando los
+    // pasos previos al throw -> reenvios duplicados eternos (poison-pill).
+    console.error('resumeWorkflowRun failed:', err?.message || err);
+    await supabaseAdmin.from('workflow_runs')
+      .update({ status: 'failed', error: String(err?.message || err).slice(0, 500), resume_at: null, ended_at: new Date().toISOString() })
+      .eq('id', run.id).then(() => {}, () => {});
   }
 }
 
@@ -1766,6 +1796,20 @@ export async function resumeWaitingWorkflows(): Promise<number> {
     .eq('status', 'waiting').lte('resume_at', new Date().toISOString()).limit(200);
   for (const run of runs || []) await resumeWorkflowRun(run);
   return (runs || []).length;
+}
+
+/**
+ * Reaper de runs huerfanos: si el proceso muere DURANTE la ejecucion (OOM/kill),
+ * el try/catch de executeWorkflowVersion no llega a correr y el run queda en
+ * 'running' para siempre. Un run sano dura segundos; marcamos como 'failed' los
+ * que lleven 'running' mas de `olderThanMin` (por defecto 15 min).
+ */
+export async function reapStuckWorkflowRuns(olderThanMin = 15): Promise<number> {
+  const cutoff = new Date(Date.now() - olderThanMin * 60000).toISOString();
+  const { data } = await supabaseAdmin.from('workflow_runs')
+    .update({ status: 'failed', error: 'stuck in running (reaped)', ended_at: new Date().toISOString() })
+    .eq('status', 'running').lt('started_at', cutoff).select('id');
+  return (data || []).length;
 }
 
 /** Fire every enabled published workflow of a manager whose trigger matches an event. */
@@ -1789,16 +1833,22 @@ export async function runWorkflowsForEvent(managerId: string, triggerKey: string
     for (const v of versions) {
       if (v.triggerKey !== triggerKey) continue;
       if (!shouldRunEventTrigger(triggerKey, v.triggerConfig, payload)) continue;
-      // Idempotency: events carrying a stable id only ever produce one run.
-      const stableId = payload?.checkinId || payload?.submissionId || payload?.messageId
-        || payload?.workoutId || payload?.mealLogId || payload?.mealId || payload?.activityId
-        || payload?.billingId || payload?.refundId || payload?.eventId
-        || (triggerKey === 'trigger.new_client' ? payload?.clientId : null);
-      const dedupeKey = stableId ? `${v.versionId}:${triggerKey}:${stableId}` : undefined;
-      await executeWorkflowVersion({
-        managerId, versionId: v.versionId, nodes: v.nodes, edges: v.edges,
-        triggerType: triggerKey, payload, dedupeKey,
-      });
+      // Aislado por-workflow: un workflow que falle no debe impedir que se
+      // disparen los demas que tambien escuchan este evento.
+      try {
+        // Idempotency: events carrying a stable id only ever produce one run.
+        const stableId = payload?.checkinId || payload?.submissionId || payload?.messageId
+          || payload?.workoutId || payload?.mealLogId || payload?.mealId || payload?.activityId
+          || payload?.billingId || payload?.refundId || payload?.eventId
+          || (triggerKey === 'trigger.new_client' ? payload?.clientId : null);
+        const dedupeKey = stableId ? `${v.versionId}:${triggerKey}:${stableId}` : undefined;
+        await executeWorkflowVersion({
+          managerId, versionId: v.versionId, nodes: v.nodes, edges: v.edges,
+          triggerType: triggerKey, payload, dedupeKey,
+        });
+      } catch (e: any) {
+        console.error('runWorkflowsForEvent version failed:', v.versionId, e?.message || e);
+      }
     }
   } catch (err) {
     console.error('runWorkflowsForEvent failed:', err);
@@ -1818,12 +1868,15 @@ export async function fireScheduledWorkflows(): Promise<number> {
     const todayWeekday = WEEKDAY_NAMES[nowDate.getDay()];
 
     for (const def of defs || []) {
+     // Aislado por-definicion: el fallo de un workflow (o una de sus queries)
+     // no debe abortar el barrido de los demas managers/workflows.
+     try {
       if (!def.current_version_id) continue;
       const { data: version } = await supabaseAdmin
         .from('workflow_versions').select('id, status, nodes, edges')
         .eq('id', def.current_version_id).maybeSingle();
       if (!version || version.status !== 'published') continue;
-      const nodes: WorkflowNode[] = version.nodes || [];
+      const nodes: WorkflowNode[] = Array.isArray(version.nodes) ? version.nodes : [];
       const trig = nodes.find(n => n.type === 'trigger');
       if (!trig) continue;
 
@@ -1999,6 +2052,9 @@ export async function fireScheduledWorkflows(): Promise<number> {
         });
         if (res.status !== 'skipped') fired++;
       }
+     } catch (e: any) {
+       console.error('fireScheduledWorkflows def failed:', def?.id, e?.message || e);
+     }
     }
   } catch (err) {
     console.error('fireScheduledWorkflows failed:', err);

@@ -4,7 +4,7 @@ import { parsePagination, buildPage, applyCursor } from '../lib/pagination.js';
 import crypto from 'crypto';
 import { supabaseAdmin } from '../db/index.js';
 import { verifyManager } from '../middleware/auth.js';
-import { resumeWaitingWorkflows, fireScheduledWorkflows } from './workflows.js';
+import { resumeWaitingWorkflows, fireScheduledWorkflows, reapStuckWorkflowRuns } from './workflows.js';
 import { logger } from '../lib/logger.js';
 import { makeEnforceLimit, limitsForTier, countActiveAutomations, type PlanTier } from '../lib/plans.js';
 import { TRIGGERS, TRIGGER_BY_ID, filterTriggersByTier } from '../lib/automation-triggers.js';
@@ -311,6 +311,10 @@ async function executeAutomationSteps(opts: {
 
   for (let i = fromStep; i < steps.length; i++) {
     const step = steps[i];
+    // Red de seguridad por-paso: un step con datos malformados (tipos raros en
+    // el jsonb) no debe propagar la excepcion y tumbar el batch del trigger.
+    // Lo tratamos como abort controlado de la cadena.
+    try {
 
     if (step.kind === 'message') {
       const finalMessage = renderMessage(step.message, ctx.renderCtx);
@@ -396,7 +400,11 @@ async function executeAutomationSteps(opts: {
     }
 
     if (step.kind === 'wait') {
-      const ms = (step.amount || 0) * (step.unit === 'hours' ? 3600 : 86400) * 1000;
+      // amount puede venir como string no numérico ("soon") u objeto en el
+      // jsonb -> NaN -> new Date(NaN) reventaba. Coerción segura a >= 0.
+      const amt = Number(step.amount);
+      const safeAmt = Number.isFinite(amt) && amt > 0 ? amt : 0;
+      const ms = safeAmt * (step.unit === 'hours' ? 3600 : 86400) * 1000;
       const resumeAt = new Date(Date.now() + ms).toISOString();
       // UPSERT sobre el indice unico (automation_id, client_id). El primer wait
       // inserta; un wait POSTERIOR (llegado al reanudar la misma cadena) actualiza
@@ -576,6 +584,11 @@ async function executeAutomationSteps(opts: {
         return 'aborted';
       }
       continue;
+    }
+
+    } catch (e: any) {
+      console.error(`[automation ${ctx.automation?.id}] step ${i} (${step?.kind}) threw:`, e?.message || e);
+      return 'aborted';
     }
   }
   return 'completed';
@@ -798,6 +811,9 @@ export async function processTrigger(managerId: string, triggerId: string, data:
       const _cachedCoachName = _managerProfile?.full_name || (_cachedLanguage === 'en' ? 'your coach' : 'tu coach');
 
       for (const clientId of clientIds) {
+       // Aislado por-cliente: un cliente con datos malformados o una query que
+       // falle no debe abortar el envio al resto de clientes de la automation.
+       try {
         // 3. Datos del cliente + conditionValues (mismo helper que usa el
         //    resume de cadenas parqueadas, para que stop_if tras un wait
         //    evalue contra datos frescos).
@@ -810,7 +826,7 @@ export async function processTrigger(managerId: string, triggerId: string, data:
 
         // 4b. Stop conditions (OR: con que UNA se cumpla, paramos)
         let stopMet = false;
-        for (const cond of (rules.stop_conditions || [])) {
+        for (const cond of (Array.isArray(rules.stop_conditions) ? rules.stop_conditions : [])) {
           if (!cond?.enabled) continue;
           if (evalConditions([cond], conditionValues)) { stopMet = true; break; }
         }
@@ -856,6 +872,9 @@ export async function processTrigger(managerId: string, triggerId: string, data:
           : [{ kind: 'message', message: automation.message || '' }];
 
         await executeAutomationSteps({ ctx: execCtx, steps, fromStep: 0 });
+       } catch (e: any) {
+         console.error(`[automation ${automation.id}] client ${clientId} failed:`, e?.message || e);
+       }
       }
     }
   } catch (error) {
@@ -1127,6 +1146,10 @@ const cronHandler = async (req: any, res: any) => {
     if (!automations) return res.json({ processed: 0 });
 
     for (const automation of automations) {
+     // Aislado por-automation: un manager/automation cuya query o cliente falle
+     // no debe abortar el barrido diario del resto (antes un solo throw aqui
+     // tumbaba TODOS los triggers programados de TODOS los managers ese dia).
+     try {
       const { data: clients } = await supabaseAdmin
         .from('users')
         .select(`
@@ -1139,10 +1162,11 @@ const cronHandler = async (req: any, res: any) => {
         `)
         .eq('manager_id', automation.manager_id)
         .eq('role', 'CLIENT');
-      
+
       if (!clients) continue;
 
       for (const client of clients) {
+       try {
         const clientProfile = Array.isArray(client.profiles) ? client.profiles[0] : client.profiles;
         const cProfile = Array.isArray(client.clients_profiles) ? client.clients_profiles[0] : client.clients_profiles;
         let shouldTrigger = false;
@@ -1466,7 +1490,13 @@ const cronHandler = async (req: any, res: any) => {
         if (shouldTrigger) {
           await processTrigger(automation.manager_id, automation.trigger_id, { clientId: client.id, ...triggerExtra });
         }
+       } catch (e: any) {
+         logger.error('automations.cron.client_failed', { automation: automation.id, client: client.id, err: e?.message });
+       }
       }
+     } catch (e: any) {
+       logger.error('automations.cron.automation_failed', { automation: automation.id, err: e?.message });
+     }
     }
 
     // Reanuda cadenas multi-step de simple automations parqueadas (los
@@ -1481,6 +1511,10 @@ const cronHandler = async (req: any, res: any) => {
         .limit(200);
 
       for (const row of pending || []) {
+       // Aislado por-fila: una fila "veneno" (step malformado que lanza) no
+       // debe abortar el resto de filas pendientes. Si lanza, la borramos para
+       // que no se re-seleccione y bloquee cada barrido para siempre.
+       try {
         const { data: automation } = await supabaseAdmin
           .from('automations').select('*').eq('id', row.automation_id).maybeSingle();
         if (!automation || !automation.enabled) {
@@ -1534,14 +1568,27 @@ const cronHandler = async (req: any, res: any) => {
           await supabaseAdmin.from('automation_pending_steps').delete().eq('id', row.id);
         }
         stepsResumed++;
+       } catch (e: any) {
+         // Fila irrecuperable: la borramos para no re-procesarla eternamente.
+         logger.error('automations.steps.row_failed', { row: row.id, err: e?.message });
+         await supabaseAdmin.from('automation_pending_steps').delete().eq('id', row.id).then(() => {}, () => {});
+       }
       }
     } catch (e: any) {
       logger.error('automations.steps.resume_failed', { err: e?.message });
     }
 
-    // Advanced Workflows: resume parked (Wait) runs + fire scheduled workflows.
-    const resumed = await resumeWaitingWorkflows();
-    const scheduled = await fireScheduledWorkflows();
+    // Advanced Workflows: recupera huerfanos, reanuda esperas y dispara los
+    // programados. Aislado en su propio try para que un fallo aqui no impida
+    // los barridos de trials/billing que vienen despues.
+    let resumed = 0, scheduled = 0, reaped = 0;
+    try {
+      reaped = await reapStuckWorkflowRuns();
+      resumed = await resumeWaitingWorkflows();
+      scheduled = await fireScheduledWorkflows();
+    } catch (e: any) {
+      logger.error('automations.cron.workflows_failed', { err: e?.message });
+    }
 
     // Expire trials whose deadline has passed and that never converted to a paid sub.
     // Move them to status='past_due' so the frontend renders the paywall.
@@ -1574,8 +1621,8 @@ const cronHandler = async (req: any, res: any) => {
       logger.error('billing.sweep.failed', { err: e?.message });
     }
 
-    logger.info('automations.cron.completed', { workflows: { resumed, scheduled }, trialsExpired, stepsResumed, billingPaid });
-    res.json({ success: true, workflows: { resumed, scheduled }, trialsExpired, stepsResumed, billingPaid });
+    logger.info('automations.cron.completed', { workflows: { resumed, scheduled, reaped }, trialsExpired, stepsResumed, billingPaid });
+    res.json({ success: true, workflows: { resumed, scheduled, reaped }, trialsExpired, stepsResumed, billingPaid });
   } catch (error: any) {
     logger.error('automations.cron.failed', { err: error?.message });
     res.status(500).json({ error: safeErr(error) });

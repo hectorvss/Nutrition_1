@@ -109,9 +109,13 @@ export const KNOWN_VARIABLES: Array<{ token: string; resolve: (ctx: RenderContex
 
 const TOKEN_RE = /\{[^}]+\}/g;
 
-export function renderMessage(template: string, ctx: RenderContext): string {
-  if (!template) return '';
-  return template.replace(TOKEN_RE, (match) => {
+export function renderMessage(template: unknown, ctx: RenderContext): string {
+  if (template == null || template === '') return '';
+  // Coerce: un campo guardado como número/objeto (p.ej. message: 42) no debe
+  // reventar `.replace`; lo tratamos como texto. Esto blinda a TODOS los
+  // callers (automations + workflows) de datos malformados en los steps.
+  const str = typeof template === 'string' ? template : String(template);
+  return str.replace(TOKEN_RE, (match) => {
     if (ctx.overrides && match in ctx.overrides) return String(ctx.overrides[match]);
     const def = KNOWN_VARIABLES.find(v => v.token === match);
     if (!def) return match;
