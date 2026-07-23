@@ -2403,24 +2403,45 @@ function ApiMcpSettings() {
         </p>
 
         {/* Tabs de cliente */}
-        <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-4 flex-wrap">
+        <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-5 flex-wrap">
           {([['claude', 'Claude Desktop'], ['claude-code', 'Claude Code'], ['cursor', 'Cursor'], ['vscode', 'VS Code']] as const).map(([id, lbl]) => (
             <button key={id} onClick={() => setMcpClient(id)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${mcpClient === id ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}>{lbl}</button>
           ))}
         </div>
 
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{mcpClient === 'claude-code' ? (isEs ? 'Comando' : 'Command') : (isEs ? 'Configuración' : 'Config')}</label>
-          <button onClick={() => copy(snippet.code, 'cfg')} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
-            {copied === 'cfg' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {isEs ? 'Copiar' : 'Copy'}
-          </button>
+        {/* Pasos */}
+        <ol className="space-y-2.5 mb-4">
+          {[
+            isEs ? 'Genera una clave API arriba y cópiala.' : 'Generate an API key above and copy it.',
+            mcpClient === 'claude-code'
+              ? (isEs ? 'Ejecuta este comando en tu terminal:' : 'Run this command in your terminal:')
+              : (isEs ? 'Pega esta configuración en tu cliente:' : 'Paste this config into your client:'),
+            snippet.note,
+          ].map((step, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
+              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+              <span className="leading-relaxed">{step}</span>
+            </li>
+          ))}
+        </ol>
+
+        {/* Bloque de código CLARO */}
+        <div className="relative rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 bg-white/60 dark:bg-slate-900/40">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{mcpClient === 'claude-code' ? 'bash' : 'json'}</span>
+            <button onClick={() => copy(snippet.code, 'cfg')} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-bold text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition">
+              {copied === 'cfg' ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />} {copied === 'cfg' ? (isEs ? 'Copiado' : 'Copied') : (isEs ? 'Copiar' : 'Copy')}
+            </button>
+          </div>
+          <pre className="p-4 text-[12px] font-mono leading-relaxed text-slate-700 dark:text-slate-200 overflow-x-auto whitespace-pre"><code>{snippet.code}</code></pre>
         </div>
-        <pre className="p-3 rounded-xl bg-slate-900 dark:bg-black text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre"><code>{snippet.code}</code></pre>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">{snippet.note}</p>
-        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 flex items-start gap-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-          {isEs ? `Sustituye ${KEY_PH} por una clave generada arriba. Da acceso a tu cuenta: no la compartas.` : `Replace ${KEY_PH} with a key generated above. It grants access to your account: don’t share it.`}
-        </p>
+
+        <div className="mt-3 flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/15 border border-amber-200/70 dark:border-amber-900/40">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500 mt-0.5" />
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            {isEs ? <>Sustituye <code className="font-mono font-bold">{KEY_PH}</code> por una de tus claves. Da acceso a tu cuenta: guárdala como una contraseña y no la subas a ningún repositorio.</> : <>Replace <code className="font-mono font-bold">{KEY_PH}</code> with one of your keys. It grants access to your account: keep it like a password and never commit it.</>}
+          </p>
+        </div>
       </div>
     </div>
   );
