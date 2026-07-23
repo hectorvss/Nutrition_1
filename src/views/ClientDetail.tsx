@@ -3,6 +3,7 @@ import { fetchWithAuth } from '../api';
 import {
   ArrowLeft,
   MessageSquare,
+  Sparkles,
   Edit,
   Copy,
   Key,
@@ -258,6 +259,14 @@ export default function ClientDetail({ clientId, onBack, onNavigate }: ClientDet
                 >
                   <MessageSquare className="w-4 h-4" />
                   {t('message', { defaultValue: 'Message' })}
+                </button>
+                <button
+                  onClick={() => onNavigate?.('assistant', { clientId })}
+                  title="Nuly AI"
+                  className="flex-1 lg:flex-none justify-center flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-emerald-500 text-emerald-400 dark:text-slate-900 hover:opacity-90 transition-all shadow-sm text-sm font-bold"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Nuly AI
                 </button>
                 <button
                   onClick={() => {

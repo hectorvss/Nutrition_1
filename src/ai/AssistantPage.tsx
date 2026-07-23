@@ -266,6 +266,11 @@ export default function AssistantPage({ selectedClientId }: { selectedClientId?:
               {isEs ? 'Tu copiloto: clientes, planes, mensajes y métricas' : 'Your copilot: clients, plans, messages and metrics'}
             </p>
           </div>
+          {selectedClientId && (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+              {isEs ? 'Con contexto del cliente abierto' : 'With open client context'}
+            </span>
+          )}
           <button
             onClick={() => { thread.reset(); void loadHistory(); }}
             className="md:hidden ml-auto p-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"

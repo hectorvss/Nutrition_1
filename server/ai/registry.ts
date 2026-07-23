@@ -15,6 +15,7 @@ import {
   AssignNutritionPlanTool,
 } from './tools/generators.js';
 import { ManageMemoryTool } from './tools/memory.js';
+import { GetBillingOverviewTool, SendPaymentReminderTool } from './tools/billing.js';
 
 const ALL: NulyTool[] = [
   new ListClientsTool(),
@@ -31,6 +32,8 @@ const ALL: NulyTool[] = [
   new GenerateNutritionPlanTool(),
   new AssignNutritionPlanTool(),
   new ManageMemoryTool(),
+  new GetBillingOverviewTool(),
+  new SendPaymentReminderTool(),
 ];
 
 const byName = new Map<string, NulyTool>(ALL.map(t => [t.name, t]));
