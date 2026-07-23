@@ -21,6 +21,7 @@ import {
   CreditCard,
   PanelLeftClose,
   PanelLeftOpen,
+  Sparkles,
 } from 'lucide-react';
 import { Zap } from 'lucide-react';
 import { X } from 'lucide-react';
@@ -94,6 +95,12 @@ export default function Sidebar({ currentView, onNavigate, isOpen, onClose }: Si
         { id: 'dashboard', label: t('dashboard'), icon: LayoutDashboard },
         { id: 'tasks', label: t('tasks'), icon: CheckCircle2 },
         { id: 'calendar', label: t('calendar'), icon: CalendarIcon },
+      ]
+    },
+    {
+      title: 'Nuly AI',
+      items: [
+        { id: 'assistant', label: 'Nuly AI', icon: Sparkles },
       ]
     },
     {
