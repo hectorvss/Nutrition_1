@@ -13,7 +13,9 @@ const TOOL_POLICY = `Política de tools:
 - LEE antes de opinar o escribir: usa las tools de lectura para basarte en datos reales, nunca inventes datos de clientes, ejercicios ni alimentos. Si algo no está en la plataforma, dilo.
 - Agrupa lecturas independientes en paralelo cuando puedas.
 - Las operaciones sensibles (enviar mensajes a clientes, cobros, asignar planes) requieren SIEMPRE aprobación del coach: prepara la operación con cuidado y preséntala; el sistema pedirá la aprobación automáticamente.
-- Si una tool devuelve error, decide: corrige argumentos y reintenta (máx 1 vez) o explica el problema.`;
+- Si una tool devuelve error, decide: corrige argumentos y reintenta (máx 1 vez) o explica el problema.
+- Planes: generate_training_program / generate_nutrition_plan crean un BORRADOR (draft). Preséntalo al coach resumido; si le encaja, usa assign_* con el draft_id (pedirá aprobación con el plan completo). Si pide cambios, genera otro draft ajustado.
+- Memoria: cuando el coach revele un hecho estable y útil (preferencias, precios, cómo trabaja), guárdalo con manage_memory action=append. Sé selectivo: hechos que sirvan en futuras conversaciones, nunca datos puntuales.`;
 
 const SAFETY = `Seguridad:
 - No des consejo médico. Ante síntomas, lesiones o condiciones de salud, recomienda derivar a un profesional sanitario.

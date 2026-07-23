@@ -8,6 +8,13 @@ import { ListClientsTool, GetClientTool } from './tools/clients.js';
 import { ReadThreadTool, SendMessageTool } from './tools/messaging.js';
 import { ListCheckinsTool, GetCheckinTool, GetBusinessMetricsTool } from './tools/insights.js';
 import { ListExercisesTool, SearchFoodsTool } from './tools/library.js';
+import {
+  GenerateTrainingProgramTool,
+  AssignTrainingProgramTool,
+  GenerateNutritionPlanTool,
+  AssignNutritionPlanTool,
+} from './tools/generators.js';
+import { ManageMemoryTool } from './tools/memory.js';
 
 const ALL: NulyTool[] = [
   new ListClientsTool(),
@@ -19,6 +26,11 @@ const ALL: NulyTool[] = [
   new GetBusinessMetricsTool(),
   new ListExercisesTool(),
   new SearchFoodsTool(),
+  new GenerateTrainingProgramTool(),
+  new AssignTrainingProgramTool(),
+  new GenerateNutritionPlanTool(),
+  new AssignNutritionPlanTool(),
+  new ManageMemoryTool(),
 ];
 
 const byName = new Map<string, NulyTool>(ALL.map(t => [t.name, t]));

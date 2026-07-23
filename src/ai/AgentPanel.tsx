@@ -34,6 +34,81 @@ function ToolChip({ name }: { name: string; key?: React.Key }) {
   );
 }
 
+/** Tarjetas de artifacts: drafts de planes generados por el agente */
+function ArtifactCard({ artifact }: { artifact: any }) {
+  const [open, setOpen] = useState(false);
+  if (artifact?.kind === 'training_draft') {
+    return (
+      <div className="max-w-[95%] rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-900/10 overflow-hidden">
+        <div className="px-4 py-3 border-b border-emerald-100 dark:border-emerald-800/40">
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Borrador · Entrenamiento</p>
+          <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{artifact.name}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">{artifact.client_name} · {artifact.days_per_week} días/semana</p>
+        </div>
+        <div className="px-4 py-2.5 flex flex-col gap-1.5">
+          {(artifact.workouts || []).slice(0, open ? 99 : 3).map((w: any, i: number) => (
+            <div key={i}>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{w.name}</p>
+              {open && (w.blocks || []).map((b: any, j: number) => (
+                <p key={j} className="text-[11px] text-slate-500 dark:text-slate-400 pl-2">
+                  {b.name}: {(b.exercises || []).map((e: any) => `${e.name} ${e.sets}×${e.reps}`).join(' · ')}
+                </p>
+              ))}
+            </div>
+          ))}
+          <button onClick={() => setOpen(o => !o)} className="self-start text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
+            {open ? 'Ver menos' : 'Ver detalle completo'}
+          </button>
+          {artifact.warnings?.length > 0 && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">⚠ {artifact.warnings.join('; ')}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+  if (artifact?.kind === 'nutrition_draft') {
+    const t = artifact.targets || {};
+    const tot = artifact.totals || {};
+    return (
+      <div className="max-w-[95%] rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/60 dark:bg-emerald-900/10 overflow-hidden">
+        <div className="px-4 py-3 border-b border-emerald-100 dark:border-emerald-800/40">
+          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Borrador · Nutrición</p>
+          <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">{artifact.name}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            {artifact.client_name} · target {t.kcal} kcal (P{t.protein}/C{t.carbs}/G{t.fats}) · plan {tot.kcal} kcal
+          </p>
+        </div>
+        <div className="px-4 py-2.5 flex flex-col gap-1.5">
+          {(artifact.meals || []).slice(0, open ? 99 : 3).map((m: any, i: number) => (
+            <div key={i}>
+              <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{m.name} <span className="font-normal text-slate-400">{m.time}</span></p>
+              {open && (
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 pl-2">
+                  {(m.items || []).map((it: any) => `${it.name} ×${it.quantity} (${it.calories}kcal)`).join(' · ')}
+                </p>
+              )}
+            </div>
+          ))}
+          <button onClick={() => setOpen(o => !o)} className="self-start text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline">
+            {open ? 'Ver menos' : 'Ver detalle completo'}
+          </button>
+          {artifact.warnings?.length > 0 && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400">⚠ {artifact.warnings.join('; ')}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+  if (artifact?.kind === 'assigned') {
+    return (
+      <div className="max-w-[85%] rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50 px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+        ✓ {artifact.plan === 'training' ? 'Programa de entrenamiento asignado' : 'Plan de nutrición asignado'}
+      </div>
+    );
+  }
+  return null;
+}
+
 const MessageBubble = React.memo(function MessageBubble({ msg }: { msg: ThreadMessage }) {
   const [expanded, setExpanded] = useState(false);
   if (msg.type === 'human') {
@@ -46,6 +121,10 @@ const MessageBubble = React.memo(function MessageBubble({ msg }: { msg: ThreadMe
     );
   }
   if (msg.type === 'tool') {
+    const artifact = msg.ui_payload?.artifact as any;
+    if (artifact?.kind && ['training_draft', 'nutrition_draft', 'assigned'].includes(artifact.kind)) {
+      return <ArtifactCard artifact={artifact} />;
+    }
     return (
       <div className="flex flex-col gap-1">
         <button
