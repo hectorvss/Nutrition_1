@@ -222,7 +222,14 @@ router.post('/', async (req: any, res) => {
   }
 });
 
-// GET informativo (algunos clientes hacen un probe). No exponemos nada sensible.
-router.get('/', (_req, res) => res.json({ name: 'nutrifit-manager MCP', transport: 'http', protocolVersion: PROTOCOL_VERSION }));
+// GET informativo (probe + capacidades para la UI). No expone nada sensible:
+// solo nombres/descripciones de las herramientas disponibles.
+router.get('/', (_req, res) => res.json({
+  name: 'nutrifit-manager',
+  transport: 'http',
+  protocolVersion: PROTOCOL_VERSION,
+  toolCount: TOOLS.length,
+  tools: TOOLS.map((t) => ({ name: t.name, description: t.description, scope: t.scope })),
+}));
 
 export default router;

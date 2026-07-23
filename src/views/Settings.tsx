@@ -2133,6 +2133,8 @@ function ApiMcpSettings() {
   const [expiry, setExpiry] = useState('0'); // 0 = sin caducidad
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [mcpTools, setMcpTools] = useState<any[] | null>(null);
+  const [mcpClient, setMcpClient] = useState<'claude' | 'claude-code' | 'cursor' | 'vscode'>('claude');
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const mcpUrl = `${origin}/api/mcp`;
@@ -2146,7 +2148,11 @@ function ApiMcpSettings() {
       setErr(e?.message || 'Error');
     } finally { setLoading(false); }
   };
-  useEffect(() => { load(); }, []);
+  const loadTools = async () => {
+    try { const d = await fetchWithAuth('/mcp'); setMcpTools(Array.isArray(d?.tools) ? d.tools : []); }
+    catch { setMcpTools([]); }
+  };
+  useEffect(() => { load(); loadTools(); }, []);
 
   const copy = (text: string, id: string) => {
     navigator.clipboard?.writeText(text).catch(() => {});
@@ -2186,9 +2192,33 @@ function ApiMcpSettings() {
     catch (e: any) { setErr(e?.message || 'Error'); }
   };
 
-  const mcpConfig = JSON.stringify({
-    mcpServers: { nutrifit: { type: 'http', url: mcpUrl, headers: { Authorization: 'Bearer TU_CLAVE_API' } } },
-  }, null, 2);
+  const KEY_PH = isEs ? 'TU_CLAVE_API' : 'YOUR_API_KEY';
+  // Snippet de configuración según el cliente MCP seleccionado.
+  const clientSnippet = (): { code: string; note: string } => {
+    switch (mcpClient) {
+      case 'claude-code':
+        return {
+          code: `claude mcp add --transport http nutrifit ${mcpUrl} \\\n  --header "Authorization: Bearer ${KEY_PH}"`,
+          note: isEs ? 'Ejecútalo en tu terminal. Luego abre Claude Code y las herramientas aparecerán.' : 'Run it in your terminal. Then open Claude Code and the tools appear.',
+        };
+      case 'cursor':
+        return {
+          code: JSON.stringify({ mcpServers: { nutrifit: { url: mcpUrl, headers: { Authorization: `Bearer ${KEY_PH}` } } } }, null, 2),
+          note: isEs ? 'Pégalo en Cursor → Settings → MCP → “Add new MCP server” (o en ~/.cursor/mcp.json).' : 'Paste in Cursor → Settings → MCP → “Add new MCP server” (or ~/.cursor/mcp.json).',
+        };
+      case 'vscode':
+        return {
+          code: JSON.stringify({ servers: { nutrifit: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${KEY_PH}` } } } }, null, 2),
+          note: isEs ? 'Añádelo a .vscode/mcp.json (o a tu settings.json bajo "mcp").' : 'Add it to .vscode/mcp.json (or your settings.json under "mcp").',
+        };
+      default: // claude desktop
+        return {
+          code: JSON.stringify({ mcpServers: { nutrifit: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${KEY_PH}` } } } }, null, 2),
+          note: isEs ? 'Pégalo en la configuración de Claude Desktop (Settings → Developer → Edit Config) y reinicia.' : 'Paste in Claude Desktop config (Settings → Developer → Edit Config) and restart.',
+        };
+    }
+  };
+  const snippet = clientSnippet();
 
   const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString(isEs ? 'es-ES' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
   const rel = (d?: string | null) => {
@@ -2315,38 +2345,82 @@ function ApiMcpSettings() {
         )}
       </div>
 
-      {/* Conexión MCP */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2"><Terminal className="w-4 h-4 text-slate-400" /> {isEs ? 'Conectar por MCP' : 'Connect via MCP'}</h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          {isEs
-            ? 'Conecta un cliente MCP (Claude, etc.) a tu cuenta. Usa una de tus claves API como token. Las herramientas disponibles respetan los permisos de la clave.'
-            : 'Connect an MCP client (Claude, etc.) to your account. Use one of your API keys as the token. Available tools respect the key’s permissions.'}
-        </p>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{isEs ? 'URL del servidor MCP' : 'MCP server URL'}</label>
-            <div className="flex gap-2">
-              <input readOnly value={mcpUrl} className={`${inputCls} font-mono`} />
-              <button onClick={() => copy(mcpUrl, 'url')} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5">
-                {copied === 'url' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-            </div>
+      {/* Qué es MCP */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/30 p-4 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+            <Terminal className="w-4 h-4 text-slate-500" />
           </div>
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{isEs ? 'Configuración (ejemplo)' : 'Config (example)'}</label>
-              <button onClick={() => copy(mcpConfig, 'cfg')} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
-                {copied === 'cfg' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {isEs ? 'Copiar' : 'Copy'}
-              </button>
-            </div>
-            <pre className="p-3 rounded-xl bg-slate-900 dark:bg-black text-slate-100 text-[11px] font-mono overflow-x-auto"><code>{mcpConfig}</code></pre>
-            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2 flex items-start gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-              {isEs ? 'Sustituye TU_CLAVE_API por una clave generada arriba. No la compartas: da acceso a tu cuenta.' : 'Replace TU_CLAVE_API with a key generated above. Don’t share it: it grants access to your account.'}
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{isEs ? '¿Qué es el Model Context Protocol (MCP)?' : 'What is Model Context Protocol (MCP)?'}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {isEs
+                ? 'Una conexión estándar para que Claude, Cursor, VS Code u otros agentes trabajen con tu SaaS sin exponer tu cuenta completa.'
+                : 'A standard connection so Claude, Cursor, VS Code or other agents can work with your SaaS without exposing your full account.'}
             </p>
           </div>
         </div>
+        <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener noreferrer" className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition">
+          {isEs ? 'Documentación' : 'Documentation'} <ArrowRight className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
+      {/* Servidor MCP */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2"><Terminal className="w-4 h-4 text-slate-400" /> {isEs ? 'Servidor' : 'Server'}</h3>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {isEs ? 'Operativo' : 'Operational'}
+          </span>
+        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{isEs ? 'HTTP (streamable) con token Bearer.' : 'Streamable HTTP with a Bearer token.'}</p>
+        <div className="flex gap-2 mb-4">
+          <input readOnly value={mcpUrl} className={`${inputCls} font-mono`} />
+          <button onClick={() => copy(mcpUrl, 'url')} className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5">
+            {copied === 'url' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{isEs ? 'Capacidades reales' : 'Real capabilities'}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              {mcpTools === null
+                ? (isEs ? 'Cargando…' : 'Loading…')
+                : `${mcpTools.length} ${isEs ? 'herramientas' : 'tools'}: ${mcpTools.slice(0, 6).map((x: any) => x.name).join(', ')}${mcpTools.length > 6 ? '…' : ''}`}
+            </p>
+          </div>
+          <button onClick={loadTools} className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+            <Loader2 className="w-3.5 h-3.5" /> {isEs ? 'Actualizar' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {/* Conectar cliente */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">{isEs ? 'Conecta tu cliente' : 'Connect your client'}</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          {isEs ? 'Elige tu cliente y pega el token creado arriba en su configuración. No lo subas nunca a un repositorio.' : 'Choose your client and paste the token created above into its config. Never commit it to a repo.'}
+        </p>
+
+        {/* Tabs de cliente */}
+        <div className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 mb-4 flex-wrap">
+          {([['claude', 'Claude Desktop'], ['claude-code', 'Claude Code'], ['cursor', 'Cursor'], ['vscode', 'VS Code']] as const).map(([id, lbl]) => (
+            <button key={id} onClick={() => setMcpClient(id)} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${mcpClient === id ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'}`}>{lbl}</button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{mcpClient === 'claude-code' ? (isEs ? 'Comando' : 'Command') : (isEs ? 'Configuración' : 'Config')}</label>
+          <button onClick={() => copy(snippet.code, 'cfg')} className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
+            {copied === 'cfg' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} {isEs ? 'Copiar' : 'Copy'}
+          </button>
+        </div>
+        <pre className="p-3 rounded-xl bg-slate-900 dark:bg-black text-slate-100 text-[11px] font-mono overflow-x-auto whitespace-pre"><code>{snippet.code}</code></pre>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">{snippet.note}</p>
+        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 flex items-start gap-1.5">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          {isEs ? `Sustituye ${KEY_PH} por una clave generada arriba. Da acceso a tu cuenta: no la compartas.` : `Replace ${KEY_PH} with a key generated above. It grants access to your account: don’t share it.`}
+        </p>
       </div>
     </div>
   );
